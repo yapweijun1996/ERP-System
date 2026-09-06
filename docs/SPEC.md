@@ -450,10 +450,13 @@ The current and future implementation must satisfy these binding requirements:
   source evidence at render time. The same no-store PDF drives preview, download and
   Print: an A4 landscape register precedes copied multi-page PDFs and embedded JPEG/PNG
   originals; unsupported formats receive an explicit identity placeholder. Access and
-  render actions must reapply the exact current visibility required by the snapshot,
-  tenant/creator scope, scan-clean state, document-version identity and content hash.
-  Current code checks only any receipt-read permission plus creator, so a
-  `read_company` → `read_own` downgrade can retain a company-wide Pack; TASK-196 is P0.
+  render actions reapply the current visibility required by the snapshot, tenant/creator
+  scope, scan-clean state, document-version identity and content hash. A frozen
+  `company` Pack requires current `read_company`; a frozen `own` Pack permits current
+  `read_own` or `read_company`. The API distinguishes preview from original-evidence
+  download/Print in the access purpose and audit after-data, returns safe not-found for
+  a frozen-visibility mismatch or wrong active tenant, and keeps the artifact private
+  and no-store. TASK-196 is done; TASK-197 owns the remaining capture/correction UX.
   Currencies are never summed together.
 - Demo/PGlite and PostgreSQL/API modes implement one contract. `expenses_tax` availability
   is platform-owned `Master enabled AND Company allocated`; missing or disabled state

@@ -260,12 +260,19 @@ export function createCompanyReceiptsRouter(db: DB): Router {
       apiError(res, 400, 'company_receipt_pack_id_invalid', 'packId must be positive.');
       return;
     }
-    const { session } = access;
+    const { session, visibility } = access;
     const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
     try {
       const data = await withTenantTransaction(db, scope, (tx) =>
-        readCompanyReceiptPackWithin(tx, scope, session.userId, packId));
-      res.json({ data, meta: { immutableSnapshot: true, completeResult: true } });
+        readCompanyReceiptPackWithin(tx, scope, session.userId, visibility, packId));
+      res.json({
+        data,
+        meta: {
+          immutableSnapshot: true,
+          completeResult: true,
+          accessVisibility: visibility,
+        },
+      });
     } catch (error) {
       handleError(res, error);
     }
@@ -285,7 +292,7 @@ export function createCompanyReceiptsRouter(db: DB): Router {
       );
       return;
     }
-    const { session } = access;
+    const { session, visibility } = access;
     const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
     try {
       const rendered = await withTenantTransaction(db, scope, async (tx) => {
@@ -293,6 +300,7 @@ export function createCompanyReceiptsRouter(db: DB): Router {
           tx,
           scope,
           session.userId,
+          visibility,
           packId,
           action,
         );
@@ -304,6 +312,9 @@ export function createCompanyReceiptsRouter(db: DB): Router {
           entityId: packId,
           action: `pdf_${action}`,
           after: {
+            accessPurpose: result.accessPurpose,
+            snapshotVisibility: result.pack.visibility,
+            currentVisibility: visibility,
             sourceSha256: result.pack.sourceSha256,
             artifactSha256: result.sha256,
             rowCount: result.pack.rowCount,
@@ -321,6 +332,7 @@ export function createCompanyReceiptsRouter(db: DB): Router {
         'X-Content-Type-Options': 'nosniff',
         'X-Receipt-Pack-SHA256': rendered.sha256,
         'X-Receipt-Pack-Source-SHA256': rendered.pack.sourceSha256,
+        'X-Receipt-Pack-Access-Purpose': rendered.accessPurpose,
       });
       res.send(Buffer.from(rendered.content));
     } catch (error) {

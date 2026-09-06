@@ -114,8 +114,9 @@ the register confirmation hand-off, actual PGlite clean-evidence persistence, au
 same-origin API/PGlite browser journey and the same journey against a newly created
 disposable PostgreSQL 16 database are browser-proven. TASK-192 later deployed migrations
 through 0098 and reset production to first-run state; no authenticated production receipt
-UAT is claimed. TASK-196/197/202 own Pack authorization, complete correction/edit/void
-UX and artifact-governance gaps.
+UAT is claimed. TASK-196 now closes the Pack authorization downgrade and export-purpose
+audit gap; TASK-197/202 own the remaining correction/edit/void UX and artifact-governance
+gaps.
 Expense accounting, Tax
 Treatment, automated Tax Evidence, Employee Reimbursement and MyInvois remain future
 or optional phases and are not v1 exit criteria.

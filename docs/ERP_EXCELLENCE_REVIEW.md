@@ -81,6 +81,13 @@ exact deployed HEAD and CI execution remain separate gaps.
 
 ### 4.2 Receipt Pack authorization downgrade
 
+Follow-up 2026-09-06: TASK-196 is complete. Current Pack reads/renders now require
+current visibility to dominate the frozen snapshot (`read_company` for company Packs;
+own/company read for own Packs), deny wrong active tenants and cross-tenant access with
+safe not-found responses, and audit preview versus original-evidence export while
+keeping the PDF private/no-store. The paragraphs below preserve the dated 2026-08-12
+finding that motivated the task.
+
 Pack creation freezes `own | company` visibility. Later Pack metadata/PDF routes verify
 only that the creator still has any receipt-read permission, then the domain verifies
 tenant plus creator. A creator downgraded from `read_company` to `read_own` can therefore

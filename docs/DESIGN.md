@@ -561,8 +561,9 @@ hidden; My Receipts limits the picker to the first 100 actor records and require
 Employee Self Service. Update/void adapters exist without a corresponding detail/editor,
 and Missing Date currently navigates rather than correcting metadata. TASK-192 later
 deployed migrations through 0098 and reset production to first-run state; no authenticated
-production Company Receipt UAT is claimed. TASK-196/197/202 own the discovered security,
-workflow and artifact-governance gaps.
+production Company Receipt UAT is claimed. TASK-197/202 own the remaining workflow and
+artifact-governance gaps; TASK-196 closed the Receipt Pack visibility and export-purpose
+security gap.
 
 ## 12. Platform Module Entitlement and tenant cutover
 
@@ -618,9 +619,11 @@ trust as the next release boundary. The complete review and evidence matrix are 
   `NOSUPERUSER NOBYPASSRLS` roles with no DDL/role-management privileges. A disposable
   PostgreSQL 16 HTTP integration proves the current bootstrap → Master → Company path
   and cross-tenant denial. Production deployment/revision evidence remains a later gate.
-- **Receipt Pack:** later reads/renders validate tenant plus creator and any read grant,
-  not whether a frozen company-visible Pack remains allowed after downgrade. Current
-  visibility must dominate snapshot visibility (TASK-196).
+- **Receipt Pack:** later reads/renders validate tenant plus creator and current visibility;
+  a frozen company-visible Pack requires current `read_company`, while an own-visible
+  Pack permits current own/company read. Preview versus original-evidence export is
+  explicit in the API/audit boundary and artifacts remain private/no-store. TASK-196 is
+  complete.
 - **Platform privilege:** Support Grant is a decision service, not a tenant-data proxy;
   exact-user Superadmin simulation needs no grant/reason/ticket under the approved
   TASK-198 exception. Elevated Platform Admin access is separate, reason/ticket-bound,

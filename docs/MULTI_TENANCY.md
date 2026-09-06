@@ -229,16 +229,20 @@ production company RLS policy set, and disposable non-superuser PostgreSQL proof
 same-tenant access plus cross-tenant denial.
 
 TASK-181 Receipt Pack selection, snapshot read and original-document rendering reapply
-the same tenant/company and permission scope. The immutable snapshot is creator-only;
-every source version is reread inside the active tenant and checked against the frozen
-document id/hash before bytes are composed. A platform support principal receives no
-implicit Company Receipt access, and a disabled Expenses & Tax entitlement must deny
-the UI route and every direct API/background path. Own/company visibility is an
-authorization scope over the same aggregate—not a client filter—and is implemented for
-list/detail reads. TASK-182 completes the canonical/module-entitlement cutover: the
-commercial `expenses_tax` route and `/api/company-receipts` first require Master enabled
-AND Company allocated, then apply explicit tenant permission/scope. The Pack continues to
-use its creator and read-scope guard; neither path reintroduces tenant MAC authority.
+the same tenant/company and permission scope. TASK-196 makes the frozen visibility
+explicit: a company snapshot requires current `read_company`, while an own snapshot
+allows current own/company read; wrong active tenant, cross-tenant and revoked/frozen-
+visibility cases return safe denial without existence leakage. The immutable snapshot is
+creator-only; every source version is reread inside the active tenant and checked against
+the frozen document id/hash before bytes are composed. Preview versus original-evidence
+download/Print has an explicit purpose in the audit boundary and uses a private
+no-store artifact. A platform support principal receives no implicit Company Receipt
+access, and a disabled Expenses & Tax entitlement must deny the UI route and every direct
+API/background path. Own/company visibility is an authorization scope over the same
+aggregate—not a client filter—and is implemented for list/detail/Pack reads. TASK-182
+completes the canonical/module-entitlement cutover: the commercial `expenses_tax` route
+and `/api/company-receipts` first require Master enabled AND Company allocated, then apply
+explicit tenant permission/scope. Neither path reintroduces tenant MAC authority.
 
 ## Master entitlement and Company allocation foundation
 

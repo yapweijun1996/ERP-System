@@ -146,14 +146,42 @@ describe('Company Receipt Pack', () => {
         merchant: 'Changed after snapshot',
       }));
     const frozen = await withTenantTransaction(db, sg, (tx) =>
-      readCompanyReceiptPackWithin(tx, sg, adminId, created.pack.id));
+      readCompanyReceiptPackWithin(tx, sg, adminId, 'company', created.pack.id));
     expect(frozen.rows[0]?.merchant).toBe('Alpha Supplies');
+    await expect(withTenantTransaction(db, sg, (tx) =>
+      readCompanyReceiptPackWithin(tx, sg, adminId, 'own', created.pack.id)))
+      .rejects.toMatchObject({ code: 'company_receipt_pack_not_found', status: 404 });
 
     const rendered = await withTenantTransaction(db, sg, (tx) =>
-      renderCompanyReceiptPackWithin(tx, sg, adminId, created.pack.id, 'view'));
+      renderCompanyReceiptPackWithin(tx, sg, adminId, 'company', created.pack.id, 'view'));
     const pdf = await PDFDocument.load(rendered.content);
     expect(pdf.getPageCount()).toBeGreaterThanOrEqual(4);
     expect(rendered.sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(rendered.accessPurpose).toBe('receipt_pack_preview');
+    await expect(withTenantTransaction(db, sg, (tx) =>
+      renderCompanyReceiptPackWithin(tx, sg, adminId, 'own', created.pack.id, 'download')))
+      .rejects.toMatchObject({ code: 'company_receipt_pack_not_found', status: 404 });
+
+    const ownPack = await withTenantTransaction(db, sg, (tx) =>
+      createCompanyReceiptPackWithin(tx, sg, viewerId, 'own', {
+        packKey: 'company-receipt-pack:own-0001',
+        dateFrom: '2026-08-09',
+        dateTo: '2026-08-10',
+        locale: 'en',
+      }));
+    expect(ownPack.pack.visibility).toBe('own');
+    const ownRendered = await withTenantTransaction(db, sg, (tx) =>
+      renderCompanyReceiptPackWithin(tx, sg, viewerId, 'own', ownPack.pack.id, 'download'));
+    expect(ownRendered.accessPurpose).toBe('receipt_pack_original_evidence_export');
+    await expect(withTenantTransaction(db, { masterFn: 'M1', companyFn: 'C-MY' }, (tx) =>
+      readCompanyReceiptPackWithin(
+        tx,
+        { masterFn: 'M1', companyFn: 'C-MY' },
+        adminId,
+        'company',
+        created.pack.id,
+      )))
+      .rejects.toMatchObject({ code: 'company_receipt_pack_not_found', status: 404 });
 
     const replay = await withTenantTransaction(db, sg, (tx) =>
       createCompanyReceiptPackWithin(tx, sg, adminId, 'company', {
@@ -163,7 +191,7 @@ describe('Company Receipt Pack', () => {
         locale: 'en',
       }));
     expect(replay).toMatchObject({ replayed: true, pack: { id: created.pack.id } });
-    expect(await db.select().from(companyReceiptPack)).toHaveLength(1);
+    expect(await db.select().from(companyReceiptPack)).toHaveLength(2);
   });
 
   it('rejects invalid, empty and actor-inaccessible packs without partial snapshots', async () => {
@@ -181,7 +209,7 @@ describe('Company Receipt Pack', () => {
       }))).rejects.toMatchObject({ code: 'company_receipt_pack_empty', status: 404 });
     expect(await db.select().from(companyReceiptPack)).toHaveLength(0);
     await expect(withTenantTransaction(db, sg, (tx) =>
-      readCompanyReceiptPackWithin(tx, sg, adminId, 999_999)))
+      readCompanyReceiptPackWithin(tx, sg, adminId, 'company', 999_999)))
       .rejects.toMatchObject({ code: 'company_receipt_pack_not_found', status: 404 });
   });
 });

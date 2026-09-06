@@ -1236,9 +1236,10 @@ more module breadth. The source-backed review is
    migration/bootstrap, API and worker roles; Platform provisioning establishes the
    generated Company context before its first FORCE-RLS write, and a PostgreSQL 16
    current-path integration proves bootstrap → Master → Company plus cross-tenant denial.
-3. **Receipt security and workflow** (TASK-196/197 todo): close company-Pack visibility
-   downgrade, define original-evidence export authority/audit, capability-gate UI actions,
-   and deliver real detail/edit/void/Missing Date plus bounded evidence selection.
+3. **Receipt security and workflow** (TASK-196 done; TASK-197 todo): Receipt Pack
+   company/own visibility, active-tenant denial, original-evidence export purpose/audit
+   and no-store behavior are now enforced. TASK-197 remains for capability-gated UI
+   actions, real detail/edit/void/Missing Date correction and bounded evidence selection.
 4. **Privileged assurance** (TASK-198 done): the approved narrow exception separates
    reason/ticket-bound Platform Admin tenant access from fixed-scope exact Employee
    simulation. The owner explicitly accepted password-only access with no MFA or recent

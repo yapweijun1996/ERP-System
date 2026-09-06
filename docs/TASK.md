@@ -8,7 +8,7 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **198**
+- Done: **199**
 - In progress: **1**
 - Todo: **10**
 - Blocked: **4**
@@ -21,7 +21,7 @@ through 0099, schema v99/252 tables, 129 Canonical / 0 Preview routes, 128 route
 API mode, 1,546 English i18n keys/72 local packs, 315 permission codes and PWA v263. The sole
 Canonical/API metadata difference is `staff-calendar`. HEAD collects 170 files / 666
 tests at the prior audit. The final EPIC-067 worktree instead passes the full local
-Vitest run at 169 files / 672 tests with one intentional file/test skip. Current source
+Vitest run at 170 files / 674 tests with two intentional skips. Current source
 also passes typechecks, lint, API/Demo builds, generated schema/drift/permission checks,
 3 focused files / 12 tests, Platform layout E2E with both tenant modes, Demo autofill
 E2E, the 59-route/13-role access matrix, 129-screen desktop/mobile audit and 129-route ×
@@ -110,7 +110,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | --- | --- | --- |
 | TASK-194 | Done | Audit HEAD, correct all source-of-truth layers and register verified hardening work |
 | TASK-195 | Done | Least-privilege runtime roles and RLS-compatible Platform provisioning proof |
-| TASK-196 | Todo | Receipt Pack visibility downgrade repair and export governance |
+| TASK-196 | Done | Receipt Pack visibility downgrade repair and export governance |
 | TASK-197 | Todo | Permission-aware Company Receipts correction/edit/void and capture UX |
 | TASK-198 | Done | Approved the narrow dual-mode exception: reason/ticket for elevated Admin access, exact-user simulation without reason/ticket, and explicit no-MFA/no-step-up risk acceptance |
 | TASK-199 | Todo | Restore public availability and prove exact deployed revision |
@@ -131,7 +131,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-208 | Todo | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation and exact Employee integration |
 | TASK-209 | Blocked | PostgreSQL/RLS, CI, browser, release, documentation and KB proof; blocked by TASK-203 and the remaining TASK-206–208 evidence |
 
-The registry therefore has **198 Done / 1 In progress / 10 Todo / 4 Blocked / 213 Total**.
+The registry therefore has **199 Done / 1 In progress / 9 Todo / 4 Blocked / 213 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery), TASK-203 (CI
 billing) and TASK-209 (release proof waiting for TASK-203/TASK-206–208). Dependencies and
 epic references are valid.
@@ -174,7 +174,9 @@ browser persistence, isolated same-origin API/PGlite journey and a new disposabl
 PostgreSQL 16 browser journey passed at that checkpoint. The 168-file/663-test result is
 dated TASK-183 evidence, not a HEAD rerun. TASK-192 later deployed migrations through
 0098 and reset the target to first-run state; no authenticated production receipt UAT is
-claimed. TASK-196/197/202 own the audit-discovered Pack and UX gaps.
+claimed. TASK-196 is now done: Pack reads/renders revalidate current visibility against
+the frozen snapshot, and Preview versus original-evidence export purpose is audited.
+TASK-197/202 own the remaining UX and lifecycle gaps.
 
 ## Latest implementation milestones
 

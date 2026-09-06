@@ -13,8 +13,8 @@ For the current source-backed action backlog and evidence boundaries, see
       green. Never treat a zero-step infrastructure failure as validation.
 - [x] `npm run typecheck && npm run typecheck:web` — root and Web typechecks pass after
       aligning the Demo purchase-requisition adapter with the actor-input command shape.
-- [x] `npm test` — current local Vitest run passes 170 files / 674 tests with one
-      intentional file/test skip. This is local evidence; PostgreSQL runtime, CI and
+- [x] `npm test` — current local Vitest run passes 170 files / 674 tests with two
+      intentional file/test skips. This is local evidence; PostgreSQL runtime, CI and
       production deployment remain separate gates.
 - [x] `npm run demo` — PGlite transaction proof passed on 2026-08-10. A dedicated,
       disposable PostgreSQL 16 database also passed `POSTGRES_URL=... npm run demo`,
@@ -117,8 +117,11 @@ receipt UAT is claimed.
 - [x] TASK-177–183 are done; STATUS and KB state implementation rather than intent.
 - [x] Company Receipts capture/confirm/save/refresh/search/range/preview/PDF/Print pass
       in Demo preview and PostgreSQL/API mode, including every matching pagination page.
-- [ ] Pack downgrade and export authority: a creator losing `read_company` cannot read or
-      render an old company-wide Pack; cross-tenant/revoked-read cases pass (TASK-196).
+- [x] Pack downgrade and export authority: current visibility dominates the frozen
+      snapshot, so a creator losing `read_company` cannot read or render an old
+      company-wide Pack; active-tenant, cross-tenant and revoked-read cases return safe
+      denial, preview/export purpose is audited, and the PDF remains private/no-store
+      (TASK-196).
 - [ ] Read-only UI hides create/edit/void; real detail, Missing Date correction, update,
       void and bounded Employee-independent-or-explicit picker behavior pass (TASK-197).
 - [ ] JPEG/PNG/HEIC/PDF validation, quarantine/OCR failure and readable multi-page PDF

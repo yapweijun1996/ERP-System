@@ -307,6 +307,9 @@ describe('Company Receipts API', () => {
     );
     expect(packPdfResponse.status).toBe(200);
     expect(packPdfResponse.headers.get('content-type')).toBe('application/pdf');
+    expect(packPdfResponse.headers.get('cache-control')).toBe('private, no-store');
+    expect(packPdfResponse.headers.get('x-receipt-pack-access-purpose'))
+      .toBe('receipt_pack_original_evidence_export');
     expect(packPdfResponse.headers.get('x-receipt-pack-sha256')).toMatch(/^[0-9a-f]{64}$/);
     expect((await PDFDocument.load(await packPdfResponse.arrayBuffer())).getPageCount())
       .toBeGreaterThanOrEqual(2);
@@ -420,6 +423,83 @@ describe('Company Receipts API', () => {
       { action: 'created', requestId: 'company-receipt-pack-create-0001' },
       { action: 'pdf_download', requestId: 'company-receipt-pack-pdf-0001' },
     ]));
+    const [pdfAudit] = await db.select({ after: auditLog.after }).from(auditLog).where(and(
+      eq(auditLog.masterFn, 'M1'),
+      eq(auditLog.companyFn, 'C-SG'),
+      eq(auditLog.entity, 'company_receipt_pack'),
+      eq(auditLog.entityId, String(packBody.data.pack.id)),
+      eq(auditLog.action, 'pdf_download'),
+    ));
+    expect(pdfAudit?.after).toMatchObject({
+      accessPurpose: 'receipt_pack_original_evidence_export',
+      snapshotVisibility: 'company',
+      currentVisibility: 'company',
+    });
+
+    await db.update(companyModule).set({ enabled: true }).where(and(
+      eq(companyModule.masterFn, 'M1'),
+      eq(companyModule.companyFn, 'C-MY'),
+      eq(companyModule.moduleKey, 'expenses_tax'),
+    ));
+    const activeTenantSwitch = await fetch(`${baseUrl}/api/auth/session/actions/switch-company`, {
+      method: 'POST',
+      headers: {
+        cookie: adminAuth.cookie,
+        'x-csrf-token': adminAuth.csrf,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ companyFn: 'C-MY' }),
+    });
+    expect(activeTenantSwitch.status).toBe(200);
+    const activeTenantPack = await fetch(
+      `${baseUrl}/api/company-receipts/packs/${packBody.data.pack.id}`,
+      { headers: { cookie: adminAuth.cookie } },
+    );
+    expect(activeTenantPack.status).toBe(404);
+    expect((await activeTenantPack.json()).error.code).toBe('company_receipt_pack_not_found');
+    const activeTenantPdf = await fetch(
+      `${baseUrl}/api/company-receipts/packs/${packBody.data.pack.id}/pdf?action=download`,
+      { headers: { cookie: adminAuth.cookie } },
+    );
+    expect(activeTenantPdf.status).toBe(404);
+    expect((await activeTenantPdf.json()).error.code).toBe('company_receipt_pack_not_found');
+    const switchBack = await fetch(`${baseUrl}/api/auth/session/actions/switch-company`, {
+      method: 'POST',
+      headers: {
+        cookie: adminAuth.cookie,
+        'x-csrf-token': adminAuth.csrf,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ companyFn: 'C-SG' }),
+    });
+    expect(switchBack.status).toBe(200);
+
+    await db.delete(rolePermission).where(eq(
+      rolePermission.permissionKey,
+      'expenses.company_receipts.read_company',
+    ));
+    const downgradedPack = await fetch(
+      `${baseUrl}/api/company-receipts/packs/${packBody.data.pack.id}`,
+      { headers: { cookie: adminAuth.cookie } },
+    );
+    expect(downgradedPack.status).toBe(404);
+    expect((await downgradedPack.json()).error.code).toBe('company_receipt_pack_not_found');
+    const downgradedPdf = await fetch(
+      `${baseUrl}/api/company-receipts/packs/${packBody.data.pack.id}/pdf?action=download`,
+      { headers: { cookie: adminAuth.cookie } },
+    );
+    expect(downgradedPdf.status).toBe(404);
+    expect((await downgradedPdf.json()).error.code).toBe('company_receipt_pack_not_found');
+    await db.delete(rolePermission).where(eq(
+      rolePermission.permissionKey,
+      'expenses.company_receipts.read_own',
+    ));
+    const revokedRead = await fetch(
+      `${baseUrl}/api/company-receipts/packs/${packBody.data.pack.id}`,
+      { headers: { cookie: adminAuth.cookie } },
+    );
+    expect(revokedRead.status).toBe(403);
+    expect((await revokedRead.json()).error.code).toBe('permission_denied');
   });
 
   it('denies register reads when only the legacy receipt mutation grant remains', async () => {

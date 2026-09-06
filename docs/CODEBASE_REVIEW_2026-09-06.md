@@ -1,7 +1,7 @@
 # ERP-System Codebase Review — 2026-09-06
 
 This review began from `main` at `2188f56` (`New`) and now records the completed
-TASK-195 follow-up. Source and tests are the implementation truth; [STATUS.md](STATUS.md) is the current status summary; [SPEC.md](SPEC.md) and
+TASK-195 and TASK-196 follow-up. Source and tests are the implementation truth; [STATUS.md](STATUS.md) is the current status summary; [SPEC.md](SPEC.md) and
 [PROJECT_LOGIC.md](PROJECT_LOGIC.md) remain the binding domain references. The older
 [ERP excellence review](ERP_EXCELLENCE_REVIEW.md) is retained as a dated historical
 baseline.
@@ -19,8 +19,8 @@ baseline.
   and Demo showcase-pack verification. The current `test:e2e:setup-wizard` also passes
   desktop, iPhone-width and small-mobile layout checks. These checks do not prove live
   PostgreSQL provisioning, public deployment, or GitHub Actions execution.
-- The task registry currently reports **198 Done / 1 In progress / 10 Todo / 4
-  Blocked / 213 Total**. The actionable boundary is concentrated in TASK-196–205 and
+- The task registry currently reports **199 Done / 1 In progress / 9 Todo / 4
+  Blocked / 213 Total**. The actionable boundary is concentrated in TASK-197–205 and
   EPIC-067/TASK-206–209; the blocked items are external or operational, not silently
   treated as code failures.
 - During this review the user-owned PWA/setup-wizard changes were committed as
@@ -47,21 +47,17 @@ baseline.
     and verification scripts do not print passwords.
   - `src/api/platformProvisioning.postgres.integration.test.ts` exercises the current
     HTTP bootstrap → Master → Company path as a `NOSUPERUSER NOBYPASSRLS` role and
-    proves RLS-filtered reads plus `42501` cross-tenant write denial. The existing
-    full security suite remains for broader lifecycle coverage rather than being the
-    only Platform proof.
+  proves RLS-filtered reads plus `42501` cross-tenant write denial. The existing
+  full security suite remains for broader lifecycle coverage rather than being the
+  only Platform proof.
 
-- **TASK-196 — Receipt Pack authorization is weaker than the frozen visibility.**
-  - **Evidence:** `requireReceiptReadAccess()` chooses current `company` or `own`
-    permission, but `readCompanyReceiptPackWithin()` only filters by active scope,
-    pack id and creator. A creator can therefore retain access to a company-visible
-    Pack after losing `read_company` while retaining `read_own`.
-  - **Action:** revalidate the caller against the Pack's frozen visibility for read,
-    preview, download and print; define who may export original evidence and record the
-    decision in the audit trail.
-  - **Acceptance:** a permission downgrade returns a safe denial for every Pack access
-    surface; company and own visibility have explicit tests; export authority and audit
-    fields are documented in `PROJECT_LOGIC.md` and `SPEC.md` if the contract changes.
+- **TASK-196 — Done 2026-09-06: Receipt Pack authorization and export governance closed.**
+  - Pack metadata and PDF routes now pass current own/company visibility into the domain;
+    company snapshots require current `read_company`, while own snapshots allow own or
+    company access. Downgrade, revoked-read and active-tenant changes return safe denial.
+  - Preview and original-evidence download/print have explicit access-purpose audit
+    fields, a no-store response and current domain/API/PostgreSQL coverage, including
+    cross-tenant Pack and source-evidence denial.
 
 - **TASK-197 — Company Receipts has backend commands but an incomplete normal workflow.**
   - **Evidence:** `src/api/routes/companyReceipts.ts` already exposes detail, PATCH and
@@ -145,9 +141,9 @@ baseline.
 
 ## Recommended execution order
 
-- **First:** TASK-196, because it is the next security/evidence boundary after the
-  completed TASK-195 RLS/runtime-role gate.
-- **Next:** TASK-197 and TASK-204, because they affect authorization,
+- **First:** TASK-197, because it is the next security/evidence boundary after the
+  completed TASK-195 and TASK-196 gates.
+- **Next:** TASK-204, because it affects authorization-adjacent accounting correctness
   evidence export and accounting correctness in already exposed ERP workflows.
 - **Then:** TASK-199/TASK-203 for deployment/CI evidence, followed by TASK-200 and the
   remaining P1 operational/lifecycle proof.
@@ -161,8 +157,12 @@ baseline.
   coverage, i18n artifacts, Demo pack, lint and root/Web typecheck. TASK-195 also passed
   the disposable PostgreSQL 16 `npm run test:postgres` run (2 files / 2 tests), including
   the current Platform HTTP path and runtime-role verification.
-- The current full Vitest run completed with **170 passed files / 1 skipped file** and
-  **674 passed tests / 1 skipped test**. The intentional stderr cases exercised
+- TASK-196 focused proof passed: Company Receipt Pack domain tests (2), Company Receipts
+  API integration tests (4), and PostgreSQL security tests (1) on disposable PostgreSQL
+  16, including downgrade, revoked-read, active-tenant, cross-tenant, export-audit and
+  no-store assertions.
+- The current full Vitest run completed with **170 passed files / 2 skipped files** and
+  **674 passed tests / 2 skipped tests**. The intentional stderr cases exercised
   malformed JSON and locale-load/markup failures; they did not fail the suite.
 - Not claimed by this document: current public availability, exact deployed revision,
   GitHub Actions execution, a production database role rollout, physical-device behavior,

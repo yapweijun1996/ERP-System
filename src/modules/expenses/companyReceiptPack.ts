@@ -40,6 +40,9 @@ const MAX_PACK_RECEIPTS = 5000;
 const MAX_PACK_SOURCE_BYTES = 250 * 1024 * 1024;
 
 export type CompanyReceiptPackAction = 'view' | 'download' | 'print';
+export type CompanyReceiptPackAccessPurpose =
+  | 'receipt_pack_preview'
+  | 'receipt_pack_original_evidence_export';
 
 export class CompanyReceiptPackError extends Error {
   constructor(
@@ -141,6 +144,25 @@ function sameFilters(value: unknown, expected: CompanyReceiptPackFilters): boole
   return stored.search === expected.search
     && stored.dateFrom === expected.dateFrom
     && stored.dateTo === expected.dateTo;
+}
+
+function accessPurpose(action: CompanyReceiptPackAction): CompanyReceiptPackAccessPurpose {
+  return action === 'view'
+    ? 'receipt_pack_preview'
+    : 'receipt_pack_original_evidence_export';
+}
+
+/**
+ * A Pack is an immutable snapshot, but its frozen visibility is not a
+ * permanent authorization grant. Company snapshots require a current
+ * read_company decision; own snapshots may be read by either own or company
+ * visibility. This same decision controls original-evidence export.
+ */
+function canAccessSnapshot(
+  snapshotVisibility: CompanyReceiptReadVisibility,
+  currentVisibility: CompanyReceiptReadVisibility,
+): boolean {
+  return snapshotVisibility === 'own' || currentVisibility === 'company';
 }
 
 export async function createCompanyReceiptPackWithin(
@@ -272,6 +294,7 @@ export async function readCompanyReceiptPackWithin(
   tx: DB,
   scope: Scope,
   actorUserId: number,
+  currentVisibility: CompanyReceiptReadVisibility,
   packId: number,
 ) {
   const [row] = await tx.select().from(companyReceiptPack).where(and(
@@ -287,6 +310,13 @@ export async function readCompanyReceiptPackWithin(
       404,
     );
   }
+  if (!canAccessSnapshot(row.visibility as CompanyReceiptReadVisibility, currentVisibility)) {
+    return fail(
+      'company_receipt_pack_not_found',
+      'Receipt Pack is unavailable for the signed-in user and active Company.',
+      404,
+    );
+  }
   return packProjection(row);
 }
 
@@ -294,11 +324,14 @@ export async function renderCompanyReceiptPackWithin(
   tx: DB,
   scope: Scope,
   actorUserId: number,
+  currentVisibility: CompanyReceiptReadVisibility,
   packId: number,
   action: CompanyReceiptPackAction,
   registry: DocumentStorageRegistry = createDocumentStorageRegistry(),
 ) {
-  const pack = await readCompanyReceiptPackWithin(tx, scope, actorUserId, packId);
+  const pack = await readCompanyReceiptPackWithin(
+    tx, scope, actorUserId, currentVisibility, packId,
+  );
   const versionIds = pack.rows.map((row) => row.documentVersionId);
   const versions = await tx.select().from(documentVersion).where(and(
     eq(documentVersion.masterFn, scope.masterFn),
@@ -351,6 +384,7 @@ export async function renderCompanyReceiptPackWithin(
   const content = await renderCompanyReceiptPackPdf(pack, documents);
   return {
     pack,
+    accessPurpose: accessPurpose(action),
     fileName: `company-receipt-pack-${pack.filters.dateFrom}-${pack.filters.dateTo}.pdf`,
     mimeType: 'application/pdf' as const,
     content,

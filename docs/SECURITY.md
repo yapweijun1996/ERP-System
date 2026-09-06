@@ -246,13 +246,16 @@ the tenant-scoped query; Company Owner receives a stored company-read grant and
 platform support receives no tenant business grant. TASK-182 keeps mutations and
 confirmation uploader-only but requires the canonical `.create`, `.edit` or `.void`
 Company Receipt permission; `employee.receipts.write` cannot authorize those paths.
-TASK-181 Pack creation resolves own/company visibility, but current later read/render
-checks only any receipt-read permission plus creator/tenant. A creator downgraded from
-`read_company` to `read_own` can retain a frozen company-wide Pack and original evidence;
-TASK-196 is the P0 repair. Snapshots are creator-only, stable-key sequentially replayed,
-bounded to 5,000 rows and render only after scan, version/hash/content and 250 MB source checks.
-Preview/download/Print return one no-store artifact and append correlated audit without
-mutating Company Receipt state. `expenses_tax` availability is already platform-owned:
+TASK-196 closes the Pack downgrade gap. Pack creation resolves own/company visibility,
+and later metadata read/render passes the current visibility into the domain: a frozen
+company Pack requires current `read_company`, while a frozen own Pack accepts
+`read_own` or `read_company`. Wrong active tenant, cross-tenant and frozen-visibility
+mismatches return the same safe not-found response without disclosing Pack existence.
+Snapshots are creator-only, stable-key sequentially replayed, bounded to 5,000 rows and
+render only after scan, version/hash/content and 250 MB source checks. Preview is audited
+with its preview purpose; download/Print are audited as original-evidence exports and
+return one private no-store artifact without mutating Company Receipt state.
+`expenses_tax` availability is already platform-owned:
 both Master entitlement and Company allocation must be enabled before the API, Demo or
 route/command surface reaches tenant permission evaluation.
 Exact hash duplicates may warn/prevent accidental storage, but

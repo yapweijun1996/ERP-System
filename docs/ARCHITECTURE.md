@@ -291,8 +291,9 @@ and its checkpoint ended at empty-database Platform registration. Current probes
 The next architecture gate is not a new module. TASK-195 now establishes transaction-local
 tenant settings before the first RLS-protected Platform write and separates migration,
 API and worker database roles; its disposable PostgreSQL proof does not replace target-host
-release evidence. Receipt Pack access also does not re-require frozen company visibility
-after permission downgrade. Platform Simulation is an undocumented exception to the
-Support Grant schema invariant and has no MFA/step-up. TASK-196–205 own the remaining
-isolation, privilege, tax/AI correctness, release-evidence and operations gaps; see
+release evidence. TASK-196 now makes Receipt Pack access reapply current visibility to the
+frozen snapshot and records preview versus original-evidence export purpose. Platform
+Simulation is an undocumented exception to the Support Grant schema invariant and has no
+MFA/step-up. TASK-197 and TASK-199–205 own the remaining isolation, privilege, tax/AI
+correctness, release-evidence and operations gaps; see
 [ERP_EXCELLENCE_REVIEW.md](ERP_EXCELLENCE_REVIEW.md).

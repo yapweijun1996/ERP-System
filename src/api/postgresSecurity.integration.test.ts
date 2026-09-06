@@ -87,6 +87,11 @@ import {
   sealTaxEvidencePackWithin,
 } from '../modules/expenses/taxEvidenceGovernance';
 import { createCompanyReceiptWithin } from '../modules/expenses/companyReceipt';
+import {
+  createCompanyReceiptPackWithin,
+  readCompanyReceiptPackWithin,
+  renderCompanyReceiptPackWithin,
+} from '../modules/expenses/companyReceiptPack';
 import { dispatchAction } from './actionDispatcher';
 import { actionDefinitionFor } from './actions';
 
@@ -1112,6 +1117,62 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
       { masterFn: documentScope.masterFn, companyFn: 'CROSS-TENANT' },
       (tx) => tx.select().from(schema.companyReceipt),
     )).toHaveLength(0);
+
+    const postgresCompanyPack = await withTenantTransaction(db, documentScope, (tx) =>
+      createCompanyReceiptPackWithin(tx, documentScope, accepted.userId, 'company', {
+        packKey: 'postgres-company-receipt-pack-0001',
+        dateFrom: '2026-07-26',
+        dateTo: '2026-07-26',
+        locale: 'en',
+      }));
+    expect(postgresCompanyPack.pack).toMatchObject({
+      visibility: 'company',
+      rowCount: 1,
+      documentCount: 1,
+    });
+    expect(await db.select().from(schema.companyReceiptPack)).toHaveLength(0);
+    expect(await withTenantTransaction(
+      db,
+      documentScope,
+      (tx) => tx.select().from(schema.companyReceiptPack),
+    )).toEqual([expect.objectContaining({ id: postgresCompanyPack.pack.id })]);
+    const renderedCompanyPack = await withTenantTransaction(db, documentScope, (tx) =>
+      renderCompanyReceiptPackWithin(
+        tx,
+        documentScope,
+        accepted.userId,
+        'company',
+        postgresCompanyPack.pack.id,
+        'download',
+        documentRegistry,
+      ));
+    expect(renderedCompanyPack.accessPurpose).toBe('receipt_pack_original_evidence_export');
+    const crossTenantScope = { masterFn: documentScope.masterFn, companyFn: 'CROSS-TENANT' };
+    expect(await withTenantTransaction(
+      db,
+      crossTenantScope,
+      (tx) => tx.select().from(schema.companyReceiptPack),
+    )).toHaveLength(0);
+    await expect(withTenantTransaction(db, crossTenantScope, (tx) =>
+      readCompanyReceiptPackWithin(
+        tx,
+        crossTenantScope,
+        accepted.userId,
+        'company',
+        postgresCompanyPack.pack.id,
+      )))
+      .rejects.toMatchObject({ code: 'company_receipt_pack_not_found', status: 404 });
+    await expect(withTenantTransaction(db, crossTenantScope, (tx) =>
+      renderCompanyReceiptPackWithin(
+        tx,
+        crossTenantScope,
+        accepted.userId,
+        'company',
+        postgresCompanyPack.pack.id,
+        'download',
+        documentRegistry,
+      )))
+      .rejects.toMatchObject({ code: 'company_receipt_pack_not_found', status: 404 });
 
     await requestPasswordReset(
       db,

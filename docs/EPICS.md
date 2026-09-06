@@ -2616,8 +2616,10 @@ Current truth:
   check:production-rls` verifies the generated 252-table schema has 222 policy tables
   plus 10 explicit security/control-plane exemptions; this is static coverage evidence,
   not runtime-role or Platform provisioning proof.
-- Receipt Pack read/render does not compare current visibility with frozen visibility;
-  a creator downgraded from company to own read can retain a company-wide snapshot.
+- Receipt Pack read/render now compares current visibility with frozen visibility;
+  company snapshots require current company read, own snapshots allow own/company read,
+  and preview versus original-evidence export is audited with a private no-store artifact
+  (TASK-196 done).
 - Company Receipts has real create/update/void commands, but read-only UI gating,
   detail/edit/void, Missing Date correction and Employee-independent picker UX are not
   complete.
@@ -2634,7 +2636,7 @@ Current truth:
 | --- | --- | --- |
 | TASK-194 | Done | Audit HEAD, correct source-of-truth docs and register hardening work |
 | TASK-195 | Done | Least-privilege runtime roles and RLS-compatible Platform provisioning |
-| TASK-196 | Todo | Receipt Pack visibility downgrade repair and export governance |
+| TASK-196 | Done | Receipt Pack visibility downgrade repair and export governance |
 | TASK-197 | Todo | Permission-aware Company Receipts capture/correction/edit/void UX |
 | TASK-198 | Done | Narrow dual-mode exception, reason/ticket Admin access and explicit no-MFA/no-step-up risk acceptance |
 | TASK-199 | Todo | Restore public availability and prove the deployed revision |

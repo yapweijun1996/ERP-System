@@ -193,9 +193,10 @@ preview or export acceptance.
 Current gaps are deliberately outside TASK-183's Done claim: the confirmation button is
 not capability-hidden, the picker is bounded to the first 100 My Receipts rows and still
 requires Employee Self Service, and there is no Company Receipt detail/edit/void or real
-Missing Date correction UI. Pack read/render also fails to re-require `read_company`
-after a company-wide snapshot creator is downgraded to `read_own`. TASK-196/197/202 own
-the authorization, workflow, lifecycle, Decimal/timezone and Unicode-PDF repairs.
+Missing Date correction UI. TASK-196 now re-requires current visibility for Pack
+metadata/rendering, denies a company Pack after downgrade to `read_own`, and audits the
+preview/export purpose. TASK-197/202 own the remaining workflow, lifecycle,
+Decimal/timezone and Unicode-PDF repairs.
 
 ## Demo platform entitlement foundation
 

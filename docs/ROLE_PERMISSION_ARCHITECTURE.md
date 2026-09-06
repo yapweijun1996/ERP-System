@@ -563,8 +563,10 @@ and platform Superadmin/support receives no tenant business grant. Confirmation/
 update and void use the canonical `.create`, `.edit` and `.void` keys; the transitional
 `employee.receipts.write` key no longer grants a Company Receipt mutation. TASK-181 Pack
 creation and Preview/download/Print reuse the resolved own/company read capability and
-creator-only snapshot scope. `expenses_tax` entitlement is Master enabled AND Company
-allocated before this tenant authorization decision.
+creator-only snapshot scope; TASK-196 additionally requires current visibility to
+dominate a frozen company snapshot and audits the preview/export purpose. `expenses_tax`
+entitlement is Master enabled AND Company allocated before this tenant authorization
+decision.
 
 ## 16. Platform Module Entitlement authority (EPIC-064)
 

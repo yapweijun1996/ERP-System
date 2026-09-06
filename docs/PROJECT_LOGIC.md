@@ -455,14 +455,18 @@ Migration 0093 and `companyReceiptPack.ts` resolve every permission-visible Read
 with a non-null date in the selected inclusive range, independently of UI pagination
 (maximum 5,000), then freeze the filters, chronological receipt/document facts, source
 SHA-256 and exact Decimal totals grouped by currency. A stable `packKey` gives
-fact-matched sequential replay; the creator alone may read/render the snapshot. Current
-routes recheck only any receipt-read grant and the domain rechecks tenant plus creator;
-they do not require current `read_company` for a frozen company Pack after a downgrade.
-TASK-196 owns that P0. Rendering otherwise rechecks document-version/hash identity,
-scan-clean state, content integrity and the 250 MB source limit. `companyReceiptPackPdf.ts` builds an A4
-landscape register, then `documents/evidencePdf.ts` copies all PDF pages, embeds JPEG/PNG
-or emits an explicit unsupported/corrupt evidence placeholder. Preview, download and
-Print use the same no-store artifact and are audited without changing receipt state.
+fact-matched sequential replay; the creator alone may read/render the snapshot. The
+domain receives the current resolved `own | company` visibility on every metadata read
+and render: a frozen `company` Pack requires current `read_company`, while a frozen
+`own` Pack is available with current `read_own` or `read_company`. The frozen snapshot
+is evidence of what was selected, not a permanent authorization grant. TASK-196 closes
+the downgrade and active-tenant gap with safe not-found responses, and the API records
+an explicit preview versus original-evidence-export purpose for render actions.
+Rendering otherwise rechecks document-version/hash identity, scan-clean state, content
+integrity and the 250 MB source limit. `companyReceiptPackPdf.ts` builds an A4 landscape
+register, then `documents/evidencePdf.ts` copies all PDF pages, embeds JPEG/PNG or emits
+an explicit unsupported/corrupt evidence placeholder. Preview, download and Print use
+the same private no-store artifact and are audited without changing receipt state.
 The shared PDF primitive is technical reuse only: Tax Evidence still joins
 `expensePosting`, `expenseClaimLine` and `receiptInboxItem` and is not this business query.
 
