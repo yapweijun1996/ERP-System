@@ -41,6 +41,11 @@ production or physical-device evidence boundaries.
 root as HTTP 200 HTML, but `/release.json`, `/health` and `/api/setup/status` are HTTP 404
 HTML fallbacks. This is static-host availability only, not current revision or API health.
 
+2026-09-07 PDF robustness addendum: Receipt Pack register text now normalizes ASCII control
+characters before Unicode PDF embedding, closing a source-level text-stream edge case. The
+focused Pack tests, typecheck, lint and documentation/link checks pass. This does not change
+the open TASK-202 production download/Print, release or authenticated UAT evidence boundary.
+
 ## Recommended order
 
 - **1. Finish TASK-204's release gate:** obtain qualified tax-owner review of the
