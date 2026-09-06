@@ -50,6 +50,8 @@ download/Print, release or authenticated UAT evidence boundary.
 2026-09-07 release-checklist addendum: the release checklist now records the verified local
 Receipt Pack and Platform workspace gates as complete while keeping production download/Print,
 current-HEAD CI, deployment, scanner/storage UAT and authenticated release evidence open.
+The current rerun also passes the Company Receipts API E2E and both Platform workspace E2E
+flows; these remain disposable/local evidence, not production release proof.
 
 ## Recommended order
 
