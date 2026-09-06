@@ -1,0 +1,9 @@
+Noto Sans CJK is distributed under the Apache License, Version 2.0.
+
+The complete license text is available at:
+https://www.apache.org/licenses/LICENSE-2.0
+
+This repository includes the regular Noto Sans CJK SC font face for
+server-side Company Receipt Pack PDF rendering. The same embedded Unicode
+face is intentionally reused for headings to keep the generated artifact
+bounded and deterministic.

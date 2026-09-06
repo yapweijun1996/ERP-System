@@ -3754,6 +3754,45 @@
     }
     return response;
   }
+  async function companyReceiptPacks(params){
+    requireEffectiveModuleForResource('expenses/company-receipts');
+    params=params||{};
+    var limit=Number(params.limit==null?25:params.limit);
+    var afterId=params.afterId==null?null:Number(params.afterId);
+    if(!Number.isSafeInteger(limit)||limit<1||limit>100||
+      (afterId!=null&&(!Number.isSafeInteger(afterId)||afterId<=0))){
+      throw new Error('Receipt Pack history query is invalid.');
+    }
+    var response=await requireDemoDb().transaction(async function(tx){
+      var orm=state.runtime.createOrm(tx),actorId=myActorUserId();
+      var canReadCompany=await state.runtime.commands.hasPermissionWithin(
+        orm,SCOPE,actorId,'expenses.company_receipts.read_company');
+      var canReadOwn=canReadCompany||await state.runtime.commands.hasPermissionWithin(
+        orm,SCOPE,actorId,'expenses.company_receipts.read_own');
+      if(!canReadOwn) throw new Error('You cannot access Company Receipt Packs.');
+      var paramsSql=[SCOPE.masterFn,SCOPE.companyFn,actorId];
+      var visibility=canReadCompany?"p.visibility in ('own','company')":"p.visibility='own'";
+      var cursor='';
+      if(afterId!=null){paramsSql.push(afterId);cursor=' and p.id < $'+paramsSql.length;}
+      var queryText='select p.* from company_receipt_pack p'
+        +' where p.master_fn=$1 and p.company_fn=$2 and p.created_by_user_id=$3'
+        +' and '+visibility+cursor
+        +' order by p.created_at desc,p.id desc limit '+(limit+1);
+      var result=await tx.query(queryText,paramsSql);
+      var rows=result.rows.map(function(row){return {
+        id:Number(row.id),packKey:row.pack_key,visibility:row.visibility,locale:row.locale,
+        filters:row.filters,rows:row.rows,totals:row.totals,sourceSha256:row.source_sha256,
+        rowCount:Number(row.row_count),documentCount:Number(row.document_count),
+        createdByUserId:Number(row.created_by_user_id),createdAt:row.created_at,
+      };});
+      return {data:rows,meta:{
+        scope:'actor',accessVisibility:canReadCompany?'company':'own',immutableSnapshot:true,
+        limit,nextCursor:rows.length>limit?rows[limit-1].id:null,
+      }};
+    });
+    response.data=response.data.slice(0,limit);
+    return response;
+  }
   async function companyReceiptPackPdf(packId,action){
     requireEffectiveModuleForResource('expenses/company-receipts');
     action=String(action||'view');
@@ -4913,6 +4952,7 @@
     updateCompanyReceipt:updateCompanyReceipt,
     voidCompanyReceipt:voidCompanyReceipt,
     companyReceiptPack:companyReceiptPack,
+    companyReceiptPacks:companyReceiptPacks,
     companyReceiptPackPdf:companyReceiptPackPdf,
     my:my,
     confirmOrder: confirmOrder,

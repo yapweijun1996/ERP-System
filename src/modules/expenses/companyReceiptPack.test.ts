@@ -14,6 +14,7 @@ import { uploadReceiptDocument } from '../documents/upload';
 import { createCompanyReceiptWithin, updateCompanyReceiptWithin } from './companyReceipt';
 import {
   createCompanyReceiptPackWithin,
+  listCompanyReceiptPacksWithin,
   readCompanyReceiptPackWithin,
   renderCompanyReceiptPackWithin,
 } from './companyReceiptPack';
@@ -173,6 +174,29 @@ describe('Company Receipt Pack', () => {
     const ownRendered = await withTenantTransaction(db, sg, (tx) =>
       renderCompanyReceiptPackWithin(tx, sg, viewerId, 'own', ownPack.pack.id, 'download'));
     expect(ownRendered.accessPurpose).toBe('receipt_pack_original_evidence_export');
+
+    const localizedPack = await withTenantTransaction(db, sg, (tx) =>
+      createCompanyReceiptPackWithin(tx, sg, adminId, 'company', {
+        packKey: 'company-receipt-pack:zh-0001',
+        dateFrom: '2026-08-09',
+        dateTo: '2026-08-10',
+        locale: 'zh',
+      }));
+    const localizedRendered = await withTenantTransaction(db, sg, (tx) =>
+      renderCompanyReceiptPackWithin(tx, sg, adminId, 'company', localizedPack.pack.id, 'view'));
+    const localizedPdf = await PDFDocument.load(localizedRendered.content);
+    expect(localizedPdf.getPageCount()).toBeGreaterThanOrEqual(4);
+    expect(Buffer.from(localizedRendered.content).toString('latin1'))
+      .toContain('NotoSansCJKsc-Regular');
+
+    const history = await withTenantTransaction(db, sg, (tx) =>
+      listCompanyReceiptPacksWithin(tx, sg, adminId, 'company', { limit: 2 }));
+    expect(history).toHaveLength(2);
+    expect(history.slice(0, 2).map((pack) => pack.id)).toEqual([
+      localizedPack.pack.id,
+      created.pack.id,
+    ]);
+
     await expect(withTenantTransaction(db, { masterFn: 'M1', companyFn: 'C-MY' }, (tx) =>
       readCompanyReceiptPackWithin(
         tx,
@@ -191,7 +215,7 @@ describe('Company Receipt Pack', () => {
         locale: 'en',
       }));
     expect(replay).toMatchObject({ replayed: true, pack: { id: created.pack.id } });
-    expect(await db.select().from(companyReceiptPack)).toHaveLength(2);
+    expect(await db.select().from(companyReceiptPack)).toHaveLength(3);
   });
 
   it('rejects invalid, empty and actor-inaccessible packs without partial snapshots', async () => {

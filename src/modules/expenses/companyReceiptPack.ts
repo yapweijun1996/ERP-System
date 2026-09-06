@@ -7,8 +7,10 @@ import {
   gte,
   ilike,
   inArray,
+  lt,
   lte,
   or,
+  desc,
 } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
@@ -152,6 +154,40 @@ function accessPurpose(action: CompanyReceiptPackAction): CompanyReceiptPackAcce
     : 'receipt_pack_original_evidence_export';
 }
 
+async function findCompanyReceiptPackWithin(
+  tx: DB,
+  scope: Scope,
+  packKey: string,
+) {
+  const [row] = await tx.select().from(companyReceiptPack).where(and(
+    eq(companyReceiptPack.masterFn, scope.masterFn),
+    eq(companyReceiptPack.companyFn, scope.companyFn),
+    eq(companyReceiptPack.packKey, packKey),
+  )).limit(1);
+  return row;
+}
+
+function replayOrConflict(
+  row: typeof companyReceiptPack.$inferSelect,
+  actorUserId: number,
+  visibility: CompanyReceiptReadVisibility,
+  locale: 'en' | 'ms' | 'zh' | 'ja' | 'vi',
+  filters: CompanyReceiptPackFilters,
+) {
+  const same = row.createdByUserId === actorUserId
+    && row.visibility === visibility
+    && row.locale === locale
+    && sameFilters(row.filters, filters);
+  if (!same) {
+    return fail(
+      'company_receipt_pack_key_conflict',
+      'This Receipt Pack key was already used for different selection facts.',
+      409,
+    );
+  }
+  return { pack: packProjection(row), replayed: true };
+}
+
 /**
  * A Pack is an immutable snapshot, but its frozen visibility is not a
  * permanent authorization grant. Company snapshots require a current
@@ -176,24 +212,9 @@ export async function createCompanyReceiptPackWithin(
   const packKey = safeKey(input.packKey);
   const filters = normalizeFilters(input);
   const locale = normalizedLocale(input.locale);
-  const [existing] = await tx.select().from(companyReceiptPack).where(and(
-    eq(companyReceiptPack.masterFn, scope.masterFn),
-    eq(companyReceiptPack.companyFn, scope.companyFn),
-    eq(companyReceiptPack.packKey, packKey),
-  )).limit(1);
+  const existing = await findCompanyReceiptPackWithin(tx, scope, packKey);
   if (existing) {
-    const same = existing.createdByUserId === actorUserId
-      && existing.visibility === visibility
-      && existing.locale === locale
-      && sameFilters(existing.filters, filters);
-    if (!same) {
-      return fail(
-        'company_receipt_pack_key_conflict',
-        'This Receipt Pack key was already used for different selection facts.',
-        409,
-      );
-    }
-    return { pack: packProjection(existing), replayed: true };
+    return replayOrConflict(existing, actorUserId, visibility, locale, filters);
   }
 
   const predicates = [
@@ -286,8 +307,49 @@ export async function createCompanyReceiptPackWithin(
     documentCount: rows.length,
     createdByUserId: actorUserId,
     createdAt: now,
+  }).onConflictDoNothing({
+    target: [companyReceiptPack.masterFn, companyReceiptPack.companyFn, companyReceiptPack.packKey],
   }).returning();
+  if (!created) {
+    // The initial read and the insert are intentionally separate because the
+    // selected receipt rows must be frozen in the same transaction. A second
+    // request can win the unique-key race after the initial read; turn that
+    // race into the same deterministic replay/conflict contract as a normal
+    // retry instead of leaking a database unique-violation response.
+    const raced = await findCompanyReceiptPackWithin(tx, scope, packKey);
+    if (!raced) {
+      return fail(
+        'company_receipt_pack_conflict_unresolved',
+        'The Receipt Pack key was claimed concurrently but its snapshot is unavailable.',
+        409,
+      );
+    }
+    return replayOrConflict(raced, actorUserId, visibility, locale, filters);
+  }
   return { pack: packProjection(created), replayed: false };
+}
+
+export async function listCompanyReceiptPacksWithin(
+  tx: DB,
+  scope: Scope,
+  actorUserId: number,
+  currentVisibility: CompanyReceiptReadVisibility,
+  input: { limit: number; afterId?: number | null },
+) {
+  const predicates = [
+    eq(companyReceiptPack.masterFn, scope.masterFn),
+    eq(companyReceiptPack.companyFn, scope.companyFn),
+    eq(companyReceiptPack.createdByUserId, actorUserId),
+    currentVisibility === 'company'
+      ? or(eq(companyReceiptPack.visibility, 'own'), eq(companyReceiptPack.visibility, 'company'))!
+      : eq(companyReceiptPack.visibility, 'own'),
+  ];
+  if (input.afterId != null) predicates.push(lt(companyReceiptPack.id, input.afterId));
+  const rows = await tx.select().from(companyReceiptPack)
+    .where(and(...predicates))
+    .orderBy(desc(companyReceiptPack.createdAt), desc(companyReceiptPack.id))
+    .limit(input.limit + 1);
+  return rows.map(packProjection);
 }
 
 export async function readCompanyReceiptPackWithin(

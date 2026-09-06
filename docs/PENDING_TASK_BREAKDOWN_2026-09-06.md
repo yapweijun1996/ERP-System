@@ -5,7 +5,7 @@ This is the actionable view of every non-Done task currently registered in
 tests are implementation evidence, while deployment, CI, production configuration and
 physical-device checks remain separate evidence classes.
 
-Current registry: **204 Done / 2 In Progress / 3 Todo / 4 Blocked / 213 Total**.
+Current registry: **204 Done / 3 In Progress / 2 Todo / 4 Blocked / 213 Total**.
 
 ## Recommended order
 
@@ -16,8 +16,9 @@ Current registry: **204 Done / 2 In Progress / 3 Todo / 4 Blocked / 213 Total**.
 - **3. Close the Platform chain in dependency order:** TASK-209 remains the release proof
   after TASK-203/external deployment evidence. TASK-206's hidden actor/session foundation,
   TASK-207 authorization proof and TASK-208 browser/workspace proof are now done.
-- **4. Complete operational/artifact depth (TASK-201/TASK-202/TASK-205); TASK-205 source
-  failure evidence is now in progress, with production gateway evidence still open.**
+- **4. Complete operational/artifact depth (TASK-201/TASK-202/TASK-205); TASK-202 now has
+  source-level concurrency/history/Unicode/Decimal hardening, while lifecycle/timezone and
+  production evidence remain open. TASK-205 source failure evidence is also in progress.**
 - **5. Keep human-owned blockers separate:** TASK-017 needs a physical phone and TASK-193
   needs production SMTP/mail delivery.
 
@@ -127,12 +128,16 @@ Current registry: **204 Done / 2 In Progress / 3 Todo / 4 Blocked / 213 Total**.
     reporting backlog and dead-letter metrics, and representative 100–800 GB query/load
     budgets. Checkpoint/runbooks must be source-controlled and reviewed.
 
-- **TASK-202 — Todo — Receipt Pack lifecycle, concurrency and localization**
+- **TASK-202 — In Progress — Receipt Pack lifecycle, concurrency and localization**
   - Depends on: `TASK-196`, `TASK-197`.
-  - Add concurrency-safe idempotency/conflict semantics, list/history, retention,
-    legal-hold/purge/tombstone behavior, locale-aware Unicode PDF/fonts, Decimal-safe UI
-    amounts, Company-calendar presets, HEIC/unsupported-original behavior and verified
-    download/print semantics.
+  - Source slice completed 2026-09-07: unique-key insert races converge to deterministic
+    replay/409 behavior; actor-scoped paginated history is available in API and Demo
+    adapters; receipt amount display avoids Number() conversion; localized register
+    labels/content cover en/ms/zh/ja/vi with an embedded Noto Sans CJK font; unsupported
+    originals keep an explicit identity placeholder.
+  - Remaining action: add Pack retention expiry, legal-hold/purge/tombstone commands and
+    tests; derive presets from the configured Company calendar/timezone; run disposable
+    PostgreSQL concurrency evidence and authenticated download/Print/browser checks.
 
 - **TASK-205 — In Progress — governed Vision failure and production boundaries**
   - Depends on: `TASK-119`, `TASK-194`.

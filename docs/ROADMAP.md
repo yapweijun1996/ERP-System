@@ -1251,8 +1251,10 @@ more module breadth. The source-backed review is
    TASK-200 is source-closed: all 129 Canonical routes declare API metadata and the
    current screen, i18n, access-matrix and Staff Calendar/API evidence has been rerun.
 6. **Operational/artifact quality** (TASK-201/202): establish SLO/RPO/RTO, timed restore
-   and scale/worker monitoring; then add Pack lifecycle, concurrency-safe idempotency,
-   Unicode localization, Decimal-safe amounts and Company-calendar presets.
+   and scale/worker monitoring. TASK-202 source hardening now covers conflict convergence,
+   actor-scoped history, localized Unicode PDF labels/content and Decimal-safe amounts;
+   Pack retention/legal-hold/purge/tombstone, Company-calendar presets and production
+   concurrency/download/Print evidence remain.
 7. **Tax and governed AI correctness** (TASK-204/205): TASK-204 source hardening now
    unifies exclusive `valid_to`, dispatches SG GST/MY SST posting by governed
    classification and prohibits default recoverable MY input tax. Its production

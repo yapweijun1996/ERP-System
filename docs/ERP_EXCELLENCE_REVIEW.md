@@ -142,7 +142,9 @@ configuration and tax-owner release proof.
   (TASK-201).
 - Give Receipt Packs concurrency-safe idempotency, history/retention/legal hold/purge,
   localized Unicode PDF, Decimal-safe browser formatting and Company-calendar date
-  presets (TASK-202).
+  presets (TASK-202). The 2026-09-07 source slice now covers conflict convergence,
+  actor-scoped history, embedded Unicode rendering and Decimal-safe display; retention/
+  legal-hold/purge, timezone and production artifact evidence remain.
 - Directly test Vision gateway/provider failures and make retry/manual/local fallback
   explicit; current encrypted connector support is not proof of a configured production
   provider, region or account (TASK-205).

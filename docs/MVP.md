@@ -117,7 +117,9 @@ disposable PostgreSQL 16 database are browser-proven. TASK-192 later deployed mi
 through 0098 and reset production to first-run state; no authenticated production receipt
 UAT is claimed. TASK-196 closes the Pack authorization downgrade and export-purpose
 audit gap; TASK-197 closes the correction/edit/void UX and eligible-evidence picker, while
-TASK-202 owns the remaining artifact-governance gaps.
+TASK-202 now has source-level conflict convergence, history, localized Unicode PDF rendering
+and Decimal-safe amount display; retention/legal-hold/purge/tombstone, Company-calendar
+timezone and production artifact evidence remain as the open artifact-governance gaps.
 Expense accounting, Tax
 Treatment, automated Tax Evidence, Employee Reimbursement and MyInvois remain future
 or optional phases and are not v1 exit criteria.

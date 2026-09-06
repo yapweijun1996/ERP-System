@@ -1031,6 +1031,14 @@
     companyReceiptPack:function(payload){
       return apiRequest('company-receipts/packs',{method:'POST',body:payload||{}});
     },
+    companyReceiptPacks:function(params){
+      params=params||{};
+      var query=new URLSearchParams();
+      if(params.limit!=null) query.set('limit',String(params.limit));
+      if(params.afterId!=null) query.set('afterId',String(params.afterId));
+      var suffix=query.toString()?('?'+query.toString()):'';
+      return apiRequest('company-receipts/packs'+suffix);
+    },
     companyReceiptPackPdf:async function(packId,action){
       var response=await apiFetch(API_BASE+'/company-receipts/packs/'+
         encodeURIComponent(packId)+'/pdf?action='+encodeURIComponent(action||'view'),{

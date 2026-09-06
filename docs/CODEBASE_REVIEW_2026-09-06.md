@@ -7,6 +7,11 @@ hardening in progress. Source and tests are the implementation truth; [STATUS.md
 [ERP excellence review](ERP_EXCELLENCE_REVIEW.md) is retained as a dated historical
 baseline.
 
+Addendum reviewed 2026-09-07: TASK-202 now has source-level Pack conflict convergence,
+actor-scoped history, localized Unicode PDF rendering and Decimal-safe browser amounts;
+its retention/legal-hold/purge/tombstone, Company-calendar and production evidence remain
+open.
+
 ## Current verified baseline
 
 - The source contains **102 ordered migrations through schema version 101**, **252
@@ -20,7 +25,7 @@ baseline.
   and Demo showcase-pack verification. The current `test:e2e:setup-wizard` also passes
   desktop, iPhone-width and small-mobile layout checks. These checks do not prove live
   PostgreSQL provisioning, public deployment, or GitHub Actions execution.
-- The task registry currently reports **204 Done / 2 In Progress / 3 Todo / 4
+- The task registry currently reports **204 Done / 3 In Progress / 2 Todo / 4
   Blocked / 213 Total**. The actionable boundary is concentrated in TASK-199–205 and
   EPIC-067/TASK-209; the blocked items are external or operational, not silently
   treated as code failures.
@@ -127,10 +132,14 @@ baseline.
     Staff Calendar API integration suite passes 6/6 tests.
 
 - **TASK-202 — Receipt Pack lifecycle is not yet a complete governed artifact.**
-  - **Action:** after TASK-196, define concurrent idempotency behavior, list/history,
-    retention/legal-hold/purge rules, locale-aware Unicode PDF rendering, Decimal-safe
-    UI amounts and company-calendar date presets. Add regression tests for replay,
-    concurrent access and artifact/source hash integrity.
+  - **Source action completed 2026-09-07:** unique-key insert races now converge to
+    deterministic replay/409 behavior; actor-scoped bounded history is available through
+    API/Demo; receipt amount display avoids Number conversion; locale labels/content use
+    en/ms/zh/ja/vi resources and an embedded Noto Sans CJK font; unsupported originals
+    retain an identity placeholder.
+  - **Remaining action:** define/test retention expiry, legal-hold/purge/tombstone behavior
+    and Company-calendar timezone presets, then run disposable PostgreSQL concurrency and
+    authenticated download/Print/browser evidence.
 
 - **TASK-201 — Production operations lack measurable SLO/DR proof.**
   - **Action:** define availability/error/latency SLOs, RPO/RTO, backup retention and
@@ -182,8 +191,11 @@ baseline.
   API integration tests (4), and PostgreSQL security tests (1) on disposable PostgreSQL
   16, including downgrade, revoked-read, active-tenant, cross-tenant, export-audit and
   no-store assertions.
-- The current full Vitest baseline completed with **171 passed files / 2 skipped files** and
-  **683 passed tests / 2 skipped tests**. The additional file/tests cover tax
+- TASK-202 focused source proof passes 2 Pack test cases, including localized Unicode font
+  embedding and actor-scoped history; root/Web typecheck, lint, `build:demo`, `demo` and
+  diff check pass.
+- The current full Vitest baseline completed with **172 passed files / 2 skipped files** and
+  **694 passed tests / 2 skipped tests**. The additional file/tests cover tax
   classification and the exclusive Expense policy boundary. CI, current public health,
   exact deployed revision, production tax-owner approval, physical-device behavior,
   SMTP/Vision configuration and dead-letter operations remain unverified. The focused

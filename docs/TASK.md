@@ -1,6 +1,6 @@
 # Task Index
 
-Reviewed: **2026-09-06**
+Reviewed: **2026-09-07**
 
 The machine-readable task source of truth is
 [`../tasks/tasks.jsonl`](../tasks/tasks.jsonl). This file is a human-readable index,
@@ -9,8 +9,8 @@ not a second task registry.
 ## Current totals
 
 - Done: **204**
-- In progress: **2**
-- Todo: **3**
+- In progress: **3**
+- Todo: **2**
 - Blocked: **4**
 - Total: **213**
 
@@ -21,7 +21,7 @@ through 0101, schema v101/252 tables, 129 Canonical / 0 Preview routes, 129 rout
 API mode, 1,725 English i18n keys/72 local packs, 315 permission codes and PWA v263. HEAD
 collects 170 files / 666
 tests at the prior audit. The final EPIC-067 worktree instead passes the full local
-Vitest run at 171 files / 683 tests with two intentional skips. Current source
+Vitest run at 172 files / 694 tests with two intentional skips. Current source
 also passes typechecks, lint, API/Demo builds, generated schema/drift/permission checks,
 2 focused Platform files / 15 tests, 2 disposable PostgreSQL files / 2 tests, Staff Calendar API integration 6/6, Staff Calendar
 Demo E2E, Platform layout E2E with both tenant modes, Demo autofill E2E, the
@@ -125,7 +125,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-199 | Todo | Restore public availability and prove exact deployed revision |
 | TASK-200 | Done | Resolve 129/129 route parity and rerun current HEAD release evidence |
 | TASK-201 | Todo | Production SLO, scale, worker monitoring and RPO/RTO proof |
-| TASK-202 | Todo | Receipt Pack lifecycle, concurrency, Decimal/timezone and Unicode i18n |
+| TASK-202 | In progress | Receipt Pack concurrency/history, localized Unicode PDF and Decimal-safe UI; lifecycle/timezone evidence remains |
 | TASK-203 | Blocked | GitHub Actions billing/spending prevents every job from starting |
 | TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |
 | TASK-205 | In progress | Direct Vision gateway failure, revoked-connector, retry/manual-review and no-fallback proof; production configuration remains |
@@ -140,7 +140,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-208 | Done | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation, exact Employee integration and five-language browser proof |
 | TASK-209 | Blocked | PostgreSQL/RLS, CI, release, documentation and KB proof; blocked by TASK-203 and deployed/production evidence |
 
-The registry therefore has **204 Done / 2 In progress / 3 Todo / 4 Blocked / 213 Total**.
+The registry therefore has **204 Done / 3 In progress / 2 Todo / 4 Blocked / 213 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery), TASK-203 (CI
 billing) and TASK-209 (release proof waiting for TASK-203/deployed-production evidence). Dependencies and
 epic references are valid.
@@ -185,8 +185,10 @@ dated TASK-183 evidence, not a HEAD rerun. TASK-192 later deployed migrations th
 0098 and reset the target to first-run state; no authenticated production receipt UAT is
 claimed. TASK-196 is now done: Pack reads/renders revalidate current visibility against
 the frozen snapshot, and Preview versus original-evidence export purpose is audited.
-TASK-202 owns the remaining Pack lifecycle and localization gaps; TASK-197 is done with
-the upload/capture boundary explicitly retained in My Receipts.
+TASK-202 now has source-level Pack conflict convergence, actor-scoped history, localized
+Unicode PDF rendering and Decimal-safe display; retention/legal-hold/purge/tombstone,
+Company-calendar timezone and production artifact evidence remain open. TASK-197 is done
+with the upload/capture boundary explicitly retained in My Receipts.
 
 ## Latest implementation milestones
 

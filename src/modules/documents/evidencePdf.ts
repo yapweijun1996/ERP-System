@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
 
 export interface EvidencePdfDocument {
   fileName: string;
@@ -12,18 +13,25 @@ export interface EvidencePdfOptions {
   createdAt: Date;
   leadingPdf?: Uint8Array;
   emptyMessage?: string;
+  fontBytes?: Uint8Array;
 }
 
-function printable(value: string): string {
+function printable(value: string, unicode = false): string {
+  if (unicode) {
+    return [...value].filter((character) => {
+      const code = character.codePointAt(0) ?? 0;
+      return code >= 32 && code !== 127;
+    }).join('');
+  }
   return [...value].map((character) => {
     const code = character.codePointAt(0) ?? 0;
     return code >= 32 && code <= 126 ? character : '?';
   }).join('');
 }
 
-function wrapText(value: string, width: number): string[] {
+function wrapText(value: string, width: number, unicode = false): string[] {
   const result: string[] = [];
-  let remaining = printable(value);
+  let remaining = printable(value, unicode);
   while (remaining.length > width) {
     result.push(remaining.slice(0, width));
     remaining = remaining.slice(width);
@@ -37,17 +45,18 @@ async function placeholderEvidencePage(
   font: Awaited<ReturnType<PDFDocument['embedFont']>>,
   document: Pick<EvidencePdfDocument, 'fileName' | 'mimeType' | 'sha256'>,
   message = 'Original evidence format cannot be embedded in this PDF.',
+  unicode = false,
 ) {
   const page = pdf.addPage([595, 842]);
-  page.drawText(printable(message), { x: 45, y: 785, size: 14, font });
+  page.drawText(printable(message, unicode), { x: 45, y: 785, size: 14, font });
   let y = 750;
-  for (const line of wrapText(`File: ${document.fileName}`, 75)) {
+  for (const line of wrapText(`File: ${document.fileName}`, 75, unicode)) {
     page.drawText(line, { x: 45, y, size: 10, font });
     y -= 15;
   }
-  page.drawText(printable(`MIME: ${document.mimeType}`), { x: 45, y, size: 10, font });
+  page.drawText(printable(`MIME: ${document.mimeType}`, unicode), { x: 45, y, size: 10, font });
   y -= 18;
-  for (const line of wrapText(`SHA-256: ${document.sha256}`, 75)) {
+  for (const line of wrapText(`SHA-256: ${document.sha256}`, 75, unicode)) {
     page.drawText(line, { x: 45, y, size: 9, font });
     y -= 14;
   }
@@ -66,7 +75,12 @@ export async function renderEvidencePdf(
   pdf.setAuthor('Aria ERP');
   pdf.setCreationDate(options.createdAt);
   pdf.setModificationDate(options.createdAt);
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  if (options.fontBytes) pdf.registerFontkit(fontkit);
+  const unicode = Boolean(options.fontBytes);
+  let font: Awaited<ReturnType<PDFDocument['embedFont']>> | null = null;
+  const getFont = async () => font ??= await pdf.embedFont(
+    options.fontBytes ?? StandardFonts.Helvetica,
+  );
 
   if (options.leadingPdf) {
     const leading = await PDFDocument.load(options.leadingPdf, {
@@ -107,24 +121,25 @@ export async function renderEvidencePdf(
           height: size.height,
         });
       } else {
-        await placeholderEvidencePage(pdf, font, document);
+        await placeholderEvidencePage(pdf, await getFont(), document, undefined, unicode);
       }
     } catch {
       await placeholderEvidencePage(
         pdf,
-        font,
+        await getFont(),
         document,
         'Original evidence could not be embedded; identity is preserved below.',
+        unicode,
       );
     }
   }
 
   if (!pdf.getPageCount()) {
-    await placeholderEvidencePage(pdf, font, {
+    await placeholderEvidencePage(pdf, await getFont(), {
       fileName: 'No evidence',
       mimeType: 'application/octet-stream',
       sha256: '0'.repeat(64),
-    }, options.emptyMessage ?? 'No evidence was supplied.');
+    }, options.emptyMessage ?? 'No evidence was supplied.', unicode);
   }
   return pdf.save({ useObjectStreams: false });
 }

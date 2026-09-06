@@ -2644,7 +2644,7 @@ Current truth:
 | TASK-199 | Todo | Restore public availability and prove the deployed revision |
 | TASK-200 | Done | Resolve 129/129 route parity and rerun current HEAD release evidence |
 | TASK-201 | Todo | Production SLO, scale, worker observability and RPO/RTO restore proof |
-| TASK-202 | Todo | Receipt Pack lifecycle, concurrency, Decimal/timezone and Unicode i18n |
+| TASK-202 | In progress | Receipt Pack conflict convergence/history, localized Unicode PDF and Decimal-safe UI; lifecycle/timezone evidence remains |
 | TASK-203 | Blocked | GitHub Actions cannot start until billing/spending is restored |
 | TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |
 | TASK-205 | In progress | Direct Vision gateway failure, revoked-connector, retry/manual-review and no-fallback proof; production configuration remains |

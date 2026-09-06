@@ -41,6 +41,16 @@
     if(value==='thisYear') return [`${year}-01-01`,`${year}-12-31`];
     return [null,null];
   }
+  function receiptMoney(value,currency){
+    const raw=String(value??'').trim();
+    if(!/^-?\d+(?:\.\d+)?$/.test(raw)) return '—';
+    const negative=raw.startsWith('-'),unsigned=negative?raw.slice(1):raw;
+    const parts=unsigned.split('.'),integer=parts[0].replace(/^0+(?=\d)/,'')||'0';
+    const fraction=(parts[1]||'').padEnd(2,'0').slice(0,2);
+    const grouped=integer.replace(/\B(?=(\d{3})+(?!\d))/g,',');
+    const symbol={SGD:'S$',MYR:'RM',USD:'$'}[currency]||(currency||'')+' ';
+    return (negative?'-':'')+symbol+grouped+'.'+fraction;
+  }
 
   SCREENS['company-receipts']=async function(root){
     const c=copy();
@@ -267,7 +277,7 @@
         {key:'merchant',label:c.merchant,primary:true},
         {key:'receiptNumber',label:c.number,render:row=>esc(row.receiptNumber||'—')},
         {key:'category',label:c.category},
-        {key:'amount',label:c.amount,numeric:true,render:row=>esc(money(Number(row.amount),row.currency))},
+        {key:'amount',label:c.amount,numeric:true,render:row=>esc(receiptMoney(row.amount,row.currency))},
         {key:'currency',label:c.currency},
         {key:'uploaderName',label:c.uploader,render:row=>esc(row.uploaderName||String(row.uploaderUserId||'—'))},
         {key:'status',label:c.status,render:row=>`<span class="badge ${statusTone(row.status)}">${esc(statusLabel(row.status))}</span>`},

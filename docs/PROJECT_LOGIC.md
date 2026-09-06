@@ -478,6 +478,12 @@ and render: a frozen `company` Pack requires current `read_company`, while a fro
 is evidence of what was selected, not a permanent authorization grant. TASK-196 closes
 the downgrade and active-tenant gap with safe not-found responses, and the API records
 an explicit preview versus original-evidence-export purpose for render actions.
+As of 2026-09-07, TASK-202 source hardening makes the unique Pack key race converge to
+deterministic replay or 409 conflict, exposes actor-scoped descending history with bounded
+cursor pagination, keeps browser receipt amounts as validated decimal strings, and renders
+localized register labels/content for en/ms/zh/ja/vi with an embedded Noto Sans CJK face.
+Retention expiry, legal-hold/purge/tombstone commands, Company-calendar timezone presets and
+production concurrency/download/Print evidence remain open.
 Rendering otherwise rechecks document-version/hash identity, scan-clean state, content
 integrity and the 250 MB source limit. `companyReceiptPackPdf.ts` builds an A4 landscape
 register, then `documents/evidencePdf.ts` copies all PDF pages, embeds JPEG/PNG or emits

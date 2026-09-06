@@ -15,6 +15,7 @@ import {
 import {
   CompanyReceiptPackError,
   createCompanyReceiptPackWithin,
+  listCompanyReceiptPacksWithin,
   readCompanyReceiptPackWithin,
   renderCompanyReceiptPackWithin,
   type CompanyReceiptPackAction,
@@ -254,6 +255,45 @@ export function createCompanyReceiptsRouter(db: DB): Router {
           limit,
           nextCursor: hasMore ? data[data.length - 1]?.id ?? null : null,
           filters: { search },
+        },
+      });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.get('/packs', async (req, res) => {
+    const access = await requireReceiptReadAccess(req, res);
+    if (!access) return;
+    const limit = req.query.limit == null ? 25 : Number(req.query.limit);
+    const afterId = req.query.afterId == null ? null : positiveId(req.query.afterId);
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100
+      || (req.query.afterId != null && afterId == null)) {
+      apiError(
+        res,
+        400,
+        'company_receipt_pack_history_query_invalid',
+        'Use limit 1-100 and a positive afterId.',
+      );
+      return;
+    }
+    const { session, visibility } = access;
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const rows = await withTenantTransaction(db, scope, (tx) =>
+        listCompanyReceiptPacksWithin(tx, scope, session.userId, visibility, {
+          limit, afterId,
+        }));
+      const hasMore = rows.length > limit;
+      const data = rows.slice(0, limit);
+      res.json({
+        data,
+        meta: {
+          scope: 'actor',
+          accessVisibility: visibility,
+          immutableSnapshot: true,
+          limit,
+          nextCursor: hasMore ? data[data.length - 1]?.id ?? null : null,
         },
       });
     } catch (error) {
