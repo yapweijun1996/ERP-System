@@ -59,6 +59,11 @@ same bounded-failure shape as document processing: five automatic attempts by de
 integration-event status. The focused outbox suite passes 3/3; production SMTP, alerting
 and operator recovery remain TASK-193/TASK-201 evidence rather than local claims.
 
+2026-09-07 full-regression addendum: after the auth outbox change, `npm test
+-- --reporter=dot` passes 172 files / 699 tests with two intentional file/test skips.
+The malformed-JSON, locale-503 and unsafe-markup stderr lines are expected assertions;
+they did not fail the suite. This updates the previous 697-test local baseline.
+
 ## Recommended order
 
 - **1. Finish TASK-204's release gate:** obtain qualified tax-owner review of the

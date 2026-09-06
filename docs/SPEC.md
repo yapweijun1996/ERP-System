@@ -279,7 +279,7 @@ pass. HEAD collected 170 files / 666 tests but the full collection was not execu
 that review. Earlier 168-file/663-test, browser-matrix, PostgreSQL and deployment results
 remain dated checkpoints. Current HEAD evidence (2026-09-07) is recorded in `STATUS.md`:
 schema v103/104 migrations/255 tables and the full local Vitest collection passes 172
-files / 697 tests with two intentional skips. Current public `/health` and setup probes
+files / 699 tests with two intentional skips. Current public `/health` and setup probes
 remain a separate production evidence boundary; the historical zero-step GitHub Actions
 run was billing-blocked. The latest CI run `34017037310` did execute
 but failed the i18n browser matrix on `timesheet: Projects`; the local `route.project-pl`

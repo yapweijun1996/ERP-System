@@ -21,7 +21,7 @@ through 0103, schema v103/255 tables, 129 Canonical / 0 Preview routes, 129 rout
 API mode, 1,726 English i18n keys/72 local packs, 315 permission codes and PWA v263. HEAD
 collects 170 files / 666
 tests at the prior audit. The final EPIC-067 worktree instead passes the full local
-Vitest run at 172 files / 697 tests with two intentional skips. Current source
+Vitest run at 172 files / 699 tests with two intentional skips. Current source
 also passes typechecks, lint, API/Demo builds, generated schema/drift/permission checks,
 2 focused Platform files / 15 tests, 2 disposable PostgreSQL files / 2 tests, Staff Calendar API integration 6/6, Staff Calendar
 Demo E2E, Platform layout E2E with both tenant modes, Demo autofill E2E, the

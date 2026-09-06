@@ -225,7 +225,7 @@ matrices now pass locally. A fresh remote run for the current local HEAD remains
   actor-scoped history; root/Web typecheck, lint, `build:demo`, `demo`, schema/RLS drift
   checks and the authenticated Company Receipts browser E2E pass.
 - The current full Vitest baseline completed with **172 passed files / 2 skipped files** and
-  **697 passed tests / 2 skipped tests**. The current additions cover tax classification,
+  **699 passed tests / 2 skipped tests**. The current additions cover tax classification,
   the exclusive Expense policy boundary and bounded document-processing dead-letter/requeue
   behavior. CI, current public health, exact deployed revision, production tax-owner
   approval, physical-device behavior, SMTP/Vision configuration and live dead-letter
