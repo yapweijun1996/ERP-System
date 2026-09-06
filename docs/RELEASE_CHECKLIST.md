@@ -37,9 +37,9 @@ For the current source-backed action backlog and evidence boundaries, see
       allowance.
 - [x] `npm run audit:pwa-update` — PWA update lifecycle audit passes; physical-device
       acceptance remains TASK-017 and is not satisfied by emulated 375 px.
-- [x] `npm run audit:i18n` — 2026-09-07 passed the full 129 × 5 language × 2 viewport
-      browser matrix with no blocking findings; static resources are 1,725 keys / 72
-      packs.
+- [x] `npm run audit:i18n` — 2026-09-07 exact CI-equivalent desktop and mobile runs
+      each passed 129 × 5 languages with no blocking findings; static resources are
+      1,726 keys / 72 packs.
 - [x] `npm run test:e2e:platform-workspace-layout` — 2026-09-07 passed isolated PGlite
       desktop/tablet/mobile Platform workspace, separate Admin/Employee modes, focus and
       overflow checks plus the focused five-language Platform workspace matrix.
@@ -49,12 +49,14 @@ For the current source-backed action backlog and evidence boundaries, see
 - [x] `npm run check:permissions` and `npm run audit:access-matrix` — 2026-09-06 passed
       the permission registry at 315/116/62/5 and the serial 59-route × 13-template
       browser access audit. This is local evidence, not production authorization proof.
-- [x] `tasks/tasks.jsonl` statuses current: 204 Done / 2 In progress / 3 Todo / 4
-      Blocked / 213 Total. Blockers are TASK-017, TASK-193, TASK-203 and TASK-209;
-      TASK-204 remains In progress until tax-owner production review and TASK-205 remains
+- [x] `tasks/tasks.jsonl` statuses current: 204 Done / 4 In progress / 2 Todo / 3
+      Blocked / 213 Total. Blockers are TASK-017, TASK-193 and TASK-209;
+      TASK-203 remains In Progress until a fresh current-HEAD remote CI result, TASK-204 remains In progress until tax-owner production review and TASK-205 remains
       In progress until production Vision/dead-letter evidence is recorded.
-- [ ] GitHub Actions actually executes current HEAD. Run `31603746668` started zero jobs
-      due account billing/spending; TASK-203 is not a green CI result.
+- [ ] GitHub Actions actually executes current HEAD with every required gate green. Run
+      `34017037310` executed its jobs but failed the i18n matrix on `timesheet: Projects`;
+      the `route.project-pl` locale fix passes exact desktop/mobile locally, and TASK-203
+      still needs a fresh current-HEAD remote run.
 - [x] 2026-08-12 current-worktree secret baseline: the tracked diff and `web/dist`
       contain no known provider/token/private-key signature; high-entropy diff strings
       were classified as document, route, module, DOM/i18n or deterministic-test values.

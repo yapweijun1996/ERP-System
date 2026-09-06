@@ -1181,6 +1181,7 @@
   "route.service-contracts": "服务合同",
   "route.depreciation": "折旧运行",
   "route.project-detail": "项目详情",
+  "route.project-pl": "项目",
   "route.timesheet": "工时表",
   "route.integration-logs": "集成日志",
   "route.data-import": "数据导入",

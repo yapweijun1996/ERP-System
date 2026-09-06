@@ -123,7 +123,7 @@ incomplete feature may be introduced only as an explicitly labelled `Preview · 
 Data` or `Preview · Canonical Data` route, with write-like actions disabled until its
 schema, resource/command, permission, tests and localization are complete.
 
-Current source inventory (2026-09-07) is 129/0 routes, 1,725 English keys and 72 local
+Current source inventory (2026-09-07) is 129/0 routes, 1,726 English keys and 72 local
 five-language packs. The current HEAD reran the complete 129-route desktop/375px and
 five-language browser matrix with no blocking findings; API-mode browser and physical-
 device evidence remain separate release gates.
@@ -252,7 +252,7 @@ controls exist.
 - **i18n:** every system-authored browser UI string uses the en/ms/zh/ja/vi i18n
   layer. The current Web preference is browser-local (`aria-lang`), defaults to
   English and is orthogonal to company country. `app_user.language` remains reserved
-  for compatibility and is not currently wired. Current inventory is 1,725 English
+  for compatibility and is not currently wired. Current inventory is 1,726 English
   keys / 72 local packs; the current 129-route × 5-language × 2-viewport browser
   matrix passes.
   Business-record values remain outside system-authored UI copy. ([I18N.md](I18N.md))
@@ -280,8 +280,11 @@ that review. Earlier 168-file/663-test, browser-matrix, PostgreSQL and deploymen
 remain dated checkpoints. Current HEAD evidence (2026-09-07) is recorded in `STATUS.md`:
 schema v102/103 migrations/255 tables and the full local Vitest collection passes 172
 files / 696 tests with two intentional skips. Current public `/health` and setup probes
-remain a separate production evidence boundary; the HEAD GitHub Actions run started no
-jobs because billing/spending blocked it. Physical-device PWA acceptance remains a
+remain a separate production evidence boundary; the historical zero-step GitHub Actions
+run was billing-blocked. The latest CI run `34017037310` did execute
+but failed the i18n browser matrix on `timesheet: Projects`; the local `route.project-pl`
+fix passes exact desktop/mobile matrices, and a current-HEAD remote rerun remains pending.
+Physical-device PWA acceptance remains a
 separate human gate.
 
 ## EPIC-059 employee access and customer onboarding

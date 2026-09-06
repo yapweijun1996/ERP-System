@@ -35,11 +35,14 @@ decision semantics.
 The 0098 reset/release paragraphs below are immutable historical checkpoints. They are
 not proof that HEAD `00e2533` is deployed or that the service is currently healthy.
 Public `/health` and `/api/setup/status` probes returned HTTP 502 during TASK-194. The
-latest HEAD workflow run `31603746668` started zero jobs because GitHub reported failed
-account payment or an exhausted spending limit. Later source adds Platform Demo quick
-login, password visibility, responsive containment and safe existing-Company resume,
-but no current deployed revision/asset hash was independently proven. TASK-199 owns
-availability and revision proof; TASK-203 owns the external CI blocker.
+historical HEAD workflow run `31603746668` started zero jobs because GitHub reported
+failed account payment or an exhausted spending limit. Latest CI run `34017037310` did
+execute all four Vitest shards and the typecheck/transaction/build job, but failed the
+i18n browser matrix on `timesheet: Projects`; the local `route.project-pl` fix passes
+exact desktop/mobile matrices and needs a fresh current-HEAD remote run. Later source
+adds Platform Demo quick login, password visibility, responsive containment and safe
+existing-Company resume, but no current deployed revision/asset hash was independently
+proven. TASK-199 owns availability/revision proof; TASK-203 owns current-HEAD CI proof.
 
 Final-review user-owned worktree edits further refactor that resume behavior into an
 explicit presentation state machine and extend its E2E assertions. They are uncommitted,

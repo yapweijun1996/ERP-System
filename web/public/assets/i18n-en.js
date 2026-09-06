@@ -1182,6 +1182,7 @@ window.__ERP_I18N_EN__=Object.freeze({
   "route.service-contracts": "Service Contracts",
   "route.depreciation": "Depreciation Run",
   "route.project-detail": "Project Detail",
+  "route.project-pl": "Projects",
   "route.timesheet": "Timesheets",
   "route.integration-logs": "Integration Logs",
   "route.data-import": "Data Import",

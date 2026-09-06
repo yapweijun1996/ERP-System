@@ -150,13 +150,15 @@ Acceptance criteria:
 - [x] Docs stay aligned with package scripts and deployment assets — actively kept
       current through TASK-009…014.
 
-Current verification note (2026-09-05): TASK-210 is done. The versioned PWA update toast,
+Current verification note (2026-09-07): TASK-210 is done. The versioned PWA update toast,
 content-driven mobile boot-loading layout, full 129-route × 5-language × 2-viewport i18n
 matrix, smoke script and transaction proof are release-green. The navigation assertion
 checks visible semantic badges; hidden zero-count badges remain in the DOM. The
 physical-device gate remains open separately under TASK-017. TASK-211 is done: the
 business allowlist artifact is regenerated and its drift check is configured in CI;
-remote workflow execution remains subject to the TASK-203 billing blocker.
+the latest remote CI run `34017037310` executed all Vitest shards and the build gate but
+failed on one hardcoded i18n navigation value. The `route.project-pl` fix passes the
+exact desktop/mobile matrices locally; a fresh current-HEAD remote run remains pending.
 
 - [x] **TASK-211 — Enforce generated i18n business allowlist in CI.** Regenerated the
       committed `web/public/assets/i18n-business.js` artifact from the source allowlist
@@ -2592,8 +2594,9 @@ the deployed release, preserves old data before the reset, validates custom dump
 isolated restore, clears only `erp-system_pgdata` and `erp-system_document_storage`,
 recreates without seed, and leaves the public site on the first Platform Superadmin
 registration page without creating a real account. TASK-193 remains blocked while SMTP is
-unset. Source CI run `31570902479` passed all four Vitest shards; HEAD run `31603746668`
-was blocked before any job started by account billing. EPIC-066 owns the newly verified
+unset. Source CI run `31570902479` passed all four Vitest shards; latest CI run
+`34017037310` executed all four shards and the build gate but exposed the i18n source
+failure described above. EPIC-066 owns the newly verified
 RLS/runtime-role, deployment-health and privileged-access hardening requirements.
 
 ## EPIC-066 — Production Trust & ERP Excellence Hardening 🔶
@@ -2626,7 +2629,9 @@ Current truth:
 - Support Grant is not a tenant-data proxy, while exact-user Superadmin simulation does
   not require a grant/reason/ticket. Platform MFA/step-up is absent.
 - Public health/setup probes returned 502 and the exact deployed HEAD revision is not
-  proven. Current CI is externally blocked by billing. Source inventory is 129 Canonical
+  proven. Current CI executes, but the latest remote run failed its i18n matrix; the
+  local source fix passes exact desktop/mobile matrices and a current-HEAD remote rerun
+  remains pending. Source inventory is 129 Canonical
   routes and all 129 now declare API-mode metadata; TASK-200 closed the prior
   `staff-calendar` exception with current route evidence.
 - TASK-204 source hardening now aligns `valid_to` to one exclusive interval and makes
@@ -2646,7 +2651,7 @@ Current truth:
 | TASK-200 | Done | Resolve 129/129 route parity and rerun current HEAD release evidence |
 | TASK-201 | Todo | Production SLO, scale, worker observability and RPO/RTO restore proof |
 | TASK-202 | In progress | Receipt Pack lifecycle/timezone and disposable PostgreSQL concurrency proof are complete; production release evidence remains |
-| TASK-203 | Blocked | GitHub Actions cannot start until billing/spending is restored |
+| TASK-203 | In Progress | Latest CI executes but the i18n matrix failed on `timesheet: Projects`; local fix passes, current-HEAD rerun pending |
 | TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |
 | TASK-205 | In progress | Direct Vision gateway failure, revoked-connector, retry/manual-review and no-fallback proof; production configuration remains |
 | TASK-213 | Done | Close production RLS coverage omission and add schema drift guard |
@@ -2679,11 +2684,11 @@ reviving a login-capable tenant Superadmin or legacy authorization bypass:
 | TASK-206 | Done | Migration 0099, hidden actor/system role and bounded session foundation; target-context RLS and hidden actor/session lifecycle are proven under disposable PostgreSQL non-superuser |
 | TASK-207 | Done | Tenant authorization, switching, break-glass and dual-attribution/adversarial proof |
 | TASK-208 | Done | Platform/Tenant workspace UX, Employee-mode integration and five-language browser proof |
-| TASK-209 | Blocked | PostgreSQL/RLS, CI, release, documentation and KB proof; blocked by TASK-203 and deployed/production evidence |
+| TASK-209 | Blocked | PostgreSQL/RLS, current-HEAD CI, release, documentation and KB proof; blocked by the pending CI rerun and deployed/production evidence |
 
 Source for TASK-206–208 is present; TASK-206's focused PGlite/API and disposable
 PostgreSQL hidden actor/session proof passes, but this is not a production-ready or
 deployed claim. TASK-195's current provisioning/access role proof is complete; migration
-0099 still requires TASK-203 to allow CI jobs to execute and deployed/production evidence
+0099 still requires a fresh current-HEAD CI result under TASK-203 and deployed/production evidence
 before release. Password-only Platform login, no step-up,
 and sensitive-data read without break-glass are explicitly accepted high-severity risks.

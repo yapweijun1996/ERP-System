@@ -679,9 +679,9 @@ checks, dual attribution and switched-Company isolation. The target Company cont
 set before `role_resource_scope` reconciliation and entitlement/resource gates, so
 production FORCE-RLS does not reject the system-managed bridge membership or misclassify
 an enabled module. TASK-208 is complete through isolated Playwright workspace, access
-matrix and five-language desktop/mobile evidence. TASK-209 remains Blocked by TASK-203,
-deployed revision and production evidence. No migration 0099 production deployment is
-claimed.
+matrix and five-language desktop/mobile evidence. TASK-209 remains Blocked pending a
+fresh current-HEAD CI result under TASK-203, deployed revision and production evidence.
+No migration 0099 production deployment is claimed.
 
 ## 11. Platform Bootstrap & Tenant Provisioning — current source contract
 
@@ -746,8 +746,10 @@ without seed; the checkpoint status was `requiresPlatformBootstrap:true` with
 `hasTenantAdmin:false`. Health/root are 200, the retired anonymous setup endpoint is 410,
 and the browser showed Create Platform Superadmin. No account was created by the reset.
 Later HEAD source is not immutable deployment proof. TASK-194 public health/setup probes
-returned 502 and HEAD CI was blocked before job start by billing; TASK-199/203 own those
-current-state gaps.
+returned 502. The latest CI run `34017037310` did execute but failed the i18n browser
+matrix on `timesheet: Projects`; the local `route.project-pl` fix passes exact
+desktop/mobile matrices, and TASK-199/203 own the remaining production/current-HEAD
+evidence gaps.
 
 ## 12. Production Trust & ERP Excellence logic boundary
 

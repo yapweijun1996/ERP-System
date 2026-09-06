@@ -1,11 +1,19 @@
-# Pending Task Breakdown — 2026-09-06
+# Pending Task Breakdown — 2026-09-07 addendum
 
 This is the actionable view of every non-Done task currently registered in
 `tasks/tasks.jsonl`. It is intentionally separate from historical reviews: source and
 tests are implementation evidence, while deployment, CI, production configuration and
 physical-device checks remain separate evidence classes.
 
-Current registry: **204 Done / 3 In Progress / 2 Todo / 4 Blocked / 213 Total**.
+Current registry: **204 Done / 4 In Progress / 2 Todo / 3 Blocked / 213 Total**.
+
+2026-09-07 CI addendum: the latest GitHub Actions CI run `34017037310` on remote
+head `2188f56186e88e542351ec3a49e07d73057182bf` executed all four Vitest shards and
+the typecheck/transaction/build job. It failed only in the i18n browser matrix on
+the hardcoded `timesheet: Projects` navigation label. The repository now supplies
+`route.project-pl` translations for all five locales; the exact CI-equivalent
+desktop and mobile matrices pass locally. A fresh remote run for the current local
+HEAD is still required; no remote green result is claimed.
 
 Release evidence boundary: TASK-196/TASK-197 source and UI implementation is present, but
 the Pack permission-downgrade path and Company Receipt correction/edit/void/date-correction
@@ -17,7 +25,9 @@ the dated ERP excellence review. This follow-up does not create a second registr
 - **1. Finish TASK-204's release gate:** obtain qualified tax-owner review of the
   versioned SG/MY configuration after the source-level fix and targeted regression proof.
 - **2. Run TASK-199 and TASK-203 in parallel when external access is available:** restore
-  public availability/deployment evidence and unblock GitHub Actions execution.
+  public availability/deployment evidence and run CI against the current pushed HEAD.
+  The prior billing blocker is no longer observed, but the latest remote run exposed
+  and now has a local source fix for the i18n matrix failure.
 - **3. Close the Platform chain in dependency order:** TASK-209 remains the release proof
   after TASK-203/external deployment evidence. TASK-206's hidden actor/session foundation,
   TASK-207 authorization proof and TASK-208 browser/workspace proof are now done.
@@ -59,18 +69,22 @@ the dated ERP excellence review. This follow-up does not create a second registr
   - Guardrail: do not reset tenant data or reseed as a diagnostic shortcut. Source-present
     UI changes are not live evidence until the deployed revision is identified.
 
-- **TASK-203 — Blocked (P0) — restore GitHub Actions execution**
+- **TASK-203 — In Progress (P0) — restore GitHub Actions execution and close the i18n failure**
   - Depends on: `TASK-194`.
-  - Blocker: the latest workflow reported failed account payments or an exhausted
-    spending limit and executed zero jobs.
-  - Required action: repository owner restores billing/spending capacity, runs the current
-    HEAD workflow, and records every required shard/typecheck/build result. A zero-step
-    billing failure must remain a failed gate, never a green result.
+  - Evidence: CI run `34017037310` executed all four Vitest shards and the
+    typecheck/transaction/build job, but the i18n matrix reported one hardcoded
+    `Projects` value on `timesheet`.
+  - Source action completed locally: `route.project-pl` was added to en/ms/zh/ja/vi
+    resources and `web/public/assets/i18n-en.js` was regenerated; the exact desktop
+    and mobile 129-route × 5-language matrices pass locally.
+  - Remaining action: commit/push the scoped fix and record a fresh current-HEAD CI
+    run with every required shard/typecheck/build gate. Keep zero-step failures and
+    source failures distinct; neither is a green gate.
 
 - **TASK-209 — Blocked (P0) — release Platform tenant administration**
   - Depends on: `TASK-195`, `TASK-203`, `TASK-206`, `TASK-207`, `TASK-208`.
-  - TASK-208 is complete; it remains blocked until executable CI, deployed revision and
-    production evidence are available.
+  - TASK-208 is complete; it remains blocked until a fresh current-HEAD CI result,
+    deployed revision and production evidence are available.
   - Release steps: backup, apply migration/RLS without reset or seed, run non-superuser
     PostgreSQL adversarial proof, execute read-only production smoke, record exact
     revision, and synchronize STATUS, PROJECT_LOGIC, task registry and KB.

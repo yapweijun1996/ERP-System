@@ -323,6 +323,8 @@ The final reset proof found 249 public tables, 221 forced-RLS tables, zero non-m
 rows and zero document-storage entries. Local/public health and root returned 200; the
 public desktop and 375px browser checks showed Create Platform Superadmin with no console
 errors or horizontal overflow. Source CI run `31570902479` passed all four Vitest shards;
-docs-only push run `31573438483` was not started because GitHub Actions account billing
-blocked every job. HEAD run `31603746668` is likewise zero-step/billing-blocked; current
-public probes returned 502.
+the historical docs-only push run `31573438483` was not started because GitHub Actions
+account billing blocked every job. Latest CI run `34017037310` did execute but failed the
+i18n browser matrix on `timesheet: Projects`; the local `route.project-pl` fix passes
+exact desktop/mobile matrices. Current public probes returned 502 and a fresh
+current-HEAD remote CI run remains pending.

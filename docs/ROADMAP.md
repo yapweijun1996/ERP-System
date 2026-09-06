@@ -1231,7 +1231,7 @@ more module breadth. The source-backed review is
 
 1. **Truth sync** (TASK-194/TASK-200 done; EPIC-067 source newer): current inventory is 103
    migrations/schema v102/255
-   tables, 129 Canonical routes with 129 API metadata routes, 1,725 i18n keys/72 packs,
+   tables, 129 Canonical routes with 129 API metadata routes, 1,726 i18n keys/72 packs,
    315 permission codes and PWA v263. Historical test/deploy checkpoints remain dated.
 2. **Isolation first** (TASK-195 done 2026-09-06): deploy configuration now separates
    migration/bootstrap, API and worker roles; Platform provisioning establishes the

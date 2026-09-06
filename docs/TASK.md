@@ -9,16 +9,16 @@ not a second task registry.
 ## Current totals
 
 - Done: **204**
-- In progress: **3**
+- In progress: **4**
 - Todo: **2**
-- Blocked: **4**
+- Blocked: **3**
 - Total: **213**
 
 ## Current release-quality note
 
 TASK-194 audited historical HEAD `00e2533`. The current EPIC-067 worktree is 103 migrations
 through 0102, schema v102/255 tables, 129 Canonical / 0 Preview routes, 129 routes declaring
-API mode, 1,725 English i18n keys/72 local packs, 315 permission codes and PWA v263. HEAD
+API mode, 1,726 English i18n keys/72 local packs, 315 permission codes and PWA v263. HEAD
 collects 170 files / 666
 tests at the prior audit. The final EPIC-067 worktree instead passes the full local
 Vitest run at 172 files / 696 tests with two intentional skips. Current source
@@ -27,8 +27,10 @@ also passes typechecks, lint, API/Demo builds, generated schema/drift/permission
 Demo E2E, Platform layout E2E with both tenant modes, Demo autofill E2E, the
 59-route/13-role access matrix, 129-screen desktop/mobile audit and 129-route ×
 5-language × 2-viewport audit. The current disposable PostgreSQL/FORCE-RLS proof is
-recorded in TASK-195; executable CI and production release remain blockers, while public
-probes and older suite totals are historical evidence. TASK-211 is done:
+recorded in TASK-195; current-HEAD remote CI and production release remain open, while
+public probes and older suite totals are historical evidence. The latest remote CI run
+`34017037310` executed all Vitest shards but failed on one hardcoded i18n label; the
+locale fix passes exact desktop/mobile matrices locally. TASK-211 is done:
 the generated business i18n allowlist is synchronized and its CI drift check is configured;
 remote workflow execution remains subject to TASK-203. TASK-212 is done: active-route
 locale switching now refreshes the shell and route in place while preserving recoverable
@@ -126,7 +128,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-200 | Done | Resolve 129/129 route parity and rerun current HEAD release evidence |
 | TASK-201 | Todo | Production SLO, scale, worker monitoring and RPO/RTO proof |
 | TASK-202 | In progress | Receipt Pack repository lifecycle/timezone and disposable PostgreSQL concurrency proof are complete; production release evidence remains |
-| TASK-203 | Blocked | GitHub Actions billing/spending prevents every job from starting |
+| TASK-203 | In progress | Remote CI now executes; fix the i18n failure and rerun the current pushed HEAD |
 | TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |
 | TASK-205 | In progress | Direct Vision gateway failure, revoked-connector, retry/manual-review and no-fallback proof; production configuration remains |
 | TASK-213 | Done | Close production RLS coverage omission and add schema drift guard |
@@ -138,11 +140,13 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-206 | Done | Migration 0099, hidden non-login bridge actor, immutable Platform Tenant Admin role/membership and bounded session foundation; disposable PostgreSQL proof covers target-context RLS, actor visibility and lifecycle |
 | TASK-207 | Done | Elevated tenant authorization, audited scope switching, Company-bound break-glass and adversarial workflow proof |
 | TASK-208 | Done | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation, exact Employee integration and five-language browser proof |
-| TASK-209 | Blocked | PostgreSQL/RLS, CI, release, documentation and KB proof; blocked by TASK-203 and deployed/production evidence |
+| TASK-209 | Blocked | PostgreSQL/RLS, current CI, release, documentation and KB proof; blocked by current-HEAD CI and deployed/production evidence |
 
-The registry therefore has **204 Done / 3 In progress / 2 Todo / 4 Blocked / 213 Total**.
-The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery), TASK-203 (CI
-billing) and TASK-209 (release proof waiting for TASK-203/deployed-production evidence). Dependencies and
+The registry therefore has **204 Done / 4 In progress / 2 Todo / 3 Blocked / 213 Total**.
+The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery) and TASK-209
+(release proof waiting for current-HEAD CI and deployed-production evidence). TASK-203
+is In Progress because the latest remote workflow executed but exposed a source i18n
+failure that now passes locally; a fresh current-HEAD run remains required. Dependencies and
 epic references are valid.
 
 TASK-213 closes the source-level RLS table-list omission for `sales_enquiry_line` and
@@ -347,8 +351,10 @@ statuses above and keep each change independently testable:
   checks do not satisfy the real-device acceptance criterion.
 - **TASK-193:** administrator email recovery. Production SMTP and Platform recovery are
   not configured/proven.
-- **TASK-203:** GitHub Actions billing/spending. The HEAD workflow starts zero jobs; no
-  code failure or green CI result may be inferred.
+- **TASK-203:** GitHub Actions current-HEAD verification. Run `34017037310` executed
+  all four Vitest shards and the build gate but failed the i18n browser matrix on
+  `timesheet: Projects`; the locale fix passes locally and must still be run remotely
+  on the current pushed HEAD. No green CI result is inferred yet.
 
 See [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md) for the current
 implementation boundary and migration dependencies, and [EPICS.md](EPICS.md) for epic

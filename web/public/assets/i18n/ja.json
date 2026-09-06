@@ -1181,6 +1181,7 @@
   "route.service-contracts": "サービス契約",
   "route.depreciation": "減価償却実行",
   "route.project-detail": "プロジェクト詳細",
+  "route.project-pl": "プロジェクト",
   "route.timesheet": "タイムシート",
   "route.integration-logs": "連携ログ",
   "route.data-import": "データ取込",

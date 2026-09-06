@@ -12,6 +12,10 @@ convergence, actor-scoped history, retention-derived governance, Legal Hold, two
 purge/tombstone/key-reuse protection, localized Unicode PDF rendering, Decimal-safe browser
 amounts and Company-calendar timezone presets. The disposable PostgreSQL same-key race
 passes on a fresh PostgreSQL 16 database; production release evidence remains open.
+The latest GitHub Actions CI run `34017037310` executed its Vitest shards and build gate
+but failed the i18n browser matrix on one hardcoded `timesheet: Projects` label. The
+source fix adds `route.project-pl` for all five locales; CI-equivalent desktop and mobile
+matrices now pass locally. A fresh remote run for the current local HEAD remains open.
 
 ## Current verified baseline
 
@@ -26,7 +30,7 @@ passes on a fresh PostgreSQL 16 database; production release evidence remains op
   and Demo showcase-pack verification. The current `test:e2e:setup-wizard` also passes
   desktop, iPhone-width and small-mobile layout checks. These checks do not prove live
   PostgreSQL provisioning, public deployment, or GitHub Actions execution.
-- The task registry currently reports **204 Done / 3 In Progress / 2 Todo / 4
+- The task registry currently reports **204 Done / 4 In Progress / 2 Todo / 3
   Blocked / 213 Total**. The actionable boundary is concentrated in TASK-199–205 and
   EPIC-067/TASK-209; the blocked items are external or operational, not silently
   treated as code failures.
@@ -38,6 +42,9 @@ passes on a fresh PostgreSQL 16 database; production release evidence remains op
   HTML referenced cache-busted assets tagged 2026-08-13 and exposed no verifiable commit
   identity. This is static Demo availability evidence only; it does not prove current
   HEAD, production API health or the deployed revision.
+- The current local i18n inventory is **1,726 English keys / 72 local five-language
+  packs**. Exact CI-equivalent browser runs pass **129 routes × 5 languages × desktop**
+  and **129 routes × 5 languages × mobile** after the `route.project-pl` fix.
 - TASK-205 source failure hardening is now in progress: direct HTTP-driver tests cover
   provider status failures, malformed/empty output and transport timeout; processing
   tests cover paused/revoked connector denial, retry lease reuse and the explicit manual
@@ -116,13 +123,15 @@ passes on a fresh PostgreSQL 16 database; production release evidence remains op
     local source tests.
 
 - **TASK-199 + TASK-203 — Release evidence is incomplete even when local checks pass.**
-  - **Evidence:** the repository records historical production public 502 probes and a
-    GitHub Actions run that started zero jobs because of account billing/spending limits.
-    A current static GitHub Pages probe returned 200, but its dated asset tags and missing
-    commit identity do not prove the current deployed revision or production API health.
+  - **Evidence:** historical production probes remain dated. A current static GitHub
+    Pages probe returned 200, but its dated asset tags and missing commit identity do not
+    prove the current deployed revision or production API health. CI run `34017037310`
+    did execute, but exposed a source i18n failure on remote head `2188f56`; the local
+    fix passes both exact desktop/mobile matrices and has not yet been run remotely on
+    the current local HEAD.
   - **Action:** diagnose public `/health`, root and setup availability read-only first;
-    restore service if needed; record immutable deployment revision/assets. Separately
-    restore CI billing/runner execution and rerun required checks.
+    restore service if needed; record immutable deployment revision/assets. Commit/push
+    the i18n fix and rerun the complete CI workflow on that exact HEAD.
   - **Acceptance:** public probes return the expected contract, the deployed revision
     is recorded and matches the release commit, CI executes (not merely queues or
     reports an infrastructure failure), and no tenant reset/seed is used as a
@@ -183,7 +192,7 @@ passes on a fresh PostgreSQL 16 database; production release evidence remains op
 
 - **First:** complete the TASK-204 tax-owner review; its source-level fix is already in
   progress and the remaining risk is configuration/release evidence.
-- **Next:** TASK-199/TASK-203 for deployment/CI evidence, then TASK-209 release proof.
+- **Next:** TASK-199/TASK-203 for deployment/current-HEAD CI evidence, then TASK-209 release proof.
   TASK-207 is source- and disposable-PostgreSQL-verified; TASK-208 is browser-verified.
 - **Documentation rule:** this review found no approved domain-contract change by
   itself. Update `PROJECT_LOGIC.md`, `SPEC.md` and the relevant KB item in the same

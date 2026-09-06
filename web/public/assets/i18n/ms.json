@@ -1181,6 +1181,7 @@
   "route.service-contracts": "Kontrak Perkhidmatan",
   "route.depreciation": "Larian Susut Nilai",
   "route.project-detail": "Butiran Projek",
+  "route.project-pl": "Projek",
   "route.timesheet": "Lembaran Masa",
   "route.integration-logs": "Log Integrasi",
   "route.data-import": "Import Data",
