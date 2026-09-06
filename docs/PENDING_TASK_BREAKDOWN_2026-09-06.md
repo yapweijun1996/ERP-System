@@ -5,7 +5,7 @@ This is the actionable view of every non-Done task currently registered in
 tests are implementation evidence, while deployment, CI, production configuration and
 physical-device checks remain separate evidence classes.
 
-Current registry: **201 Done / 2 In Progress / 6 Todo / 4 Blocked / 213 Total**.
+Current registry: **202 Done / 1 In Progress / 6 Todo / 4 Blocked / 213 Total**.
 
 ## Recommended order
 
@@ -13,8 +13,8 @@ Current registry: **201 Done / 2 In Progress / 6 Todo / 4 Blocked / 213 Total**.
   versioned SG/MY configuration after the source-level fix and targeted regression proof.
 - **2. Run TASK-199 and TASK-203 in parallel when external access is available:** restore
   public availability/deployment evidence and unblock GitHub Actions execution.
-- **3. Close the Platform chain in dependency order:** TASK-206 → TASK-207 → TASK-208,
-  then release proof in TASK-209.
+- **3. Close the Platform chain in dependency order:** TASK-207 → TASK-208, then release
+  proof in TASK-209. TASK-206's hidden actor/session foundation is now done.
 - **4. Complete operational/artifact depth (TASK-201/TASK-202/TASK-205).**
 - **5. Keep human-owned blockers separate:** TASK-017 needs a physical phone and TASK-193
   needs production SMTP/mail delivery.
@@ -40,19 +40,6 @@ Current registry: **201 Done / 2 In Progress / 6 Todo / 4 Blocked / 213 Total**.
     exemptions, thresholds and transitional rules, and record the review evidence.
   - Risk: source-level tests do not prove production tax configuration or tax filing
     compliance. Do not mark Done until the external approval evidence is attached.
-
-- **TASK-206 — In Progress — hidden Platform tenant actor and elevated-session foundation**
-  - Depends on: `TASK-195`, `TASK-198`.
-  - Existing source: migration `0099`, hidden non-login bridge actor, system-managed
-    Platform Tenant Admin membership, bounded elevated session and Company-bound
-    break-glass record.
-  - Remaining actions: prove one actor per principal/Master, immutable membership
-    ownership, no tenant login/reset/invite/Employee/simulation exposure, expiry/revoke
-    on parent logout or scope change, and hidden-actor/session-specific PostgreSQL
-    FORCE-RLS behavior under non-superuser runtime roles.
-  - Verification: add adversarial PostgreSQL/API evidence and rerun migration/PGlite
-    replay checks; keep the existing TASK-195 runtime-role proof as supporting evidence,
-    not as a substitute for this task's hidden-actor proof.
 
 - **TASK-199 — Todo (P0) — restore public availability and prove deployed revision**
   - Depends on: `TASK-192`, `TASK-194`.
@@ -97,6 +84,17 @@ Current registry: **201 Done / 2 In Progress / 6 Todo / 4 Blocked / 213 Total**.
     revision, and synchronize STATUS, PROJECT_LOGIC, task registry and KB.
 
 ## Completed during this review
+
+- **TASK-206 — Done 2026-09-06 — hidden Platform tenant actor and elevated-session foundation**
+  - `startPlatformTenantAccess()` and `switchPlatformTenantScope()` now set the target
+    Company's transaction-local RLS context before reconciling the hidden actor's
+    `role_resource_scope` and system-managed membership. This closes the production-only
+    failure that PGlite could not expose.
+  - Disposable PostgreSQL proof runs the HTTP bootstrap → Master → two Company path as
+    `NOSUPERUSER NOBYPASSRLS`, then verifies one actor per principal/Master, non-login and
+    no app session, no tenant user/role/simulation/Employee-workspace exposure, both
+    Company memberships, scope switch, Return and parent-session revoke. PGlite/API
+    regression proof remains green.
 
 - **TASK-200 — Done — Canonical/API route parity and current-head evidence**
   - `staff-calendar` is implemented in both adapters and backed by `/api/hr/calendar/staff`;

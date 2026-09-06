@@ -1,7 +1,7 @@
 # ERP-System Codebase Review — 2026-09-06
 
 This review began from `main` at `2188f56` (`New`) and now records the completed
-TASK-195–197 follow-up plus the source-level TASK-204 hardening in progress. Source and tests are the implementation truth; [STATUS.md](STATUS.md) is the current status summary; [SPEC.md](SPEC.md) and
+TASK-195–197 and TASK-206 follow-up plus the source-level TASK-204 hardening in progress. Source and tests are the implementation truth; [STATUS.md](STATUS.md) is the current status summary; [SPEC.md](SPEC.md) and
 [PROJECT_LOGIC.md](PROJECT_LOGIC.md) remain the binding domain references. The older
 [ERP excellence review](ERP_EXCELLENCE_REVIEW.md) is retained as a dated historical
 baseline.
@@ -19,9 +19,9 @@ baseline.
   and Demo showcase-pack verification. The current `test:e2e:setup-wizard` also passes
   desktop, iPhone-width and small-mobile layout checks. These checks do not prove live
   PostgreSQL provisioning, public deployment, or GitHub Actions execution.
-- The task registry currently reports **201 Done / 2 In Progress / 6 Todo / 4
+- The task registry currently reports **202 Done / 1 In Progress / 6 Todo / 4
   Blocked / 213 Total**. The actionable boundary is concentrated in TASK-199–205 and
-  EPIC-067/TASK-206–209; the blocked items are external or operational, not silently
+  EPIC-067/TASK-207–209; the blocked items are external or operational, not silently
   treated as code failures.
 - TASK-204 source work is now in progress: migrations `0100`/`0101` add governed tax
   classification/recoverability/source facts and the Expense snapshot; the generated
@@ -39,6 +39,12 @@ baseline.
   API and worker roles; the current HTTP bootstrap → Master → Company route passes
   PostgreSQL 16 FORCE-RLS with cross-tenant denial. Production revision, CI and
   elevated Platform Admin evidence remain separate gates.
+
+- TASK-206 is now **Done**: elevated Platform Admin entry establishes the target
+  Company's transaction-local RLS context before hidden actor role/membership writes.
+  Disposable PostgreSQL non-superuser proof covers actor identity and no-login/session,
+  tenant user/role/simulation/Employee-workspace visibility, one actor per
+  principal/Master, two Company memberships, scope switch, Return and parent revoke.
 
 ## Action backlog
 
@@ -130,11 +136,10 @@ baseline.
     configuration absence and audit boundaries. Do not imply a Vision-to-local-OCR
     fallback until the code and user-facing state actually implement it.
 
-- **EPIC-067 / TASK-206–209 — Platform Admin work has a dependency chain.**
-  - **Action order:** complete the hidden actor / elevated-session foundation in
-    TASK-206; then complete authorization switching,
-    break-glass and audit proof (TASK-207), browser/access/i18n integration (TASK-208),
-    and only then release TASK-209. TASK-203 remains an independent CI gate.
+- **EPIC-067 / TASK-207–209 — Platform Admin work has a dependency chain.**
+  - **Action order:** complete authorization switching, break-glass and audit proof
+    (TASK-207), browser/access/i18n integration (TASK-208), and only then release
+    TASK-209. TASK-203 remains an independent CI gate; TASK-206 is done.
 
 ### Blocked or human-owned follow-up
 
@@ -147,8 +152,8 @@ baseline.
 
 - **First:** complete the TASK-204 tax-owner review; its source-level fix is already in
   progress and the remaining risk is configuration/release evidence.
-- **Next:** TASK-199/TASK-203 for deployment/CI evidence, then the TASK-206 → 207 → 208
-  Platform dependency chain before TASK-209 release proof.
+- **Next:** TASK-199/TASK-203 for deployment/CI evidence, then TASK-207 → TASK-208
+  before TASK-209 release proof.
 - **Documentation rule:** this review found no approved domain-contract change by
   itself. Update `PROJECT_LOGIC.md`, `SPEC.md` and the relevant KB item in the same
   task whenever an implementation changes one of these contracts.

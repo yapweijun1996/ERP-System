@@ -62,9 +62,9 @@ This is UI containment evidence only: no entitlement PATCH was sent.
 TASK-195 closes the source/deployment role gap. `production-rls.sql` is now paired with
 explicit API and worker roles (`NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE`), a
 profiled migration owner, and a current Platform Company context established before
-the first FORCE-RLS write. A disposable PostgreSQL 16 HTTP integration passes
-bootstrap → Master → Company and cross-tenant denial. This is not production revision
-or CI evidence; TASK-199/TASK-203/TASK-206–209 remain release gates.
+the first FORCE-RLS write. Disposable PostgreSQL HTTP integrations pass bootstrap →
+Master → Company, hidden actor/session lifecycle and cross-tenant denial. This is not
+production revision or CI evidence; TASK-199/TASK-203/TASK-207–209 remain release gates.
 
 Current TASK-175 evidence (2026-08-10): a disposable PostgreSQL 16 database passed
 `POSTGRES_URL=... npm run demo` (cross-engine parity and exactly-one-winner stock

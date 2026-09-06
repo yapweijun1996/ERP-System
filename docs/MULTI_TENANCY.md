@@ -313,5 +313,6 @@ the server verifies the new Company belongs to the requested Master, revokes the
 Company break-glass window, refreshes authorization/module projection and audits both
 scopes. Exact Employee simulation remains Company-locked and must return before selecting
 another scope. Missing or unresolved Master/Company entitlement fails closed. TASK-195's
-non-superuser/non-BYPASSRLS current-path PostgreSQL proof is complete; the remaining
-Platform Admin release proof is TASK-206–209.
+non-superuser/non-BYPASSRLS current-path PostgreSQL proof and TASK-206's hidden
+actor/session proof are complete; the remaining Platform Admin release proof is
+TASK-207–209.

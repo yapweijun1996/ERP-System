@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import type { Server } from 'node:http';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool } from 'pg';
@@ -210,5 +210,149 @@ suite('Platform provisioning PostgreSQL FORCE RLS proof', () => {
         message: expect.stringMatching(/row-level security policy/i),
       }),
     });
+
+    // The elevated Platform path must remain an overlay on the independent
+    // platform session. It must not create a login-capable tenant identity or
+    // weaken the FORCE-RLS boundary already proven above.
+    const tenantAccessResponse = await fetch(`${baseUrl}/api/platform/tenant-access`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        masterFn: master.masterFn,
+        companyFn: firstCompany.companyFn,
+        reason: 'PostgreSQL hidden actor proof',
+        ticketReference: 'SEC-PG-206',
+      }),
+    });
+    expect(tenantAccessResponse.status).toBe(201);
+    const tenantAccess = (await tenantAccessResponse.json()).data as {
+      accessId: number;
+      actorUserId: number;
+      platformPrincipalId: number;
+      masterFn: string;
+      companyFn: string;
+    };
+    expect(tenantAccess).toMatchObject({
+      masterFn: master.masterFn,
+      companyFn: firstCompany.companyFn,
+    });
+
+    const tenantSessionResponse = await fetch(`${baseUrl}/api/auth/session`, { headers });
+    expect(tenantSessionResponse.status).toBe(200);
+    expect(await tenantSessionResponse.json()).toMatchObject({
+      userId: tenantAccess.actorUserId,
+      activeCompanyFn: firstCompany.companyFn,
+      actingPrincipal: {
+        actorType: 'platform_superadmin',
+        platformPrincipalId: tenantAccess.platformPrincipalId,
+      },
+    });
+
+    const [bridge] = await db.select().from(schema.appUser)
+      .where(eq(schema.appUser.userId, tenantAccess.actorUserId));
+    expect(bridge).toMatchObject({
+      masterFn: master.masterFn,
+      identityKind: 'platform_actor',
+      loginEnabled: false,
+      email: null,
+    });
+    expect(await db.select().from(schema.employee)
+      .where(eq(schema.employee.userId, tenantAccess.actorUserId))).toHaveLength(0);
+    const actorMappings = await db.select().from(schema.platformPrincipalTenantActor)
+      .where(and(
+        eq(schema.platformPrincipalTenantActor.platformPrincipalId, tenantAccess.platformPrincipalId),
+        eq(schema.platformPrincipalTenantActor.masterFn, master.masterFn),
+      ));
+    expect(actorMappings).toHaveLength(1);
+    expect(actorMappings[0].actorUserId).toBe(tenantAccess.actorUserId);
+
+    const guessedLogin = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        organizationCode: 'PGROUP',
+        username: bridge.username,
+        password: 'not-a-platform-credential',
+      }),
+    });
+    expect(guessedLogin.status).not.toBe(200);
+    expect(await db.select().from(schema.appSession)
+      .where(eq(schema.appSession.userId, tenantAccess.actorUserId))).toHaveLength(0);
+
+    const tenantUsers = await fetch(`${baseUrl}/api/admin/users`, { headers });
+    expect(tenantUsers.status).toBe(200);
+    expect((await tenantUsers.json()).data.users.some(
+      (user: { id: number }) => user.id === tenantAccess.actorUserId,
+    )).toBe(false);
+    const simulationTargets = await fetch(
+      `${baseUrl}/api/platform/simulation-targets?masterFn=${master.masterFn}&companyFn=${firstCompany.companyFn}`,
+      { headers },
+    );
+    expect(simulationTargets.status).toBe(200);
+    expect((await simulationTargets.json()).data.some(
+      (user: { userId: number }) => user.userId === tenantAccess.actorUserId,
+    )).toBe(false);
+    const tenantRoles = await fetch(`${baseUrl}/api/admin/roles`, { headers });
+    expect(tenantRoles.status).toBe(200);
+    expect((await tenantRoles.json()).data.some(
+      (item: { sourceTemplateKey: string }) => item.sourceTemplateKey === 'platform_tenant_admin',
+    )).toBe(false);
+    const employeeWorkspaceTargets = await fetch(
+      `${baseUrl}/api/auth/session/employee-workspace-targets`, { headers },
+    );
+    expect(employeeWorkspaceTargets.status).toBe(403);
+    expect((await employeeWorkspaceTargets.json()).error.code).toBe('superadmin_required');
+
+    const switchedScope = await fetch(`${baseUrl}/api/platform/tenant-access/actions/switch-scope`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ masterFn: master.masterFn, companyFn: secondCompany.companyFn }),
+    });
+    expect(switchedScope.status).toBe(200);
+    expect((await switchedScope.json()).data).toMatchObject({
+      masterFn: master.masterFn,
+      companyFn: secondCompany.companyFn,
+      actorUserId: tenantAccess.actorUserId,
+      breakGlass: null,
+    });
+    const actorAssignments = await db.select().from(schema.userCompanyRole)
+      .where(eq(schema.userCompanyRole.userId, tenantAccess.actorUserId));
+    expect(actorAssignments.filter((assignment) => assignment.companyFn === firstCompany.companyFn
+      && assignment.managedBySystem && assignment.assignmentSource === 'system')).toHaveLength(1);
+    expect(actorAssignments.filter((assignment) => assignment.companyFn === secondCompany.companyFn
+      && assignment.managedBySystem && assignment.assignmentSource === 'system')).toHaveLength(1);
+    expect(await db.select().from(schema.platformPrincipalTenantActor).where(and(
+      eq(schema.platformPrincipalTenantActor.platformPrincipalId, tenantAccess.platformPrincipalId),
+      eq(schema.platformPrincipalTenantActor.masterFn, master.masterFn),
+    ))).toHaveLength(1);
+
+    const returned = await fetch(`${baseUrl}/api/platform/tenant-access/actions/return`, {
+      method: 'POST', headers, body: JSON.stringify({}),
+    });
+    expect(returned.status).toBe(200);
+    const returnedSession = await fetch(`${baseUrl}/api/auth/session`, { headers });
+    expect(returnedSession.status).toBe(401);
+
+    const reentered = await fetch(`${baseUrl}/api/platform/tenant-access`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        masterFn: master.masterFn,
+        companyFn: secondCompany.companyFn,
+        reason: 'PostgreSQL parent revoke proof',
+        ticketReference: 'SEC-PG-206-REVOKE',
+      }),
+    });
+    expect(reentered.status).toBe(201);
+    const parentRevoked = await fetch(`${baseUrl}/api/platform/session/actions/revoke`, {
+      method: 'POST', headers, body: JSON.stringify({}),
+    });
+    expect(parentRevoked.status).toBe(200);
+    const accessRows = await db.select().from(schema.platformTenantAccessSession)
+      .where(eq(schema.platformTenantAccessSession.platformPrincipalId, tenantAccess.platformPrincipalId));
+    expect(accessRows.length).toBeGreaterThanOrEqual(2);
+    expect(accessRows[accessRows.length - 1].revokedAt).toBeInstanceOf(Date);
+    expect((await fetch(`${baseUrl}/api/auth/session`, { headers })).status).toBe(401);
+    expect((await fetch(`${baseUrl}/api/platform/session`, { headers })).status).toBe(401);
   }, 60_000);
 });

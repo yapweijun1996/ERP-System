@@ -318,9 +318,10 @@ writes retain permission/scope/workflow checks. Sensitive mutation additionally 
 a current-Company break-glass window and returns `platform_break_glass_required` when
 absent. Break-glass never overrides maker-checker or business rules and is revoked on
 scope switch/return/logout/expiry. UI and audit must display the real Platform principal,
-not the bridge identity. TASK-206–209 remain incomplete/release-blocked pending their
-own adversarial/browser proof and executable CI; TASK-195's PostgreSQL/FORCE-RLS role
-boundary is complete.
+not the bridge identity. TASK-206's hidden actor/session boundary is complete through
+disposable PostgreSQL non-superuser proof; TASK-207–209 remain incomplete/release-blocked
+pending their own adversarial/browser proof and executable CI. TASK-195's
+PostgreSQL/FORCE-RLS role boundary is complete.
 
 Current production RLS is source/runtime-role compatible: Platform Company provisioning
 sets generated tenant context before RLS-protected writes, and bundled Compose uses

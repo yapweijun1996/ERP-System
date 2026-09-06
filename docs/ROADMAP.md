@@ -1266,18 +1266,18 @@ production pass. TASK-017 and TASK-193 remain independent blockers.
 
 ## Phase 49 — Platform Tenant Administration 🔶
 
-1. **Session foundation** (TASK-206 in progress): migration 0099 and source add the
-   hidden non-login bridge identity, system-managed Platform Tenant Admin membership,
-   15-minute elevated access and Company-bound break-glass records. Completion can use
-   TASK-195's completed PostgreSQL/FORCE-RLS proof; hidden actor and elevated-session
-   evidence is still required.
+1. **Session foundation** (TASK-206 done): migration 0099 and source add the hidden
+   non-login bridge identity, system-managed Platform Tenant Admin membership,
+   15-minute elevated access and Company-bound break-glass records. Disposable
+   PostgreSQL non-superuser proof covers target-context RLS, hidden actor/session
+   visibility, scope switching, Return and parent revoke.
 2. **Authorization** (TASK-207 todo): prove MAC-effective navigation, ordinary tenant
    writes, sensitive-operation denial/unlock, workflow and maker-checker preservation,
    scope isolation, expiry, revoke and dual attribution adversarially.
 3. **Workspace UX** (TASK-208 todo): finish desktop/mobile/accessibility/i18n proof for
    separate `Open as Platform Admin` and exact `Login as employee` actions, persistent
    banners, audited scope switching, unlock and return.
-4. **Release** (TASK-209 blocked): after TASK-195 and executable CI in TASK-203, apply
+4. **Release** (TASK-209 blocked): after TASK-195, TASK-207–208 and executable CI in TASK-203, apply
    migrations 0099–0101, reapply RLS and release the application without reset or seed. The
    production smoke is read-only and must not exercise sensitive business mutation.
 

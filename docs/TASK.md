@@ -8,8 +8,8 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **201**
-- In progress: **2**
+- Done: **202**
+- In progress: **1**
 - Todo: **6**
 - Blocked: **4**
 - Total: **213**
@@ -37,7 +37,8 @@ TASK-213 is done: `sales_enquiry_line` is now covered by the production FORCE-RL
 and `npm run check:production-rls` guards every generated table with both tenant keys
 against accidental policy-list omission. This is source/static coverage evidence only;
 least-privilege runtime-role and Platform provisioning proof is complete in TASK-195;
-the remaining Platform Admin chain is TASK-206–209.
+the remaining Platform Admin chain is TASK-207–209; TASK-206's PostgreSQL hidden-actor
+foundation is complete.
 
 See [PENDING_TASK_BREAKDOWN_2026-09-06.md](PENDING_TASK_BREAKDOWN_2026-09-06.md) for the
 bullet-level action plan for every non-Done task, including dependencies, evidence and
@@ -131,14 +132,14 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 
 | Task | Status | Purpose |
 | --- | --- | --- |
-| TASK-206 | In progress | Migration 0099, hidden non-login bridge actor, immutable Platform Tenant Admin role/membership and bounded session foundation; its PostgreSQL/RLS completion can now use TASK-195's runtime-role proof |
+| TASK-206 | Done | Migration 0099, hidden non-login bridge actor, immutable Platform Tenant Admin role/membership and bounded session foundation; disposable PostgreSQL proof covers target-context RLS, actor visibility and lifecycle |
 | TASK-207 | Todo | Elevated tenant authorization, audited scope switching, Company-bound break-glass and adversarial workflow proof |
 | TASK-208 | Todo | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation and exact Employee integration |
-| TASK-209 | Blocked | PostgreSQL/RLS, CI, browser, release, documentation and KB proof; blocked by TASK-203 and the remaining TASK-206–208 evidence |
+| TASK-209 | Blocked | PostgreSQL/RLS, CI, browser, release, documentation and KB proof; blocked by TASK-203 and the remaining TASK-207–208 evidence |
 
-The registry therefore has **201 Done / 2 In progress / 6 Todo / 4 Blocked / 213 Total**.
+The registry therefore has **202 Done / 1 In progress / 6 Todo / 4 Blocked / 213 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery), TASK-203 (CI
-billing) and TASK-209 (release proof waiting for TASK-203/TASK-206–208). Dependencies and
+billing) and TASK-209 (release proof waiting for TASK-203/TASK-207–208). Dependencies and
 epic references are valid.
 
 TASK-213 closes the source-level RLS table-list omission for `sales_enquiry_line` and

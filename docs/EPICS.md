@@ -2674,13 +2674,14 @@ reviving a login-capable tenant Superadmin or legacy authorization bypass:
 
 | Task | Status | Scope |
 | --- | --- | --- |
-| TASK-206 | In progress | Migration 0099, hidden actor/system role and bounded session foundation; TASK-195 PostgreSQL/RLS proof is complete, while actor/session evidence remains |
+| TASK-206 | Done | Migration 0099, hidden actor/system role and bounded session foundation; target-context RLS and hidden actor/session lifecycle are proven under disposable PostgreSQL non-superuser |
 | TASK-207 | Todo | Tenant authorization, switching, break-glass and dual-attribution/adversarial proof |
 | TASK-208 | Todo | Platform/Tenant workspace UX and Employee-mode integration |
-| TASK-209 | Blocked | PostgreSQL/RLS, CI, browser, release, documentation and KB proof; blocked by TASK-203 and remaining TASK-206–208 evidence |
+| TASK-209 | Blocked | PostgreSQL/RLS, CI, browser, release, documentation and KB proof; blocked by TASK-203 and remaining TASK-207–208 evidence |
 
-Source for TASK-206–208 is present and focused PGlite/API tests pass, but this is not a
-production-ready or deployed claim. TASK-195's current provisioning/access role proof
-is complete; migration 0099 still requires TASK-206–208 evidence and TASK-203 to allow
-CI jobs to execute before release. Password-only Platform login, no step-up,
+Source for TASK-206–208 is present; TASK-206's focused PGlite/API and disposable
+PostgreSQL hidden actor/session proof passes, but this is not a production-ready or
+deployed claim. TASK-195's current provisioning/access role proof is complete; migration
+0099 still requires TASK-207–208 evidence and TASK-203 to allow CI jobs to execute
+before release. Password-only Platform login, no step-up,
 and sensitive-data read without break-glass are explicitly accepted high-severity risks.

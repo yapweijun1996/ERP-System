@@ -541,10 +541,10 @@ automated release-gate proof. Implementation tests and fixtures remain distinct 
 human UAT and do not authorize a production release or migration.
 
 EPIC-067/TASK-206–209 add the elevated mode and migration 0099 source. TASK-195's
-non-superuser/FORCE-RLS PostgreSQL proof is complete; TASK-206 remains In progress and
-TASK-207/208 remain Todo for adversarial and browser/accessibility/i18n closure. TASK-209
-is Blocked by TASK-203 and the remaining TASK-206–208 evidence. No migration 0099
-production deployment is claimed.
+non-superuser/FORCE-RLS PostgreSQL proof and TASK-206's hidden actor/session proof are
+complete; TASK-207/208 remain Todo for authorization and browser/accessibility/i18n
+closure. TASK-209 is Blocked by TASK-203 and the remaining TASK-207–208 evidence. No
+migration 0099 production deployment is claimed.
 
 ## 11. Platform Bootstrap & Tenant Provisioning contract (EPIC-065)
 

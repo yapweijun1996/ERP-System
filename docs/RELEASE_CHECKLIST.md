@@ -43,7 +43,7 @@ For the current source-backed action backlog and evidence boundaries, see
 - [x] `npm run check:permissions` and `npm run audit:access-matrix` — 2026-09-06 passed
       the permission registry at 315/116/62/5 and the serial 59-route × 13-template
       browser access audit. This is local evidence, not production authorization proof.
-- [x] `tasks/tasks.jsonl` statuses current: 201 Done / 2 In progress / 6 Todo / 4
+- [x] `tasks/tasks.jsonl` statuses current: 202 Done / 1 In progress / 6 Todo / 4
       Blocked / 213 Total. Blockers are TASK-017, TASK-193, TASK-203 and TASK-209;
       TASK-204 remains In progress until tax-owner production review.
 - [ ] GitHub Actions actually executes current HEAD. Run `31603746668` started zero jobs
@@ -171,6 +171,10 @@ current release approval.
       and current Platform bootstrap → Master → Company plus cross-tenant denial passes
       under PostgreSQL 16 FORCE RLS. Run `deploy/verify-runtime-roles.sh` on the target;
       this does not claim a current production revision.
+- [x] TASK-206 hidden actor/session boundary: disposable PostgreSQL non-superuser proof
+      covers target-context RLS provisioning, non-login/no-session actor behavior, tenant
+      user/role/simulation/Employee-workspace exclusion, scope switch, Return and parent
+      revoke. This does not claim migration 0099 production deployment.
 - [ ] `npm run test:e2e:platform-workspace-layout` and
       `npm run test:e2e:platform-workspace-demo-autofill` pass for the release commit.
 - [ ] Support Grant/Simulation policy, Platform MFA and recent sensitive-action step-up

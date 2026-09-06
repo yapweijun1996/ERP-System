@@ -4,6 +4,7 @@
 import { randomUUID } from 'node:crypto';
 import { and, eq, gt, isNull, lte } from 'drizzle-orm';
 import type { DB } from '../data/db';
+import { setTenantContext } from '../data/tenantTransaction';
 import {
   appUser,
   company,
@@ -314,6 +315,9 @@ export async function startPlatformTenantAccess(
   await db.transaction(async (tx) => {
     const exec = tx as unknown as DB;
     await assertCompany(exec, scope);
+    // The bridge role and membership are tenant-scoped RLS writes. Establish
+    // the target Company's transaction-local context before reconciling them.
+    await setTenantContext(exec, scope);
     const sessionHash = hashSecret(token);
     const [simulation] = await exec.select({ id: platformSimulationSession.simulationId })
       .from(platformSimulationSession).where(and(
@@ -397,6 +401,10 @@ export async function switchPlatformTenantScope(
       throw new PlatformAccessError(409, 'platform_tenant_access_required', 'Platform tenant access is no longer active.');
     }
     await assertCompany(exec, scope);
+    // Scope switching may target another Company in the same Master, so the
+    // new RLS context must replace the previous one before actor membership
+    // reconciliation writes role_resource_scope.
+    await setTenantContext(exec, scope);
     const actorUserId = await ensurePlatformActorWithin(exec, platformSession, scope);
     await exec.update(platformBreakGlassWindow).set({ revokedAt: now, updatedAt: now })
       .where(and(eq(platformBreakGlassWindow.accessId, lockedCurrent.accessId), isNull(platformBreakGlassWindow.revokedAt)));
