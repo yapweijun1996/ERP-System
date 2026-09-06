@@ -43,8 +43,9 @@ HTML fallbacks. This is static-host availability only, not current revision or A
 
 2026-09-07 PDF robustness addendum: Receipt Pack register text now normalizes ASCII control
 characters before Unicode PDF embedding, closing a source-level text-stream edge case. The
-focused Pack tests, typecheck, lint and documentation/link checks pass. This does not change
-the open TASK-202 production download/Print, release or authenticated UAT evidence boundary.
+focused Pack tests, Demo build, Company Receipts browser E2E, typecheck, lint and
+documentation/link checks pass. This does not change the open TASK-202 production
+download/Print, release or authenticated UAT evidence boundary.
 
 ## Recommended order
 
