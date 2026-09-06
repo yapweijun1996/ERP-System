@@ -39,7 +39,11 @@ if [[ -z "$release_commit" ]]; then
   echo "ERROR: release must run from a Git checkout so the deployed revision is traceable." >&2
   exit 1
 fi
-export ERP_RELEASE_COMMIT="${ERP_RELEASE_COMMIT:-$release_commit}"
+if [[ -n "${ERP_RELEASE_COMMIT:-}" && "$ERP_RELEASE_COMMIT" != "$release_commit" ]]; then
+  echo "ERROR: ERP_RELEASE_COMMIT ($ERP_RELEASE_COMMIT) does not match Git HEAD ($release_commit)." >&2
+  exit 1
+fi
+export ERP_RELEASE_COMMIT="$release_commit"
 "${compose[@]}" config --quiet
 
 echo "==> Releasing application containers only (database is preserved)"
