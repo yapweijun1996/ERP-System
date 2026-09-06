@@ -265,7 +265,9 @@ make release                 # rebuild/restart web + api + calendar-worker; no m
 ```
 
 The production overlay keeps PostgreSQL and the document-storage volume in place and
-removes the DB/API host ports. The release script never calls `docker compose down -v`,
+removes the DB/API host ports. `deploy/release.sh` checks `/health` from inside the web
+container through the nginx-to-api Compose-network path, so the release gate does not
+depend on a published `WEB_PORT`. The release script never calls `docker compose down -v`,
 never runs `npm run migrate`, and never runs the seed. A source-only change therefore
 does not alter existing rows or schema. Keep `COMPOSE_PROJECT_NAME=erp-system` stable in
 `.env` so the named volume namespace remains stable even if the checkout path changes.
@@ -279,7 +281,7 @@ deployment-managed and are never returned to the browser. Appointment recurrence
 reminder jobs are bounded to a 93-day look-ahead and are safe to retry by their unique
 tenant-scoped event keys.
 
-Migrations through **0102** are additive schema changes for appointment automation,
+Migrations through **0103** are additive schema changes for appointment automation,
 the platform support control plane, assignment-scoped authorization and reasoned
 user-level permission overrides, Company Receipts, platform entitlement and first-run
 Platform provisioning, governed tax facts, Receipt Pack governance and Company timezone facts.

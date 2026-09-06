@@ -49,15 +49,18 @@ export ERP_RELEASE_COMMIT="$release_commit"
 echo "==> Releasing application containers only (database is preserved)"
 "${compose[@]}" up -d --build --no-deps api web calendar-worker
 
-web_port="$(awk -F= '$1 == "WEB_PORT" {print $2}' .env | tail -n 1)"
-web_port="${web_port:-8080}"
 ready=false
-for i in $(seq 1 30); do
-  if curl --fail --silent --show-error "http://127.0.0.1:${web_port}/health" >/dev/null 2>&1; then
+attempt=1
+while (( attempt <= 30 )); do
+  # The production overlay intentionally removes host port publishing. Probe from
+  # inside nginx instead, so the check exercises the same web -> api proxy path in
+  # both the private production network and the local base Compose configuration.
+  if "${compose[@]}" exec -T web wget --spider --quiet http://127.0.0.1/health >/dev/null 2>&1; then
     ready=true
     break
   fi
   sleep 2
+  attempt=$((attempt + 1))
 done
 
 if [[ "$ready" != true ]]; then
