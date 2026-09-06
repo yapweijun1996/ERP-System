@@ -7,6 +7,11 @@ physical-device checks remain separate evidence classes.
 
 Current registry: **204 Done / 3 In Progress / 2 Todo / 4 Blocked / 213 Total**.
 
+Release evidence boundary: TASK-196/TASK-197 source and UI implementation is present, but
+the Pack permission-downgrade path and Company Receipt correction/edit/void/date-correction
+workflow remain P0 UAT follow-up until authenticated browser/production evidence reconciles
+the dated ERP excellence review. This follow-up does not create a second registry row.
+
 ## Recommended order
 
 - **1. Finish TASK-204's release gate:** obtain qualified tax-owner review of the

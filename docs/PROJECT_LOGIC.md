@@ -484,6 +484,9 @@ cursor pagination, keeps browser receipt amounts as validated decimal strings, a
 localized register labels/content for en/ms/zh/ja/vi with an embedded Noto Sans CJK face.
 Retention expiry, legal-hold/purge/tombstone commands, Company-calendar timezone presets and
 production concurrency/download/Print evidence remain open.
+The source/UI paths for Pack permission downgrade and Company Receipt correction/edit/void/date
+correction exist, but their authenticated browser/production UAT remains a P0 release evidence
+follow-up until the dated ERP excellence review is reconciled.
 Rendering otherwise rechecks document-version/hash identity, scan-clean state, content
 integrity and the 250 MB source limit. `companyReceiptPackPdf.ts` builds an A4 landscape
 register, then `documents/evidencePdf.ts` copies all PDF pages, embeds JPEG/PNG or emits

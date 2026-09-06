@@ -2020,10 +2020,13 @@ EPIC-063 and TASK-177–183 register the implementation work. Expense accounting
 Treatment, automated Tax Evidence, Employee Reimbursement and MyInvois are preserved
 future/optional phases rather than v1 defects. Receipt Pack authorization, complete
 Company Receipt correction/edit/void UX and the employee-independent eligible-evidence
-picker are now implemented. TASK-202 now also has deterministic pack-key conflict
-convergence, actor-scoped history, Decimal-safe amount formatting and localized Unicode
-register/PDF rendering with an embedded Noto Sans CJK font; retention/legal-hold/purge/
-tombstone, Company-calendar presets and production UAT remain explicit EPIC-066 gaps.
+picker are now implemented at source/UI level. The Pack permission-downgrade path and
+correction/edit/void/date-correction workflow still require P0 authenticated UAT/release
+reconciliation before they are treated as production-closed. TASK-202 now also has
+deterministic pack-key conflict convergence, actor-scoped history, Decimal-safe amount
+formatting and localized Unicode register/PDF rendering with an embedded Noto Sans CJK
+font; retention/legal-hold/purge/tombstone, Company-calendar presets and production UAT
+remain explicit EPIC-066 gaps.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
