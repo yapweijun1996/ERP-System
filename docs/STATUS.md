@@ -674,10 +674,10 @@ are not more module screens:
   health/manifest/expected-revision matching; its local HTTP fixture and CLI contract
   tests pass 6/6, including a same-path redirect acceptance case. This makes the live
   acceptance step repeatable but does not create
-  deployed evidence. A read-only run against local HEAD `0d51d23` returned
-  `health_http_404` from Pages and `root_http_502` from the production origin, both with
-  exit 1 and empty stderr; this confirms the known public availability boundary without
-  changing remote state;
+  deployed evidence. The 2026-09-08 read-only rerun against local HEAD
+  `5ac1dcb61b3309f616650d76f783e6127e50b449` returned `health_http_404` from Pages and
+  `root_http_502` from the production origin, both with exit 1 and empty stderr; this
+  confirms the known public availability boundary without changing remote state;
 - TASK-200 is source-closed; TASK-201 still owns SLO/RPO/RTO, scale and worker telemetry.
   TASK-202's governed localized Pack lifecycle and Company timezone are implemented with
   local proof; the disposable PostgreSQL same-key race and an unsupported-original
