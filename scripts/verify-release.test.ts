@@ -1,15 +1,18 @@
 import { createServer } from 'node:http';
 import type { Server, ServerResponse, IncomingMessage } from 'node:http';
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import process from 'node:process';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { verifyRelease } from './verify-release.mjs';
 
 const expectedRevision = 'test-release-revision';
+const assetBody = Buffer.from('asset-body');
+const assetHash = createHash('sha256').update(assetBody).digest('hex');
 const scriptPath = path.join(process.cwd(), 'scripts', 'verify-release.mjs');
 
-type FixtureMode = 'ok' | 'mismatch' | 'redirect';
+type FixtureMode = 'ok' | 'mismatch' | 'redirect' | 'asset-mismatch' | 'asset-hash-mismatch';
 
 interface RunningFixture {
   baseUrl: string;
@@ -55,12 +58,21 @@ function handleFixtureRequest(request: IncomingMessage, response: ServerResponse
     sendJson(response, { initialized: true, status: 'ready' });
     return;
   }
+  if (requestUrl.pathname === '/erp/index.html') {
+    response.writeHead(200, { 'content-type': 'text/html' });
+    response.end(mode === 'asset-mismatch' ? 'changed-body' : assetBody);
+    return;
+  }
   if (requestUrl.pathname === '/erp/release.json') {
     sendJson(response, {
       schemaVersion: 1,
       revision: expectedRevision,
       fileCount: 1,
-      files: [{ path: 'index.html', bytes: 10, sha256: '0'.repeat(64) }],
+      files: [{
+        path: 'index.html',
+        bytes: assetBody.byteLength,
+        sha256: mode === 'asset-hash-mismatch' ? 'f'.repeat(64) : assetHash,
+      }],
     });
     return;
   }
@@ -136,6 +148,7 @@ describe('verifyRelease', () => {
         health: true,
         setupStatus: true,
         releaseManifest: true,
+        assetHashes: true,
         revisionMatch: true,
         finalUrlsReviewed: true,
       },
@@ -146,6 +159,18 @@ describe('verifyRelease', () => {
     running.setMode('mismatch');
     await expect(verifyRelease({ origin: running.baseUrl, expectedRevision }))
       .rejects.toMatchObject({ code: 'revision_mismatch' });
+  });
+
+  it('rejects an asset whose bytes do not match the release manifest', async () => {
+    running.setMode('asset-mismatch');
+    await expect(verifyRelease({ origin: running.baseUrl, expectedRevision }))
+      .rejects.toMatchObject({ code: 'asset_bytes_mismatch' });
+  });
+
+  it('rejects an asset whose hash does not match the release manifest', async () => {
+    running.setMode('asset-hash-mismatch');
+    await expect(verifyRelease({ origin: running.baseUrl, expectedRevision }))
+      .rejects.toMatchObject({ code: 'asset_hash_mismatch' });
   });
 
   it('rejects a redirect that changes the reviewed endpoint path', async () => {

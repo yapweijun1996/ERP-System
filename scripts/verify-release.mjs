@@ -2,9 +2,11 @@
 
 import process from 'node:process';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const MAX_EVIDENCE_BYTES = 2 * 1024 * 1024;
+const MAX_ASSET_BYTES = 32 * 1024 * 1024;
 
 export class ReleaseVerificationError extends Error {
   constructor(code, message) {
@@ -46,6 +48,35 @@ function endpoint(baseUrl, suffix) {
   return url;
 }
 
+async function readResponseBody(response, target) {
+  const maxBytes = target.maxBytes ?? MAX_EVIDENCE_BYTES;
+  const chunks = [];
+  let totalBytes = 0;
+  const reader = response.body?.getReader();
+  if (!reader) {
+    fail('evidence_read_error', `Could not read ${target.name}.`);
+  }
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        await reader.cancel();
+        fail('evidence_too_large', `${target.name} exceeded the bounded evidence size.`);
+      }
+      chunks.push(Buffer.from(value));
+    }
+  } catch (error) {
+    if (error instanceof ReleaseVerificationError) throw error;
+    fail('evidence_read_error', `Could not read ${target.name}.`);
+  }
+
+  const bytes = Buffer.concat(chunks, totalBytes);
+  return target.binary ? bytes : new TextDecoder().decode(bytes);
+}
+
 async function fetchEvidence(target, fetchImpl) {
   let response;
   try {
@@ -68,23 +99,16 @@ async function fetchEvidence(target, fetchImpl) {
     fail('final_url_mismatch', `${target.name} ended at an unreviewed origin or path.`);
   }
 
+  const maxBytes = target.maxBytes ?? MAX_EVIDENCE_BYTES;
   const contentLength = response.headers.get('content-length');
   const declaredLength = contentLength === null ? null : Number(contentLength);
   if (declaredLength !== null && (!Number.isFinite(declaredLength) || declaredLength < 0)) {
     fail('invalid_content_length', `${target.name} returned an invalid content length.`);
   }
-  if (declaredLength !== null && declaredLength > MAX_EVIDENCE_BYTES) {
+  if (declaredLength !== null && declaredLength > maxBytes) {
     fail('evidence_too_large', `${target.name} exceeded the bounded evidence size.`);
   }
-  let body;
-  try {
-    body = await response.text();
-  } catch {
-    fail('evidence_read_error', `Could not read ${target.name}.`);
-  }
-  if (Buffer.byteLength(body) > MAX_EVIDENCE_BYTES) {
-    fail('evidence_too_large', `${target.name} exceeded the bounded evidence size.`);
-  }
+  const body = await readResponseBody(response, target);
   return { response, body };
 }
 
@@ -105,6 +129,13 @@ function assertSuccessfulResponse(response, name) {
   if (response.status !== 200) {
     fail(`${name}_http_${response.status}`, `${name} returned HTTP ${response.status}.`);
   }
+}
+
+function hasUnsafeManifestPathCharacter(value) {
+  return [...value].some((character) => {
+    const codePoint = character.codePointAt(0) ?? 0;
+    return codePoint <= 0x1f || codePoint === 0x7f || character === '?' || character === '#';
+  });
 }
 
 function validateManifest(manifest) {
@@ -128,7 +159,8 @@ function validateManifest(manifest) {
       || !file.path
       || file.path.startsWith('/')
       || file.path.includes('\\')
-      || file.path.split('/').includes('..')
+      || file.path.split('/').some((segment) => !segment || segment === '.' || segment === '..')
+      || hasUnsafeManifestPathCharacter(file.path)
       || identities.has(file.path)
       || !Number.isInteger(file.bytes)
       || file.bytes < 0
@@ -179,6 +211,26 @@ export async function verifyRelease({ origin, expectedRevision, fetchImpl = glob
     fail('revision_mismatch', 'The deployed revision does not match the expected revision.');
   }
 
+  for (const file of manifest.files) {
+    const target = {
+      name: `asset ${file.path}`,
+      url: endpoint(baseUrl, file.path),
+      binary: true,
+      maxBytes: MAX_ASSET_BYTES,
+    };
+    const assetEvidence = await fetchEvidence(target, fetchImpl);
+    assertSuccessfulResponse(assetEvidence.response, target.name);
+    const assetBytes = assetEvidence.body;
+    const actualBytes = assetBytes.byteLength;
+    const actualHash = createHash('sha256').update(assetBytes).digest('hex');
+    if (actualBytes !== file.bytes) {
+      fail('asset_bytes_mismatch', `Asset ${file.path} byte count does not match the manifest.`);
+    }
+    if (actualHash !== file.sha256.toLowerCase()) {
+      fail('asset_hash_mismatch', `Asset ${file.path} hash does not match the manifest.`);
+    }
+  }
+
   return {
     status: 'verified',
     origin: baseUrl.toString(),
@@ -191,6 +243,7 @@ export async function verifyRelease({ origin, expectedRevision, fetchImpl = glob
       health: true,
       setupStatus: true,
       releaseManifest: true,
+      assetHashes: true,
       revisionMatch: true,
       finalUrlsReviewed: true,
     },
