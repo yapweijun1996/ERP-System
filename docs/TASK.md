@@ -1,7 +1,7 @@
 # Task Index
 
 [TEST_COVERAGE.md](TEST_COVERAGE.md) is the module evidence map. TASK-216 through
-TASK-219 are the completed F01–F04 repairs; TASK-220–223 remain open F05–F08 repairs. TASK-215 is
+TASK-220 are the completed F01–F05 repairs; TASK-221–223 remain open F06–F08 repairs. TASK-215 is
 documentation reconciliation, not runtime completion.
 
 Reviewed: **2026-09-08**
@@ -12,9 +12,9 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **210**
+- Done: **211**
 - In progress: **4**
-- Todo: **6**
+- Todo: **5**
 - Blocked: **3**
 - Total: **223**
 
@@ -23,8 +23,8 @@ not a second task registry.
 TASK-214 completed the [ERP specialist audit](ERP_SPECIALIST_REVIEW_2026-09-07.md)
 and [product quality baseline](ERP_QUALITY_BASELINE.md). It records fresh failures
 and evidence limits; prior passing suite/audit statements below are historical and
-do not supersede the new findings. TASK-216–219 now close F01–F04 locally; the
-remaining runtime follow-up is TASK-220–223.
+do not supersede the new findings. TASK-216–220 now close F01–F05 locally; the
+remaining runtime follow-up is TASK-221–223.
 
 TASK-194 audited historical HEAD `00e2533`. The current EPIC-067 worktree is 104 migrations
 through 0103, schema v103/255 tables, 129 Canonical / 0 Preview routes, 129 routes declaring
@@ -155,7 +155,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-208 | Done | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation, exact Employee integration and five-language browser proof |
 | TASK-209 | Blocked | PostgreSQL/RLS, current CI, release, documentation and KB proof; blocked by current-HEAD CI and deployed/production evidence |
 
-The registry therefore has **210 Done / 4 In Progress / 6 Todo / 3 Blocked / 223 Total**.
+The registry therefore has **211 Done / 4 In Progress / 5 Todo / 3 Blocked / 223 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery) and TASK-209
 (release proof waiting for current-HEAD CI and deployed-production evidence). TASK-203
 is In Progress because the latest remote workflow executed but exposed a source i18n
@@ -173,7 +173,11 @@ facts now derive outstanding, overdue, paid and selected-period predicates from 
 date-only business day, invoice date and active fiscal period while preserving the raw
 posting status. The focused mixed-fixture test, built-Demo KPI/filter/detail route check,
 console-error check, Demo proof, lint/typechecks, generated checks, documentation links
-and diff check pass. TASK-220–223 remain Todo.
+and diff check pass. TASK-219 is also Done: canonical sales-invoice locale labels pass the
+live desktop/mobile switch E2E and current full PGlite i18n audit. TASK-220 is Done: the
+new contrast E2E passes light/dark desktop/mobile action controls at 5.567:1 normal and
+6.947:1 hover, with visible focus and disabled-state treatment; generated/build/docs gates
+pass. TASK-221–223 remain Todo.
 
 TASK-213 closes the source-level RLS table-list omission for `sales_enquiry_line` and
 adds a deterministic generated-schema coverage gate. TASK-195 now establishes the

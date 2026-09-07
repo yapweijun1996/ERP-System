@@ -9,7 +9,7 @@ source/documentation, and official SG/MY market references. This review does not
 certify production readiness or fix runtime defects. Product direction is recorded
 in [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md).
 
-Follow-up status: TASK-216 through TASK-219 are now complete on the subsequent local worktree.
+Follow-up status: TASK-216 through TASK-220 are now complete on the subsequent local worktree.
 The compact
 seed and showcase pack v16 carry governed SG/MY tax snapshots, the untouched historical
 SG approval row has an idempotent upgrade repair, and fresh/upgraded shared-command
@@ -35,11 +35,21 @@ locale-generated dates such as `Sept` as dynamic business values. The original F
 reproduction below remain historical baseline observations; current-HEAD remote CI is not
 claimed.
 
+TASK-220 closes the historical F05 contrast finding locally: `--accent-action` and
+`--accent-action-hover` now separate white-text filled controls from accent text/chart
+color. Primary buttons, PWA Install and related filled states use the action token; PWA
+disabled buttons expose the same visible disabled treatment as shared buttons. The focused
+E2E passes light/dark × desktop/mobile with computed normal/hover contrast of 5.567:1 and
+6.947:1, visible 2px focus outlines, zero browser errors and no mobile horizontal overflow.
+Four screenshots from those combinations were visually inspected and removed after the
+check. The original F05 row below remains a historical baseline observation; charts, print
+output, physical devices and exhaustive palette certification remain separate evidence.
+
 ## Executive assessment
 
 The Demo runs and the shared transaction layer has meaningful accounting and rollback
 proof. Historical seeded-procurement, date-only and invoice-aging observations are now
-repaired locally under TASK-216–219; contrast/usability/recovery gaps remain.
+repaired locally under TASK-216–220; procurement/mobile/recovery gaps remain.
 Prioritize those business-facing gaps before treating 129 rendered routes as a complete
 ERP experience.
 
@@ -77,7 +87,8 @@ updates are automatically detected and explicitly accepted, not forced silently.
 | `AUDIT_VIEWPORT=desktop POSTING_DETAIL_ONLY=1 npm run audit:screens` | Pass | Focused 3-route desktop rerun including payment-voucher recovery. The script's generic final desktop/mobile wording must not be read as a mobile rerun. |
 | `npm run audit:pwa-update` | Pass | v263 audit-b deferred once; audit-c activated once. Does not cover real-device, dirty-form or multi-tab upgrade compatibility. |
 | Seven routes × five languages × desktop/mobile | Historical TASK-214 failure; TASK-219 follow-up passes | Original `Outstanding` and `Due date` finding on sales-invoices in ms/zh/ja/vi; no other reported matrix issues. See F04 and the TASK-219 follow-up above. |
-| Manual 375px light/dark/Chinese and approval dialog | Mixed | Zero document overflow on sampled routes; readable structure and usable decision dialog. Contrast and untranslated text issues remain. |
+| Filled-action contrast E2E | Pass: 2 themes × 2 viewports × normal/hover/focus/disabled | Computed normal/hover contrast 5.567:1 / 6.947:1; zero browser errors and no mobile horizontal overflow. Focused palette evidence only. See F05 and the TASK-220 follow-up above. |
+| Manual 375px light/dark/Chinese and approval dialog | Mixed | Zero document overflow on sampled routes; readable structure and usable decision dialog. Touch/zoom/status usability and recovery remain open. |
 | Optional `npm test` full regression | Incomplete, stopped | No final result after about 10 minutes while another independent Vitest run was active. Stopped only this audit's process/workers to bound contention. No current full-suite pass or application failure is inferred. |
 
 Reproduce the bounded i18n matrix:
@@ -141,6 +152,9 @@ TASK-214 on completion. Historical passing tests in STATUS remain dated evidence
   **Acceptance:** distinguish accent-text and filled-action tokens, verify >=4.5:1
   normal text in both themes, then inspect primary/hover/focus/disabled states and
   charts. This is one verified pair, not an exhaustive palette certification.
+  **Follow-up:** TASK-220 now passes the focused primary/PWA action checks; the
+  reproduction above remains historical, and the remaining chart/print/device boundaries
+  are not silently certified by this fix.
 
 - **F06 — P2 — Procurement next actions and wording need a coherent workflow.**
   Goods Receipts → `Receive approved PO` routes to the PO list; opening the approved

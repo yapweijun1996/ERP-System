@@ -1,6 +1,6 @@
 # ERP module verification coverage
 
-Reviewed: **2026-09-08**, source `243af56`, TASK-214 evidence and TASK-219 follow-up; TASK-215 documentation reconciliation.
+Reviewed: **2026-09-08**, source `243af56`, TASK-214 evidence and TASK-219/220 follow-up; TASK-215 documentation reconciliation.
 
 **All modules have not passed complete end-to-end testing.** All 129 registered routes
 rendered at desktop/mobile, but the complete screen audit failed one recovery assertion.
@@ -38,7 +38,7 @@ and colocated test entry points.
 | [purchasing](../src/modules/purchasing/) | 11 | Fresh compact seed and simulated historical-pack upgrade now approve/receive/post exactly one balanced supplier invoice through shared commands; the fail-closed unclassified/regime-mismatch guard remains covered. Browser/API production tax-owner evidence is separate. |
 | [quality](../src/modules/quality/) | 1 | Route rendering only; inspection/disposition business cycle not rerun. |
 | [reporting](../src/modules/reporting/) | 1 | Routes rendered; aggregate report reconciliation, export correctness and large-data plans not comprehensively tested. |
-| [sales](../src/modules/sales/) | 8 | MCP SO-2 confirmation/stock/invoice/balanced GL and SO-3 rejection pass; TASK-217 fixes F02 date-only due-date arithmetic, TASK-218 fixes F03 invoice aging/period presentation and TASK-219 fixes sales-invoice locale labels with focused/browser evidence; no complete customer settlement chain. |
+| [sales](../src/modules/sales/) | 8 | MCP SO-2 confirmation/stock/invoice/balanced GL and SO-3 rejection pass; TASK-217 fixes F02 date-only due-date arithmetic, TASK-218 fixes F03 invoice aging/period presentation and TASK-219 fixes sales-invoice locale labels with focused/browser evidence; TASK-220 separately covers shared filled-action palette evidence; no complete customer settlement chain. |
 | [service](../src/modules/service/) | 2 | Route rendering only; contract/ticket assignment/resolution lifecycle not rerun. |
 | [setup](../src/modules/setup/) | 3 | Fresh local Demo setup/sign-in observed; current production bootstrap/provisioning and remote health not exercised. |
 | [warehouse](../src/modules/warehouse/) | 1 | Route rendering only; receiving/transfers/picking reconciliation not fully exercised. |
@@ -50,7 +50,7 @@ and colocated test entry points.
 | Demo build / PGlite domain proof | Passed | TASK-216 fresh seed and simulated v15→v16 upgrade complete the seeded PO approval → receipt → invoice chain with one balanced supplier invoice; TASK-217 date-only boundary tests and TASK-218 mixed invoice-fact tests plus built-Demo KPI/filter route checks pass; shared rejection guards remain green |
 | Desktop/mobile route rendering | 129 routes rendered, no console/page errors; full audit failed voucher Retry | TASK-223; a focused three-route desktop pass does not close the full gate |
 | i18n | Current built-Demo PGlite audit passes 129 routes × five languages × two viewports with zero blocking findings; 1,728 canonical English keys and 72 local packs | Current local release evidence; current-HEAD remote CI rerun remains separate |
-| Theme/mobile | Selected pages inspected; contrast, touch/zoom/status gaps | TASK-220/222; no complete palette/device certification |
+| Theme/mobile | Focused filled-action contrast E2E passes light/dark desktop/mobile; touch/zoom/status gaps remain | TASK-222; no complete palette/device certification |
 | PWA update lifecycle | Passed explicit deferral/acceptance/reload flow | Physical devices, multiple tabs, unsaved drafts, in-flight requests and interrupted upgrades remain unverified |
 | Performance | Warm route and bundle observations only | TASK-201; cold-start, interaction percentiles, realistic data and concurrent tenant workloads |
 | Worker telemetry | Aggregate shape/redaction tests pass 3/3 | TASK-201; telemetry is awaited before work, uses whole-table aggregates and does not yet make `ready` identical to queue claim eligibility |
@@ -85,13 +85,15 @@ TASK-215 does not close any runtime finding or production gate.
 
 ## Documentation and KB reconciliation
 
-TASK-215 through TASK-219 are complete; TASK-220–223 remain Todo. Current registry:
-**210 Done / 4 In Progress / 6 Todo / 3 Blocked / 223 Total**. The project KB
+TASK-215 through TASK-220 are complete; TASK-221–223 remain Todo. Current registry:
+**211 Done / 4 In Progress / 5 Todo / 3 Blocked / 223 Total**. The project KB
 `erp-system-project-logic` (`ef47bf4b-83e1-42b2-a412-66912d04ea24`) now includes coverage
 item `8007eaf3-0ec3-4fa4-b4ca-1bdc3d8153b3`; the architecture inventory, EPIC-066 and
 specialist audit items plus KB description were updated and read back. TASK-216 changed
 local seed/pack/test runtime files, TASK-217 changed browser date derivation plus its
 regression test, TASK-218 changed only sales presentation facts/list predicates plus
-their regression test, and TASK-219 changed only sales-invoice locale bindings, locale
-resources, generated bootstrap and dynamic-date audit classification; no production system,
-deployment or remote CI result is claimed.
+their regression test, TASK-219 changed only sales-invoice locale bindings, locale
+resources, generated bootstrap and dynamic-date audit classification, and TASK-220 changed
+only presentation tokens, filled-state selectors, PWA disabled styling, cache-bust
+references and its focused E2E; no production system, deployment or remote CI result is
+claimed.

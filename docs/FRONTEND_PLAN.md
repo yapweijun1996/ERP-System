@@ -52,8 +52,8 @@ recovery gate and targeted invoice i18n failed. See [TEST_COVERAGE.md](TEST_COVE
 1. **Close latest verified defects.** TASK-216 completed seed correctness at the shared
    command/Demo-pack boundary, TASK-217 completed date-only due-date correctness, and
    TASK-218 completed invoice aging/period presentation correctness and TASK-219 completed
-   sales-invoice translation correctness. TASK-220–223 cover palette contrast, procurement
-   actions, mobile accessibility and recovery.
+   sales-invoice translation correctness and TASK-220 completed filled-action palette
+   contrast. TASK-221–223 cover procurement actions, mobile accessibility and recovery.
 2. **Preserve completed Receipt controls.** TASK-196/197 implemented permission-aware
    Pack reads and Company Receipt detail/edit/void/date correction plus eligible evidence
    selection. Upstream capture remains My Receipts; TASK-202 production artifact UAT

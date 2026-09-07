@@ -23,8 +23,9 @@ found seeded-PO invoicing blocked by unclassified tax snapshots, a one-day SG du
 shift, incorrect invoice aging/period KPIs and a dark-button contrast gap. These were
 historical audit findings, not fixed by the documentation audit. TASK-216 subsequently
 repairs the seeded procurement path, TASK-217 repairs the date-only due-date path, and
-TASK-218 repairs invoice aging/period presentation facts and TASK-219 repairs the sales-invoice
-translation gaps; TASK-220–223 remain open. The audit's
+TASK-218 repairs invoice aging/period presentation facts, TASK-219 repairs the sales-invoice
+translation gaps and TASK-220 repairs the filled-action contrast gap; TASK-221–223 remain open.
+The audit's
 optional full Vitest run stopped without a result; earlier suite totals below remain
 historical evidence.
 
@@ -60,6 +61,15 @@ The seven-route specialist matrix and the full PGlite browser audit pass at 129 
 accepts locale-generated month names such as `Sept` without weakening system-copy detection.
 This is local source/Demo evidence, not current-HEAD remote CI or deployment evidence.
 
+TASK-220 follow-up is complete on the local source: `--accent-action` and
+`--accent-action-hover` now separate filled white-text controls from accent text/chart
+color. Primary buttons, PWA Install and related selected controls use the action token;
+PWA disabled actions now share the visible disabled treatment. The focused action-contrast
+E2E passes light/dark × desktop/mobile with 5.567:1 normal, 6.947:1 hover, visible 2px
+focus outlines, disabled-state checks, zero browser errors and no mobile horizontal overflow.
+The four screenshots from those combinations were visually inspected and removed after the
+check. This is local source/Demo evidence, not current-HEAD remote CI or deployment evidence.
+
 ## Source-of-truth synchronization
 
 The synchronized review/status baseline started at `2188f56` (`New`). The current
@@ -69,7 +79,7 @@ production deployment is still a separate release gate.
 
 The current worktree adds migrations 0100/0101/0102/0103: the Drizzle journal contains **104 migration
 entries**, generated canonical SQL contains **255 tables**, and the task registry contains
-**210 Done / 4 In Progress / 6 Todo / 3 Blocked / 223 Total**. TASK-200 now closes the
+**211 Done / 4 In Progress / 5 Todo / 3 Blocked / 223 Total**. TASK-200 now closes the
 Canonical/API route parity gap by including `staff-calendar` in `API_SCREEN_ROUTES`.
 TASK-212 is done: the
 active route and dynamic shell now refresh in place on locale change while preserving
@@ -527,8 +537,9 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Enterprise Demo personas | ✅ 12 real permission sessions | Showcase manifest v16 owns all 12 identities directly and adds reporting lines, governed leave openings/reservations, 24 controlled July/August leave cases, 6 payroll runs, 282 payroll lines, one real pending sales approval and one balanced unpaid procure-to-pay case in each SG/MY entity within a 10,436-record deterministic pack. The calendar cases cover approved, pending, rejected, cancelled, multi-day and overlapping availability, and earlier controlled Demo rows converge in place on the same fixed business date. The controlled approval orders carry sufficient stock in the exact fulfilment warehouse, and sales availability is warehouse-specific rather than group-wide. v16 also supplies the complete sales, purchasing, treasury and landed-cost posting controls in both legal entities; its SG/MY procure-to-pay rows include governed classification/recoverability snapshots; gives each linked persona one company-managed Employee base role; removes the replaced shared compatibility grant; and deterministically binds Jordan Lee to Mei Lin for direct-manager approval. An existing IndexedDB upgrades additively without replacing user-owned data. SO-2/SO-3 remain the explicit confirmation success/rollback teaching drafts and are not mislabelled as approvals. Persona user names match their linked employee profiles. Missing SG/MY calendars, leave types, confirmed policies and posting accounts are repaired on historical IndexedDB upgrades before dependent records are created. Payroll examples follow the same SG CPF/SDL and MY EPF/SOCSO/EIS/PCB approximations as the canonical engine. `Avery Tan · Company Owner` is assigned to SG/MY with the current 115-permission template and company scope; approval, payment, payroll, sensitive tax-evidence and platform-support authority are not implicit, and the owner appears first in the switcher. Managers remain restricted to direct or explicitly granted teams. Viewer and all ten department personas display their actual effective roles. Role permissions and data scopes are regression-checked against the authoritative templates. |
 | PWA (manifest, SW, update prompt, safe areas) | ✅ Working | `web/public/manifest.webmanifest`, `sw.js`, `pwa.js`; current v263 adds the waiting worker version code to the update toast while retaining the waiting service worker as the single update authority, HTTP-cache bypass for `sw.js`, exact-version session suppression and one reload only after explicit acceptance. `npm run audit:pwa-update` has dated lifecycle evidence. |
 | Canonical UI i18n | ✅ Current browser verified | `node scripts/audit-i18n.mjs` verifies 1,728 English resources and 72 registered local five-language packs. The current built-Demo PGlite desktop/mobile runs passed 129 routes × 5 languages × 2 viewports with zero runtime errors, raw keys, blocking hardcoded system copy or page-level horizontal overflow. `setLang()` remains atomic and state-preserving; business-record values remain outside UI i18n. |
+| Filled-action contrast | ✅ Current browser verified | `tests/e2e/action-contrast.spec.mjs` covers primary/PWA actions across light/dark desktop/mobile. Computed normal/hover contrast is 5.567:1 / 6.947:1; focus and disabled states pass. This is focused palette evidence, not exhaustive chart/print/device certification. |
 | GitHub Pages deploy | ✅ Working | `.github/workflows/deploy-pages.yml` builds the static PGlite/IndexedDB Demo and publishes only the `web/dist/` artifact; it does not publish the Node API, PostgreSQL data, `.env` files or production secrets. The repository is public and Pages is configured for workflow deployment at `https://yapweijun1996.github.io/ERP-System/`. On 2026-09-05, run `33940353016` passed both Build and Deploy; a fresh-browser smoke check reached the setup wizard, completed local demo setup, opened the dashboard and confirmed `window.ErpSystemData.mode === 'pglite'` with no `/api` requests. Production remains the separate Docker/API/PostgreSQL track. |
-| CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ⚠️ Workflow executes; current-HEAD rerun pending | CI run `34017037310` is a historical remote failure on a hardcoded `timesheet: Projects` label. TASK-219's current source passes the full local 129-route desktop/mobile matrix; TASK-203 remains In Progress until a fresh run for the current pushed HEAD is recorded. |
+| CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ⚠️ Workflow executes; current-HEAD rerun pending | CI run `34017037310` is a historical remote failure on a hardcoded `timesheet: Projects` label. TASK-219/220 current source passes the full local i18n and focused contrast browser gates; TASK-203 remains In Progress until a fresh run for the current pushed HEAD is recorded. |
 | Generated PGlite schema + drift check | ✅ Working | `scripts/generate-demo-schema.mjs` generates fresh/upgrade SQL from ordered Drizzle migrations; `npm run check:demo-schema` and `npm run check:drift` run in CI. |
 | Browser smoke test (desktop + mobile, zero console/page errors, dashboard content verified) | ✅ Green | `scripts/smoke.mjs`, `npm run smoke`, Playwright, wired into CI with browser caching, TASK-015. The 2026-09-07 current worktree run passes desktop/mobile; the assertion now considers only visible semantic navigation badges while hidden zero-count badges remain in the DOM. |
 | Route production metadata and Preview contract | ✅ 129-route parity | `SCREEN_META` covers **129 Canonical / 0 Preview** routes and all 129 declare API mode, including `staff-calendar`. The screen audit fails closed on future Canonical/API metadata gaps. Preview pages, if reintroduced, distinguish Sample Data from Canonical Data and lock write-like actions. |

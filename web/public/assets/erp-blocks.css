@@ -1380,7 +1380,7 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
 .calendar-day{min-height:88px;padding:7px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--surface);transition:background .12s}
 .calendar-day:nth-child(7n){border-right:0}.calendar-day.outside{background:var(--surface-2);color:var(--muted)}
 .calendar-day.today{background:color-mix(in srgb,var(--accent-soft) 52%,var(--surface))}.calendar-day-number{display:flex;align-items:center;justify-content:space-between;gap:4px;font-size:12px;font-weight:700;margin-bottom:5px}
-.calendar-day.today .calendar-day-number>span{display:grid;place-items:center;width:23px;height:23px;border-radius:50%;background:var(--accent);color:#fff}
+.calendar-day.today .calendar-day-number>span{display:grid;place-items:center;width:23px;height:23px;border-radius:50%;background:var(--accent-action);color:#fff}
 .calendar-day-number small{font-size:9px;color:var(--accent);font-weight:700}
 .calendar-event{display:flex;width:100%;align-items:center;gap:6px;border:1px solid transparent;border-radius:7px;padding:4px 6px;margin:3px 0;text-align:left;font-size:11px;cursor:pointer;transition:border-color .12s,transform .12s}
 .calendar-event:hover{transform:translateY(-1px);border-color:currentColor}.calendar-event.selected{outline:2px solid var(--accent);outline-offset:1px}
@@ -1513,7 +1513,7 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
 .platform-step>span{display:grid;place-items:center;width:22px;height:22px;border:1px solid var(--line);border-radius:50%;background:var(--surface);color:var(--muted);font-size:11px;font-weight:700;flex:none;}
 .platform-step-label-short{display:none;}
 .platform-step.current{color:var(--text);}
-.platform-step.current>span{border-color:var(--accent);background:var(--accent);color:#fff;}
+.platform-step.current>span{border-color:var(--accent-action);background:var(--accent-action);color:#fff;}
 .platform-step.complete{color:var(--text);}
 .platform-step.complete>span{border-color:var(--ok,#1d9b65);background:var(--ok,#1d9b65);color:#fff;}
 .platform-demo-banner{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:14px 0 0;padding:11px 12px;border:1px solid color-mix(in srgb,var(--accent) 28%,var(--line));border-radius:var(--r-s);background:color-mix(in srgb,var(--accent-tint) 82%,var(--surface));color:var(--text);}

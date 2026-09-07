@@ -11,7 +11,7 @@ are acceptance targets, not declarations that every module is production-ready.
 Required corrections are TASK-216–223: governed seed snapshots, date-only due dates,
 reconciled invoice aging/period KPIs, complete translated labels, filled-action
 contrast, usable procurement actions, mobile/zoom/status accessibility and reliable
-recovery verification. TASK-216 through TASK-219 are complete; TASK-220–223 are Todo. Complete them
+recovery verification. TASK-216 through TASK-220 are complete; TASK-221–223 are Todo. Complete them
 with negative-path and regression evidence before changing their acceptance status.
 Automatic client updates currently mean background detection plus explicit user
 activation; unattended forced refresh and multi-tab draft safety are not guaranteed.
@@ -144,7 +144,8 @@ schema, resource/command, permission, tests and localization are complete.
 Current source inventory (2026-09-08) is 129/0 routes, 1,728 English keys and 72 local
 five-language packs. TASK-214 rendered all 129 routes but the full screen gate failed
 one recovery assertion; TASK-219 now closes the targeted invoice-label finding and the
-current full five-language browser matrix passes. API-mode browser and physical-device
+current full five-language browser matrix passes. TASK-220 closes the filled-action contrast
+finding in the built Demo at desktop/mobile; API-mode browser and physical-device
 evidence remain separate release gates. See [TEST_COVERAGE.md](TEST_COVERAGE.md).
 Business-record values remain outside system-authored UI copy.
 
@@ -273,7 +274,9 @@ controls exist.
   English and is orthogonal to company country. `app_user.language` remains reserved
   for compatibility and is not currently wired. Current inventory is 1,728 English
   keys / 72 local packs; the current 129-route × 5-language × 2-viewport browser
-  matrix passes.
+  matrix passes. Filled primary/PWA actions now use a separate contrast-safe action token;
+  the focused contrast E2E covers both themes, normal/hover/focus/disabled states and
+  desktop/mobile widths.
   Business-record values remain outside system-authored UI copy. ([I18N.md](I18N.md))
 - **Licensing:** Odoo is studied at concept level only — no code porting.
   ([STUDYING_ODOO.md](STUDYING_ODOO.md))

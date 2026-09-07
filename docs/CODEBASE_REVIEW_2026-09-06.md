@@ -6,7 +6,8 @@ i18n and contrast defects, a full-screen recovery assertion failure and an incom
 full Vitest attempt. See [TEST_COVERAGE.md](TEST_COVERAGE.md); TASK-216 through TASK-219
 are now Done with command-level seed/upgrade, browser date-only and invoice KPI proof,
 TASK-219 is now Done with canonical sales-invoice locale bindings and full local browser
-matrix evidence; TASK-220–223 remain open.
+matrix evidence; TASK-220 is now Done with focused filled-action contrast evidence;
+TASK-221–223 remain open.
 
 This review began from `main` at `2188f56` (`New`) and now records the completed
 TASK-195–197 and TASK-206–208 follow-up plus the source-level TASK-204 and TASK-205
@@ -38,7 +39,7 @@ current source and TASK-219 follow-up pass the full built-Demo PGlite matrix at 
   and Demo showcase-pack verification. The current `test:e2e:setup-wizard` also passes
   desktop, iPhone-width and small-mobile layout checks. These checks do not prove live
   PostgreSQL provisioning, public deployment, or GitHub Actions execution.
-- The task registry currently reports **210 Done / 4 In Progress / 6 Todo / 3 Blocked / 223 Total**. TASK-216 through TASK-219 are complete locally; the actionable boundary is concentrated in TASK-199–205 and
+- The task registry currently reports **211 Done / 4 In Progress / 5 Todo / 3 Blocked / 223 Total**. TASK-216 through TASK-220 are complete locally; the actionable boundary is concentrated in TASK-199–205 and
   EPIC-067/TASK-209; the blocked items are external or operational, not silently
   treated as code failures.
 - TASK-204 source work is now in progress: migrations `0100`/`0101` add governed tax

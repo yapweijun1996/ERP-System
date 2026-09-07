@@ -44,6 +44,10 @@ For the current source-backed action backlog and evidence boundaries, see
 - [x] `npm run audit:i18n` — TASK-219 repaired the sales-invoice labels; the current
       built-Demo PGlite run passed 129 routes × 5 languages × desktop/mobile with zero
       blocking findings. Current-HEAD remote CI remains a separate gate.
+- [x] `npm run test:e2e:action-contrast` — TASK-220 action-token E2E passed light/dark
+      desktop/mobile with 5.567:1 normal and 6.947:1 hover contrast, visible focus and
+      disabled states, zero browser errors and no mobile horizontal overflow. This is
+      focused palette evidence, not exhaustive chart/print/physical-device certification.
 - [x] `npm run test:e2e:platform-workspace-layout` — 2026-09-07 passed isolated PGlite
       desktop/tablet/mobile Platform workspace, separate Admin/Employee modes, focus and
       overflow checks plus the focused five-language Platform workspace matrix.
@@ -60,13 +64,13 @@ For the current source-backed action backlog and evidence boundaries, see
       the primary/calendar entry points emit aggregate-only queue snapshots. This proves
       shape/redaction only: bounded non-blocking collection, claim-predicate parity,
       production metrics/alerts, ownership and recovery exercise remain TASK-201.
-- [x] `tasks/tasks.jsonl` statuses current: 210 Done / 4 In Progress / 6 Todo / 3 Blocked / 223 Total. Blockers are TASK-017, TASK-193 and TASK-209;
+- [x] `tasks/tasks.jsonl` statuses current: 211 Done / 4 In Progress / 5 Todo / 3 Blocked / 223 Total. Blockers are TASK-017, TASK-193 and TASK-209;
       TASK-203 remains In Progress until a fresh current-HEAD remote CI result, TASK-204 remains In progress until tax-owner production review and TASK-205 remains
       In progress until production Vision configuration and live dead-letter alert/recovery
       evidence is recorded.
 - [ ] GitHub Actions actually executes current HEAD with every required gate green. Run
       `34017037310` is a historical remote failure on `timesheet: Projects`; the current
-      TASK-219 source passes the full local desktop/mobile matrix, and TASK-203 still needs
+      TASK-219/220 source passes the full local i18n and focused contrast browser gates, and TASK-203 still needs
       a fresh current-HEAD remote run.
 - [x] 2026-08-12 current-worktree secret baseline: the tracked diff and `web/dist`
       contain no known provider/token/private-key signature; high-entropy diff strings
