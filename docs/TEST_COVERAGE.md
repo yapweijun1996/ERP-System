@@ -58,7 +58,7 @@ colocated test entry points.
 | Performance | Warm route and bundle observations only | TASK-201; cold-start, interaction percentiles, realistic data and concurrent tenant workloads |
 | Worker telemetry | Aggregate shape/redaction tests pass 3/3 | TASK-201; telemetry is awaited before work, uses whole-table aggregates and does not yet make `ready` identical to queue claim eligibility |
 | Full unit/integration suite | Current HEAD passes 174 files / 710 tests with 2 skipped files and 2 skipped tests | PostgreSQL target and production evidence remain separate |
-| PostgreSQL/API/production | Not rerun by this audit | TASK-199/203/209 and module-specific PostgreSQL/API UAT |
+| PostgreSQL/API/production | Current disposable PostgreSQL 16 security/provisioning gate passes 2 files / 2 tests | Production database, deployed revision, remote CI and module-specific PostgreSQL/API UAT remain TASK-199/203/209 gates |
 | Generated schema/RLS static coverage | TASK-215 fresh check passed: 104 migrations, 255 tables, 225 policies + 10 exemptions | This does not execute PostgreSQL RLS or prove target-host deployment |
 
 ## Completion requirements

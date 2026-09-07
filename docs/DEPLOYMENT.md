@@ -130,6 +130,11 @@ profiled migration owner, and a current Platform Company context established bef
 the first FORCE-RLS write. Disposable PostgreSQL HTTP integrations pass bootstrap →
 Master → Company, hidden actor/session lifecycle and cross-tenant denial. This is not
 production revision or CI evidence; TASK-199/TASK-203/TASK-209 remain release gates.
+The current-HEAD PostgreSQL gate was rerun on 2026-09-08 in a temporary PostgreSQL 16
+container and passed both `postgresSecurity.integration.test.ts` and
+`platformProvisioning.postgres.integration.test.ts` (2 files / 2 tests). The test
+database was removed after verification; no production database or deployment was
+changed.
 
 Current TASK-175 evidence (2026-08-10): a disposable PostgreSQL 16 database passed
 `POSTGRES_URL=... npm run demo` (cross-engine parity and exactly-one-winner stock

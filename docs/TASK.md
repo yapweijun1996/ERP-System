@@ -208,8 +208,9 @@ remote CI result is claimed; the current full local Vitest run separately passes
 TASK-213 closes the source-level RLS table-list omission for `sales_enquiry_line` and
 adds a deterministic generated-schema coverage gate. TASK-195 now establishes the
 non-superuser PostgreSQL runtime roles and Platform provisioning context with a
-disposable PostgreSQL proof; current production availability remains owned by
-TASK-199/209.
+disposable PostgreSQL proof. Its current-HEAD security and provisioning gate was rerun
+on 2026-09-08 and passed 2 files / 2 tests in a temporary PostgreSQL 16 container;
+current production availability remains owned by TASK-199/209.
 
 TASK-185 delivered migration 0094 and the platform foundation. TASK-186 delivered
 migration 0095, retired the tenant permission/API/UI/onboarding backdoors, applied Master

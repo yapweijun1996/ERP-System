@@ -275,7 +275,7 @@ suite('PostgreSQL 16 security lifecycle proof', () => {
         expect(message.text).toContain('token=');
       },
     }, { tokenEncryptionKey: key, workerId: 'pg-ci-worker' });
-    expect(delivered).toEqual({ claimed: 1, delivered: 1, failed: 0 });
+    expect(delivered).toEqual({ claimed: 1, deadLettered: 0, delivered: 1, failed: 0 });
     const accepted = await acceptInvitation(db, {
       token: inviteToken,
       fullName: 'Invited User',
