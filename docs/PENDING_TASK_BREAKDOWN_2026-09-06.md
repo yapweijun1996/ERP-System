@@ -263,9 +263,9 @@ remain green; TASK-199 still needs a target-host release and health proof.
     update; a temporary PostgreSQL 16 rerun passes 2 files / 2 tests. The earlier
     `34017037310` i18n failure is historical; its `route.project-pl` fix and exact
     desktop/mobile 129-route × 5-language matrices also pass locally.
-  - Remaining action: commit/push the scoped fix and record a fresh current-HEAD CI
-    run with every required shard/typecheck/build gate. Keep zero-step failures and
-    source failures distinct; neither is a green gate.
+  - Remaining action: after authorized push of the already-committed local fixes,
+    record a fresh current-HEAD CI run with every required shard/typecheck/build gate.
+    Keep zero-step failures and source failures distinct; neither is a green gate.
 
 - **TASK-209 — Blocked (P0) — release Platform tenant administration**
   - Depends on: `TASK-195`, `TASK-203`, `TASK-206`, `TASK-207`, `TASK-208`, `TASK-199`.
