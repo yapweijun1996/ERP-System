@@ -130,6 +130,14 @@ download/Print, release or authenticated UAT evidence boundary.
 2026-09-07 release-checklist addendum: the release checklist now records the verified local
 Receipt Pack and Platform workspace gates as complete while keeping production download/Print,
 current-HEAD CI, deployment, scanner/storage UAT and authenticated release evidence open.
+
+2026-09-08 release-evidence addendum: commit `7a06c47` adds `npm run verify:release`, a
+bounded read-only checker for the same-origin root, `/health`, `/api/setup/status` and
+`release.json`. Its local HTTP fixture tests pass 4/4 for success, revision mismatch,
+unreviewed redirect-path rejection and CLI exit/status parity. Against local HEAD
+`0d51d23`, the current Pages origin fails closed with `health_http_404` and the production
+Cloudflare origin fails closed with `root_http_502`; both exits are 1 with empty stderr.
+This confirms the known availability boundary without claiming a release or root cause.
 The current rerun also passes the Company Receipts API E2E and both Platform workspace E2E
 flows; these remain disposable/local evidence, not production release proof.
 
@@ -228,7 +236,9 @@ remain green; TASK-199 still needs a target-host release and health proof.
     `deploy/release.sh` now checks `/health` from inside the web container through the
     Compose network because the production overlay removes DB/API host port publishing.
     The manifest writer now uses a private atomic replacement path with symlink/non-file
-    rejection; focused replacement/failure/permission tests pass 4/4.
+    rejection; focused replacement/failure/permission tests pass 4/4. The new
+    `verify:release` command validates root/health/setup/manifest final URLs and exact
+    revision equality with bounded response bodies; its local fixture/CLI tests pass 4/4.
   - Steps: perform read-only `/health`, root and setup-status probes from two independent
     checks; identify the 502 cause; restore the service; capture running commit and
     static-asset hashes; verify Compose tunnel/database/storage/monitoring health; record
