@@ -1,15 +1,15 @@
 # ERP-System Project Logic
 
 TASK-216 fixture repair, TASK-217 date-only repair, TASK-218 invoice presentation repair,
-TASK-219 sales-invoice i18n repair, TASK-220 filled-action contrast repair and TASK-221
-procurement receiving workflow repair
+TASK-219 sales-invoice i18n repair, TASK-220 filled-action contrast repair, TASK-221
+procurement receiving workflow repair and TASK-222 mobile/status usability repair
 (2026-09-08) change no posting contract: governed tax facts are now present in fresh and
 upgraded Demo procurement rows, while sales due-date arithmetic uses a shared calendar-
 date helper and invoice aging/period KPIs derive from immutable facts without changing
 posting status. Shared posting rejection remains authoritative.
 [TEST_COVERAGE.md](TEST_COVERAGE.md) records every current module and evidence gaps;
-TASK-216–223 own the eight specialist findings; TASK-216 through TASK-221 are complete and
-TASK-222–223 remain Todo. Fresh schema/RLS checks prove
+TASK-216–223 own the eight specialist findings; TASK-216 through TASK-222 are complete and
+TASK-223 remains Todo. Fresh schema/RLS checks prove
 104 migrations, 255 tables, 225 generic policy tables and 10 explicit exemptions,
 not production isolation. Domain fixes must update this mirror and the KB together.
 
@@ -59,6 +59,15 @@ order line at read-only full quantity, and submits the existing shared `receiveG
 command with its tenant/session boundary and idempotency key. Partial quantities, QC
 disposition, open receipt states and inspection actions are not part of this contract;
 the UI must describe that boundary rather than imply unsupported capability.
+
+TASK-222 establishes the mobile presentation contract: stable workflow enums remain data
+values, while PO approval detail renders `pending_approval`/`open` through the existing
+five-language status layer. User zoom remains available in the viewport metadata. At narrow
+layouts, top-bar controls, filters, row actions, detail actions and modal actions target at
+least 44px; row actions do not depend on hover. Shared modals focus their first field,
+contain keyboard Tab focus and restore the opener on close. The built-Demo browser evidence
+covers five locales at 375px, desktop at 1280px and 188px half-width reflow; physical-device
+acceptance remains TASK-017.
 
 ## 1. System boundary and execution contract
 

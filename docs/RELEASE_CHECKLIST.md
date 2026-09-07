@@ -48,6 +48,10 @@ For the current source-backed action backlog and evidence boundaries, see
       desktop/mobile with 5.567:1 normal and 6.947:1 hover contrast, visible focus and
       disabled states, zero browser errors and no mobile horizontal overflow. This is
       focused palette evidence, not exhaustive chart/print/physical-device certification.
+- [x] `npm run test:e2e:mobile-usability` — TASK-222 built-Demo E2E passed en/ms/zh/ja/vi at
+      375px, en at 1280px and a 188px half-width reflow equivalent to 200% zoom; it checked
+      localized PO status values, practical touch targets, modal focus/close recovery, zero
+      browser errors and no document overflow. Physical-device acceptance remains TASK-017.
 - [x] `npm run test:e2e:platform-workspace-layout` — 2026-09-07 passed isolated PGlite
       desktop/tablet/mobile Platform workspace, separate Admin/Employee modes, focus and
       overflow checks plus the focused five-language Platform workspace matrix.
@@ -64,7 +68,7 @@ For the current source-backed action backlog and evidence boundaries, see
       the primary/calendar entry points emit aggregate-only queue snapshots. This proves
       shape/redaction only: bounded non-blocking collection, claim-predicate parity,
       production metrics/alerts, ownership and recovery exercise remain TASK-201.
-- [x] `tasks/tasks.jsonl` statuses current: 212 Done / 4 In Progress / 4 Todo / 3 Blocked / 223 Total. Blockers are TASK-017, TASK-193 and TASK-209;
+- [x] `tasks/tasks.jsonl` statuses current: 213 Done / 4 In Progress / 3 Todo / 3 Blocked / 223 Total. Blockers are TASK-017, TASK-193 and TASK-209;
       TASK-203 remains In Progress until a fresh current-HEAD remote CI result, TASK-204 remains In progress until tax-owner production review and TASK-205 remains
       In progress until production Vision configuration and live dead-letter alert/recovery
       evidence is recorded.

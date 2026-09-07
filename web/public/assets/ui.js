@@ -193,24 +193,60 @@ function initTooltip(){
 
 /* ---- modal ---- */
 let modalCloseHandler=null;
+let modalReturnFocus=null;
+const modalFocusableSelector='button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href],[contenteditable="true"],[tabindex]:not([tabindex="-1"])';
+function modalFocusableElements(modal){
+  return [...modal.querySelectorAll(modalFocusableSelector)].filter(element=>!element.hidden&&element.getClientRects().length);
+}
+function focusModalControl(modal){
+  const contentControl=modal.querySelector('input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[contenteditable="true"]');
+  const target=contentControl&&contentControl.getClientRects().length
+    ?contentControl
+    :modal.querySelector('.modal-foot button:not([disabled])')||modal.querySelector('.modal-head .x')||modal;
+  if(typeof target.focus==='function'){
+    try{target.focus({preventScroll:true});}catch{target.focus();}
+  }
+}
 function openModal(html,{onClose=null}={}){
   // A new modal replaces the current one synchronously. closeModal() deliberately
   // keeps its node for the exit animation, which would otherwise leave duplicate
   // modalEl/modalScrim ids and let immediate follow-up actions bind to the old DOM.
+  const existing=document.querySelector('#modalEl');
+  if(!existing){
+    const active=document.activeElement;
+    modalReturnFocus=active&&active!==document.body?active:null;
+  }
   document.querySelectorAll('#modalEl,#modalScrim').forEach(node=>node.remove());
   modalCloseHandler=typeof onClose==='function'?onClose:null;
   const scrim=document.createElement('div'); scrim.className='scrim show'; scrim.id='modalScrim';
   scrim.style.zIndex=110;
-  const m=document.createElement('div'); m.className='modal'; m.id='modalEl'; m.innerHTML=html;
+  const m=document.createElement('div'); m.className='modal'; m.id='modalEl'; m.setAttribute('role','dialog'); m.setAttribute('aria-modal','true'); m.tabIndex=-1; m.innerHTML=html;
   document.body.appendChild(scrim); document.body.appendChild(m);
-  requestAnimationFrame(()=>m.classList.add('show'));
+  requestAnimationFrame(()=>{m.classList.add('show');focusModalControl(m);});
+  m.addEventListener('keydown',event=>{
+    if(event.key!=='Tab') return;
+    const focusable=modalFocusableElements(m);
+    if(!focusable.length){event.preventDefault();m.focus();return;}
+    const first=focusable[0],last=focusable[focusable.length-1];
+    if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+    else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+  });
   scrim.addEventListener('click',closeModal);
 }
 function closeModal(){
   const m=$('#modalEl'),s=$('#modalScrim'),onClose=modalCloseHandler;
+  const restore=modalReturnFocus;
   modalCloseHandler=null;
+  modalReturnFocus=null;
   if(m){m.classList.remove('show');setTimeout(()=>m.remove(),200);} if(s)s.remove();
   if(typeof onClose==='function') onClose();
+  if(restore&&restore.isConnected){
+    requestAnimationFrame(()=>{
+      const activeModal=document.querySelector('#modalEl');
+      if(activeModal&&activeModal!==m) return;
+      try{restore.focus({preventScroll:true});}catch{restore.focus();}
+    });
+  }
 }
 
 /* ---- standard modal builder (SINGLE SOURCE OF TRUTH for modal chrome) ----

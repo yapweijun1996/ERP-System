@@ -6,8 +6,9 @@ upgrade with explicit SG/MY tax snapshots; the posting guard still rejects incom
 or regime-incompatible records. UI date-only handling is repaired under TASK-217; invoice
 aging and fiscal-period KPI presentation is repaired under TASK-218. Sales invoice
 translation gaps are repaired under TASK-219, and filled-action contrast is repaired under
-TASK-220; the current 129-route five-language desktop/mobile matrix and focused contrast
-E2E pass locally. Remaining presentation follow-up is TASK-222.
+TASK-220; TASK-222 now covers localized PO workflow status names in addition to mobile
+touch/zoom/modal usability. The current 129-route five-language desktop/mobile matrix and
+focused contrast/mobile E2E pass locally. Physical-device acceptance remains TASK-017.
 See [TEST_COVERAGE.md](TEST_COVERAGE.md).
 
 The ERP serves multiple countries from one codebase. Country behavior is an **attribute

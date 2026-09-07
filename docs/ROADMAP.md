@@ -7,8 +7,8 @@
    presentation boundary; TASK-219 is Done at the sales-invoice i18n boundary and TASK-221
    is Done at the procurement receiving presentation/workflow boundary. Rerun the affected
    browser journeys so command repair is not mistaken for complete E2E.
-2. TASK-222/223: close mobile/zoom/status and
-   recovery verification gaps.
+2. TASK-223: resolve payment-voucher recovery audit timing uncertainty. TASK-222's
+   mobile/zoom/status gap is closed locally; physical-device acceptance remains TASK-017.
 3. TASK-203: obtain current-HEAD green CI after fixes; TASK-199: verify target health
    and revision. TASK-209 release requires both, plus its completed security chain.
 4. Finish TASK-202/204/205 production artifact, tax-owner and provider/recovery evidence;
@@ -16,14 +16,14 @@
    measures scale, alerting and restore objectives after TASK-199.
    TASK-017 and TASK-193 still require devices and SMTP respectively.
 
-TASK-214 audit is complete; TASK-215, TASK-219, TASK-220 and TASK-221 synchronize this plan. Historic phase checkmarks
+TASK-214 audit is complete; TASK-215, TASK-219, TASK-220, TASK-221 and TASK-222 synchronize this plan. Historic phase checkmarks
 mean the scoped milestone was delivered, not current all-module or production acceptance.
 Use [TEST_COVERAGE.md](TEST_COVERAGE.md) for latest results and
 [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md) for the full product goals.
 
 This roadmap keeps the ERP build focused on a working demo first, then production
 readiness. The order matters: prove the product shape in the browser, then harden the
-server and Docker path. Status reviewed **2026-09-07** (see [STATUS.md](STATUS.md)).
+server and Docker path. Status reviewed **2026-09-08** (see [STATUS.md](STATUS.md)).
 
 Status legend: ✅ complete · 🔶 in progress · ⬜ not started.
 

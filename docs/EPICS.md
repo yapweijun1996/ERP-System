@@ -4,7 +4,7 @@ Reviewed 2026-09-08: historical Done milestones retain their original scoped evi
 TASK-214 does not certify all modules. [TEST_COVERAGE.md](TEST_COVERAGE.md) records
 latest failures and untested boundaries; EPIC-066 now tracks TASK-215 documentation
 and TASK-216–223 runtime follow-up against [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md).
-TASK-216 through TASK-221 are complete locally; TASK-222–223 remain open.
+TASK-216 through TASK-222 are complete locally; TASK-223 remains open.
 
 Each epic describes a large work group. Small executable tasks live in
 `tasks/tasks.jsonl`. Status legend: ✅ done · 🔶 in progress · ⬜ not started.
@@ -2671,7 +2671,7 @@ Current truth:
 | TASK-219 | Done | Close sales invoice translation gaps; five-language labels and full desktop/mobile i18n audit pass |
 | TASK-220 | Done | Correct filled-action contrast in both themes; action-token E2E passes in both themes and viewports |
 | TASK-221 | Done | Make procurement next actions and receiving scope clear; built-Demo desktop/mobile full-receipt workflow passes |
-| TASK-222 | Todo | Improve mobile touch zoom and localized status usability |
+| TASK-222 | Done | Improve mobile touch zoom and localized status usability; five-language desktop/mobile E2E and half-width reflow pass |
 | TASK-223 | Todo | Resolve payment voucher recovery audit timing uncertainty |
 
 Exit criteria: TASK-195–202 and TASK-204–205 pass their source, PostgreSQL, browser and operational

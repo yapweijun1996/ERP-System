@@ -1,6 +1,6 @@
 # ERP System
 
-ERP review status: [module test coverage](docs/TEST_COVERAGE.md) lists verified
+ERP review status (2026-09-08): [module test coverage](docs/TEST_COVERAGE.md) lists verified
 workflows, known failures and untested production boundaries. All-route rendering
 is not all-module business E2E acceptance.
 

@@ -1,6 +1,6 @@
 # ERP module verification coverage
 
-Reviewed: **2026-09-08**, source `243af56`, TASK-214 evidence and TASK-219/220/221 follow-up; TASK-215 documentation reconciliation.
+Reviewed: **2026-09-08**, source `243af56`, TASK-214 evidence and TASK-219/220/221/222 follow-up; TASK-215 documentation reconciliation.
 
 **All modules have not passed complete end-to-end testing.** All 129 registered routes
 rendered at desktop/mobile, but the complete screen audit failed one recovery assertion.
@@ -50,7 +50,7 @@ and colocated test entry points.
 | Demo build / PGlite domain proof | Passed | TASK-216 fresh seed and simulated v15→v16 upgrade complete the seeded PO approval → receipt → invoice chain with one balanced supplier invoice; TASK-217 date-only boundary tests and TASK-218 mixed invoice-fact tests plus built-Demo KPI/filter route checks pass; shared rejection guards remain green |
 | Desktop/mobile route rendering | 129 routes rendered, no console/page errors; full audit failed voucher Retry | TASK-223; a focused three-route desktop pass does not close the full gate |
 | i18n | Current built-Demo PGlite audit passes 129 routes × five languages × two viewports with zero blocking findings; 1,728 canonical English keys and 72 local packs | Current local release evidence; current-HEAD remote CI rerun remains separate |
-| Theme/mobile | Focused filled-action contrast E2E passes light/dark desktop/mobile; touch/zoom/status gaps remain | TASK-222; no complete palette/device certification |
+| Theme/mobile | Focused filled-action contrast E2E and TASK-222 mobile usability E2E pass; five locales, desktop/mobile touch targets, zoom metadata, modal focus and 188px reflow are covered | Physical-device acceptance TASK-017 and exhaustive palette/device certification remain separate |
 | PWA update lifecycle | Passed explicit deferral/acceptance/reload flow | Physical devices, multiple tabs, unsaved drafts, in-flight requests and interrupted upgrades remain unverified |
 | Performance | Warm route and bundle observations only | TASK-201; cold-start, interaction percentiles, realistic data and concurrent tenant workloads |
 | Worker telemetry | Aggregate shape/redaction tests pass 3/3 | TASK-201; telemetry is awaited before work, uses whole-table aggregates and does not yet make `ready` identical to queue claim eligibility |
@@ -78,16 +78,16 @@ capability gap, not a tested feature.
 F01–F08 map one-to-one to TASK-216–223 in [TASK.md](TASK.md) and the
 [task registry](../tasks/tasks.jsonl). TASK-218 depends on TASK-217's date contract;
 TASK-221 depended on restoring the seeded procurement journey in TASK-216 and is now
-complete. Translation,
-contrast, mobile usability and recovery investigation can proceed independently.
+complete. TASK-222 now closes the focused mobile/status finding; recovery investigation
+TASK-223 remains independent.
 Existing production gates remain TASK-199/201/202/203/204/205/209, physical-device
 acceptance TASK-017, and SMTP-dependent recovery TASK-193. Documentation completion
 TASK-215 does not close any runtime finding or production gate.
 
 ## Documentation and KB reconciliation
 
-TASK-215 through TASK-221 are complete; TASK-222–223 remain Todo. Current registry:
-**212 Done / 4 In Progress / 4 Todo / 3 Blocked / 223 Total**. The project KB
+TASK-215 through TASK-222 are complete; TASK-223 remains Todo. Current registry:
+**213 Done / 4 In Progress / 3 Todo / 3 Blocked / 223 Total**. The project KB
 `erp-system-project-logic` (`ef47bf4b-83e1-42b2-a412-66912d04ea24`) now includes coverage
 item `8007eaf3-0ec3-4fa4-b4ca-1bdc3d8153b3`; the architecture inventory, EPIC-066 and
 specialist audit items plus KB description were updated and read back. TASK-216 changed
@@ -99,4 +99,6 @@ only presentation tokens, filled-state selectors, PWA disabled styling, cache-bu
 references and its focused E2E. TASK-221 changed only procurement workflow presentation,
 the existing full-receipt modal wiring, canonical register scope and its focused E2E; no
 partial-receipt domain capability, production system, deployment or remote CI result is
-claimed.
+claimed. TASK-222 then changed only the mobile presentation boundary, viewport zoom metadata,
+localized PO status display, shared modal focus lifecycle and its focused browser E2E; the
+188px check is a repeatable reflow equivalent, not physical-device evidence.

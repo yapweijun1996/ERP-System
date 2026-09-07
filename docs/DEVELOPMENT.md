@@ -23,6 +23,7 @@ npm install
 | `npm run test:e2e:company-receipts-postgres` | Uses the same authenticated browser journey against an explicitly supplied `TASK183_POSTGRES_URL`. It rejects a non-empty database before migrations/seed; the 2026-08-12 proof passed against a new disposable local PostgreSQL 16 database. It does not deploy or use production data. |
 | `npm run test:e2e:platform-workspace-layout` | Builds API mode and checks Platform workspace desktop/mobile containment. |
 | `npm run test:e2e:platform-workspace-demo-autofill` | Builds the explicitly flagged hosted-Demo presentation and checks sample login/defaults, password controls, resume and new-Company safety. |
+| `npm run test:e2e:mobile-usability` | Builds the Demo and checks five-language PO workflow status labels, narrow-screen 44px touch targets, user zoom metadata, modal focus/close recovery and 188px half-width reflow at desktop/mobile viewports. It is browser evidence; physical-device acceptance remains TASK-017. |
 | `node tests/e2e/staff-calendar.spec.mjs` | Uses the current Demo build to verify mixed leave/appointment rendering, create, filter and list search; the test waits for Demo/PGlite readiness before installing its adapter fixture. |
 | `npm run preview` | Serve the built `web/dist/` locally |
 | `npm run migrate` | Apply Drizzle migrations to PostgreSQL (production mode) |
@@ -36,7 +37,7 @@ npm install
 | `npm test` | **Vitest unit/integration suite** — domain transactions, API/auth, migrations, PGlite parity and conditional PostgreSQL security coverage. Current HEAD passes 173 files/705 tests with two intentional file/test skips. Most isolated tests use fresh PGlite state; the PostgreSQL suite requires its explicit URL/environment and otherwise records one conditional skip. |
 | `npm run lint` | ESLint over the current root/Web source set |
 
-Current source note (2026-09-07): 129 Canonical / 0 Preview routes exist and all 129
+Current source note (2026-09-08): 129 Canonical / 0 Preview routes exist and all 129
 declare API mode, including `staff-calendar`. The current HEAD `audit:screens` passes
 all 129 routes at desktop and 375px; the full 129 × 5 × 2 i18n browser matrix, API Staff
 Calendar integration (6/6), Staff Calendar Demo E2E, authenticated API browser proof and

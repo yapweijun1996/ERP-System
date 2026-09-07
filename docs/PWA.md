@@ -95,6 +95,9 @@ ERP System rules:
 - Bottom tabbar height includes `safe-area-inset-bottom`; buttons fill the usable height.
 - Floating PWA update/install toast sits above the bottom tabbar on mobile.
 - Detail sheets and command palette respect bottom safe area.
+- The viewport metadata leaves user zoom enabled; narrow touch controls use practical
+  44px targets and mobile row actions do not depend on hover. Browser reflow evidence does
+  not replace the separate physical-device acceptance in TASK-017.
 
 Do not implement iOS bottom navigation by adding bottom padding only. The bar itself must
 occupy the home-indicator area so there is no empty strip below the buttons.

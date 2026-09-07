@@ -71,6 +71,20 @@ function poApprovalCopy(){
   return key=>pack[key]||packs.en[key]||key;
 }
 function poApprovalLabel(status){const s=poApprovalCopy();return s(status==='pending'?'pending':status==='approved'?'approved':'rejected');}
+function poOrderStatusLabel(status){
+  const raw=String(status==null?'':status).trim();
+  const normalized=raw.toLowerCase().replace(/\s+/g,'_');
+  const display={
+    pending_approval:'Pending Approval',
+    approved:'Approved',
+    open:'Open',
+    received:'Completed',
+    completed:'Completed',
+    rejected:'Rejected',
+    cancelled:'Cancelled',
+  }[normalized]||raw;
+  return typeof ts==='function'?ts(display):display;
+}
 function poApprovalTone(status){return status==='approved'?'ok':status==='rejected'?'danger':'warn';}
 function openPoApprovalDecision(request,decision){
   const s=poApprovalCopy();
@@ -183,7 +197,7 @@ SCREENS['po-approval']=async function(root,params){
       {label:s('net'),value:money(request.net,request.currency),numeric:true},
       {label:s('date'),value:request.orderDate},
       {label:s('submitted'),value:request.submittedAt},
-      {label:s('orderStatus'),value:request.orderStatus},
+      {label:s('orderStatus'),value:poOrderStatusLabel(request.orderStatus)},
     ],
     main:`<div class="panel" data-po-lines>
       <div class="panel-h"><h3>${esc(s('lineItems'))}</h3><span class="case-detail-panel-count">${request.lines.length}</span></div>

@@ -106,6 +106,22 @@ html,body{
   body{padding-left:var(--safe-left);padding-right:var(--safe-right);}
   .main{padding-bottom:calc(var(--mobile-tabbar-base) + var(--safe-bottom));}
   .topbar{padding-top:calc(10px + var(--safe-top));padding-left:max(14px,var(--safe-left));padding-right:max(14px,var(--safe-right));}
+  /* Touch controls keep a practical 44px target on narrow layouts. The
+     desktop density remains unchanged, while mobile row actions stay
+     discoverable without relying on hover. */
+  .topbar .iconbtn,
+  .topbar .avatar{width:44px;height:44px;min-width:44px;min-height:44px;}
+  .topbar .avatar svg{width:22px;height:22px;}
+  [data-list-filters] .chip,
+  .toolbar .btn,
+  .case-detail-actions .btn,
+  .modal-foot .btn{min-height:44px;}
+  [data-list-filters] .chip{padding:10px 12px;}
+  .rowact{opacity:1;}
+  .rowact .transaction-row-menu{width:44px;height:44px;min-width:44px;min-height:44px;border-radius:10px;}
+  .modal{width:min(540px,calc(100vw - 16px));max-height:calc(100dvh - 16px);}
+  .modal-foot{flex-wrap:wrap;}
+  .modal-foot .btn{min-width:110px;justify-content:center;}
   .tabbar{
     min-height:calc(var(--mobile-tabbar-base) + var(--safe-bottom));
     padding:6px max(8px,var(--safe-right)) var(--safe-bottom) max(8px,var(--safe-left));

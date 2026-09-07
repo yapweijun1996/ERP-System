@@ -25,7 +25,8 @@ historical audit findings, not fixed by the documentation audit. TASK-216 subseq
 repairs the seeded procurement path, TASK-217 repairs the date-only due-date path, and
 TASK-218 repairs invoice aging/period presentation facts, TASK-219 repairs the sales-invoice
 translation gaps, TASK-220 repairs the filled-action contrast gap and TASK-221 repairs the
-procurement receiving workflow; TASK-222–223 remain open.
+procurement receiving workflow; TASK-222 repairs the mobile/status usability gap and
+TASK-223 remains open.
 The audit's
 optional full Vitest run stopped without a result; earlier suite totals below remain
 historical evidence.
@@ -82,6 +83,17 @@ review → full receipt → register flow at 1280px and 375px with zero browser 
 mobile horizontal overflow. This is local Demo/source evidence, not partial-receipt domain
 capability, production deployment or remote CI evidence.
 
+TASK-222 follow-up is complete on the local source: purchase-order `pending_approval` and
+`open` enums remain stable in the data contract but render through the existing five-language
+status layer; the viewport no longer disables user zoom; and narrow layouts give practical
+44px targets to top-bar controls, filter chips, row actions, detail actions and modal actions.
+Mobile row actions are visible without hover, and shared modals now enter focus into their
+first field, contain Tab focus and restore the opener after Escape/close. The focused built-
+Demo Playwright E2E passes en/ms/zh/ja/vi at 375px, en at 1280px and a 188px half-width
+reflow check with zero browser errors and no document overflow. TASK-221's approval → full
+receipt regression also passes. The half-width check is browser reflow evidence; physical-
+device acceptance remains TASK-017.
+
 ## Source-of-truth synchronization
 
 The synchronized review/status baseline started at `2188f56` (`New`). The current
@@ -91,7 +103,7 @@ production deployment is still a separate release gate.
 
 The current worktree adds migrations 0100/0101/0102/0103: the Drizzle journal contains **104 migration
 entries**, generated canonical SQL contains **255 tables**, and the task registry contains
-**212 Done / 4 In Progress / 4 Todo / 3 Blocked / 223 Total**. TASK-200 now closes the
+**213 Done / 4 In Progress / 3 Todo / 3 Blocked / 223 Total**. TASK-200 now closes the
 Canonical/API route parity gap by including `staff-calendar` in `API_SCREEN_ROUTES`.
 TASK-212 is done: the
 active route and dynamic shell now refresh in place on locale change while preserving

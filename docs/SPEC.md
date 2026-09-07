@@ -11,7 +11,7 @@ are acceptance targets, not declarations that every module is production-ready.
 Required corrections are TASK-216–223: governed seed snapshots, date-only due dates,
 reconciled invoice aging/period KPIs, complete translated labels, filled-action
 contrast, usable procurement actions, mobile/zoom/status accessibility and reliable
-recovery verification. TASK-216 through TASK-221 are complete; TASK-222–223 are Todo. Complete them
+recovery verification. TASK-216 through TASK-222 are complete; TASK-223 remains Todo. Complete it
 with negative-path and regression evidence before changing their acceptance status.
 Automatic client updates currently mean background detection plus explicit user
 activation; unattended forced refresh and multi-tab draft safety are not guaranteed.
@@ -276,7 +276,9 @@ controls exist.
   keys / 72 local packs; the current 129-route × 5-language × 2-viewport browser
   matrix passes. Filled primary/PWA actions now use a separate contrast-safe action token;
   the focused contrast E2E covers both themes, normal/hover/focus/disabled states and
-  desktop/mobile widths.
+  desktop/mobile widths. TASK-222 additionally verifies localized PO workflow statuses,
+  44px narrow-layout touch targets, user zoom metadata, modal focus/close recovery and
+  188px half-width reflow; physical-device acceptance remains TASK-017.
   Business-record values remain outside system-authored UI copy. ([I18N.md](I18N.md))
 - **Licensing:** Odoo is studied at concept level only — no code porting.
   ([STUDYING_ODOO.md](STUDYING_ODOO.md))

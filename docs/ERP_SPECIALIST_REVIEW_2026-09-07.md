@@ -9,7 +9,7 @@ source/documentation, and official SG/MY market references. This review does not
 certify production readiness or fix runtime defects. Product direction is recorded
 in [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md).
 
-Follow-up status: TASK-216 through TASK-221 are now complete on the subsequent local worktree.
+Follow-up status: TASK-216 through TASK-222 are now complete on the subsequent local worktree.
 The compact
 seed and showcase pack v16 carry governed SG/MY tax snapshots, the untouched historical
 SG approval row has an idempotent upgrade repair, and fresh/upgraded shared-command
@@ -186,6 +186,15 @@ TASK-214 on completion. Historical passing tests in STATUS remain dated evidence
   **Acceptance:** accessible localized status names, practical touch areas, zoom
   and keyboard checks, and stable focus/close paths with the virtual keyboard open.
 
+  **Follow-up 2026-09-08 — TASK-222 complete locally.** PO approval keeps the stable
+  `pending_approval`/`open` data enums but renders localized names through the existing
+  status layer. The viewport now permits user zoom; narrow top-bar, filter, row-action,
+  detail-action and modal controls use practical 44px targets, with row actions visible
+  without hover. Shared modals enter focus into the first field, contain Tab focus and
+  restore the opener after close. Built-Demo `test:e2e:mobile-usability` passes en/ms/zh/ja/vi
+  at 375px, en at 1280px and a 188px half-width reflow equivalent to 200% zoom, with zero
+  browser errors and no document overflow. Physical-device evidence remains TASK-017.
+
 - **F08 — P2 — Recovery audit is timing-sensitive.** The 129-route run failed the
   payment-voucher Retry assertion; a fresh focused desktop run passed. The loop in
   [audit-screens.mjs](../scripts/audit-screens.mjs) around 4470 allows 20×100ms after
@@ -263,7 +272,8 @@ focus stability, which requires a settled-state check.
 ## Recommended order
 
 1. Repair F01–F03 with contract-level regressions and fresh Demo walkthroughs.
-2. Close F04–F07 with five-language, light/dark and device-focused UI checks; stabilize F08.
+2. F04–F07 now have local focused UI evidence; stabilize F08 and obtain the separate
+   physical-device evidence where required.
 3. Extend the AR/AP completion and Agent contracts according to approved business scope.
 4. Close current CI, production/security/tax-owner/restore/scale and client-upgrade
    gates before claiming production readiness. Keep evidence dated and reproducible.
