@@ -667,8 +667,9 @@ are not more module screens:
   the remote Cloudflare tunnel/host process;
 - TASK-200 is source-closed; TASK-201 still owns SLO/RPO/RTO, scale and worker telemetry.
   TASK-202's governed localized Pack lifecycle and Company timezone are implemented with
-  local proof; the disposable PostgreSQL same-key race is verified, while production
-  release/download/Print evidence remains.
+  local proof; the disposable PostgreSQL same-key race and an unsupported-original
+  identity-page rendering regression are verified, while production release/download/Print
+  evidence remains.
 - TASK-204/205: correct GST/SST validity/posting mechanics and prove governed Vision
   provider-failure/configuration boundaries. TASK-204's official-source review packet is
   now recorded in `docs/TAX_OWNER_REVIEW_2026-09-07.md`; qualified tax-owner approval

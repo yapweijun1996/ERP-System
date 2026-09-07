@@ -13,6 +13,7 @@ import {
 } from '../../data/schema';
 import { withTenantTransaction } from '../../data/tenantTransaction';
 import { freshDb } from '../../test/helpers';
+import { createManagedDocument } from '../documents/storage';
 import { uploadReceiptDocument } from '../documents/upload';
 import { createCompanyReceiptWithin, updateCompanyReceiptWithin } from './companyReceipt';
 import {
@@ -246,6 +247,54 @@ describe('Company Receipt Pack', () => {
     await expect(withTenantTransaction(db, sg, (tx) =>
       readCompanyReceiptPackWithin(tx, sg, adminId, 'company', 999_999)))
       .rejects.toMatchObject({ code: 'company_receipt_pack_not_found', status: 404 });
+  });
+
+  it('preserves identity for an unsupported original through Pack PDF rendering', async () => {
+    const stored = await createManagedDocument(db, sg, { userId: viewerId }, {
+      documentKey: 'receipt-pack-heic-placeholder-0001',
+      purpose: 'receipt',
+      ownerUserId: viewerId,
+      originalFileName: 'camera-capture.heic',
+      mimeType: 'image/heic',
+      retentionUntil: new Date('2030-01-01T00:00:00.000Z'),
+      content: Uint8Array.from([0, 1, 2, 3, 4]),
+    });
+    await withTenantTransaction(db, sg, (tx) => tx.insert(documentScanJob).values({
+      ...sg,
+      versionId: stored.version.id,
+      status: 'clean',
+      scanner: 'company-receipt-pack-test',
+      resultCode: 'clean',
+      completedAt: new Date('2026-08-11T08:00:00.000Z'),
+    }));
+    await withTenantTransaction(db, sg, (tx) =>
+      createCompanyReceiptWithin(tx, sg, viewerId, {
+        documentId: stored.document.id,
+        documentVersionId: stored.version.id,
+        transactionDate: '2026-08-11',
+        merchant: 'HEIC Placeholder Merchant',
+        amount: '12.0000',
+        currency: 'SGD',
+        category: 'Office supplies',
+        businessPurpose: 'Unsupported-original identity proof',
+      }));
+    const created = await withTenantTransaction(db, sg, (tx) =>
+      createCompanyReceiptPackWithin(tx, sg, adminId, 'company', {
+        packKey: 'company-receipt-pack:heic-0001',
+        dateFrom: '2026-08-11',
+        dateTo: '2026-08-11',
+        locale: 'en',
+      }));
+
+    const rendered = await withTenantTransaction(db, sg, (tx) =>
+      renderCompanyReceiptPackWithin(tx, sg, adminId, 'company', created.pack.id, 'download'));
+    const pdf = await PDFDocument.load(rendered.content);
+    expect(pdf.getPageCount()).toBe(2);
+    expect(rendered.accessPurpose).toBe('receipt_pack_original_evidence_export');
+    expect(rendered.pack.rows[0]).toMatchObject({
+      originalFileName: 'camera-capture.heic',
+      documentSha256: stored.version.sha256,
+    });
   });
 
   it('enforces Pack retention, legal hold, two-person purge and tombstone key reuse protection', async () => {

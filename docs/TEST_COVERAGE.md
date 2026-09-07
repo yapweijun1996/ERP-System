@@ -29,7 +29,7 @@ colocated test entry points.
 | [assets](../src/modules/assets/) | 2 | Route rendering only; acquisition/depreciation/disposal business cycle not rerun. |
 | [crm](../src/modules/crm/) | 6 | PGlite proof passes conversion to order/stock/GL plus duplicate and insufficient-stock rejection; no fresh complete browser lead-to-cash cycle. |
 | [documents](../src/modules/documents/) | 5 | Route rendering only; external scanning/OCR/storage/provider and recovery evidence remains TASK-205. |
-| [expenses](../src/modules/expenses/) | 12 | Receipt/claim routes rendered; no fresh complete claim approval/reimbursement or Pack export business E2E; TASK-202 production evidence open. |
+| [expenses](../src/modules/expenses/) | 12 | Receipt/claim routes rendered; Receipt Pack unit/API/Demo/browser coverage now includes unsupported-original identity-page rendering, while no fresh complete claim approval/reimbursement or production Pack export E2E is claimed; TASK-202 production evidence remains open. |
 | [finance](../src/modules/finance/) | 6 | Sales/purchasing/payroll GL assertions pass in PGlite proof; TASK-218 repairs invoice aging/period presentation KPIs with focused/browser evidence; TASK-223 synchronizes and measures payment-voucher recovery in the full route audit. No full AR/AP closing cycle. |
 | [hr](../src/modules/hr/) | 14 | My Leave and Staff Calendar included in targeted i18n matrix; full onboarding/leave/balance/calendar mutation cycles not rerun. Existing Calendar browser fixture stubs reads AND appointment creation, so it is not persisted-create proof. |
 | [integration](../src/modules/integration/) | 3 | Route rendering only; real SMTP/calendar/provider delivery and recovery not proven. |

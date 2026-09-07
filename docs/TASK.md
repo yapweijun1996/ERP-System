@@ -248,8 +248,9 @@ claimed. TASK-196 is now done: Pack reads/renders revalidate current visibility 
 the frozen snapshot, and Preview versus original-evidence export purpose is audited.
 TASK-202 now has Pack conflict convergence, actor-scoped history, retention-derived
 Legal Hold/two-person purge/tombstone/key-reuse protection, localized Unicode PDF rendering,
-Decimal-safe display and Company-calendar timezone presets. Disposable PostgreSQL same-key
-concurrency is verified; production artifact evidence remains open. TASK-197 is done with the upload/capture boundary
+Decimal-safe display, Company-calendar timezone presets and a direct unsupported-original
+identity-page regression. Disposable PostgreSQL same-key concurrency is verified; production
+artifact evidence remains open. TASK-197 is done with the upload/capture boundary
 explicitly retained in My Receipts.
 
 ## Latest implementation milestones
