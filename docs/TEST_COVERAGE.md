@@ -27,7 +27,7 @@ and colocated test entry points.
 | [crm](../src/modules/crm/) | 6 | PGlite proof passes conversion to order/stock/GL plus duplicate and insufficient-stock rejection; no fresh complete browser lead-to-cash cycle. |
 | [documents](../src/modules/documents/) | 5 | Route rendering only; external scanning/OCR/storage/provider and recovery evidence remains TASK-205. |
 | [expenses](../src/modules/expenses/) | 12 | Receipt/claim routes rendered; no fresh complete claim approval/reimbursement or Pack export business E2E; TASK-202 production evidence open. |
-| [finance](../src/modules/finance/) | 6 | Sales/purchasing/payroll GL assertions pass in PGlite proof; invoice aging/period KPIs fail (F03); voucher recovery has unresolved timing (F08). No full AR/AP closing cycle. |
+| [finance](../src/modules/finance/) | 6 | Sales/purchasing/payroll GL assertions pass in PGlite proof; TASK-218 repairs invoice aging/period presentation KPIs with focused/browser evidence; voucher recovery has unresolved timing (F08). No full AR/AP closing cycle. |
 | [hr](../src/modules/hr/) | 14 | My Leave and Staff Calendar included in targeted i18n matrix; full onboarding/leave/balance/calendar mutation cycles not rerun. Existing Calendar browser fixture stubs reads AND appointment creation, so it is not persisted-create proof. |
 | [integration](../src/modules/integration/) | 3 | Route rendering only; real SMTP/calendar/provider delivery and recovery not proven. |
 | [inventory](../src/modules/inventory/) | 5 | PGlite stock issue, transactional rollback and sales/purchase effects pass; no full lot/serial/pick-pack/warehouse cycle. |
@@ -38,7 +38,7 @@ and colocated test entry points.
 | [purchasing](../src/modules/purchasing/) | 11 | Fresh compact seed and simulated historical-pack upgrade now approve/receive/post exactly one balanced supplier invoice through shared commands; the fail-closed unclassified/regime-mismatch guard remains covered. Browser/API production tax-owner evidence is separate. |
 | [quality](../src/modules/quality/) | 1 | Route rendering only; inspection/disposition business cycle not rerun. |
 | [reporting](../src/modules/reporting/) | 1 | Routes rendered; aggregate report reconciliation, export correctness and large-data plans not comprehensively tested. |
-| [sales](../src/modules/sales/) | 8 | MCP SO-2 confirmation/stock/invoice/balanced GL and SO-3 rejection pass; TASK-217 fixes F02 date-only due-date arithmetic with focused/browser boundary evidence; F03 invoice KPIs remain open; no complete customer settlement chain. |
+| [sales](../src/modules/sales/) | 8 | MCP SO-2 confirmation/stock/invoice/balanced GL and SO-3 rejection pass; TASK-217 fixes F02 date-only due-date arithmetic and TASK-218 fixes F03 invoice aging/period presentation with focused/browser evidence; no complete customer settlement chain. |
 | [service](../src/modules/service/) | 2 | Route rendering only; contract/ticket assignment/resolution lifecycle not rerun. |
 | [setup](../src/modules/setup/) | 3 | Fresh local Demo setup/sign-in observed; current production bootstrap/provisioning and remote health not exercised. |
 | [warehouse](../src/modules/warehouse/) | 1 | Route rendering only; receiving/transfers/picking reconciliation not fully exercised. |
@@ -47,7 +47,7 @@ and colocated test entry points.
 
 | Gate | TASK-214 result | Required follow-up |
 | --- | --- | --- |
-| Demo build / PGlite domain proof | Passed | TASK-216 fresh seed and simulated v15→v16 upgrade complete the seeded PO approval → receipt → invoice chain with one balanced supplier invoice; TASK-217 date-only boundary tests and the built-Demo sales-invoice route check pass; shared rejection guards remain green |
+| Demo build / PGlite domain proof | Passed | TASK-216 fresh seed and simulated v15→v16 upgrade complete the seeded PO approval → receipt → invoice chain with one balanced supplier invoice; TASK-217 date-only boundary tests and TASK-218 mixed invoice-fact tests plus built-Demo KPI/filter route checks pass; shared rejection guards remain green |
 | Desktop/mobile route rendering | 129 routes rendered, no console/page errors; full audit failed voucher Retry | TASK-223; a focused three-route desktop pass does not close the full gate |
 | i18n | Seven routes × five languages × two viewports; two hardcoded labels fail | TASK-219, then full release matrix |
 | Theme/mobile | Selected pages inspected; contrast, touch/zoom/status gaps | TASK-220/222; no complete palette/device certification |
@@ -85,10 +85,11 @@ TASK-215 does not close any runtime finding or production gate.
 
 ## Documentation and KB reconciliation
 
-TASK-215 through TASK-217 are complete; TASK-218–223 remain Todo. Current registry:
-**208 Done / 4 In Progress / 8 Todo / 3 Blocked / 223 Total**. The project KB
+TASK-215 through TASK-218 are complete; TASK-219–223 remain Todo. Current registry:
+**209 Done / 4 In Progress / 7 Todo / 3 Blocked / 223 Total**. The project KB
 `erp-system-project-logic` (`ef47bf4b-83e1-42b2-a412-66912d04ea24`) now includes coverage
 item `8007eaf3-0ec3-4fa4-b4ca-1bdc3d8153b3`; the architecture inventory, EPIC-066 and
 specialist audit items plus KB description were updated and read back. TASK-216 changed
-local seed/pack/test runtime files and TASK-217 changed only browser date derivation plus
-its regression test; no production system, deployment or remote CI result is claimed.
+local seed/pack/test runtime files, TASK-217 changed browser date derivation plus its
+regression test, and TASK-218 changed only sales presentation facts/list predicates plus
+their regression test; no production system, deployment or remote CI result is claimed.

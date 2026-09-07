@@ -22,8 +22,9 @@ checks supplement the journey but do not replace it.
 Current source note (2026-09-07): 129 Canonical / 0 Preview routes, 129 API metadata
 entries and 1,726 English keys/72 locale packs. [TEST_COVERAGE.md](TEST_COVERAGE.md)
 lists every module and the latest execution limits. TASK-214 has recovery/i18n failures;
-F01 is command-level repaired under TASK-216 and F02 date-only arithmetic is repaired
-under TASK-217, while F03–F08 remain open, and full
+F01 is command-level repaired under TASK-216, F02 date-only arithmetic is repaired
+under TASK-217, and F03 invoice aging/period presentation is repaired under TASK-218,
+while F04–F08 remain open, and full
 business E2E is incomplete. August health/reset and
 billing events are historical. Later CI executed but failed i18n; current green CI,
 target production evidence and TASK-017 physical-device acceptance remain open.

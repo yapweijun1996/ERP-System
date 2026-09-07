@@ -1,12 +1,13 @@
 # ERP-System Project Logic
 
-TASK-216 fixture repair and TASK-217 date-only repair (2026-09-07) change no posting
-contract: governed tax facts are now present in fresh and upgraded Demo procurement rows,
-while sales due-date arithmetic uses a shared calendar-date helper and shared posting
-rejection remains authoritative.
+TASK-216 fixture repair, TASK-217 date-only repair and TASK-218 invoice presentation repair
+(2026-09-07) change no posting contract: governed tax facts are now present in fresh and
+upgraded Demo procurement rows, while sales due-date arithmetic uses a shared calendar-
+date helper and invoice aging/period KPIs derive from immutable facts without changing
+posting status. Shared posting rejection remains authoritative.
 [TEST_COVERAGE.md](TEST_COVERAGE.md) records every current module and evidence gaps;
-TASK-216–223 own the eight specialist findings; TASK-216 and TASK-217 are complete and
-TASK-218–223 remain Todo. Fresh schema/RLS checks prove
+TASK-216–223 own the eight specialist findings; TASK-216 through TASK-218 are complete and
+TASK-219–223 remain Todo. Fresh schema/RLS checks prove
 104 migrations, 255 tables, 225 generic policy tables and 10 explicit exemptions,
 not production isolation. Domain fixes must update this mirror and the KB together.
 
@@ -40,6 +41,14 @@ invalid input preserves the prior display value. `src/browserDateOnly.test.ts` a
 built-Demo `#sales-invoices` route proof cover month/year and leap-day boundaries. This
 is presentation/date derivation logic; stored monetary and posting facts remain owned by
 the shared domain commands.
+
+TASK-218 establishes the sales invoice presentation contract: `salesInvoiceViewFacts`
+preserves the stored `rawStatus`, computes a non-negative balance from total and paid,
+marks an invoice overdue only when it is outstanding and its due date is before the
+active `workingBusinessDate`, and marks it posted in the selected fiscal period when
+`invoiceDate` is within the inclusive `workingPeriodStartDate`/`workingPeriodEndDate`
+range. Cards, filters, rows and invoice-facing detail documents consume these derived
+facts. This is a view/aging contract, not a posting-state transition or AR settlement.
 
 ## 1. System boundary and execution contract
 

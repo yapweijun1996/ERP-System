@@ -4,7 +4,8 @@
 production approval remains TASK-204. TASK-216 repairs the compact seed and showcase
 upgrade with explicit SG/MY tax snapshots; the posting guard still rejects incomplete
 or regime-incompatible records. UI date-only handling is repaired under TASK-217; invoice
-aging and fiscal-period KPI reconciliation remains TASK-218.
+aging and fiscal-period KPI presentation is repaired under TASK-218. Translation gaps
+remain TASK-219.
 See [TEST_COVERAGE.md](TEST_COVERAGE.md).
 
 The ERP serves multiple countries from one codebase. Country behavior is an **attribute

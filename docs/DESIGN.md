@@ -2,9 +2,10 @@
 
 Reviewed 2026-09-07: the shared schema/domain and Demo/API boundaries remain unchanged.
 Newly verified seed, date, reporting and presentation defects are tracked in
-[TEST_COVERAGE.md](TEST_COVERAGE.md), TASK-217–223. TASK-216 seed/Demo-pack repair and
-TASK-217 date-only due-date repair are complete locally: seed repair belongs in governed
-fixture generation/upgrade; date and aging rules need one business-owned contract;
+[TEST_COVERAGE.md](TEST_COVERAGE.md), TASK-219–223. TASK-216 seed/Demo-pack repair,
+TASK-217 date-only due-date repair and TASK-218 invoice KPI reconciliation are complete
+locally: seed repair belongs in governed fixture generation/upgrade; date and aging rules
+share one business-owned date-only presentation contract;
 translations and theme tokens remain presentation responsibilities. Do not weaken
 posting validation or duplicate domain SQL to make a showcase pass.
 

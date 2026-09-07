@@ -2,15 +2,15 @@
 
 ## Latest specialist follow-up
 
-TASK-215 reconciles documentation/KB only. TASK-216 and TASK-217 are complete and
-TASK-218–223 remain open, one per F03–F08 in
+TASK-215 reconciles documentation/KB only. TASK-216 through TASK-218 are complete and
+TASK-219–223 remain open, one per F04–F08 in
 [ERP_SPECIALIST_REVIEW_2026-09-07.md](ERP_SPECIALIST_REVIEW_2026-09-07.md).
 
 | Task | Status | Required outcome |
 | --- | --- | --- |
 | TASK-216 | Done | Compact seed and Demo-pack v16 carry governed SG/MY tax snapshots; fresh/upgraded approval → receipt → invoice proof passes |
 | TASK-217 | Done | Shared date-only due-date arithmetic and SG/MY boundary regression/browser proof |
-| TASK-218 | Todo | Reconcile invoice aging and fiscal-period KPIs |
+| TASK-218 | Done | Derive invoice aging and fiscal-period KPIs from date-only presentation facts while preserving posting status |
 | TASK-219 | Todo | Close sales invoice translation gaps |
 | TASK-220 | Todo | Correct filled-action contrast in both themes |
 | TASK-221 | Todo | Make procurement next actions and receiving scope clear |
@@ -28,7 +28,7 @@ This is the actionable view of every non-Done task currently registered in
 tests are implementation evidence, while deployment, CI, production configuration and
 physical-device checks remain separate evidence classes.
 
-Current registry: **208 Done / 4 In Progress / 8 Todo / 3 Blocked / 223 Total**.
+Current registry: **209 Done / 4 In Progress / 7 Todo / 3 Blocked / 223 Total**.
 
 2026-09-07 TASK-216 completion: the compact seed and generated showcase pack v16 now
 write governed GST/SST classification and recoverability snapshots. A deterministic
@@ -50,6 +50,17 @@ the built Demo `#sales-invoices` route rendered without console errors and retur
 typechecks, Demo build/proof, generated checks, documentation links and diff checks pass;
 no monetary posting code changed. This is local source/Demo evidence, not production or
 remote-CI evidence.
+
+2026-09-07 TASK-218 completion: sales invoice cards, filters, rows and detail-facing
+documents now share `salesInvoiceViewFacts`. The selected fiscal period uses inclusive
+`invoiceDate` bounds; overdue means an outstanding balance whose due date is before the
+Demo business date; `rawStatus` remains the stored posting state while `status` and
+`agingStatus` are derived display facts. Mixed past/future/paid/unpaid fixtures pass the
+focused browser-date test. Built-Demo Playwright evidence confirms FY2026/P06 shows
+Outstanding/Overdue S$174 and Posted this period 0, the Overdue filter retains the two
+old invoices, Paid is empty, and the route has zero console errors. Demo, lint,
+typechecks, generated checks, documentation links and diff checks pass. This is local
+Demo/source evidence, not production or remote-CI evidence.
 
 2026-09-07 CI addendum: the latest GitHub Actions CI run `34017037310` on remote
 head `2188f56186e88e542351ec3a49e07d73057182bf` executed all four Vitest shards and

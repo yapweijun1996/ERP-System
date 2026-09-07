@@ -3,9 +3,9 @@
 TASK-214 superseding execution note (2026-09-07): the baseline passes below are
 prior checkpoints. Latest evidence includes seeded PO invoicing, invoice date/KPI,
 i18n and contrast defects, a full-screen recovery assertion failure and an incomplete
-full Vitest attempt. See [TEST_COVERAGE.md](TEST_COVERAGE.md); TASK-216 and TASK-217 are
-now Done with command-level seed/upgrade and browser date-only proof, while TASK-218–223
-remain open.
+full Vitest attempt. See [TEST_COVERAGE.md](TEST_COVERAGE.md); TASK-216 through TASK-218
+are now Done with command-level seed/upgrade, browser date-only and invoice KPI proof,
+while TASK-219–223 remain open.
 
 This review began from `main` at `2188f56` (`New`) and now records the completed
 TASK-195–197 and TASK-206–208 follow-up plus the source-level TASK-204 and TASK-205
@@ -37,7 +37,7 @@ matrices now pass locally. A fresh remote run for the current local HEAD remains
   and Demo showcase-pack verification. The current `test:e2e:setup-wizard` also passes
   desktop, iPhone-width and small-mobile layout checks. These checks do not prove live
   PostgreSQL provisioning, public deployment, or GitHub Actions execution.
-- The task registry currently reports **208 Done / 4 In Progress / 8 Todo / 3 Blocked / 223 Total**. TASK-216 and TASK-217 are complete locally; the actionable boundary is concentrated in TASK-199–205 and
+- The task registry currently reports **209 Done / 4 In Progress / 7 Todo / 3 Blocked / 223 Total**. TASK-216 through TASK-218 are complete locally; the actionable boundary is concentrated in TASK-199–205 and
   EPIC-067/TASK-209; the blocked items are external or operational, not silently
   treated as code failures.
 - TASK-204 source work is now in progress: migrations `0100`/`0101` add governed tax

@@ -76,6 +76,58 @@ function salesDueDate(value){
   return addCalendarDays(value,30)||value;
 }
 
+function salesInvoicePresentationContext(){
+  return {
+    asOf:typeof workingBusinessDate==='function'
+      ?workingBusinessDate()
+      :new Date().toISOString().slice(0,10),
+    periodStart:typeof workingPeriodStartDate==='function'
+      ?workingPeriodStartDate()
+      :new Date().toISOString().slice(0,10),
+    periodEnd:typeof workingPeriodEndDate==='function'
+      ?workingPeriodEndDate()
+      :new Date().toISOString().slice(0,10),
+  };
+}
+
+/**
+ * Derive receivables presentation facts from immutable invoice facts. The
+ * stored status stays in rawStatus; status is the display/aging state only.
+ */
+function salesInvoiceViewFacts(invoice,asOf,periodStart,periodEnd){
+  const source=invoice||{};
+  const rawStatus=String(source.rawStatus??source.status??'');
+  const statusKey=rawStatus.toLowerCase();
+  const date=dateValue(source.date||source.invoiceDate);
+  const due=dateValue(source.due||salesDueDate(date));
+  const total=salesNumber(source.total);
+  const paid=salesNumber(source.paid);
+  const balance=Math.max(0,total-paid);
+  const draft=statusKey==='draft';
+  const cancelled=statusKey==='cancelled';
+  const settled=statusKey==='paid'||(!draft&&!cancelled&&balance<=0);
+  const outstanding=!draft&&!cancelled&&!settled&&balance>0;
+  const overdue=outstanding&&due<String(asOf||'');
+  const displayStatus=draft?'Draft':cancelled?'Cancelled':settled?'Paid':overdue?'Overdue':'Posted';
+  const postedInPeriod=!draft&&!cancelled
+    &&date>=String(periodStart||'')
+    &&date<=String(periodEnd||'');
+  return {
+    ...source,
+    date,
+    due,
+    total,
+    paid,
+    balance,
+    rawStatus,
+    status:displayStatus,
+    agingStatus:displayStatus,
+    isOutstanding:outstanding,
+    isOverdue:overdue,
+    postedInPeriod,
+  };
+}
+
 /* Canonical order-to-cash presentation model. Every row comes from the
    bounded ErpSystemData resource contract in both Demo and API modes. */
 async function prepareCanonicalSalesData(){
@@ -87,7 +139,24 @@ async function prepareCanonicalSalesData(){
       &&Array.isArray(DB.salesInvoices)
       &&DB.salesOrderDocs
       &&DB.salesInvoiceDocs
-    ) return;
+    ){
+      const context=salesInvoicePresentationContext();
+      DB.salesInvoices=DB.salesInvoices.map(invoice=>salesInvoiceViewFacts(
+        invoice,context.asOf,context.periodStart,context.periodEnd,
+      ));
+      DB.salesInvoices.forEach(invoice=>{
+        const doc=DB.salesInvoiceDocs[invoice.no];
+        if(doc) Object.assign(doc,{
+          due:invoice.due,
+          status:invoice.status,
+          rawStatus:invoice.rawStatus,
+          agingStatus:invoice.agingStatus,
+          balance:invoice.balance,
+          postedInPeriod:invoice.postedInPeriod,
+        });
+      });
+      return;
+    }
     throw new Error('The offline canonical sales snapshot is unavailable.');
   }
   const pages=await Promise.all([
@@ -180,7 +249,6 @@ async function prepareCanonicalSalesData(){
   }));
 
   const ORDER_STATUS_UI={pending_approval:'Pending Approval',approved:'Approved',draft:'Draft',confirmed:'Closed',rejected:'Rejected',cancelled:'Cancelled'};
-  const INVOICE_STATUS_UI={unpaid:'Posted',paid:'Paid',cancelled:'Cancelled'};
   DB.salesOrders=orders.map(row=>{
     const customer=customerById.get(row.customerId)||{};
     const lines=linesByOrderId.get(row.id)||[];
@@ -256,11 +324,12 @@ async function prepareCanonicalSalesData(){
   });
   DB.so0418=DB.salesOrderDocs[DB.salesOrders[0]&&DB.salesOrders[0].no]||null;
 
+  const invoiceContext=salesInvoicePresentationContext();
   DB.salesInvoices=invoices.map(row=>{
     const customer=customerById.get(row.customerId)||{};
     const order=orderById.get(row.orderId)||{};
     const total=salesNumber(row.totalAmount);
-    return {
+    return salesInvoiceViewFacts({
       id:row.id,
       version:row.version,
       no:row.docNo,
@@ -273,11 +342,10 @@ async function prepareCanonicalSalesData(){
       orderId:row.orderId,
       total,
       paid:row.status==='paid'?total:0,
-      status:INVOICE_STATUS_UI[row.status]||row.status,
       rawStatus:row.status,
       currency:row.currency,
       doc:true,
-    };
+    },invoiceContext.asOf,invoiceContext.periodStart,invoiceContext.periodEnd);
   });
   DB.salesInvoiceDocs={};
   DB.salesInvoices.forEach(row=>{
@@ -303,13 +371,16 @@ async function prepareCanonicalSalesData(){
       shipping:0,
       status:row.status,
       rawStatus:row.rawStatus,
+      agingStatus:row.agingStatus,
       paid:row.paid,
+      balance:row.balance,
+      postedInPeriod:row.postedInPeriod,
       owner:DB.user&&DB.user.name||'System',
       lines:linesByOrderId.get(order.id)||[],
     };
   });
   DB.invoice0331=DB.salesInvoiceDocs[DB.salesInvoices[0]&&DB.salesInvoices[0].no]||null;
-  DB.soNow=typeof workingBusinessDate==='function'?workingBusinessDate():new Date().toISOString().slice(0,10);
+  DB.soNow=invoiceContext.asOf;
   DB.salesReadMeta={
     truncated:pages.some(page=>Boolean(page.nextCursor)),
     nextCursors:pages.map(page=>page.nextCursor),
@@ -331,8 +402,8 @@ SCREENS['sales-home'] = function(root){
   const dueWeek=open.filter(s=>{const d=(new Date(s.deliver)-now)/86400000;return d>=0&&d<=7;}).length;
   const overdueDel=DB.deliveries.filter(d=>['Draft','Picking','Packed','Partially Delivered'].includes(d.status) && new Date(d.date)<now).length
                   + open.filter(s=>new Date(s.deliver)<now).length;
-  const pendingInv=INV.filter(i=>['Posted','Partially Paid','Overdue'].includes(i.status)).length;
-  const overduePay=INV.filter(i=>i.status==='Overdue').reduce((a,i)=>a+(i.total-i.paid),0);
+  const pendingInv=INV.filter(i=>i.isOutstanding).length;
+  const overduePay=INV.filter(i=>i.isOverdue).reduce((a,i)=>a+i.balance,0);
 
   const kpis=[
     {label:'Open orders', val:open.length, route:'sales-orders'},
@@ -376,7 +447,7 @@ SCREENS['sales-home'] = function(root){
       case 'quotations': return qOpen.length;
       case 'sales-orders': return open.length;
       case 'delivery-orders': return DB.deliveries.filter(d=>d.status!=='Delivered'&&d.status!=='Cancelled').length;
-      case 'sales-invoices': return INV.filter(i=>['Posted','Partially Paid','Overdue'].includes(i.status)).length;
+      case 'sales-invoices': return INV.filter(i=>i.isOutstanding).length;
       case 'sales-returns': return DB.salesReturns.filter(r=>!['Credited','Closed','Rejected'].includes(r.status)).length;
       case 'credit-notes': return DB.creditNotes.filter(c=>c.status==='Draft').length;
       case 'debit-notes': return DB.debitNotes.filter(d=>d.status==='Draft').length;

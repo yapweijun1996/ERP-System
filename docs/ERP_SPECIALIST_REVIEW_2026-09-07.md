@@ -9,7 +9,7 @@ source/documentation, and official SG/MY market references. This review does not
 certify production readiness or fix runtime defects. Product direction is recorded
 in [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md).
 
-Follow-up status: TASK-216 and TASK-217 are now complete on the subsequent local worktree.
+Follow-up status: TASK-216 through TASK-218 are now complete on the subsequent local worktree.
 The compact
 seed and showcase pack v16 carry governed SG/MY tax snapshots, the untouched historical
 SG approval row has an idempotent upgrade repair, and fresh/upgraded shared-command
@@ -20,16 +20,19 @@ deployment evidence remain separate.
 TASK-217 fixes the historical F02 date-only arithmetic defect: shared
 `addCalendarDays` now owns sales invoice term calculation, focused SG/MY-relevant
 month/year and leap-day tests pass, and the built Demo `#sales-invoices` route rendered
-without console errors. The original F02 reproduction below is retained as a dated
-baseline observation; F03 invoice aging/period KPI reconciliation remains open.
+without console errors. TASK-218 now owns the same route's presentation facts: the
+selected fiscal period is inclusive on `invoiceDate`, overdue is based on outstanding
+balance and the active business date, and raw posting status is preserved separately
+from display aging. Mixed-fixture tests and a built-Demo KPI/filter/browser check pass.
+The original F02/F03 reproductions below are retained as dated baseline observations.
 
 ## Executive assessment
 
 The Demo runs and the shared transaction layer has meaningful accounting and rollback
-proof. However, the seeded procurement journey cannot finish supplier invoicing,
-sales invoice aging/period KPIs are misleading, date-only arithmetic is timezone
-sensitive, and translation/contrast gaps remain. Prioritize these business-facing
-defects before treating 129 rendered routes as a complete ERP experience.
+proof. Historical seeded-procurement, date-only and invoice-aging observations are now
+repaired locally under TASK-216–218; translation/contrast/usability/recovery gaps remain.
+Prioritize those business-facing gaps before treating 129 rendered routes as a complete
+ERP experience.
 
 Production release, SG/MY statutory integration, physical devices, realistic capacity
 and safe multi-tab/draft upgrades still require separate evidence. Existing PWA
