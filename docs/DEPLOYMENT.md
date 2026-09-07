@@ -90,9 +90,14 @@ The snapshot is deliberately aggregate-only: it contains no tenant identifiers, 
 payloads, credentials, lock owners or raw transport errors. Reporting, document and
 calendar reads run under the same transaction-local worker flags used by the processing
 commands; `outbox_event` remains a separately restricted operational table. This is a
-source-level observability primitive, not production proof. TASK-201 still requires an
-operational log/metrics sink, alert thresholds and ownership, exercised recovery, backup
-integrity and restore timing, load/plan budgets, and reviewed capacity/failover runbooks.
+source-level observability primitive, not production proof. Both worker entry points
+currently await a due snapshot before processing work, and the aggregate queries scan
+each queue without a top-level row filter. The generic `ready` calculation checks
+`available_at` but does not fully mirror queue-specific lease/reminder/capability claim
+conditions, so it can include leased or not-yet-claimable rows. TASK-201 must bound or
+decouple collection, reconcile metric predicates with claim predicates, prove query plans
+at representative volume, and then add an operational sink, alert thresholds/ownership,
+exercised recovery, backup integrity/restore timing and capacity/failover runbooks.
 
 ### Platform switch-scroll hotfix evidence (2026-08-13)
 

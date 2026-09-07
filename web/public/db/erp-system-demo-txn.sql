@@ -208,9 +208,10 @@ BEGIN
     RETURNING id INTO v_po_id;
 
   INSERT INTO purchase_order_line (master_fn, company_fn, order_id, line_no, product_id,
-                                   qty, unit_cost, net_amount, tax_code, tax_rate, tax_amount)
+                                   qty, unit_cost, net_amount, tax_code, tax_rate,
+                                   tax_classification, input_tax_recoverable_pct, tax_amount)
     VALUES ('M1', 'C-SG', v_po_id, 1, v_product_id,
-            v_qty, v_unit_cost, v_net, 'SR', v_rate, v_tax);
+            v_qty, v_unit_cost, v_net, 'SR', v_rate, 'gst_standard', 100.0000, v_tax);
 
   -- 2. receiveGoods.ts: stock IN (upsert -- this is the first-ever stock_level row
   --    for SG-WIDGET at WH-SALES that was created via a PURCHASE rather than the

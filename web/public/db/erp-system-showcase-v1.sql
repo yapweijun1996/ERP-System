@@ -747,6 +747,41 @@ WHERE request.master_fn='M1' AND request.status='pending' AND request.leave_type
   AND request.reason LIKE 'Controlled demo leave case %'
 ON CONFLICT (master_fn,company_fn,entry_key) DO NOTHING;
 
+-- TASK-216: older compact Demo seeds predate governed purchasing tax snapshots.
+-- Repair only the deterministic, untouched showcase approval row; never rewrite
+-- a row after a user has received goods or posted an invoice.
+UPDATE purchase_order_line line
+SET tax_classification='gst_standard',
+    input_tax_recoverable_pct=100.0000,
+    updated_at=now()
+FROM purchase_order order_row
+WHERE order_row.master_fn='M1'
+  AND order_row.company_fn='C-SG'
+  AND order_row.doc_no='PO-APP-2026-0001'
+  AND order_row.status='pending_approval'
+  AND line.master_fn=order_row.master_fn
+  AND line.company_fn=order_row.company_fn
+  AND line.order_id=order_row.id
+  AND line.line_no=1
+  AND line.tax_code='SR'
+  AND line.tax_rate=9.000
+  AND line.net_amount=350.00
+  AND line.tax_amount=31.50
+  AND line.tax_classification='unclassified'
+  AND line.input_tax_recoverable_pct=0
+  AND NOT EXISTS (
+    SELECT 1 FROM goods_receipt receipt
+    WHERE receipt.master_fn=order_row.master_fn
+      AND receipt.company_fn=order_row.company_fn
+      AND receipt.order_id=order_row.id
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM supplier_invoice invoice
+    WHERE invoice.master_fn=order_row.master_fn
+      AND invoice.company_fn=order_row.company_fn
+      AND invoice.order_id=order_row.id
+  );
+
 INSERT INTO payroll_run (
   master_fn, company_fn, doc_no, period_start, period_end, pay_date, status,
   total_gross_pay, total_net_pay, version, posted_at
@@ -958,12 +993,15 @@ WHERE NOT EXISTS (
 
 INSERT INTO purchase_order_line (
   master_fn, company_fn, order_id, line_no, product_id, qty, unit_cost,
-  net_amount, tax_code, tax_rate, tax_amount
+  net_amount, tax_code, tax_rate, tax_classification, input_tax_recoverable_pct,
+  tax_amount
 )
 SELECT 'M1', purchase_order.company_fn, purchase_order.id, 1, product.id, 10,
   purchase_order.net_amount / 10, purchase_order.net_amount,
   CASE purchase_order.company_fn WHEN 'C-SG' THEN 'SR' ELSE 'ZR' END,
   CASE purchase_order.company_fn WHEN 'C-SG' THEN 9.000 ELSE 0.000 END,
+  CASE purchase_order.company_fn WHEN 'C-SG' THEN 'gst_standard' ELSE 'sst_exempt' END,
+  CASE purchase_order.company_fn WHEN 'C-SG' THEN 100.0000 ELSE 0.0000 END,
   purchase_order.tax_amount
 FROM purchase_order
 JOIN product ON product.master_fn=purchase_order.master_fn
@@ -1118,7 +1156,7 @@ WHERE NOT EXISTS (
 );
 
 INSERT INTO system_state (key, value, updated_at)
-VALUES ('demo_showcase_pack', '{"version":"15","businessDate":"2026-07-27","records":10436,"personas":12}'::jsonb, now())
+VALUES ('demo_showcase_pack', '{"version":"16","businessDate":"2026-07-27","records":10436,"personas":12}'::jsonb, now())
 ON CONFLICT (key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at;
 
 COMMIT;

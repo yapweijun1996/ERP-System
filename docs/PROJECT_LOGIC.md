@@ -1,8 +1,11 @@
 # ERP-System Project Logic
 
-TASK-215 source reconciliation (2026-09-07) changes no domain contract.
+TASK-216 fixture repair (2026-09-07) changes no posting contract: governed tax facts are
+now present in fresh and upgraded Demo procurement rows, while shared posting rejection
+remains authoritative.
 [TEST_COVERAGE.md](TEST_COVERAGE.md) records every current module and evidence gaps;
-TASK-216–223 own the eight open specialist findings. Fresh schema/RLS checks prove
+TASK-216–223 own the eight specialist findings; TASK-216 is complete and TASK-217–223
+remain Todo. Fresh schema/RLS checks prove
 104 migrations, 255 tables, 225 generic policy tables and 10 explicit exemptions,
 not production isolation. Domain fixes must update this mirror and the KB together.
 
@@ -21,10 +24,12 @@ the relevant KB item and the tests in the same task.
 The product-owner criteria are in [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md).
 The [2026-09-07 ERP specialist review](ERP_SPECIALIST_REVIEW_2026-09-07.md) records
 current Demo workflow, date/KPI, i18n/contrast and recovery-test findings. In particular,
-the seeded pending PO omits governed tax snapshot fields and cannot be invoiced after
-receipt; preserve the posting rejection and repair seed/upgrade consistency. No domain
-contract was changed by the audit. Production/scale/physical-device evidence remains
-separate from local PGlite and screen checks.
+the seeded pending PO omitted governed tax snapshot fields and could not be invoiced after
+receipt. TASK-216 repairs the compact seed and deterministic pack upgrade, and its shared
+command proof completes exactly one balanced supplier invoice; production rows that are
+still unclassified or regime-incompatible remain rejected. No posting contract was
+weakened. Production/scale/physical-device evidence remains separate from local PGlite
+and screen checks.
 
 ## 1. System boundary and execution contract
 
@@ -277,8 +282,12 @@ Both worker entry points also emit an aggregate-only `erp.worker.telemetry` snap
 every 60 seconds by default. `src/worker/telemetry.ts` reports pending/ready/in-flight/
 retrying/failed/dead-letter counts and oldest pending age for the outbox, document,
 reporting, tax-evidence and calendar queues under their existing worker RLS flags. It
-does not include tenant identifiers, payloads, credentials, lock owners or raw errors;
-an operational sink, thresholds and recovery ownership remain production evidence.
+does not include tenant identifiers, payloads, credentials, lock owners or raw errors.
+This telemetry is not yet an authoritative queue-state contract: the workers await it
+before processing, the aggregates are whole-table reads, and generic `ready` omits parts
+of real claim eligibility such as an expired/free lease and reminder time. TASK-201 owns
+bounded/non-blocking collection, claim-predicate parity, scale plans, the operational
+sink, thresholds and recovery ownership. No queue business rule changes in TASK-215.
 
 Sources: `src/worker/outbox.ts`, `src/worker/telemetry.ts`, `src/worker.ts`, and
 `src/modules/integration/eventLog.ts`.

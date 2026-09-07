@@ -2,14 +2,16 @@
 
 ## Immediate execution order
 
-1. TASK-216–218: restore seeded procure-to-invoice and correct sales date/aging/period
-   behavior. TASK-218 depends on TASK-217. These affect Demo credibility and decisions.
+1. TASK-216 is Done at the seed/upgrade command boundary. Complete TASK-217–218 for
+   sales date/aging/period behavior; TASK-218 depends on TASK-217. Then rerun the
+   affected browser journeys so command repair is not mistaken for complete E2E.
 2. TASK-219/220/222/223: close translation, theme contrast, mobile/zoom/status and
    recovery verification gaps; TASK-221 follows TASK-216 for procurement usability.
 3. TASK-203: obtain current-HEAD green CI after fixes; TASK-199: verify target health
    and revision. TASK-209 release requires both, plus its completed security chain.
 4. Finish TASK-202/204/205 production artifact, tax-owner and provider/recovery evidence;
-   TASK-201 measures scale, observability and restore objectives after TASK-199.
+   TASK-201 first makes worker telemetry bounded/non-blocking and claim-accurate, then
+   measures scale, alerting and restore objectives after TASK-199.
    TASK-017 and TASK-193 still require devices and SMTP respectively.
 
 TASK-214 audit is complete; TASK-215 synchronizes this plan. Historic phase checkmarks

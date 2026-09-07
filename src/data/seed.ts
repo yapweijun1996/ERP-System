@@ -1189,7 +1189,8 @@ export async function seedDemo(db: DB): Promise<void> {
   await db.insert(purchaseOrderLine).values({
     masterFn: 'M1', companyFn: 'C-SG', orderId: approvalPo.id, lineNo: 1,
     productId: sgWidget.id, qty: '50', unitCost: '7.0000',
-    netAmount: '350.00', taxCode: 'SR', taxRate: '9.000', taxAmount: '31.50',
+    netAmount: '350.00', taxCode: 'SR', taxRate: '9.000',
+    taxClassification: 'gst_standard', inputTaxRecoverablePct: '100.0000', taxAmount: '31.50',
   });
   await db.insert(purchaseOrderApproval).values({
     masterFn: 'M1', companyFn: 'C-SG', orderId: approvalPo.id, status: 'pending',

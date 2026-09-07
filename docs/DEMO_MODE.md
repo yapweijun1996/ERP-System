@@ -93,9 +93,10 @@ larger deterministic employee population for list, permissions and reporting dem
 
 ## 5. Known limits
 
-The [2026-09-07 specialist review](ERP_SPECIALIST_REVIEW_2026-09-07.md) records a
-current seeded-PO tax-snapshot gap that blocks supplier invoicing after receiving.
-A successful domain proof or page render does not mean every seed journey completes.
+The [2026-09-07 specialist review](ERP_SPECIALIST_REVIEW_2026-09-07.md) records the
+historical seeded-PO tax-snapshot failure. TASK-216 repairs the compact seed and
+Demo-pack v16 upgrade and passes shared-command regressions; a fresh browser rerun and
+production tax-owner evidence remain separate.
 
 - **Storage quota:** IndexedDB is subject to per-origin browser quotas. Keep seed data
   small; the demo is a showcase, not a data store.
@@ -131,7 +132,7 @@ Before publishing the demo:
 
 Fresh Demo databases load the generated `erp-system-showcase-v1.sql` after the small
 regression seed. The browser verifies the manifest SHA-256 and commits the whole pack
-in one transaction. Manifest version 15 is fixed to 2026-07-27 and makes all 12 real
+in one transaction. Manifest version 16 is fixed to 2026-07-27 and makes all 12 real
 permission personas self-contained in the enterprise pack: Company Owner is assigned to
 both legal entities with explicit tenant administration access, while Viewer and the ten
 department personas exercise their actual company roles. The pack also contains

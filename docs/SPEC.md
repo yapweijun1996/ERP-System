@@ -11,7 +11,8 @@ are acceptance targets, not declarations that every module is production-ready.
 Required corrections are TASK-216–223: governed seed snapshots, date-only due dates,
 reconciled invoice aging/period KPIs, complete translated labels, filled-action
 contrast, usable procurement actions, mobile/zoom/status accessibility and reliable
-recovery verification. Complete them with negative-path and regression evidence.
+recovery verification. TASK-216 is complete; TASK-217–223 are Todo. Complete them
+with negative-path and regression evidence before changing their acceptance status.
 Automatic client updates currently mean background detection plus explicit user
 activation; unattended forced refresh and multi-tab draft safety are not guaranteed.
 AI-friendly APIs must retain session-derived tenant scope, authorization, idempotency
@@ -645,7 +646,10 @@ requirements, not optional polish:
   never a green current gate.
 - **Operations:** declare and prove availability/error/latency SLOs, RPO/RTO, backup and
   document restore, worker backlog/dead-letter alerts, scale budgets and incident/rollback
-  ownership before production expansion.
+  ownership before production expansion. Telemetry must not delay the business tick,
+  must have a measured/index-supported query budget at representative volume, and must
+  calculate `ready` from the same time, lease, status and capability predicates as the
+  corresponding claim command. Coarse source-level counters are not production SLIs.
 - **Business correctness:** browser money stays Decimal-safe; date presets use the
   Company calendar; exported Unicode/localized documents and retention/legal-hold rules
   are tested as domain requirements.

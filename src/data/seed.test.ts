@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { employee } from './schema';
+import { employee, purchaseOrder, purchaseOrderLine } from './schema';
 import { seedDemo } from './seed';
 import { freshDb } from '../test/helpers';
 
@@ -33,5 +33,30 @@ describe('compact Demo HR starter roster', () => {
       .where(and(eq(employee.masterFn, 'M1'), eq(employee.companyFn, 'C-SG')));
     expect(new Set(sgEmployeeNumbers.map((row) => row.employeeNo)).size)
       .toBe(sgEmployeeNumbers.length);
+  });
+
+  it('seeds the approval procurement path with governed GST snapshots', async () => {
+    const db = await freshDb();
+    await seedDemo(db);
+
+    const scope = { masterFn: 'M1', companyFn: 'C-SG' } as const;
+    const [order] = await db.select({ id: purchaseOrder.id, status: purchaseOrder.status })
+      .from(purchaseOrder)
+      .where(and(
+        eq(purchaseOrder.masterFn, scope.masterFn),
+        eq(purchaseOrder.companyFn, scope.companyFn),
+        eq(purchaseOrder.docNo, 'PO-APP-2026-0001'),
+      ));
+    const [line] = await db.select({
+      taxClassification: purchaseOrderLine.taxClassification,
+      inputTaxRecoverablePct: purchaseOrderLine.inputTaxRecoverablePct,
+    }).from(purchaseOrderLine).where(and(
+      eq(purchaseOrderLine.masterFn, scope.masterFn),
+      eq(purchaseOrderLine.companyFn, scope.companyFn),
+      eq(purchaseOrderLine.orderId, order.id),
+    ));
+    expect(order.status).toBe('pending_approval');
+    expect(line).toEqual({ taxClassification: 'gst_standard', inputTaxRecoverablePct: '100.0000' });
+
   });
 });

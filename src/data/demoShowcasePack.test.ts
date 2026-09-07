@@ -2,12 +2,15 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
-import { sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import * as schema from './schema';
 import { seedDemo } from './seed';
 import { projectEmployeeAnnualLeaveWithin } from '../modules/hr/leaveBalance';
 import { ROLE_TEMPLATES } from '../auth/accessCatalog';
+import { markPurchaseOrderApprovedForFixture } from '../test/purchasing';
+import { receiveGoods } from '../modules/purchasing/receiveGoods';
+import { postSupplierInvoice } from '../modules/purchasing/postSupplierInvoice';
 
 describe('deterministic enterprise Demo pack', () => {
   it('verifies SHA-256, fixed counts, references and balanced journals', async () => {
@@ -31,15 +34,66 @@ describe('deterministic enterprise Demo pack', () => {
         total: number;
       };
     };
-    expect(manifest.version).toBe('15');
+    expect(manifest.version).toBe('16');
     expect(manifest.personas).toBe(12);
     expect(createHash('sha256').update(packSql).digest('hex')).toBe(manifest.sha256);
     const client = new PGlite();
     await client.exec(schemaSql);
     const db = drizzle(client, { schema });
     await seedDemo(db);
+    await client.exec(`
+      update purchase_order_line
+      set tax_classification='unclassified', input_tax_recoverable_pct=0
+      where master_fn='M1' and company_fn='C-SG'
+        and order_id=(select id from purchase_order where master_fn='M1'
+          and company_fn='C-SG' and doc_no='PO-APP-2026-0001')
+    `);
     await client.exec(packSql);
     await client.exec(receiptFixtureSql);
+    const upgradedApprovalLine = (await client.query<{ tax_classification: string; input_tax_recoverable_pct: string }>(`
+      select tax_classification, input_tax_recoverable_pct::text
+      from purchase_order_line line
+      join purchase_order order_row on order_row.id=line.order_id
+      where order_row.master_fn='M1' and order_row.company_fn='C-SG'
+        and order_row.doc_no='PO-APP-2026-0001'
+    `)).rows;
+    expect(upgradedApprovalLine).toEqual([{
+      tax_classification: 'gst_standard', input_tax_recoverable_pct: '100.0000',
+    }]);
+
+    const scope = { masterFn: 'M1', companyFn: 'C-SG' } as const;
+    const [approvalOrder] = await db.select({ id: schema.purchaseOrder.id })
+      .from(schema.purchaseOrder).where(and(
+        eq(schema.purchaseOrder.masterFn, scope.masterFn),
+        eq(schema.purchaseOrder.companyFn, scope.companyFn),
+        eq(schema.purchaseOrder.docNo, 'PO-APP-2026-0001'),
+      ));
+    await markPurchaseOrderApprovedForFixture(db, scope, approvalOrder.id);
+    const [location] = await db.select({ id: schema.warehouse.id }).from(schema.warehouse).where(and(
+      eq(schema.warehouse.masterFn, scope.masterFn),
+      eq(schema.warehouse.companyFn, scope.companyFn),
+      eq(schema.warehouse.code, 'DEMO-SG-MAIN'),
+    ));
+    await receiveGoods(db, scope, {
+      purchaseOrderId: approvalOrder.id, warehouseId: location.id,
+      docNo: 'GR-APP-2026-0001', receivedDate: '2026-07-21',
+    });
+    const result = await postSupplierInvoice(db, scope, {
+      purchaseOrderId: approvalOrder.id, docNo: 'SINV-APP-2026-0001', invoiceDate: '2026-07-22',
+    });
+    expect(result.total).toBe(381.5);
+    const invoices = await db.select({ id: schema.supplierInvoice.id })
+      .from(schema.supplierInvoice).where(and(
+        eq(schema.supplierInvoice.masterFn, scope.masterFn),
+        eq(schema.supplierInvoice.companyFn, scope.companyFn),
+        eq(schema.supplierInvoice.orderId, approvalOrder.id),
+      ));
+    expect(invoices).toHaveLength(1);
+    const legs = await db.select({ debit: schema.glEntry.debit, credit: schema.glEntry.credit })
+      .from(schema.glEntry).where(eq(schema.glEntry.journalRef, 'SINV-APP-2026-0001'));
+    expect(legs).toHaveLength(3);
+    expect(legs.reduce((sum, leg) => sum + Number(leg.debit), 0))
+      .toBeCloseTo(legs.reduce((sum, leg) => sum + Number(leg.credit), 0), 2);
     const counts = (await client.query<{
       activities: number; movements: number; gl_entries: number;
       leave_requests: number; leave_balance_entries: number;

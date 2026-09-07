@@ -1,7 +1,8 @@
 # Task Index
 
-[TEST_COVERAGE.md](TEST_COVERAGE.md) is the module evidence map. TASK-216–223 are
-open F01–F08 repairs; TASK-215 is documentation reconciliation, not runtime completion.
+[TEST_COVERAGE.md](TEST_COVERAGE.md) is the module evidence map. TASK-216 is the
+completed F01 repair; TASK-217–223 remain open F02–F08 repairs. TASK-215 is
+documentation reconciliation, not runtime completion.
 
 Reviewed: **2026-09-07**
 
@@ -11,9 +12,9 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **206**
+- Done: **207**
 - In progress: **4**
-- Todo: **10**
+- Todo: **9**
 - Blocked: **3**
 - Total: **223**
 
@@ -137,7 +138,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-198 | Done | Approved the narrow dual-mode exception: reason/ticket for elevated Admin access, exact-user simulation without reason/ticket, and explicit no-MFA/no-step-up risk acceptance |
 | TASK-199 | Todo | Restore public availability and prove exact deployed revision |
 | TASK-200 | Done | Resolve 129/129 route parity and rerun current HEAD release evidence |
-| TASK-201 | Todo | Production SLO, scale, worker monitoring and RPO/RTO proof; source auth outbox cap added, production exercise remains |
+| TASK-201 | Todo | Production SLO, scale and RPO/RTO proof; make worker telemetry bounded/non-blocking and claim-accurate before production alerting |
 | TASK-202 | In progress | Receipt Pack repository lifecycle/timezone and disposable PostgreSQL concurrency proof are complete; production release evidence remains |
 | TASK-203 | In progress | Remote CI now executes; fix the i18n failure and rerun the current pushed HEAD |
 | TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |
@@ -153,12 +154,18 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-208 | Done | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation, exact Employee integration and five-language browser proof |
 | TASK-209 | Blocked | PostgreSQL/RLS, current CI, release, documentation and KB proof; blocked by current-HEAD CI and deployed/production evidence |
 
-The registry therefore has **206 Done / 4 In Progress / 10 Todo / 3 Blocked / 223 Total**.
+The registry therefore has **207 Done / 4 In Progress / 9 Todo / 3 Blocked / 223 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery) and TASK-209
 (release proof waiting for current-HEAD CI and deployed-production evidence). TASK-203
 is In Progress because the latest remote workflow executed but exposed a source i18n
 failure that now passes locally; a fresh current-HEAD run remains required. Dependencies and
 epic references are valid.
+
+TASK-216 is Done: compact seed PO-APP-2026-0001 and showcase pack v16 carry governed
+SG/MY tax snapshots; the historical upgrade repair is idempotent and guarded against
+rewriting received/invoiced rows. Fresh and upgraded approval → receipt → supplier
+invoice proof, balanced GL and fail-closed rejection tests are recorded in its task
+registry entry. TASK-217–223 remain Todo.
 
 TASK-213 closes the source-level RLS table-list omission for `sales_enquiry_line` and
 adds a deterministic generated-schema coverage gate. TASK-195 now establishes the

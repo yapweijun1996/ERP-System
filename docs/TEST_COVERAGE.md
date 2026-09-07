@@ -35,7 +35,7 @@ and colocated test entry points.
 | [manufacturing](../src/modules/manufacturing/) | 2 | Route rendering only; BOM/work-order/material/finished-goods cycle not rerun. |
 | [payroll](../src/modules/payroll/) | 3 | PGlite SG/MY fixture totals, balanced journals and repost denial pass; browser payroll lifecycle and statutory submissions not rerun. |
 | [project](../src/modules/project/) | 3 | Route rendering only; progress claim, timesheet, billing and receipt lifecycle not rerun. |
-| [purchasing](../src/modules/purchasing/) | 11 | MCP seeded PO approve/receive passes but invoice fails F01. Separate PGlite valid-fixture proof passes invoice, return, landed cost and rejection guards; these are different datasets. |
+| [purchasing](../src/modules/purchasing/) | 11 | Fresh compact seed and simulated historical-pack upgrade now approve/receive/post exactly one balanced supplier invoice through shared commands; the fail-closed unclassified/regime-mismatch guard remains covered. Browser/API production tax-owner evidence is separate. |
 | [quality](../src/modules/quality/) | 1 | Route rendering only; inspection/disposition business cycle not rerun. |
 | [reporting](../src/modules/reporting/) | 1 | Routes rendered; aggregate report reconciliation, export correctness and large-data plans not comprehensively tested. |
 | [sales](../src/modules/sales/) | 8 | MCP SO-2 confirmation/stock/invoice/balanced GL and SO-3 rejection pass; F02 due date and F03 invoice KPIs fail; no complete customer settlement chain. |
@@ -47,12 +47,13 @@ and colocated test entry points.
 
 | Gate | TASK-214 result | Required follow-up |
 | --- | --- | --- |
-| Demo build / PGlite domain proof | Passed | Preserve shared domain rules; repair the different seeded PO fixture in TASK-216 |
+| Demo build / PGlite domain proof | Passed | TASK-216 fresh seed and simulated v15→v16 upgrade complete the seeded PO approval → receipt → invoice chain with one balanced supplier invoice; shared rejection guards remain green |
 | Desktop/mobile route rendering | 129 routes rendered, no console/page errors; full audit failed voucher Retry | TASK-223; a focused three-route desktop pass does not close the full gate |
 | i18n | Seven routes × five languages × two viewports; two hardcoded labels fail | TASK-219, then full release matrix |
 | Theme/mobile | Selected pages inspected; contrast, touch/zoom/status gaps | TASK-220/222; no complete palette/device certification |
 | PWA update lifecycle | Passed explicit deferral/acceptance/reload flow | Physical devices, multiple tabs, unsaved drafts, in-flight requests and interrupted upgrades remain unverified |
 | Performance | Warm route and bundle observations only | TASK-201; cold-start, interaction percentiles, realistic data and concurrent tenant workloads |
+| Worker telemetry | Aggregate shape/redaction tests pass 3/3 | TASK-201; telemetry is awaited before work, uses whole-table aggregates and does not yet make `ready` identical to queue claim eligibility |
 | Full unit/integration suite | Stopped without final result | Fresh complete run; do not use historical counts as current proof |
 | PostgreSQL/API/production | Not rerun by this audit | TASK-199/203/209 and module-specific PostgreSQL/API UAT |
 | Generated schema/RLS static coverage | TASK-215 fresh check passed: 104 migrations, 255 tables, 225 policies + 10 exemptions | This does not execute PostgreSQL RLS or prove target-host deployment |
@@ -84,9 +85,10 @@ TASK-215 does not close any runtime finding or production gate.
 
 ## Documentation and KB reconciliation
 
-TASK-215 is complete; TASK-216–223 remain Todo. Final registry: **206 Done / 4 In
-Progress / 10 Todo / 3 Blocked / 223 Total**. The project KB
+TASK-215 and TASK-216 are complete; TASK-217–223 remain Todo. Current registry:
+**207 Done / 4 In Progress / 9 Todo / 3 Blocked / 223 Total**. The project KB
 `erp-system-project-logic` (`ef47bf4b-83e1-42b2-a412-66912d04ea24`) now includes coverage
 item `8007eaf3-0ec3-4fa4-b4ca-1bdc3d8153b3`; the architecture inventory, EPIC-066 and
-specialist audit items plus KB description were updated and read back. No production
-system or runtime source was changed by this reconciliation.
+specialist audit items plus KB description were updated and read back. TASK-216 changed
+local seed/pack/test runtime files only; no production system, deployment or remote CI
+result is claimed.

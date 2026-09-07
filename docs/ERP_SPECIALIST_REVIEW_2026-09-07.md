@@ -9,6 +9,13 @@ source/documentation, and official SG/MY market references. This review does not
 certify production readiness or fix runtime defects. Product direction is recorded
 in [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md).
 
+Follow-up status: TASK-216 is now complete on the subsequent local worktree. The compact
+seed and showcase pack v16 carry governed SG/MY tax snapshots, the untouched historical
+SG approval row has an idempotent upgrade repair, and fresh/upgraded shared-command
+proof completes exactly one balanced supplier invoice. The original F01 reproduction
+below remains the historical audit observation; production tax-owner approval and
+deployment evidence remain separate.
+
 ## Executive assessment
 
 The Demo runs and the shared transaction layer has meaningful accounting and rollback

@@ -2,7 +2,8 @@
 
 Reviewed 2026-09-07: the shared schema/domain and Demo/API boundaries remain unchanged.
 Newly verified seed, date, reporting and presentation defects are tracked in
-[TEST_COVERAGE.md](TEST_COVERAGE.md), TASK-216–223. Seed repair belongs in governed
+[TEST_COVERAGE.md](TEST_COVERAGE.md), TASK-217–223. TASK-216 seed/Demo-pack repair is
+complete: seed repair belongs in governed
 fixture generation/upgrade; date and aging rules need one business-owned contract;
 translations and theme tokens remain presentation responsibilities. Do not weaken
 posting validation or duplicate domain SQL to make a showcase pass.
@@ -206,8 +207,12 @@ cross the fulfilment/accounting boundary, preserving one authoritative posting p
   `erp.worker.telemetry` JSON record from `src/worker/telemetry.ts`. It aggregates queue
   depth, ready work, active leases, attempted/retrying rows, failures, dead letters and
   oldest pending age under the existing worker RLS flags. It intentionally omits tenant
-  identifiers, payloads, credentials, lock owners and raw errors; a production metrics/
-  alert sink and incident ownership remain TASK-201 deployment work.
+  identifiers, payloads, credentials, lock owners and raw errors. Current implementation
+  awaits telemetry before business processing and calculates each aggregate from the
+  whole queue table; `ready` is a coarse availability count rather than the exact claim
+  predicate (for example, lease eligibility and reminder time are not represented).
+  TASK-201 must move/limit this read path, prove indexed bounded plans and align every SLI
+  with its queue claim contract before production alert thresholds are trusted.
 - **Local Postgres proof** (no Docker required): `createdb erp_system_proof` against
   PostgreSQL 16+, then point `POSTGRES_URL` at that empty database and run `npm run
   demo`. Do not migrate or seed it first: the proof's read-only preflight requires zero

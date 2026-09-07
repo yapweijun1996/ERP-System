@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { and, eq } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import {
-  account, company, currency, glEntry, master, product, project, supplier, supplierInvoice, taxRule, warehouse,
+  account, company, currency, glEntry, master, product, project, purchaseOrderLine, supplier, supplierInvoice, taxRule, warehouse,
 } from '../../data/schema';
 import { freshDb, TEST_SCOPE as SCOPE } from '../../test/helpers';
 import { markPurchaseOrderApprovedForFixture } from '../../test/purchasing';
@@ -107,6 +107,46 @@ describe('postSupplierInvoice', () => {
     expect(legs.reduce((sum, leg) => sum + Number(leg.credit), 0)).toBeCloseTo(129.6, 2);
     expect(legs.find((leg) => Number(leg.credit) > 0)?.memo).toBe('AP');
     expect(legs.some((leg) => leg.memo === 'Recoverable input tax')).toBe(false);
+  });
+
+  it('fails closed when a legacy or regime-incompatible line lacks governed tax facts', async () => {
+    const db = await freshDb();
+    const fx = await seedPurchasingFixture(db);
+    await db.insert(master).values({ masterFn: SCOPE.masterFn, loginCode: 'TEST-SG', name: 'Test Singapore Master' });
+    await db.insert(currency).values({ code: 'SGD', name: 'Singapore Dollar', symbol: 'S$' });
+    await db.insert(company).values({
+      companyFn: SCOPE.companyFn,
+      masterFn: SCOPE.masterFn,
+      name: 'Test Singapore Company',
+      country: 'SG',
+      currency: 'SGD',
+      taxRegime: 'GST',
+    });
+    const po = await createPurchaseOrder(db, SCOPE, {
+      docNo: 'PO-TAX-GUARD', supplierId: fx.supplierId, orderDate: '2024-06-01', currency: 'SGD',
+      lines: [{ productId: fx.widgetId, qty: 20, unitCost: 6, taxCode: 'SR' }],
+    });
+    await markPurchaseOrderApprovedForFixture(db, SCOPE, po.orderId);
+    await receiveGoods(db, SCOPE, {
+      purchaseOrderId: po.orderId, warehouseId: fx.warehouseId,
+      docNo: 'GR-TAX-GUARD', receivedDate: '2024-06-05',
+    });
+
+    await db.update(purchaseOrderLine).set({
+      taxClassification: 'unclassified', inputTaxRecoverablePct: '0.0000',
+    }).where(eq(purchaseOrderLine.orderId, po.orderId));
+    await expect(postSupplierInvoice(db, SCOPE, {
+      purchaseOrderId: po.orderId, docNo: 'SINV-TAX-UNCLASSIFIED', invoiceDate: '2024-06-06',
+    })).rejects.toThrow('tax classification is not governed');
+
+    await db.update(purchaseOrderLine).set({
+      taxClassification: 'sst_service', inputTaxRecoverablePct: '0.0000',
+    }).where(eq(purchaseOrderLine.orderId, po.orderId));
+    await expect(postSupplierInvoice(db, SCOPE, {
+      purchaseOrderId: po.orderId, docNo: 'SINV-TAX-MISMATCH', invoiceDate: '2024-06-06',
+    })).rejects.toThrow('tax classification is not governed');
+    expect(await db.select().from(supplierInvoice).where(eq(supplierInvoice.orderId, po.orderId)))
+      .toHaveLength(0);
   });
 
   it('rollback: posting an invoice before the goods receipt throws and posts no GL legs', async () => {

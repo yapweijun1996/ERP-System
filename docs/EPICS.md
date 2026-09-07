@@ -2656,7 +2656,7 @@ Current truth:
 | TASK-198 | Done | Narrow dual-mode exception, reason/ticket Admin access and explicit no-MFA/no-step-up risk acceptance |
 | TASK-199 | Todo | Restore public availability and prove the deployed revision |
 | TASK-200 | Done | Resolve 129/129 route parity and rerun current HEAD release evidence |
-| TASK-201 | Todo | Production SLO, scale, worker observability and RPO/RTO restore proof |
+| TASK-201 | Todo | Production SLO, scale and RPO/RTO proof; bounded/non-blocking, claim-accurate worker observability |
 | TASK-202 | In progress | Receipt Pack lifecycle/timezone and disposable PostgreSQL concurrency proof are complete; production release evidence remains |
 | TASK-203 | In Progress | Latest CI executes but the i18n matrix failed on `timesheet: Projects`; local fix passes, current-HEAD rerun pending |
 | TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |
@@ -2664,7 +2664,7 @@ Current truth:
 | TASK-213 | Done | Close production RLS coverage omission and add schema drift guard |
 | TASK-214 | Done | ERP specialist audit and product quality baseline with documentation/KB synchronization |
 | TASK-215 | Done | Synchronize ERP architecture requirements roadmap and module test coverage |
-| TASK-216 | Todo | Repair governed tax snapshots in seeded procurement |
+| TASK-216 | Done | Compact seed and Demo-pack v16 carry governed SG/MY tax snapshots; fresh/upgraded approval → receipt → invoice and fail-closed rejection proof passes |
 | TASK-217 | Todo | Correct date-only sales invoice due dates |
 | TASK-218 | Todo | Reconcile invoice aging and fiscal-period KPIs |
 | TASK-219 | Todo | Close sales invoice translation gaps |

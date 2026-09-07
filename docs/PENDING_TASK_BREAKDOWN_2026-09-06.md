@@ -2,12 +2,13 @@
 
 ## Latest specialist follow-up
 
-TASK-215 reconciles documentation/KB only. TASK-216–223 are open, one per F01–F08 in
+TASK-215 reconciles documentation/KB only. TASK-216 is complete and TASK-217–223 remain
+open, one per F02–F08 in
 [ERP_SPECIALIST_REVIEW_2026-09-07.md](ERP_SPECIALIST_REVIEW_2026-09-07.md).
 
 | Task | Status | Required outcome |
 | --- | --- | --- |
-| TASK-216 | Todo | Repair governed tax snapshots in seeded procurement |
+| TASK-216 | Done | Compact seed and Demo-pack v16 carry governed SG/MY tax snapshots; fresh/upgraded approval → receipt → invoice proof passes |
 | TASK-217 | Todo | Correct date-only sales invoice due dates |
 | TASK-218 | Todo | Reconcile invoice aging and fiscal-period KPIs |
 | TASK-219 | Todo | Close sales invoice translation gaps |
@@ -27,7 +28,18 @@ This is the actionable view of every non-Done task currently registered in
 tests are implementation evidence, while deployment, CI, production configuration and
 physical-device checks remain separate evidence classes.
 
-Current registry: **206 Done / 4 In Progress / 10 Todo / 3 Blocked / 223 Total**.
+Current registry: **207 Done / 4 In Progress / 9 Todo / 3 Blocked / 223 Total**.
+
+2026-09-07 TASK-216 completion: the compact seed and generated showcase pack v16 now
+write governed GST/SST classification and recoverability snapshots. A deterministic
+upgrade repairs only the untouched historical `PO-APP-2026-0001` SG row; it does not
+rewrite received or invoiced records. Fresh and simulated-upgrade PGlite tests complete
+approval → receipt → exactly one supplier invoice with balanced GL, while unclassified
+and regime-incompatible lines remain rejected. The focused purchasing tests pass 3
+files/11 tests, existing HTTP purchasing coverage passes `src/api/app.test.ts` 29/29,
+and `npm run demo`, generated pack/schema and drift checks also pass. This is local
+Demo/API shared-command evidence, not
+production tax-owner approval or deployment evidence.
 
 2026-09-07 CI addendum: the latest GitHub Actions CI run `34017037310` on remote
 head `2188f56186e88e542351ec3a49e07d73057182bf` executed all four Vitest shards and

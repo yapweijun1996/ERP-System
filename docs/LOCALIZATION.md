@@ -1,9 +1,10 @@
 # Localization — Singapore & Malaysia
 
 2026-09-07 acceptance note: governed tax source hardening is present; tax-owner
-production approval remains TASK-204. Seeded procurement fails because its tax snapshot
-is incomplete (TASK-216), not because the guard should be relaxed. UI date handling
-and invoice aging require TASK-217/218. See [TEST_COVERAGE.md](TEST_COVERAGE.md).
+production approval remains TASK-204. TASK-216 repairs the compact seed and showcase
+upgrade with explicit SG/MY tax snapshots; the posting guard still rejects incomplete
+or regime-incompatible records. UI date handling and invoice aging require TASK-217/218.
+See [TEST_COVERAGE.md](TEST_COVERAGE.md).
 
 The ERP serves multiple countries from one codebase. Country behavior is an **attribute
 of the company (`company_fn`)**, not a build flag. Today: **Singapore (SG)** and

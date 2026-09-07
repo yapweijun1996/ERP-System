@@ -87,7 +87,7 @@ suppliers, 500 products and 10,436 deterministic activity, inventory, GL, leave,
 payroll records. Stock movements are paired, journals balance by company and reference,
 and HR data includes reporting lines plus controlled approval and payroll states.
 Cross-company Finance and HR assignments demonstrate legal-entity separation. The
-enterprise-pack manifest is currently version 15; it owns all 12 identities directly
+enterprise-pack manifest is currently version 16; it owns all 12 identities directly
 instead of relying on the compact regression seed. Its Company Owner belongs to both
 companies, has explicit tenant administration permissions, and retains no implicit
 approval/payment/payroll/platform-support authority. The Demo switcher presents the true

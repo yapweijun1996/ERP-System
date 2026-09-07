@@ -17,6 +17,9 @@ filesystem storage needs a shared durable design before horizontal API/worker sc
 > read-replica routing, automated materialized-view refresh, WAL/PITR/pgBackRest
 > operations or a representative 100–800 GB load/plan report. Sections 3–8 are target
 > architecture, not deployed facts. TASK-201 owns measured scale, SLO and recovery proof.
+> Its current worker telemetry performs whole-table aggregate reads and is awaited before
+> business processing when due; this must be bounded or decoupled and plan-tested at
+> representative queue volume before it can be treated as production-safe monitoring.
 
 This applies **only to production PostgreSQL**. The demo (PGlite/IndexedDB) holds a few
 thousand mock rows and never approaches this scale — do not conflate the two.
