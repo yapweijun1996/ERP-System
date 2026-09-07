@@ -32,6 +32,13 @@ The current full local Vitest run passes 176 files / 724 tests with 2 skipped fi
 skipped tests (178 files / 726 tests total). Production and current-HEAD remote CI remain
 separate evidence gates.
 
+The 2026-09-08 local release-gate rerun also passes the PGlite `npm run demo`,
+`npm run build:demo`, generated Demo schema/pack and i18n checks, schema drift, permission
+registry, production-RLS coverage, documentation links, lint and both typechecks. The
+build's existing Vite externalization and large-chunk warnings did not change its exit
+status. These are repository evidence only and do not replace current-HEAD CI or live
+production proof.
+
 TASK-216 follow-up is now complete on the local source: compact seed PO-APP-2026-0001
 and showcase pack v16 carry governed SG GST / MY SST snapshot facts; an idempotent
 upgrade repairs only the untouched historical SG approval row. Fresh and simulated-
@@ -675,7 +682,7 @@ are not more module screens:
   tests pass 6/6, including a same-path redirect acceptance case. This makes the live
   acceptance step repeatable but does not create
   deployed evidence. The 2026-09-08 read-only rerun against local HEAD
-  `5ac1dcb61b3309f616650d76f783e6127e50b449` returned `health_http_404` from Pages and
+  `c4aea93a64d123dd9882ceb3bf783be2eb28a78e` returned `health_http_404` from Pages and
   `root_http_502` from the production origin, both with exit 1 and empty stderr; this
   confirms the known public availability boundary without changing remote state;
 - TASK-200 is source-closed; TASK-201 still owns SLO/RPO/RTO, scale and worker telemetry.

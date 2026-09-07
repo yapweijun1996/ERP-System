@@ -62,8 +62,8 @@ private `api:3000` service and `deploy/release.sh` probes that same path from in
 This validates repository release wiring only and cannot prove the remote Cloudflare
 tunnel/host process is running.
 
-The new verifier was also run read-only against both origins with local HEAD
-`5ac1dcb61b3309f616650d76f783e6127e50b449`:
+The verifier was rerun read-only against both origins with local HEAD
+`c4aea93a64d123dd9882ceb3bf783be2eb28a78e`:
 Pages exited `1` with `health_http_404`, and the production origin exited `1` with
 `root_http_502`; both emitted no stderr. These are structured confirmations of the
 existing availability boundary, not a deployment attempt.
