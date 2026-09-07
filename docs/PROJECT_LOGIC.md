@@ -1,13 +1,14 @@
 # ERP-System Project Logic
 
-TASK-216 fixture repair, TASK-217 date-only repair and TASK-218 invoice presentation repair
+TASK-216 fixture repair, TASK-217 date-only repair, TASK-218 invoice presentation repair and
+TASK-219 sales-invoice i18n repair
 (2026-09-07) change no posting contract: governed tax facts are now present in fresh and
 upgraded Demo procurement rows, while sales due-date arithmetic uses a shared calendar-
 date helper and invoice aging/period KPIs derive from immutable facts without changing
 posting status. Shared posting rejection remains authoritative.
 [TEST_COVERAGE.md](TEST_COVERAGE.md) records every current module and evidence gaps;
-TASK-216–223 own the eight specialist findings; TASK-216 through TASK-218 are complete and
-TASK-219–223 remain Todo. Fresh schema/RLS checks prove
+TASK-216–223 own the eight specialist findings; TASK-216 through TASK-219 are complete and
+TASK-220–223 remain Todo. Fresh schema/RLS checks prove
 104 migrations, 255 tables, 225 generic policy tables and 10 explicit exemptions,
 not production isolation. Domain fixes must update this mirror and the KB together.
 

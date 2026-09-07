@@ -1,6 +1,6 @@
 # SPEC — Contract of Record
 
-## Current product acceptance and evidence boundary — 2026-09-07
+## Current product acceptance and evidence boundary — 2026-09-08
 
 [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md) defines the requested workflow,
 performance, layout, responsive, five-language, light/dark palette, usability, SG/MY,
@@ -11,7 +11,7 @@ are acceptance targets, not declarations that every module is production-ready.
 Required corrections are TASK-216–223: governed seed snapshots, date-only due dates,
 reconciled invoice aging/period KPIs, complete translated labels, filled-action
 contrast, usable procurement actions, mobile/zoom/status accessibility and reliable
-recovery verification. TASK-216 through TASK-218 are complete; TASK-219–223 are Todo. Complete them
+recovery verification. TASK-216 through TASK-219 are complete; TASK-220–223 are Todo. Complete them
 with negative-path and regression evidence before changing their acceptance status.
 Automatic client updates currently mean background detection plus explicit user
 activation; unattended forced refresh and multi-tab draft safety are not guaranteed.
@@ -141,10 +141,10 @@ incomplete feature may be introduced only as an explicitly labelled `Preview · 
 Data` or `Preview · Canonical Data` route, with write-like actions disabled until its
 schema, resource/command, permission, tests and localization are complete.
 
-Current source inventory (2026-09-07) is 129/0 routes, 1,726 English keys and 72 local
+Current source inventory (2026-09-08) is 129/0 routes, 1,728 English keys and 72 local
 five-language packs. TASK-214 rendered all 129 routes but the full screen gate failed
-one recovery assertion; its targeted five-language matrix failed two invoice labels.
-Earlier full-matrix passes are dated checkpoints. API-mode browser and physical-device
+one recovery assertion; TASK-219 now closes the targeted invoice-label finding and the
+current full five-language browser matrix passes. API-mode browser and physical-device
 evidence remain separate release gates. See [TEST_COVERAGE.md](TEST_COVERAGE.md).
 Business-record values remain outside system-authored UI copy.
 
@@ -271,7 +271,7 @@ controls exist.
 - **i18n:** every system-authored browser UI string uses the en/ms/zh/ja/vi i18n
   layer. The current Web preference is browser-local (`aria-lang`), defaults to
   English and is orthogonal to company country. `app_user.language` remains reserved
-  for compatibility and is not currently wired. Current inventory is 1,726 English
+  for compatibility and is not currently wired. Current inventory is 1,728 English
   keys / 72 local packs; the current 129-route × 5-language × 2-viewport browser
   matrix passes.
   Business-record values remain outside system-authored UI copy. ([I18N.md](I18N.md))

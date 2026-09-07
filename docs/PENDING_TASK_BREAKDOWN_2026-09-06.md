@@ -1,9 +1,9 @@
-# Pending Task Breakdown — 2026-09-07 addendum
+# Pending Task Breakdown — 2026-09-08 addendum
 
 ## Latest specialist follow-up
 
-TASK-215 reconciles documentation/KB only. TASK-216 through TASK-218 are complete and
-TASK-219–223 remain open, one per F04–F08 in
+TASK-215 reconciles documentation/KB only. TASK-216 through TASK-219 are complete and
+TASK-220–223 remain open, one per F05–F08 in
 [ERP_SPECIALIST_REVIEW_2026-09-07.md](ERP_SPECIALIST_REVIEW_2026-09-07.md).
 
 | Task | Status | Required outcome |
@@ -11,7 +11,7 @@ TASK-219–223 remain open, one per F04–F08 in
 | TASK-216 | Done | Compact seed and Demo-pack v16 carry governed SG/MY tax snapshots; fresh/upgraded approval → receipt → invoice proof passes |
 | TASK-217 | Done | Shared date-only due-date arithmetic and SG/MY boundary regression/browser proof |
 | TASK-218 | Done | Derive invoice aging and fiscal-period KPIs from date-only presentation facts while preserving posting status |
-| TASK-219 | Todo | Close sales invoice translation gaps |
+| TASK-219 | Done | Close sales invoice translation gaps; canonical labels and current full i18n matrix pass |
 | TASK-220 | Todo | Correct filled-action contrast in both themes |
 | TASK-221 | Todo | Make procurement next actions and receiving scope clear |
 | TASK-222 | Todo | Improve mobile touch zoom and localized status usability |
@@ -28,7 +28,7 @@ This is the actionable view of every non-Done task currently registered in
 tests are implementation evidence, while deployment, CI, production configuration and
 physical-device checks remain separate evidence classes.
 
-Current registry: **209 Done / 4 In Progress / 7 Todo / 3 Blocked / 223 Total**.
+Current registry: **210 Done / 4 In Progress / 6 Todo / 3 Blocked / 223 Total**.
 
 2026-09-07 TASK-216 completion: the compact seed and generated showcase pack v16 now
 write governed GST/SST classification and recoverability snapshots. A deterministic
@@ -61,6 +61,16 @@ Outstanding/Overdue S$174 and Posted this period 0, the Overdue filter retains t
 old invoices, Paid is empty, and the route has zero console errors. Demo, lint,
 typechecks, generated checks, documentation links and diff checks pass. This is local
 Demo/source evidence, not production or remote-CI evidence.
+
+2026-09-08 TASK-219 completion: sales-invoice `Outstanding` and `Due date` now resolve
+through `ar.outstanding` and `common.dueDate` in all five locale packs, with the generated
+English bootstrap at 1,728 canonical keys. The built Demo live-locale E2E passes on desktop
+and mobile with route/filter retention and focused draft controls; shared locale refresh
+continues to capture/restore scroll state. The specialist seven-route matrix and the full
+PGlite release audit pass at 129 routes × 5 languages × 2 viewports with zero blocking
+findings. The i18n audit's dynamic-date allowlist now accepts locale-generated month names
+such as `Sept` without classifying runtime business dates as untranslated system copy.
+TASK-220–223 remain independently actionable.
 
 2026-09-07 CI addendum: the latest GitHub Actions CI run `34017037310` on remote
 head `2188f56186e88e542351ec3a49e07d73057182bf` executed all four Vitest shards and

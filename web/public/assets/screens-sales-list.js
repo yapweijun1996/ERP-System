@@ -185,7 +185,7 @@ registerSalesTransactionList({
   chips:[['all','All'],['unpaid','Unpaid'],['overdue','Overdue'],['paid','Paid'],['draft','Draft']],
   filterFn:(i,f)=>f==='unpaid'?i.isOutstanding:f==='overdue'?i.isOverdue:f==='paid'?i.status==='Paid':i.status==='Draft',
   kpis:(r)=>[
-    {label:'Outstanding', val:money0(r.filter(i=>i.isOutstanding).reduce((a,i)=>a+i.balance,0)), f:'unpaid'},
+    {label:()=>t('ar.outstanding'), val:money0(r.filter(i=>i.isOutstanding).reduce((a,i)=>a+i.balance,0)), f:'unpaid'},
     {label:'Overdue', val:money0(r.filter(i=>i.isOverdue).reduce((a,i)=>a+i.balance,0)), neg:true, f:'overdue'},
     {label:'Posted this period', val:r.filter(i=>i.postedInPeriod).length},
     {label:'Paid', val:r.filter(i=>i.status==='Paid').length, f:'paid'},
@@ -193,7 +193,7 @@ registerSalesTransactionList({
   columns:[
     {label:'Invoice', w:'minmax(132px,1.2fr)', render:i=>docNoCell(i.no, i.date)},
     {label:'Customer', align:'l', w:'minmax(150px,1.5fr)', render:i=>custCell(i.cust,i.custCode)},
-    {label:'Due date', align:'l', w:'minmax(94px,1fr)', render:i=>`<span class="muted-date ${i.isOverdue?'due-danger':''}">${esc(i.due)}</span>`},
+    {label:()=>t('common.dueDate'), align:'l', w:'minmax(94px,1fr)', render:i=>`<span class="muted-date ${i.isOverdue?'due-danger':''}">${esc(i.due)}</span>`},
     {label:'From order', align:'l', w:'minmax(104px,1fr)', render:i=>`<span class="mono" style="font-size:12px">${esc(i.so)}</span>`},
     {label:'Total', align:'r', sortable:true, w:'minmax(104px,0.9fr)', render:i=>`<b class="tnum">${money(i.total)}</b>`},
     {label:'Balance', align:'r', w:'minmax(100px,0.9fr)', render:i=>{const b=i.balance;return `<b class="tnum" style="color:${b>0?(i.isOverdue?'var(--danger)':'var(--fg)'):'var(--ok)'}">${b>0?money(b):'—'}</b>`;}},

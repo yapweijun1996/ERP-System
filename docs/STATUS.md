@@ -1,4 +1,4 @@
-# Project Status — reviewed 2026-09-07
+# Project Status — reviewed 2026-09-08
 
 One-page truth about what is **built**, what is **mock**, and what is **documented but
 not implemented**. Read this first before picking any task. Update this file whenever
@@ -17,13 +17,14 @@ fresh local evidence on source `243af56`, and [ERP_QUALITY_BASELINE.md](ERP_QUAL
 for the product-owner acceptance criteria. The Demo build and PGlite domain proof
 pass, and all 129 routes render at desktop/mobile without console/page errors.
 The full screen audit failed one payment-voucher recovery assertion; a focused
-three-route desktop rerun passed. A seven-route five-language desktop/mobile matrix
-failed on sales-invoice `Outstanding` and `Due date`. Manual Chrome DevTools MCP
+three-route desktop rerun passed. The historical TASK-214 seven-route five-language
+desktop/mobile matrix failed on sales-invoice `Outstanding` and `Due date`. Manual Chrome DevTools MCP
 found seeded-PO invoicing blocked by unclassified tax snapshots, a one-day SG due-date
 shift, incorrect invoice aging/period KPIs and a dark-button contrast gap. These were
 historical audit findings, not fixed by the documentation audit. TASK-216 subsequently
 repairs the seeded procurement path, TASK-217 repairs the date-only due-date path, and
-TASK-218 repairs invoice aging/period presentation facts; TASK-219–223 remain open. The audit's
+TASK-218 repairs invoice aging/period presentation facts and TASK-219 repairs the sales-invoice
+translation gaps; TASK-220–223 remain open. The audit's
 optional full Vitest run stopped without a result; earlier suite totals below remain
 historical evidence.
 
@@ -50,6 +51,15 @@ FY2026/P06 shows Outstanding/Overdue S$174 and Posted this period 0, the Overdue
 retains the two historical invoices, Paid is empty, and console errors are zero. This
 does not constitute production AR settlement, current-HEAD CI or deployment evidence.
 
+TASK-219 follow-up is complete on the local source: sales-invoice `Outstanding` and `Due date`
+labels resolve through canonical `ar.outstanding` and `common.dueDate` keys in all five
+locale packs. Built-Demo live-locale E2E passes on desktop/mobile with route/filter retention
+and focused draft controls; shared locale refresh retains its scroll capture/restore path.
+The seven-route specialist matrix and the full PGlite browser audit pass at 129 routes ×
+5 languages × 2 viewports with zero blocking findings. The dynamic-date audit allowlist now
+accepts locale-generated month names such as `Sept` without weakening system-copy detection.
+This is local source/Demo evidence, not current-HEAD remote CI or deployment evidence.
+
 ## Source-of-truth synchronization
 
 The synchronized review/status baseline started at `2188f56` (`New`). The current
@@ -59,7 +69,7 @@ production deployment is still a separate release gate.
 
 The current worktree adds migrations 0100/0101/0102/0103: the Drizzle journal contains **104 migration
 entries**, generated canonical SQL contains **255 tables**, and the task registry contains
-**209 Done / 4 In Progress / 7 Todo / 3 Blocked / 223 Total**. TASK-200 now closes the
+**210 Done / 4 In Progress / 6 Todo / 3 Blocked / 223 Total**. TASK-200 now closes the
 Canonical/API route parity gap by including `staff-calendar` in `API_SCREEN_ROUTES`.
 TASK-212 is done: the
 active route and dynamic shell now refresh in place on locale change while preserving
@@ -116,7 +126,7 @@ passes on the current worktree.
 
 The TASK-194 correction aligns deployment, security, architecture, role-permission, Demo
 and UAT material to that boundary: current inventory is 129
-Canonical / 0 Preview routes, 129 API-mode metadata routes, 1,726 English keys/72 local
+Canonical / 0 Preview routes, 129 API-mode metadata routes, 1,728 English keys/72 local
 packs, 315 permission codes, 59 access-matrix routes, Company Owner 115 and PWA v263.
 The older 170-file / 666-test collection is a dated TASK-194 checkpoint; the pre-TASK-214
 local full Vitest result was 173 files / 705 tests with two intentional file/test skips.
@@ -240,7 +250,7 @@ Current source registers **129 Canonical / 0 Preview** routes; all 129 declare A
 including `staff-calendar`. TASK-214 rendered all 129 routes at desktop/mobile but
 failed one voucher recovery assertion; TASK-183 remains historical full-matrix evidence, while TASK-210
 reran the current 129-route language matrix on both viewports. The static i18n audit
-passes **1,726 English keys and
+passes **1,728 English keys and
 72 local five-language packs**. Business-record values remain outside the UI-resource
 audit; system-authored labels and state text are covered by localized packs or explicit
 business-text boundary markers.
@@ -516,9 +526,9 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Personal activity | ✅ Canonical Demo/API sanitized actor read model | `account/activity` reads only the signed-in actor's active-company audit facts, newest first. The response maps internal vocabulary to bounded category/entity/action keys and excludes payloads, request IDs, actor identity, other users, device/IP and session/security state. The five-language `my-activity` page is read-only and states this boundary. |
 | Enterprise Demo personas | ✅ 12 real permission sessions | Showcase manifest v16 owns all 12 identities directly and adds reporting lines, governed leave openings/reservations, 24 controlled July/August leave cases, 6 payroll runs, 282 payroll lines, one real pending sales approval and one balanced unpaid procure-to-pay case in each SG/MY entity within a 10,436-record deterministic pack. The calendar cases cover approved, pending, rejected, cancelled, multi-day and overlapping availability, and earlier controlled Demo rows converge in place on the same fixed business date. The controlled approval orders carry sufficient stock in the exact fulfilment warehouse, and sales availability is warehouse-specific rather than group-wide. v16 also supplies the complete sales, purchasing, treasury and landed-cost posting controls in both legal entities; its SG/MY procure-to-pay rows include governed classification/recoverability snapshots; gives each linked persona one company-managed Employee base role; removes the replaced shared compatibility grant; and deterministically binds Jordan Lee to Mei Lin for direct-manager approval. An existing IndexedDB upgrades additively without replacing user-owned data. SO-2/SO-3 remain the explicit confirmation success/rollback teaching drafts and are not mislabelled as approvals. Persona user names match their linked employee profiles. Missing SG/MY calendars, leave types, confirmed policies and posting accounts are repaired on historical IndexedDB upgrades before dependent records are created. Payroll examples follow the same SG CPF/SDL and MY EPF/SOCSO/EIS/PCB approximations as the canonical engine. `Avery Tan · Company Owner` is assigned to SG/MY with the current 115-permission template and company scope; approval, payment, payroll, sensitive tax-evidence and platform-support authority are not implicit, and the owner appears first in the switcher. Managers remain restricted to direct or explicitly granted teams. Viewer and all ten department personas display their actual effective roles. Role permissions and data scopes are regression-checked against the authoritative templates. |
 | PWA (manifest, SW, update prompt, safe areas) | ✅ Working | `web/public/manifest.webmanifest`, `sw.js`, `pwa.js`; current v263 adds the waiting worker version code to the update toast while retaining the waiting service worker as the single update authority, HTTP-cache bypass for `sw.js`, exact-version session suppression and one reload only after explicit acceptance. `npm run audit:pwa-update` has dated lifecycle evidence. |
-| Canonical UI i18n | ✅ Current browser verified | `node scripts/audit-i18n.mjs` verifies 1,726 English resources and 72 registered local five-language packs. The exact CI-equivalent 2026-09-07 desktop and mobile runs each passed 129 routes × 5 languages with zero runtime errors, raw keys, hardcoded system copy or page-level horizontal overflow after adding `route.project-pl`. `setLang()` remains atomic and state-preserving; business-record values remain outside UI i18n. |
+| Canonical UI i18n | ✅ Current browser verified | `node scripts/audit-i18n.mjs` verifies 1,728 English resources and 72 registered local five-language packs. The current built-Demo PGlite desktop/mobile runs passed 129 routes × 5 languages × 2 viewports with zero runtime errors, raw keys, blocking hardcoded system copy or page-level horizontal overflow. `setLang()` remains atomic and state-preserving; business-record values remain outside UI i18n. |
 | GitHub Pages deploy | ✅ Working | `.github/workflows/deploy-pages.yml` builds the static PGlite/IndexedDB Demo and publishes only the `web/dist/` artifact; it does not publish the Node API, PostgreSQL data, `.env` files or production secrets. The repository is public and Pages is configured for workflow deployment at `https://yapweijun1996.github.io/ERP-System/`. On 2026-09-05, run `33940353016` passed both Build and Deploy; a fresh-browser smoke check reached the setup wizard, completed local demo setup, opened the dashboard and confirmed `window.ErpSystemData.mode === 'pglite'` with no `/api` requests. Production remains the separate Docker/API/PostgreSQL track. |
-| CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ⚠️ Workflow executes; current-HEAD rerun pending | CI run `34017037310` executed all Vitest shards and the typecheck/transaction/build job but failed the i18n browser matrix on a hardcoded `timesheet: Projects` label. The locale fix passes exact desktop/mobile matrices locally; TASK-203 remains In Progress until a fresh run for the current pushed HEAD is recorded. |
+| CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ⚠️ Workflow executes; current-HEAD rerun pending | CI run `34017037310` is a historical remote failure on a hardcoded `timesheet: Projects` label. TASK-219's current source passes the full local 129-route desktop/mobile matrix; TASK-203 remains In Progress until a fresh run for the current pushed HEAD is recorded. |
 | Generated PGlite schema + drift check | ✅ Working | `scripts/generate-demo-schema.mjs` generates fresh/upgrade SQL from ordered Drizzle migrations; `npm run check:demo-schema` and `npm run check:drift` run in CI. |
 | Browser smoke test (desktop + mobile, zero console/page errors, dashboard content verified) | ✅ Green | `scripts/smoke.mjs`, `npm run smoke`, Playwright, wired into CI with browser caching, TASK-015. The 2026-09-07 current worktree run passes desktop/mobile; the assertion now considers only visible semantic navigation badges while hidden zero-count badges remain in the DOM. |
 | Route production metadata and Preview contract | ✅ 129-route parity | `SCREEN_META` covers **129 Canonical / 0 Preview** routes and all 129 declare API mode, including `staff-calendar`. The screen audit fails closed on future Canonical/API metadata gaps. Preview pages, if reintroduced, distinguish Sample Data from Canonical Data and lock write-like actions. |
@@ -815,7 +825,7 @@ cost-layer semantics the schema cannot support.
 | Claim in docs | Reality |
 | --- | --- |
 | `VITE_DATA_MODE=api` renders every current Canonical screen with real data | **Route parity is now source-verified for all 129.** `staff-calendar` is backed by the API adapter and endpoint; authenticated API browser and integration evidence are recorded separately from the Demo route audit. |
-| Every Canonical route has five-language coverage | **Latest browser acceptance remains open.** Prior full-matrix checks passed, but TASK-214 found Outstanding and Due date untranslated in the seven-route matrix. TASK-219 and a fresh full release matrix are required. |
+| Every Canonical route has five-language coverage | **Current local browser acceptance passes.** TASK-219 translated the sales-invoice Outstanding/Due date labels, and the built-Demo PGlite matrix passes all 129 routes × 5 languages × desktop/mobile with zero blocking findings. Current-HEAD remote CI and production/API evidence remain separate release gates. |
 | API server has all business **write** endpoints | **Complete for the present Canonical boundary.** Production setup, auth lifecycle, CRM opportunity conversion, Sales enquiry/quotation/order conversion, service-capable order lines, Draft confirmation, RMA/credit and debit-note posting, inventory adjustment post, stock-transfer completion, work-order execution/completion, quality inspection/NCR disposition, PO creation/receipt and supplier-invoice posting are live; advanced manufacturing depth and any new finance/commercial actions remain separate future scope. |
 | `deploy/erp-server.mjs` | Still just a static "Live" placeholder page + `/health` — **not** the real API; the real API is `src/server.ts` now, run via `npm run server` locally or as the `api` service in Docker. |
 | `npm run lint` | Implemented with ESLint and part of the local/CI gate. |

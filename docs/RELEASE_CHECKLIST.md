@@ -1,6 +1,6 @@
 # Release Checklist
 
-Latest release boundary (2026-09-07): see [TEST_COVERAGE.md](TEST_COVERAGE.md).
+Latest release boundary (2026-09-08): see [TEST_COVERAGE.md](TEST_COVERAGE.md).
 Checked entries below retain named historical/local evidence only; rerun required
 gates for the selected release revision. TASK-214 found open runtime failures, so
 this checklist does not authorize or certify a production release.
@@ -41,8 +41,9 @@ For the current source-backed action backlog and evidence boundaries, see
       Focused desktop three-route rerun passed; full recovery gate remains TASK-223.
 - [x] `npm run audit:pwa-update` — PWA update lifecycle audit passes; physical-device
       acceptance remains TASK-017 and is not satisfied by emulated 375 px.
-- [ ] `npm run audit:i18n` — TASK-214 targeted matrix failed Outstanding and Due date;
-      TASK-219 repair and fresh full release matrix are required.
+- [x] `npm run audit:i18n` — TASK-219 repaired the sales-invoice labels; the current
+      built-Demo PGlite run passed 129 routes × 5 languages × desktop/mobile with zero
+      blocking findings. Current-HEAD remote CI remains a separate gate.
 - [x] `npm run test:e2e:platform-workspace-layout` — 2026-09-07 passed isolated PGlite
       desktop/tablet/mobile Platform workspace, separate Admin/Employee modes, focus and
       overflow checks plus the focused five-language Platform workspace matrix.
@@ -59,14 +60,14 @@ For the current source-backed action backlog and evidence boundaries, see
       the primary/calendar entry points emit aggregate-only queue snapshots. This proves
       shape/redaction only: bounded non-blocking collection, claim-predicate parity,
       production metrics/alerts, ownership and recovery exercise remain TASK-201.
-- [x] `tasks/tasks.jsonl` statuses current: 209 Done / 4 In Progress / 7 Todo / 3 Blocked / 223 Total. Blockers are TASK-017, TASK-193 and TASK-209;
+- [x] `tasks/tasks.jsonl` statuses current: 210 Done / 4 In Progress / 6 Todo / 3 Blocked / 223 Total. Blockers are TASK-017, TASK-193 and TASK-209;
       TASK-203 remains In Progress until a fresh current-HEAD remote CI result, TASK-204 remains In progress until tax-owner production review and TASK-205 remains
       In progress until production Vision configuration and live dead-letter alert/recovery
       evidence is recorded.
 - [ ] GitHub Actions actually executes current HEAD with every required gate green. Run
-      `34017037310` executed its jobs but failed the i18n matrix on `timesheet: Projects`;
-      the `route.project-pl` locale fix passes exact desktop/mobile locally, and TASK-203
-      still needs a fresh current-HEAD remote run.
+      `34017037310` is a historical remote failure on `timesheet: Projects`; the current
+      TASK-219 source passes the full local desktop/mobile matrix, and TASK-203 still needs
+      a fresh current-HEAD remote run.
 - [x] 2026-08-12 current-worktree secret baseline: the tracked diff and `web/dist`
       contain no known provider/token/private-key signature; high-entropy diff strings
       were classified as document, route, module, DOM/i18n or deterministic-test values.

@@ -1,11 +1,13 @@
 # Localization — Singapore & Malaysia
 
-2026-09-07 acceptance note: governed tax source hardening is present; tax-owner
+2026-09-08 acceptance note: governed tax source hardening is present; tax-owner
 production approval remains TASK-204. TASK-216 repairs the compact seed and showcase
 upgrade with explicit SG/MY tax snapshots; the posting guard still rejects incomplete
 or regime-incompatible records. UI date-only handling is repaired under TASK-217; invoice
-aging and fiscal-period KPI presentation is repaired under TASK-218. Translation gaps
-remain TASK-219.
+aging and fiscal-period KPI presentation is repaired under TASK-218. Sales invoice
+translation gaps are repaired under TASK-219; the current 129-route five-language
+desktop/mobile matrix passes locally. Remaining presentation follow-up is TASK-220 and
+TASK-222.
 See [TEST_COVERAGE.md](TEST_COVERAGE.md).
 
 The ERP serves multiple countries from one codebase. Country behavior is an **attribute

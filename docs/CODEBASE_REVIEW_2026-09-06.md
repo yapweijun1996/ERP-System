@@ -3,9 +3,10 @@
 TASK-214 superseding execution note (2026-09-07): the baseline passes below are
 prior checkpoints. Latest evidence includes seeded PO invoicing, invoice date/KPI,
 i18n and contrast defects, a full-screen recovery assertion failure and an incomplete
-full Vitest attempt. See [TEST_COVERAGE.md](TEST_COVERAGE.md); TASK-216 through TASK-218
+full Vitest attempt. See [TEST_COVERAGE.md](TEST_COVERAGE.md); TASK-216 through TASK-219
 are now Done with command-level seed/upgrade, browser date-only and invoice KPI proof,
-while TASK-219–223 remain open.
+TASK-219 is now Done with canonical sales-invoice locale bindings and full local browser
+matrix evidence; TASK-220–223 remain open.
 
 This review began from `main` at `2188f56` (`New`) and now records the completed
 TASK-195–197 and TASK-206–208 follow-up plus the source-level TASK-204 and TASK-205
@@ -14,15 +15,15 @@ hardening in progress. Source and tests are the implementation truth; [STATUS.md
 [ERP excellence review](ERP_EXCELLENCE_REVIEW.md) is retained as a dated historical
 baseline.
 
-Addendum reviewed 2026-09-07: TASK-202 repository implementation now covers Pack conflict
+Addendum reviewed 2026-09-08: TASK-202 repository implementation now covers Pack conflict
 convergence, actor-scoped history, retention-derived governance, Legal Hold, two-person
 purge/tombstone/key-reuse protection, localized Unicode PDF rendering, Decimal-safe browser
 amounts and Company-calendar timezone presets. The disposable PostgreSQL same-key race
 passes on a fresh PostgreSQL 16 database; production release evidence remains open.
 The latest GitHub Actions CI run `34017037310` executed its Vitest shards and build gate
 but failed the i18n browser matrix on one hardcoded `timesheet: Projects` label. The
-source fix adds `route.project-pl` for all five locales; CI-equivalent desktop and mobile
-matrices now pass locally. A fresh remote run for the current local HEAD remains open.
+current source and TASK-219 follow-up pass the full built-Demo PGlite matrix at 129 routes
+× 5 languages × 2 viewports; a fresh remote run for the current local HEAD remains open.
 
 ## Current verified baseline
 
@@ -37,7 +38,7 @@ matrices now pass locally. A fresh remote run for the current local HEAD remains
   and Demo showcase-pack verification. The current `test:e2e:setup-wizard` also passes
   desktop, iPhone-width and small-mobile layout checks. These checks do not prove live
   PostgreSQL provisioning, public deployment, or GitHub Actions execution.
-- The task registry currently reports **209 Done / 4 In Progress / 7 Todo / 3 Blocked / 223 Total**. TASK-216 through TASK-218 are complete locally; the actionable boundary is concentrated in TASK-199–205 and
+- The task registry currently reports **210 Done / 4 In Progress / 6 Todo / 3 Blocked / 223 Total**. TASK-216 through TASK-219 are complete locally; the actionable boundary is concentrated in TASK-199–205 and
   EPIC-067/TASK-209; the blocked items are external or operational, not silently
   treated as code failures.
 - TASK-204 source work is now in progress: migrations `0100`/`0101` add governed tax
@@ -49,7 +50,7 @@ matrices now pass locally. A fresh remote run for the current local HEAD remains
   HTML referenced cache-busted assets tagged 2026-08-13 and exposed no verifiable commit
   identity. This is static Demo availability evidence only; it does not prove current
   HEAD, production API health or the deployed revision.
-- The current local i18n inventory is **1,726 English keys / 72 local five-language
+- The current local i18n inventory is **1,728 English keys / 72 local five-language
   packs**. Exact CI-equivalent browser runs pass **129 routes × 5 languages × desktop**
   and **129 routes × 5 languages × mobile** after the `route.project-pl` fix.
 - TASK-205 source failure hardening is now in progress: direct HTTP-driver tests cover

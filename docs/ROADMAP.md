@@ -4,9 +4,9 @@
 
 1. TASK-216 is Done at the seed/upgrade command boundary, TASK-217 is Done at the
    date-only presentation boundary, and TASK-218 is Done at the sales aging/period
-   presentation boundary. Rerun the
+   presentation boundary; TASK-219 is Done at the sales-invoice i18n boundary. Rerun the
    affected browser journeys so command repair is not mistaken for complete E2E.
-2. TASK-219/220/222/223: close translation, theme contrast, mobile/zoom/status and
+2. TASK-220/222/223: close theme contrast, mobile/zoom/status and
    recovery verification gaps; TASK-221 follows TASK-216 for procurement usability.
 3. TASK-203: obtain current-HEAD green CI after fixes; TASK-199: verify target health
    and revision. TASK-209 release requires both, plus its completed security chain.
@@ -15,7 +15,7 @@
    measures scale, alerting and restore objectives after TASK-199.
    TASK-017 and TASK-193 still require devices and SMTP respectively.
 
-TASK-214 audit is complete; TASK-215 synchronizes this plan. Historic phase checkmarks
+TASK-214 audit is complete; TASK-215 and TASK-219 synchronize this plan. Historic phase checkmarks
 mean the scoped milestone was delivered, not current all-module or production acceptance.
 Use [TEST_COVERAGE.md](TEST_COVERAGE.md) for latest results and
 [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md) for the full product goals.
@@ -1251,7 +1251,7 @@ more module breadth. The source-backed review is
 
 1. **Truth sync** (TASK-194/TASK-200 done; EPIC-067 source newer): current inventory is 104
    migrations/schema v103/255
-   tables, 129 Canonical routes with 129 API metadata routes, 1,726 i18n keys/72 packs,
+   tables, 129 Canonical routes with 129 API metadata routes, 1,728 i18n keys/72 packs,
    315 permission codes and PWA v263. Historical test/deploy checkpoints remain dated.
 2. **Isolation first** (TASK-195 done 2026-09-06): deploy configuration now separates
    migration/bootstrap, API and worker roles; Platform provisioning establishes the

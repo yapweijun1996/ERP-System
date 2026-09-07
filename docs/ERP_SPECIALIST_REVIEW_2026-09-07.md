@@ -9,7 +9,7 @@ source/documentation, and official SG/MY market references. This review does not
 certify production readiness or fix runtime defects. Product direction is recorded
 in [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md).
 
-Follow-up status: TASK-216 through TASK-218 are now complete on the subsequent local worktree.
+Follow-up status: TASK-216 through TASK-219 are now complete on the subsequent local worktree.
 The compact
 seed and showcase pack v16 carry governed SG/MY tax snapshots, the untouched historical
 SG approval row has an idempotent upgrade repair, and fresh/upgraded shared-command
@@ -26,11 +26,20 @@ balance and the active business date, and raw posting status is preserved separa
 from display aging. Mixed-fixture tests and a built-Demo KPI/filter/browser check pass.
 The original F02/F03 reproductions below are retained as dated baseline observations.
 
+TASK-219 closes the historical F04 translation finding locally: sales-invoice
+`Outstanding` and `Due date` now use canonical locale keys in all five packs, the live
+locale E2E passes on desktop/mobile with route/filter and focused-draft retention, and
+the specialist seven-route matrix plus the full built-Demo PGlite audit pass at 129 routes
+× 5 languages × 2 viewports with zero blocking findings. The audit allowlist also classifies
+locale-generated dates such as `Sept` as dynamic business values. The original F04 row and
+reproduction below remain historical baseline observations; current-HEAD remote CI is not
+claimed.
+
 ## Executive assessment
 
 The Demo runs and the shared transaction layer has meaningful accounting and rollback
 proof. Historical seeded-procurement, date-only and invoice-aging observations are now
-repaired locally under TASK-216–218; translation/contrast/usability/recovery gaps remain.
+repaired locally under TASK-216–219; contrast/usability/recovery gaps remain.
 Prioritize those business-facing gaps before treating 129 rendered routes as a complete
 ERP experience.
 
@@ -67,7 +76,7 @@ updates are automatically detected and explicitly accepted, not forced silently.
 | `npm run audit:screens` | Failed one recovery assertion | All 129 routes rendered at desktop and mobile with no console/page errors and shared shell/maturity checks passing. Desktop payment-voucher Retry did not recover within the harness budget. |
 | `AUDIT_VIEWPORT=desktop POSTING_DETAIL_ONLY=1 npm run audit:screens` | Pass | Focused 3-route desktop rerun including payment-voucher recovery. The script's generic final desktop/mobile wording must not be read as a mobile rerun. |
 | `npm run audit:pwa-update` | Pass | v263 audit-b deferred once; audit-c activated once. Does not cover real-device, dirty-form or multi-tab upgrade compatibility. |
-| Seven routes × five languages × desktop/mobile | Fail: 2 hardcoded labels | `Outstanding` and `Due date` on sales-invoices in ms/zh/ja/vi; no other reported matrix issues. See F04. |
+| Seven routes × five languages × desktop/mobile | Historical TASK-214 failure; TASK-219 follow-up passes | Original `Outstanding` and `Due date` finding on sales-invoices in ms/zh/ja/vi; no other reported matrix issues. See F04 and the TASK-219 follow-up above. |
 | Manual 375px light/dark/Chinese and approval dialog | Mixed | Zero document overflow on sampled routes; readable structure and usable decision dialog. Contrast and untranslated text issues remain. |
 | Optional `npm test` full regression | Incomplete, stopped | No final result after about 10 minutes while another independent Vitest run was active. Stopped only this audit's process/workers to bound contention. No current full-suite pass or application failure is inferred. |
 
