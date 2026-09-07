@@ -19,8 +19,9 @@ For the current source-backed action backlog and evidence boundaries, see
       green. Never treat a zero-step infrastructure failure as validation.
 - [x] `npm run typecheck && npm run typecheck:web` — root and Web typechecks pass after
       aligning the Demo purchase-requisition adapter with the actor-input command shape.
-- [ ] `npm test` — latest TASK-214 attempt stopped without a result. The earlier
-      173-file/705-test pass with two skips is historical; rerun the full suite.
+- [x] `npm test` — current 2026-09-08 HEAD run passes 174 files / 710 tests with 2 skipped
+      files and 2 skipped tests (176 files / 712 tests total). Production and current-HEAD
+      remote CI remain separate release gates.
 - [x] `npm run demo` — PGlite transaction proof passed on 2026-08-10. A dedicated,
       disposable PostgreSQL 16 database also passed `POSTGRES_URL=... npm run demo`,
       including cross-engine parity and the true-concurrency race. The preflight

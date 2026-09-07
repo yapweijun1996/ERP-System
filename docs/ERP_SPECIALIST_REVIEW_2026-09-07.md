@@ -89,7 +89,7 @@ updates are automatically detected and explicitly accepted, not forced silently.
 | Seven routes × five languages × desktop/mobile | Historical TASK-214 failure; TASK-219 follow-up passes | Original `Outstanding` and `Due date` finding on sales-invoices in ms/zh/ja/vi; no other reported matrix issues. See F04 and the TASK-219 follow-up above. |
 | Filled-action contrast E2E | Pass: 2 themes × 2 viewports × normal/hover/focus/disabled | Computed normal/hover contrast 5.567:1 / 6.947:1; zero browser errors and no mobile horizontal overflow. Focused palette evidence only. See F05 and the TASK-220 follow-up above. |
 | Manual 375px light/dark/Chinese and approval dialog | Mixed | Zero document overflow on sampled routes; readable structure and usable decision dialog. Physical-device evidence remains TASK-017. |
-| Optional `npm test` full regression | Incomplete, stopped | No final result after about 10 minutes while another independent Vitest run was active. Stopped only this audit's process/workers to bound contention. No current full-suite pass or application failure is inferred. |
+| `npm test` full regression | Pass on 2026-09-08 | Current HEAD passes 174 files / 710 tests with 2 skipped files and 2 skipped tests (176 files / 712 tests total). This is local unit/integration evidence; PostgreSQL target, production and remote CI remain separate. |
 
 Reproduce the bounded i18n matrix:
 
@@ -209,8 +209,8 @@ TASK-214 on completion. Historical passing tests in STATUS remain dated evidence
   The full built-Demo 129-route audit measured approximately 1333ms desktop and 949ms
   mobile recovery and passed with zero console/page errors, identity leaks or layout
   failures. The PO approval state smoke was synchronized to its refresh Promise and its
-  current TASK-221 authorized Receive goods action. No production, remote CI or full
-  Vitest result is implied.
+  current TASK-221 authorized Receive goods action. No production or remote CI result is
+  implied; the separate full local Vitest result is recorded in the gate table above.
 
 ## Performance observations, not capacity certification
 

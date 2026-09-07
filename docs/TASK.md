@@ -1,6 +1,6 @@
 # Task Index
 
-[TEST_COVERAGE.md](TEST_COVERAGE.md) is the module evidence map. TASK-216 through
+[TEST_COVERAGE.md](TEST_COVERAGE.md) is the module evidence map.
 TASK-216 through TASK-223 are complete through the F08 recovery-audit repair. TASK-215 is
 documentation reconciliation, not runtime completion.
 
@@ -201,8 +201,9 @@ TASK-223 is Done: the screen audit now captures the actual payment-voucher Retry
 failures under a bounded 10-second budget. The full built-Demo 129-route desktop/mobile
 audit measured approximately 1333ms/949ms recovery and passed with zero console/page errors,
 identity leaks or layout failures. The PO approval smoke also waits for its refresh Promise
-and checks the current TASK-221 authorized Receive goods action. No production deployment,
-remote CI or full Vitest pass is claimed.
+and checks the current TASK-221 authorized Receive goods action. No production deployment or
+remote CI result is claimed; the current full local Vitest run separately passes 174 files /
+710 tests with 2 skipped files and 2 skipped tests.
 
 TASK-213 closes the source-level RLS table-list omission for `sales_enquiry_line` and
 adds a deterministic generated-schema coverage gate. TASK-195 now establishes the

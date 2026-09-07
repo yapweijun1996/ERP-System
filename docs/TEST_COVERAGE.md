@@ -1,11 +1,14 @@
 # ERP module verification coverage
 
-Reviewed: **2026-09-08**, source `243af56`, TASK-214 evidence and TASK-219/220/221/222 follow-up; TASK-215 documentation reconciliation.
+Reviewed: **2026-09-08**, audit baseline `243af56` with current verification follow-up
+source `3a4b6e8`; TASK-214 evidence and TASK-219/220/221/222 follow-up; TASK-215
+documentation reconciliation.
 
 **All modules have not passed complete end-to-end testing.** All 129 registered routes
-rendered at desktop/mobile, but the complete screen audit failed one recovery assertion.
-Route rendering, API metadata, test-file presence, successful commands and production
-acceptance are separate evidence levels. No percentage of business coverage is inferred.
+rendered at desktop/mobile and the TASK-223 follow-up screen audit passes its recovery
+assertion. Route rendering, API metadata, test-file presence, successful commands and
+production acceptance are separate evidence levels. No percentage of business coverage is
+inferred.
 The [specialist report](ERP_SPECIALIST_REVIEW_2026-09-07.md) contains reproductions,
 screenshots and exact run limitations; [STATUS.md](STATUS.md) owns implementation status.
 
@@ -14,9 +17,9 @@ screenshots and exact run limitations; [STATUS.md](STATUS.md) owns implementatio
 Every current directory under `src/modules/` is listed. Test-file counts are recursive
 `*.test.ts` files in that directory only, including integration files if colocated;
 API/auth tests elsewhere are not counted. Counts describe discoverability, not executed
-or passing tests. Latest full Vitest attempt stopped without a result; prior 173-file /
-705-test evidence is historical. Source folder links provide the current implementation
-and colocated test entry points.
+or passing tests. The current full Vitest run passes 174 files / 710 tests with 2 skipped
+files and 2 skipped tests. Source folder links provide the current implementation and
+colocated test entry points.
 
 | Module/source | Colocated test files | Latest audit evidence and remaining boundary |
 | --- | ---: | --- |
@@ -48,13 +51,13 @@ and colocated test entry points.
 | Gate | TASK-214 result | Required follow-up |
 | --- | --- | --- |
 | Demo build / PGlite domain proof | Passed | TASK-216 fresh seed and simulated v15→v16 upgrade complete the seeded PO approval → receipt → invoice chain with one balanced supplier invoice; TASK-217 date-only boundary tests and TASK-218 mixed invoice-fact tests plus built-Demo KPI/filter route checks pass; shared rejection guards remain green |
-| Desktop/mobile route rendering | 129 routes rendered, no console/page errors; full audit passes recovery and layout checks | Production, remote CI and full Vitest evidence remain separate |
+| Desktop/mobile route rendering | 129 routes rendered, no console/page errors; full audit passes recovery and layout checks | Production and remote CI evidence remain separate; current full Vitest pass is recorded below |
 | i18n | Current built-Demo PGlite audit passes 129 routes × five languages × two viewports with zero blocking findings; 1,728 canonical English keys and 72 local packs | Current local release evidence; current-HEAD remote CI rerun remains separate |
 | Theme/mobile | Focused filled-action contrast E2E and TASK-222 mobile usability E2E pass; five locales, desktop/mobile touch targets, zoom metadata, modal focus and 188px reflow are covered | Physical-device acceptance TASK-017 and exhaustive palette/device certification remain separate |
 | PWA update lifecycle | Passed explicit deferral/acceptance/reload flow | Physical devices, multiple tabs, unsaved drafts, in-flight requests and interrupted upgrades remain unverified |
 | Performance | Warm route and bundle observations only | TASK-201; cold-start, interaction percentiles, realistic data and concurrent tenant workloads |
 | Worker telemetry | Aggregate shape/redaction tests pass 3/3 | TASK-201; telemetry is awaited before work, uses whole-table aggregates and does not yet make `ready` identical to queue claim eligibility |
-| Full unit/integration suite | Stopped without final result | Fresh complete run; do not use historical counts as current proof |
+| Full unit/integration suite | Current HEAD passes 174 files / 710 tests with 2 skipped files and 2 skipped tests | PostgreSQL target and production evidence remain separate |
 | PostgreSQL/API/production | Not rerun by this audit | TASK-199/203/209 and module-specific PostgreSQL/API UAT |
 | Generated schema/RLS static coverage | TASK-215 fresh check passed: 104 migrations, 255 tables, 225 policies + 10 exemptions | This does not execute PostgreSQL RLS or prove target-host deployment |
 
@@ -104,5 +107,5 @@ localized PO status display, shared modal focus lifecycle and its focused browse
 188px check is a repeatable reflow equivalent, not physical-device evidence. TASK-223
 changed only the screen-audit recovery synchronization/budget and its stale PO approval
 state expectation; focused case/posting audits and the full 129-route desktop/mobile audit
-pass with measured payment-voucher recovery. No production, remote CI or full Vitest pass
-is claimed.
+pass with measured payment-voucher recovery. No production or remote CI result is claimed;
+the current full Vitest result is recorded above.
