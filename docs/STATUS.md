@@ -2215,7 +2215,7 @@ release/download/Print UAT remains an explicit EPIC-066 release-evidence gap.
   missing production SMTP. EPIC-066 is in progress: TASK-194–198 are done;
   TASK-204 is in progress with source-level tax hardening and an open tax-owner review;
   TASK-205 is in progress with direct provider-failure/retry/no-fallback and bounded
-  dead-letter/same-chain requeue evidence but open production configuration; TASK-199 and TASK-201 remain Todo while TASK-202 and
+  dead-letter/same-chain requeue evidence but open production configuration; TASK-199 is In Progress for local release-manifest hardening and TASK-201 remains Todo while TASK-202 and
   TASK-203 are In Progress. TASK-203's latest remote run exposed one i18n source
   failure, fixed locally; a current-HEAD remote rerun remains pending. EPIC-067 source is
   present: TASK-206, TASK-207 and TASK-208 are done, and TASK-209 is blocked pending

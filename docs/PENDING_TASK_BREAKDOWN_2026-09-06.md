@@ -220,13 +220,15 @@ remain green; TASK-199 still needs a target-host release and health proof.
   - Risk: source-level tests do not prove production tax configuration or tax filing
     compliance. Do not mark Done until the external approval evidence is attached.
 
-- **TASK-199 — Todo (P0) — restore public availability and prove deployed revision**
+- **TASK-199 — In Progress (P0) — restore public availability and prove deployed revision**
   - Depends on: `TASK-192`, `TASK-194`.
   - Local source support now emits API `/health.revision` from `ERP_RELEASE_COMMIT` and
     static `release.json` with the commit plus SHA-256/byte-size evidence for each build
     file. Pages injects `github.sha`; the Docker application release derives Git HEAD.
     `deploy/release.sh` now checks `/health` from inside the web container through the
     Compose network because the production overlay removes DB/API host port publishing.
+    The manifest writer now uses a private atomic replacement path with symlink/non-file
+    rejection; focused replacement/failure/permission tests pass 4/4.
   - Steps: perform read-only `/health`, root and setup-status probes from two independent
     checks; identify the 502 cause; restore the service; capture running commit and
     static-asset hashes; verify Compose tunnel/database/storage/monitoring health; record
