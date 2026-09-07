@@ -93,6 +93,13 @@ tests pass; `npm run smoke` also passes at desktop and 375px with zero console/p
 errors. This is a local source/build correction, not a substitute for TASK-199 Pages
 revision/API health evidence.
 
+2026-09-07 production-image addendum: the local production Compose `web` image build
+installed the project dependencies and reached the Dockerfile base-image stage, but
+Docker Hub's `nginx:alpine` 20.09 MB layer stalled at 3.15 MB for roughly 274 seconds.
+The build was stopped without starting containers, changing volumes, migrating data or
+claiming image-build success. Compose overlay syntax and the repository API/Demo builds
+remain green; TASK-199 still needs a target-host release and health proof.
+
 ## Recommended order
 
 - **1. Finish TASK-204's release gate:** obtain qualified tax-owner review of the
