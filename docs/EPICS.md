@@ -2655,7 +2655,7 @@ Current truth:
 | TASK-196 | Done | Receipt Pack visibility downgrade repair and export governance |
 | TASK-197 | Done | Permission-aware Company Receipts detail/correction/void UX and employee-independent eligible-evidence picker; upload boundary explicitly remains My Receipts |
 | TASK-198 | Done | Narrow dual-mode exception, reason/ticket Admin access and explicit no-MFA/no-step-up risk acceptance |
-| TASK-199 | In Progress | Restore public availability and prove the deployed revision; local manifest publication is hardened, live origin/revision proof remains |
+| TASK-199 | In Progress | Restore public availability and prove the deployed revision; local manifest publication and the bounded read-only release verifier are hardened, live origin/revision proof remains |
 | TASK-200 | Done | Resolve 129/129 route parity and rerun current HEAD release evidence |
 | TASK-201 | Todo | Production SLO, scale and RPO/RTO proof; bounded/non-blocking, claim-accurate worker observability |
 | TASK-202 | In progress | Receipt Pack lifecycle/timezone and disposable PostgreSQL concurrency proof are complete; production release evidence remains |

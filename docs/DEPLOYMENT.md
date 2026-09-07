@@ -85,7 +85,21 @@ The application now emits two non-secret release identity surfaces:
 These surfaces make a deployed revision auditable but do not prove availability by
 themselves. After release, fetch `/health` and `/release.json` from the same public
 origin and require their revision to match the intended commit before recording TASK-199
-as complete. A local build or a stale cached asset is not deployment evidence.
+as complete. The repository now provides a bounded read-only verifier for this release
+evidence:
+
+```bash
+npm run verify:release -- <public-origin> --expected-revision <commit>
+```
+
+It checks the root, `/health`, `/api/setup/status` and `/release.json` from the same
+origin, validates the manifest inventory and health/manifest revision equality, rejects
+redirects that end at an unreviewed origin or path, and emits machine-readable JSON with
+exit status `0` or `1`. `scripts/verify-release.test.ts` exercises the command against a
+local HTTP fixture, including revision mismatch and redirect-path failures. A local
+fixture pass remains source/tooling evidence; it does not replace the selected public
+origin's two independent read-only probes, deployed revision, monitoring or rollback
+evidence. A local build or a stale cached asset is not deployment evidence.
 
 ### Worker telemetry source boundary
 

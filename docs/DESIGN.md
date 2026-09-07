@@ -73,8 +73,8 @@ Current source inventory on 2026-09-07 is **129 Canonical / 0 Preview** routes. 
 129 routes declare API support; `staff-calendar` uses the shared API adapter and
 `/api/hr/calendar/staff` contract. The current `audit:screens` run covers all
 129 routes at desktop/mobile; API integration, authenticated API browser, access-matrix
-and i18n evidence remain separately recorded. The current full Vitest run passes 175 files /
-718 tests with 2 skipped files and 2 skipped tests; Staff Calendar API integration remains
+and i18n evidence remain separately recorded. The current full Vitest run passes 176 files /
+722 tests with 2 skipped files and 2 skipped tests; Staff Calendar API integration remains
 6/6. The Calendar browser fixture covers interactions but stubs both reads
 and appointment creation; it is not persisted-create proof. TASK-214 rendered all
 129 routes but failed one voucher recovery assertion and two invoice i18n labels.
