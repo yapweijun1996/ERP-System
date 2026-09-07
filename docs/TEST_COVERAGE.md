@@ -17,7 +17,7 @@ screenshots and exact run limitations; [STATUS.md](STATUS.md) owns implementatio
 Every current directory under `src/modules/` is listed. Test-file counts are recursive
 `*.test.ts` files in that directory only, including integration files if colocated;
 API/auth tests elsewhere are not counted. Counts describe discoverability, not executed
-or passing tests. The current full Vitest run passes 174 files / 713 tests with 2 skipped
+or passing tests. The current full Vitest run passes 174 files / 714 tests with 2 skipped
 files and 2 skipped tests. Source folder links provide the current implementation and
 colocated test entry points.
 
@@ -57,7 +57,7 @@ colocated test entry points.
 | PWA update lifecycle | Passed explicit deferral/acceptance/reload flow | Physical devices, multiple tabs, unsaved drafts, in-flight requests and interrupted upgrades remain unverified |
 | Performance | Warm route and bundle observations only | TASK-201; cold-start, interaction percentiles, realistic data and concurrent tenant workloads |
 | Worker telemetry | Focused telemetry tests pass 6/6; ready/in-flight predicates cover active leases, enabled calendar connections and reminder due time; emission is single-flight and non-blocking | TASK-201; whole-table query budget/plan evidence, operational sink/alerts and production SLO/DR/load evidence remain |
-| Full unit/integration suite | Current HEAD passes 174 files / 713 tests with 2 skipped files and 2 skipped tests | PostgreSQL target and production evidence remain separate |
+| Full unit/integration suite | Current HEAD passes 174 files / 714 tests with 2 skipped files and 2 skipped tests | PostgreSQL target and production evidence remain separate |
 | PostgreSQL/API/production | Current disposable PostgreSQL 16 security/provisioning gate passes 2 files / 2 tests | Production database, deployed revision, remote CI and module-specific PostgreSQL/API UAT remain TASK-199/203/209 gates |
 | Generated schema/RLS static coverage | TASK-215 fresh check passed: 104 migrations, 255 tables, 225 policies + 10 exemptions | This does not execute PostgreSQL RLS or prove target-host deployment |
 

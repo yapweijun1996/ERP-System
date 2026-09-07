@@ -203,7 +203,7 @@ audit measured approximately 1333ms/949ms recovery and passed with zero console/
 identity leaks or layout failures. The PO approval smoke also waits for its refresh Promise
 and checks the current TASK-221 authorized Receive goods action. No production deployment or
 remote CI result is claimed; the current full local Vitest run separately passes 174 files /
-713 tests with 2 skipped files and 2 skipped tests.
+714 tests with 2 skipped files and 2 skipped tests.
 
 TASK-213 closes the source-level RLS table-list omission for `sales_enquiry_line` and
 adds a deterministic generated-schema coverage gate. TASK-195 now establishes the
