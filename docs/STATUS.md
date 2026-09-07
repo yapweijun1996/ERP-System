@@ -661,7 +661,10 @@ are not more module screens:
   production Cloudflare origin `https://gmb01.xyz/erp` and `/erp/health` still returns
   HTTP 502 text/plain; Cloudflare DNS resolves the proxy anycast addresses but exposes no
   origin health payload. No tenant write, reset, reseed or deployment was attempted;
-  TASK-199 remains open for authorized origin repair and current-revision proof;
+  TASK-199 remains open for authorized origin repair and current-revision proof. The
+  source-only merged Compose configuration check passes; nginx `/health` and the release
+  script use the same private web-to-API path, which validates repository wiring but not
+  the remote Cloudflare tunnel/host process;
 - TASK-200 is source-closed; TASK-201 still owns SLO/RPO/RTO, scale and worker telemetry.
   TASK-202's governed localized Pack lifecycle and Company timezone are implemented with
   local proof; the disposable PostgreSQL same-key race is verified, while production

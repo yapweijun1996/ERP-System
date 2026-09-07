@@ -56,7 +56,11 @@ availability/revision proof; TASK-203 owns current-HEAD CI proof. A separate rea
 on the production Cloudflare origin `https://gmb01.xyz/erp` and `/erp/health` still returns
 HTTP 502 text/plain; Cloudflare DNS resolves the proxy anycast addresses but exposes no
 origin health payload. No tenant write, reset, reseed or deployment was attempted. TASK-199
-remains open for authorized origin repair and current-revision proof.
+remains open for authorized origin repair and current-revision proof. A source-only merged
+Compose configuration check passes on 2026-09-08; `web/nginx.conf` routes `/health` to the
+private `api:3000` service and `deploy/release.sh` probes that same path from inside `web`.
+This validates repository release wiring only and cannot prove the remote Cloudflare
+tunnel/host process is running.
 
 The final-review Platform workspace edits were later committed in `84a18b5`: they
 further refactor that resume behavior into an explicit presentation state machine and
