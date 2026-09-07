@@ -19,11 +19,12 @@ checks supplement the journey but do not replace it.
 - External SMTP, bank and tax submissions remain Blocked unless a real approved test
   endpoint is in scope. A simulated or local export is not an external-service pass.
 
-Current source note (2026-08-12): 129 Canonical / 0 Preview routes exist; 128 declare API
-mode. Static i18n passes 1,545 keys/72 packs. TASK-183 records dated 129-route browser
-evidence, while TASK-194 did not rerun browsers. TASK-192 records a dated deployment/
-reset checkpoint; current public probes returned 502 and HEAD CI was billing-blocked.
-TASK-017 remains the physical-device blocker.
+Current source note (2026-09-07): 129 Canonical / 0 Preview routes, 129 API metadata
+entries and 1,726 English keys/72 locale packs. [TEST_COVERAGE.md](TEST_COVERAGE.md)
+lists every module and the latest execution limits. TASK-214 has recovery/i18n failures
+and F01–F08 open findings; full business E2E is incomplete. August health/reset and
+billing events are historical. Later CI executed but failed i18n; current green CI,
+target production evidence and TASK-017 physical-device acceptance remain open.
 
 ## Baseline and environment checklist
 
@@ -69,13 +70,17 @@ URL, a direct API denial and sensitive-data minimisation.
 
 ### Lead to cash
 
-- [ ] Lead/opportunity → quotation → approval → sales order → delivery → invoice/GL → receipt.
+- [ ] Target lead/opportunity → quotation → approval → sales order → delivery → invoice/GL → receipt.
+      Current Bank Receipt settles Project Progress Claims in full; general sales-invoice
+      collection is a capability gap and must not be marked passed by that command.
 - [ ] Return plus credit/debit note; credit-limit denial and insufficient-stock rollback.
 - [ ] Duplicate confirmation, stale version and replay use one order/invoice/stock/GL effect.
 
 ### Procure to pay
 
 - [ ] Requisition/RFQ/quote → PO approval → receipt → AP invoice → payment.
+      Include fresh and upgraded Demo seeded PO regression F01/TASK-216. Payment
+      Voucher currently pays the full remaining supplier invoice amount; do not infer partial allocation.
 - [ ] Purchase return, supplier debit/credit note and landed-cost allocation.
 - [ ] Reject early/duplicate invoice, duplicate receipt, overpayment and locked-period posting.
 

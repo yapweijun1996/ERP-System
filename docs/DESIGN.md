@@ -1,5 +1,12 @@
 # DESIGN — How the system is built
 
+Reviewed 2026-09-07: the shared schema/domain and Demo/API boundaries remain unchanged.
+Newly verified seed, date, reporting and presentation defects are tracked in
+[TEST_COVERAGE.md](TEST_COVERAGE.md), TASK-216–223. Seed repair belongs in governed
+fixture generation/upgrade; date and aging rules need one business-owned contract;
+translations and theme tokens remain presentation responsibilities. Do not weaken
+posting validation or duplicate domain SQL to make a showcase pass.
+
 Working-level design notes for whoever (human or AI agent) writes the next line of
 code. Architecture rationale lives in [ARCHITECTURE.md](ARCHITECTURE.md); this file is
 the practical map: where things are, how they connect, and the traps.
@@ -60,10 +67,12 @@ Current source inventory on 2026-09-07 is **129 Canonical / 0 Preview** routes. 
 129 routes declare API support; `staff-calendar` uses the shared API adapter and
 `/api/hr/calendar/staff` contract. The current `audit:screens` run covers all
 129 routes at desktop/mobile; API integration, authenticated API browser, access-matrix
-and i18n evidence remain separately recorded. The current HEAD full Vitest run passes
-173 files / 705 tests with two intentional file/test skips; the Staff Calendar API
-integration passes 6/6 and its Demo E2E covers mixed events, create, filtering and list
-search.
+and i18n evidence remain separately recorded. The pre-TASK-214 checkpoint recorded 173 files / 705 tests with two intentional
+skips and Staff Calendar API integration 6/6. The latest full Vitest attempt has no
+final result. The Calendar browser fixture covers interactions but stubs both reads
+and appointment creation; it is not persisted-create proof. TASK-214 rendered all
+129 routes but failed one voucher recovery assertion and two invoice i18n labels.
+See [TEST_COVERAGE.md](TEST_COVERAGE.md) for the exact evidence boundaries.
 Business-record values are not treated as UI copy. Physical-device acceptance remains
 separate from the automated 375 px browser gate.
 
@@ -644,14 +653,14 @@ trust as the next release boundary. The complete review and evidence matrix are 
   recent step-up are explicitly absent high-severity residual risks.
 
 - **Release truth:** HEAD source, dated tests, deployed revision and live availability
-  are separate facts. Public probes returned 502 and HEAD CI was blocked before job
-  start by account billing (TASK-199/TASK-203).
+  are separate facts. The August 502 and zero-job billing failures are historical.
+  Later CI run `34017037310` executed but failed i18n; current-HEAD green CI and target
+  health/revision proof remain TASK-203/199, with release under TASK-209.
 - **Operational quality:** after P0 isolation/privilege fixes, SLO/RPO/RTO, worker
   telemetry, scale budgets and Pack lifecycle/i18n become binding gates (TASK-201/202).
-- **Tax and AI evidence:** unify tax validity/posting behavior before MY SST may be
-  called compliant (TASK-204), and directly test Vision provider failure with explicit
-  manual retry/review semantics without treating an encrypted connector as deployed
-  provider proof (TASK-205).
+- **Tax and AI evidence:** exclusive tax intervals and governed posting, plus direct
+  Vision failure/dead-letter/manual retry tests, are source-present. TASK-204 tax-owner
+  approval and TASK-205 deployed provider/recovery evidence remain open.
 
 EPIC-067 source adds an authenticated tenant-admin presentation using a hidden non-login
 bridge actor. Platform workspace exposes separate `Open as Platform Admin` and `Login as

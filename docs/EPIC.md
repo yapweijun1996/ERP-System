@@ -1,6 +1,11 @@
 # Epic Index
 
-Reviewed: **2026-08-13**
+Latest EPIC-066 follow-up: TASK-214 audit, TASK-215 documentation reconciliation and
+TASK-216–223 open runtime findings. [TEST_COVERAGE.md](TEST_COVERAGE.md) distinguishes
+route coverage from business E2E; see [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md)
+for the product acceptance direction.
+
+Reviewed: **2026-09-07**
 
 The canonical epic registry is [EPICS.md](EPICS.md). This singular filename exists as
 a compatibility entry point for tools and requests that refer to `EPIC.md`; do not

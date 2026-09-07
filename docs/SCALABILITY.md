@@ -1,5 +1,10 @@
 # Scalability — Designed for 100 GB to 800 GB
 
+Latest evidence: [TEST_COVERAGE.md](TEST_COVERAGE.md). TASK-214 warm Demo timings
+and a roughly 41 MiB built artifact do not validate the production capacity target.
+Default database-backed document bytes share PostgreSQL durability; optional local
+filesystem storage needs a shared durable design before horizontal API/worker scaling.
+
 > **Hard constraint:** client production databases are **100 GB today, growing toward
 > 800 GB**. Every decision below assumes that scale. A query pattern that is fine on
 > 1 GB can take down an 800 GB table. This document is the rulebook.

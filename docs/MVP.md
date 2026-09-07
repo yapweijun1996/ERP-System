@@ -24,10 +24,10 @@ in localStorage).
 | 5 | Finance: invoices, journal entries, chart of accounts, ledger drill-down, P&L, AR aging | ✅ done |
 | 6 | Settings → Demo data reset (drop + reseed IndexedDB) | ✅ done |
 | 7 | Installable PWA with update prompt; usable at 375 px mobile width | ✅ done |
-| 8 | Static demo bundle suitable for Pages or another public host | ✅ build verified; Pages workflow disabled for this private repo |
+| 8 | Static demo bundle suitable for Pages or another public host | ✅ build verified; Pages workflow configured, hosted revision separately verified |
 | 9 | First-run **setup wizard** (language → company → country/tax → admin) | ✅ done (TASK-009, TASK-010) |
 | 10 | Every routed screen opens without console errors; mock screens clearly labeled as "sample data" | ✅ Current HEAD screen audit covers 129 Canonical / 0 Preview routes; TASK-200 closes API metadata parity, while physical-device and production-release gates remain separate |
-| 11 | Real-device verification (iPhone/Android) of layout + confirm flow | ⬜ TASK-017 (permanently blocked — needs a physical phone) |
+| 11 | Real-device verification (iPhone/Android) of layout + confirm flow | ⬜ TASK-017 (blocked pending physical-phone access) |
 
 ### Explicitly OUT of MVP-1
 
@@ -39,7 +39,7 @@ in localStorage).
 ### MVP-1 exit criteria
 
 - Static demo artifact boots offline-capable PWA with seeded data in local/static preview;
-  public hosting is a separate follow-up because this repository is private.
+  public hosting revision and availability are separate acceptance evidence.
 - Order → stock → invoice → GL demo works and rolls back on over-sell (SO-2 / SO-3).
 - Setup wizard can create a fresh company and land on its empty dashboard.
 - Zero console errors on every registered route in demo mode.

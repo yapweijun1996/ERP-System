@@ -1,5 +1,9 @@
 # ERP System
 
+ERP review status: [module test coverage](docs/TEST_COVERAGE.md) lists verified
+workflows, known failures and untested production boundaries. All-route rendering
+is not all-module business E2E acceptance.
+
 A modular, full-stack ERP (Enterprise Resource Planning) system designed to run in
 **two modes from a single codebase**:
 
@@ -121,6 +125,8 @@ full regime engines and statutory filing integrations remain target scope. See
 
 | Doc | What's inside |
 | --- | --- |
+| [docs/ERP_QUALITY_BASELINE.md](docs/ERP_QUALITY_BASELINE.md) | Product acceptance: workflows, UX/mobile/i18n/themes, SG/MY, agents, Demo, production, scale and safe upgrades |
+| [docs/ERP_SPECIALIST_REVIEW_2026-09-07.md](docs/ERP_SPECIALIST_REVIEW_2026-09-07.md) | Current local specialist audit, reproduced issues and prioritized follow-up acceptance |
 | [docs/STATUS.md](docs/STATUS.md) | **Start here** — what is implemented, tested, deployed, blocked or planned (reviewed 2026-09-07) |
 | [docs/MVP.md](docs/MVP.md) | MVP-1 (browser demo) and MVP-2 (Docker production) scope + exit criteria |
 | [docs/SPEC.md](docs/SPEC.md) | Contract of record: invariants, data model, functional requirements, gates |

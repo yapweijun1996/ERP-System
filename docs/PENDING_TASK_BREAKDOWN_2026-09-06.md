@@ -1,11 +1,33 @@
 # Pending Task Breakdown — 2026-09-07 addendum
 
+## Latest specialist follow-up
+
+TASK-215 reconciles documentation/KB only. TASK-216–223 are open, one per F01–F08 in
+[ERP_SPECIALIST_REVIEW_2026-09-07.md](ERP_SPECIALIST_REVIEW_2026-09-07.md).
+
+| Task | Status | Required outcome |
+| --- | --- | --- |
+| TASK-216 | Todo | Repair governed tax snapshots in seeded procurement |
+| TASK-217 | Todo | Correct date-only sales invoice due dates |
+| TASK-218 | Todo | Reconcile invoice aging and fiscal-period KPIs |
+| TASK-219 | Todo | Close sales invoice translation gaps |
+| TASK-220 | Todo | Correct filled-action contrast in both themes |
+| TASK-221 | Todo | Make procurement next actions and receiving scope clear |
+| TASK-222 | Todo | Improve mobile touch zoom and localized status usability |
+| TASK-223 | Todo | Resolve payment voucher recovery audit timing uncertainty |
+
+All depend on TASK-214 except TASK-218 additionally needs TASK-217 and TASK-221
+needs TASK-216. Acceptance criteria are in the [task registry](../tasks/tasks.jsonl).
+Prioritize seed/date/KPI correctness, then presentation/recovery; preserve the P0
+production evidence chain below. [TEST_COVERAGE.md](TEST_COVERAGE.md) records what
+was actually tested; earlier passing matrices below are historical checkpoints.
+
 This is the actionable view of every non-Done task currently registered in
 `tasks/tasks.jsonl`. It is intentionally separate from historical reviews: source and
 tests are implementation evidence, while deployment, CI, production configuration and
 physical-device checks remain separate evidence classes.
 
-Current registry: **204 Done / 4 In Progress / 2 Todo / 3 Blocked / 213 Total**.
+Current registry: **206 Done / 4 In Progress / 10 Todo / 3 Blocked / 223 Total**.
 
 2026-09-07 CI addendum: the latest GitHub Actions CI run `34017037310` on remote
 head `2188f56186e88e542351ec3a49e07d73057182bf` executed all four Vitest shards and
@@ -171,7 +193,7 @@ remain green; TASK-199 still needs a target-host release and health proof.
     source failures distinct; neither is a green gate.
 
 - **TASK-209 — Blocked (P0) — release Platform tenant administration**
-  - Depends on: `TASK-195`, `TASK-203`, `TASK-206`, `TASK-207`, `TASK-208`.
+  - Depends on: `TASK-195`, `TASK-203`, `TASK-206`, `TASK-207`, `TASK-208`, `TASK-199`.
   - TASK-208 is complete; it remains blocked until a fresh current-HEAD CI result,
     deployed revision and production evidence are available.
   - Release steps: backup, apply migration/RLS without reset or seed, run non-superuser
@@ -203,7 +225,7 @@ remain green; TASK-199 still needs a target-host release and health proof.
     invalid state/immutable budget, expiry, dual audit attribution and switched-Company
     user/order isolation. Disposable PostgreSQL 16 `NOSUPERUSER NOBYPASSRLS` proof adds a
     real Finance budget workflow and confirms the module gate works under FORCE RLS.
-  - TASK-208 browser/workspace proof is now complete; TASK-209 remains blocked by CI billing,
+  - TASK-208 browser/workspace proof is now complete; TASK-209 remains blocked by current-HEAD green CI,
     deployment and production release evidence.
 
 - **TASK-208 — Done 2026-09-07 — Platform Admin and exact Employee workspace integration**

@@ -1,6 +1,6 @@
 # Demo Mode (PGlite + IndexedDB)
 
-The demo is the version deployed to GitHub Pages. It has **no backend server** — the
+The static Demo build targets GitHub Pages or another static host. It has **no backend server** — the
 database runs entirely in the browser.
 
 ## 1. How it works
@@ -39,8 +39,8 @@ web/public/db/erp-system-demo-txn.sql  (SQL form of the src/demo.ts SO-1 chain)
 PGlite (idb://erp-system-demo) -> async SQL reads -> Aria DB object -> screens
 ```
 
-`app.js` defers UI boot until `window.ErpSystemDemoReady` resolves. If the PGlite
-WASM (loaded from CDN) is unreachable — e.g. fully offline — the adapter falls back
+`app.js` defers UI boot until `window.ErpSystemDemoReady` resolves. If the bundled PGlite
+WASM/runtime or browser database cannot initialize, the adapter falls back
 to a static payload carrying the SAME canonical values, and `DB.erpSystem.dataMode`
 records `'fallback'` instead of `'pglite'`.
 
@@ -93,9 +93,15 @@ larger deterministic employee population for list, permissions and reporting dem
 
 ## 5. Known limits
 
+The [2026-09-07 specialist review](ERP_SPECIALIST_REVIEW_2026-09-07.md) records a
+current seeded-PO tax-snapshot gap that blocks supplier invoicing after receiving.
+A successful domain proof or page render does not mean every seed journey completes.
+
 - **Storage quota:** IndexedDB is subject to per-origin browser quotas. Keep seed data
   small; the demo is a showcase, not a data store.
-- **Single user:** no concurrency, no real auth — the demo user is a fixed sample account.
+- **Single browser:** local showcase personas and wizard-created identities, not
+  production server authentication or multi-user concurrency. Sign-in offers the
+  eligible one-click showcase persona after first-run setup.
 - **No server-only transactions:** flows that require server guarantees in production
   (advisory locks) run as ordinary client transactions in the demo. Correct for one user;
   not a multi-user guarantee.

@@ -90,7 +90,7 @@ The production overlay currently applies the generic `tenant_scope` policy to ev
 generated table carrying both tenant keys, including `sales_enquiry_line`. The local
 `npm run check:production-rls` gate first verifies the generated Demo schema is current,
 then checks for missing, unknown, malformed or duplicate policy entries. The current
-schema has 232 tenant-keyed tables: 222 use the generic policy and 10 explicitly listed
+schema has 235 tenant-keyed tables: 225 use the generic policy and 10 explicitly listed
 security/control-plane tables remain outside that generic loop. This guard proves table
 coverage only; TASK-195 now supplies the non-superuser/non-BYPASSRLS runtime roles,
 generated Platform provisioning context and disposable PostgreSQL 16 current-path proof.

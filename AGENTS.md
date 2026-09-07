@@ -65,13 +65,16 @@ and KB instead of silently choosing an old summary.
   managed-document upload/scan/OCR/version boundary but are a separate Company-owned
   aggregate under the active `masterFn` + `companyFn`. They do not depend on
   `expense_claim`, reimbursement, GL posting or Tax Treatment. Direct domain/API
-  commands do not require an Employee, although the current My Receipts picker UI
-  still does. Current entry points are `src/data/schema/expenses.ts`,
+  commands and the eligible-evidence picker do not require an Employee. The upstream
+  My Receipts capture/upload workflow remains Employee Self Service. Entry points
+  include `src/data/schema/expenses.ts`,
   `src/modules/expenses/companyReceipt.ts`,
   `src/modules/expenses/companyReceiptPack.ts`,
   `src/api/routes/companyReceipts.ts` and `web/public/assets/screens-company-receipts.js`.
-  Treat the Pack permission-downgrade repair and the missing edit/void/date-correction
-  UX in `docs/PROJECT_LOGIC.md` and `docs/ERP_EXCELLENCE_REVIEW.md` as open P0 work.
+  Pack permission-downgrade and edit/void/date-correction repairs are source-complete
+  (TASK-196/197); production Pack release/UAT evidence remains separate (TASK-202).
+  Use current `docs/STATUS.md` and `docs/PROJECT_LOGIC.md`, not the historical review,
+  to determine remaining work.
 - Project billing Progress Claim is a separate record:
   `src/modules/project/progressClaim.ts` and `project/progress-claims` API
   resources. Do not conflate it with Employee Expense Claims.
@@ -81,6 +84,10 @@ and KB instead of silently choosing an old summary.
   default Malaysia tax to Singapore-style recoverable Input Tax.
 
 ## Documentation and verification
+
+- Apply `docs/ERP_QUALITY_BASELINE.md` as the product-owner acceptance framework for
+  ERP workflow, performance, UX/mobile/i18n/themes, SG/MY, Agent operability, Demo,
+  production, scale and safe client upgrades. Goals are not evidence of completion.
 
 - Read `docs/PROJECT_LOGIC.md` for the domain workflow, then follow its source and
   test references before changing behavior.

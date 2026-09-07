@@ -10,6 +10,20 @@ the bullet-level breakdown for every pending task is
 The prior [ERP excellence review](ERP_EXCELLENCE_REVIEW.md) remains a dated historical
 baseline rather than current release evidence.
 
+## Latest specialist audit — TASK-214
+
+See [ERP_SPECIALIST_REVIEW_2026-09-07.md](ERP_SPECIALIST_REVIEW_2026-09-07.md) for
+fresh local evidence on source `243af56`, and [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md)
+for the product-owner acceptance criteria. The Demo build and PGlite domain proof
+pass, and all 129 routes render at desktop/mobile without console/page errors.
+The full screen audit failed one payment-voucher recovery assertion; a focused
+three-route desktop rerun passed. A seven-route five-language desktop/mobile matrix
+failed on sales-invoice `Outstanding` and `Due date`. Manual Chrome DevTools MCP
+found seeded-PO invoicing blocked by unclassified tax snapshots, a one-day SG due-date
+shift, incorrect invoice aging/period KPIs and a dark-button contrast gap. These are
+open findings, not fixed by the documentation audit. Its optional full Vitest run was
+stopped without a result; earlier suite totals below remain historical evidence.
+
 ## Source-of-truth synchronization
 
 The synchronized review/status baseline started at `2188f56` (`New`). The current
@@ -19,13 +33,13 @@ production deployment is still a separate release gate.
 
 The current worktree adds migrations 0100/0101/0102/0103: the Drizzle journal contains **104 migration
 entries**, generated canonical SQL contains **255 tables**, and the task registry contains
-**204 Done / 4 In Progress / 2 Todo / 3 Blocked / 213 Total**. TASK-200 now closes the
+**206 Done / 4 In Progress / 10 Todo / 3 Blocked / 223 Total**. TASK-200 now closes the
 Canonical/API route parity gap by including `staff-calendar` in `API_SCREEN_ROUTES`.
 TASK-212 is done: the
 active route and dynamic shell now refresh in place on locale change while preserving
 recoverable view state; local desktop/mobile live-i18n E2E and the full i18n audit pass.
 TASK-213 is done: `sales_enquiry_line` is included in the production FORCE-RLS overlay,
-and the generated-schema coverage check passes with 222 policy tables and 10 explicit
+and the generated-schema coverage check passes with 225 policy tables and 10 explicit
 security/control-plane exemptions. Local static/unit evidence passes. TASK-195 now has a
 disposable PostgreSQL 16 proof; production deployment and exact live revision remain
 separate release evidence.
@@ -48,7 +62,7 @@ switcher, while Demo autofill E2E, the 59-route/13-role access matrix, 129-scree
 desktop/mobile audit and 129-route × 5-language × 2-viewport audit pass. TASK-195 now
 adds a current-path PostgreSQL/FORCE-RLS proof; TASK-206 and TASK-207 are done, while
 executable CI and the remaining Platform release chain remain TASK-203 and
-TASK-209 work. The final local full Vitest run passes 173 files /
+TASK-209 work. The pre-TASK-214 local full Vitest checkpoint passed 173 files /
 705 tests with two intentional file/test skips. TASK-204 source-level tax interval,
 classification and posting hardening is now in progress; targeted tax/purchasing/Expense
 tests pass, while production tax-owner review remains open. TASK-205 source hardening is
@@ -74,8 +88,8 @@ The TASK-194 correction aligns deployment, security, architecture, role-permissi
 and UAT material to that boundary: current inventory is 129
 Canonical / 0 Preview routes, 129 API-mode metadata routes, 1,726 English keys/72 local
 packs, 315 permission codes, 59 access-matrix routes, Company Owner 115 and PWA v263.
-The older 170-file / 666-test collection is a dated TASK-194 checkpoint; the current
-local full Vitest result is 173 files / 705 tests with two intentional file/test skips.
+The older 170-file / 666-test collection is a dated TASK-194 checkpoint; the pre-TASK-214
+local full Vitest result was 173 files / 705 tests with two intentional file/test skips.
 TASK-017 remains
 the physical-device blocker, TASK-193 is blocked by missing production SMTP/recovery,
 and TASK-203 is In Progress: the latest remote workflow executed but exposed one i18n
@@ -184,7 +198,7 @@ That full Vitest run was green: 156 passed files plus 1 skipped file (635 passed
 skipped tests). A later 2026-08-12 checkpoint was green at 168 passed files plus 1
 skipped file (663 passed, 1 skipped tests). TASK-194 subsequently recorded a
 170-file / 666-test collection checkpoint without executing the full collection. The
-2026-09-07 current run passes 173 files / 705 tests with two skips. The authenticated `account/*`
+pre-TASK-214 2026-09-07 checkpoint passed 173 files / 705 tests with two skips. The authenticated `account/*`
 service prefix is explicitly
 non-module-gated while notification permissions remain enforced, and the 15-test
 targeted notification/matrix/module regression passes. HR Calendar fixtures now use
@@ -193,8 +207,8 @@ fixture mismatch. Assignment/RBAC, admin/manager and strict approval-focused tes
 pass, including expiry, revoke, multi-target, explicit deny precedence and safe
 explanation access-control cases.
 Current source registers **129 Canonical / 0 Preview** routes; all 129 declare API mode,
-including `staff-calendar`. The current HEAD screen audit passes all 129 routes at
-desktop and 375px; TASK-183 remains historical full-matrix evidence, while TASK-210
+including `staff-calendar`. TASK-214 rendered all 129 routes at desktop/mobile but
+failed one voucher recovery assertion; TASK-183 remains historical full-matrix evidence, while TASK-210
 reran the current 129-route language matrix on both viewports. The static i18n audit
 passes **1,726 English keys and
 72 local five-language packs**. Business-record values remain outside the UI-resource
@@ -503,8 +517,8 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Landed Cost allocation & moving-average revaluation | ✅ Canonical Demo/API data and writes | Migration 0033 adds versioned receipt-linked `landed_cost` headers, immutable allocation snapshots, `product.average_cost` and upgrade-safe account `2300`. Shared Decimal commands allocate by received value or quantity with deterministic whole-cent residuals. Allocation locks the draft/products/current balances, requires positive on-hand, revalues moving-average cost and posts balanced Dr Inventory / Cr Landed Cost Accrual without a `stock_movement`. Demo/API create and idempotent audited allocate actions, production RLS, five-language UI and inventory/GL trace links are live. Browser proof allocated S$14.00 against GR-1: Widget cost S$6.50→S$6.64, Dr/Cr S$14.00 and unchanged quantity. |
 | Project Finance Depth: Bank Receipt, Payment Voucher & project-scoped AP | ✅ Canonical Demo/API data and writes | Closes Project's third and final deferred sub-phase — every originally-scoped Phase 7 module is now real. `bank_receipt` (settles a posted progress claim's AR in full, Dr `1000` Cash / Cr `1100` AR) and `payment_voucher`+`payment_voucher_line` (settles one or more of a supplier's unpaid invoices, Dr `2100` AP / Cr `1000` Cash, and is the first code in this repo to ever flip a `supplier_invoice` to `paid`) added to `src/data/schema/finance.ts` — the first new Treasury documents here, in a new `src/modules/finance/` module (GL had been read-only until now, hence a new `finance.write` permission). `purchase_order`/`supplier_invoice` gained a nullable `project_id`: settable from the `new-purchase-order` wizard, auto-propagated onto the resulting invoice with no new user input. Seeded a new `1000` Cash & Bank chart-of-accounts row, which also fixed a long-dead `screens-fin2.js` GL tile that already summed codes `1000`+`1010` against accounts that never existed. `payment-voucher`/`new-payment-voucher` replaced 100%-fabricated screens (the old wizard's "open invoices" list was a hash of the supplier code, and "Post payment" never touched the adapter) with a real per-voucher detail and a real 2-step wizard reading genuine unpaid invoices; `project-detail` gained a real "Record receipt" action and a real "Project costs" panel. Verified live with a mathematically balanced result: one Payment Voucher (S$1,220.80 across two real unpaid invoices) and one Bank Receipt (S$54,500) left the General Ledger's Cash & Bank account at exactly S$53,279, with AP and AR each moving by the settled amounts — confirmed by resetting the demo database and re-deriving every balance from scratch. |
 | Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. Smoke now passes with visible-only semantic badge assertions; actionable counts remain in canonical module KPIs and approval queues. |
-| Full screen audit — current route checkpoint | ✅ 129 desktop/mobile routes | The current 2026-09-07 `npm run audit:screens` rendered all 129 Canonical / 0 Preview routes at desktop and mobile without console/page, document-layout, active-tab, action-bar or shared-shell failures. The dedicated workspace audit also passed. |
-| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Local full suite | Current local Vitest run passes 173 files / 705 tests with two intentional file/test skips. PostgreSQL runtime, CI execution and production deployment remain separate evidence boundaries. |
+| Full screen audit — TASK-214 | ⚠️ Rendering passes; recovery gate open | All 129 routes rendered desktop/mobile without console/page errors. Full audit failed one Payment Voucher Retry assertion; three-route desktop rerun passed. TASK-223 owns unresolved timing verification. |
+| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ⚠️ Latest full attempt incomplete | Pre-TASK-214 checkpoint passed 173 files / 705 tests with two skips. Latest optional full run stopped without result; see TEST_COVERAGE.md. PostgreSQL and production remain separate gates. |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemData.completeSetup()` → shared `completeDemoSetupWithin`, gated in `app.js` boot(). Production setup remains a separate empty-database/zero-user command and does not require a deployment setup token. |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemData.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -771,7 +785,7 @@ cost-layer semantics the schema cannot support.
 | Claim in docs | Reality |
 | --- | --- |
 | `VITE_DATA_MODE=api` renders every current Canonical screen with real data | **Route parity is now source-verified for all 129.** `staff-calendar` is backed by the API adapter and endpoint; authenticated API browser and integration evidence are recorded separately from the Demo route audit. |
-| Every Canonical route has five-language coverage | **Current browser evidence passes.** Static audit passes 1,726 keys/72 packs, and the exact CI-equivalent desktop and mobile runs on 2026-09-07 each passed 129 × 5 languages with no blocking findings after adding `route.project-pl`. |
+| Every Canonical route has five-language coverage | **Latest browser acceptance remains open.** Prior full-matrix checks passed, but TASK-214 found Outstanding and Due date untranslated in the seven-route matrix. TASK-219 and a fresh full release matrix are required. |
 | API server has all business **write** endpoints | **Complete for the present Canonical boundary.** Production setup, auth lifecycle, CRM opportunity conversion, Sales enquiry/quotation/order conversion, service-capable order lines, Draft confirmation, RMA/credit and debit-note posting, inventory adjustment post, stock-transfer completion, work-order execution/completion, quality inspection/NCR disposition, PO creation/receipt and supplier-invoice posting are live; advanced manufacturing depth and any new finance/commercial actions remain separate future scope. |
 | `deploy/erp-server.mjs` | Still just a static "Live" placeholder page + `/health` — **not** the real API; the real API is `src/server.ts` now, run via `npm run server` locally or as the `api` service in Docker. |
 | `npm run lint` | Implemented with ESLint and part of the local/CI gate. |

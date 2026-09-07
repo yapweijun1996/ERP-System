@@ -1,5 +1,22 @@
 # SPEC — Contract of Record
 
+## Current product acceptance and evidence boundary — 2026-09-07
+
+[ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md) defines the requested workflow,
+performance, layout, responsive, five-language, light/dark palette, usability, SG/MY,
+AI-agent, static Demo, production, scale and safe client-update requirements. These
+are acceptance targets, not declarations that every module is production-ready.
+[TEST_COVERAGE.md](TEST_COVERAGE.md) records measured coverage and unmet criteria.
+
+Required corrections are TASK-216–223: governed seed snapshots, date-only due dates,
+reconciled invoice aging/period KPIs, complete translated labels, filled-action
+contrast, usable procurement actions, mobile/zoom/status accessibility and reliable
+recovery verification. Complete them with negative-path and regression evidence.
+Automatic client updates currently mean background detection plus explicit user
+activation; unattended forced refresh and multi-tab draft safety are not guaranteed.
+AI-friendly APIs must retain session-derived tenant scope, authorization, idempotency
+and audit; a dedicated ERP agent/MCP manifest is not established by this review.
+
 This is the binding functional/technical contract. If code and this spec disagree,
 either fix the code or change this spec in the same PR — never let them drift silently.
 Deep dives live in the linked docs; this file is the index of *requirements*.
@@ -124,9 +141,10 @@ Data` or `Preview · Canonical Data` route, with write-like actions disabled unt
 schema, resource/command, permission, tests and localization are complete.
 
 Current source inventory (2026-09-07) is 129/0 routes, 1,726 English keys and 72 local
-five-language packs. The current HEAD reran the complete 129-route desktop/375px and
-five-language browser matrix with no blocking findings; API-mode browser and physical-
-device evidence remain separate release gates.
+five-language packs. TASK-214 rendered all 129 routes but the full screen gate failed
+one recovery assertion; its targeted five-language matrix failed two invoice labels.
+Earlier full-matrix passes are dated checkpoints. API-mode browser and physical-device
+evidence remain separate release gates. See [TEST_COVERAGE.md](TEST_COVERAGE.md).
 Business-record values remain outside system-authored UI copy.
 
 Module depth that is not yet represented by a route or command remains future scope;
@@ -277,9 +295,10 @@ Historical review evidence (2026-08-12): schema v98/99 migrations/249-table pari
 Demo-pack, permission, static i18n and Demo build gates pass; 7 focused files / 22 tests
 pass. HEAD collected 170 files / 666 tests but the full collection was not executed in
 that review. Earlier 168-file/663-test, browser-matrix, PostgreSQL and deployment results
-remain dated checkpoints. Current HEAD evidence (2026-09-07) is recorded in `STATUS.md`:
-schema v103/104 migrations/255 tables and the full local Vitest collection passes 173
-files / 705 tests with two intentional skips. Current public `/health` and setup probes
+remain dated checkpoints. Source inventory is schema v103/104 migrations/255 tables.
+The pre-TASK-214 local Vitest checkpoint passed 173 files / 705 tests with two skips;
+the latest attempt stopped without a final result. TASK-214 failures and TASK-215
+static schema/RLS verification are recorded in [TEST_COVERAGE.md](TEST_COVERAGE.md). Current public `/health` and setup probes
 remain a separate production evidence boundary; the historical zero-step GitHub Actions
 run was billing-blocked. The latest CI run `34017037310` did execute
 but failed the i18n browser matrix on `timesheet: Projects`; the local `route.project-pl`
@@ -595,7 +614,7 @@ journey and proves cross-tenant denial. This closes the source/test boundary, no
 later production revision/CI/release evidence.
 
 TASK-213 closes the source-level table-list omission for `sales_enquiry_line` and adds a
-deterministic guard over the generated schema: 222 tenant-keyed tables are covered by the
+deterministic guard over the generated schema: 225 tenant-keyed tables are covered by the
 generic overlay and 10 reviewed security/control-plane tables are explicit exemptions.
 This is static coverage evidence and does not relax the runtime-role or Platform
 provisioning requirements above.

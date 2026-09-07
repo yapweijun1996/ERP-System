@@ -5,7 +5,7 @@ deployment and Docker is the production deployment:
 
 1. **Demo artifact** → static `web/dist/` → GitHub Pages at
    `https://yapweijun1996.github.io/ERP-System/` (no backend).
-2. **Production** → Docker Compose (`web` + `api` + PostgreSQL), sized for 100–800 GB.
+2. **Production** → Docker Compose (`web` + `api` + PostgreSQL), targeting 100–800 GB; measured sizing, load and recovery proof remains TASK-201.
    Use `docker-compose.production.yml` on a client server so only `web` is exposed.
 
 Current code schema boundary: migration

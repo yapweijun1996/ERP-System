@@ -1,8 +1,25 @@
 # Roadmap
 
+## Immediate execution order
+
+1. TASK-216–218: restore seeded procure-to-invoice and correct sales date/aging/period
+   behavior. TASK-218 depends on TASK-217. These affect Demo credibility and decisions.
+2. TASK-219/220/222/223: close translation, theme contrast, mobile/zoom/status and
+   recovery verification gaps; TASK-221 follows TASK-216 for procurement usability.
+3. TASK-203: obtain current-HEAD green CI after fixes; TASK-199: verify target health
+   and revision. TASK-209 release requires both, plus its completed security chain.
+4. Finish TASK-202/204/205 production artifact, tax-owner and provider/recovery evidence;
+   TASK-201 measures scale, observability and restore objectives after TASK-199.
+   TASK-017 and TASK-193 still require devices and SMTP respectively.
+
+TASK-214 audit is complete; TASK-215 synchronizes this plan. Historic phase checkmarks
+mean the scoped milestone was delivered, not current all-module or production acceptance.
+Use [TEST_COVERAGE.md](TEST_COVERAGE.md) for latest results and
+[ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md) for the full product goals.
+
 This roadmap keeps the ERP build focused on a working demo first, then production
 readiness. The order matters: prove the product shape in the browser, then harden the
-server and Docker path. Status reviewed **2026-08-12** (see [STATUS.md](STATUS.md)).
+server and Docker path. Status reviewed **2026-09-07** (see [STATUS.md](STATUS.md)).
 
 Status legend: ✅ complete · 🔶 in progress · ⬜ not started.
 
@@ -24,13 +41,13 @@ Goal: publish a public static ERP demo that feels real but contains only sample 
 
 Delivered: PGlite schema/seed aligned with the Drizzle schema, IndexedDB persistence +
 reset action, dashboard/inventory/sales/invoice/finance/settings screens, a validated
-GitHub Pages build artifact, and the PWA shell with update prompt. The Pages workflow
-is currently disabled because this repository is private; Docker/PostgreSQL is the
-active production path (see STATUS.md and DEPLOYMENT.md).
+GitHub Pages build artifact, and the PWA shell with update prompt. The Pages workflow is configured for main pushes and manual runs; remote enablement
+and the hosted revision were not checked in this review. Docker/PostgreSQL remains
+the production path (see STATUS.md and DEPLOYMENT.md).
 
 Exit criteria: the static bundle builds and boots without a backend in local/static
 preview, with no secrets bundled. The historical Pages URL acceptance remains in the
-delivery record, but this private repository does not currently publish Pages.
+delivery record; current hosted revision and availability require independent proof.
 
 ## Phase 3 — Core ERP Flow ✅
 
@@ -44,7 +61,7 @@ plus no leftover prototype identity leaks on canonical screens; found and fixed 
 bugs — a stale sales-rep dropdown, a stale default-company picker, and a genuine async
 race in the Master Control screen — see docs/STATUS.md).
 
-Open: TASK-017 real-device verification (permanently blocked — needs a physical phone).
+Open: TASK-017 real-device verification (blocked pending physical-phone access).
 
 ## Phase 4 — Setup Wizard ✅ (demo path) — production lock done via TASK-024 (Phase 5)
 
@@ -126,7 +143,7 @@ verification and rollback).
 Exit criteria: every PR can be validated with documented commands (✅ — typecheck,
 demo-build, drift, smoke, unit-tests and PG-parity all run in CI on every PR); demo
 and production paths have separate deployment checks (✅ — the Pages workflow is
-configured but intentionally disabled for this private repository, `ci.yml` validates
+configured for main pushes and manual runs; remote enablement requires independent verification and was not checked in TASK-215, `ci.yml` validates
 every PR, and Docker Compose is the active production runtime).
 
 ## Phase 7 — Module Expansion ✅ (every originally-scoped module converted: Purchasing, CRM, Fixed Assets, Admin, HR-lite, Project incl. finance depth, Service, Purchase Requisition)
@@ -1247,9 +1264,11 @@ more module breadth. The source-backed review is
    simulation. The owner explicitly accepted password-only access with no MFA or recent
    step-up as a high-severity residual risk.
 5. **Current release proof** (TASK-199/203): restore public availability, identify the
-   exact deployed revision, and unblock the zero-step GitHub Actions billing failure.
+   exact deployed revision, and obtain a current-HEAD green CI run. The later remote
+   workflow executed and failed i18n; the zero-step billing incident is historical.
    TASK-200 is source-closed: all 129 Canonical routes declare API metadata and the
-   current screen, i18n, access-matrix and Staff Calendar/API evidence has been rerun.
+   earlier screen, i18n, access-matrix and Staff Calendar/API evidence was recorded.
+   TASK-214 subsequently found recovery and invoice-i18n gaps; see TEST_COVERAGE.md.
 6. **Operational/artifact quality** (TASK-201/202): establish SLO/RPO/RTO, timed restore
    and scale/worker monitoring. TASK-202 source hardening now covers conflict convergence,
    actor-scoped history, localized Unicode PDF labels/content and Decimal-safe amounts;
@@ -1265,7 +1284,7 @@ more module breadth. The source-backed review is
    recovery evidence remains a release gate.
 
 Exit criteria: every P0 passes its PostgreSQL/API/browser/security proof; public health
-and revision evidence are current; CI actually executes; operational objectives are
+and revision evidence are current; all required current-HEAD CI gates pass; operational objectives are
 measured; no document calls a collected test, old probe or source-present commit a live
 production pass. TASK-017 and TASK-193 remain independent blockers.
 

@@ -1,5 +1,11 @@
 # ERP-System Project Logic
 
+TASK-215 source reconciliation (2026-09-07) changes no domain contract.
+[TEST_COVERAGE.md](TEST_COVERAGE.md) records every current module and evidence gaps;
+TASK-216–223 own the eight open specialist findings. Fresh schema/RLS checks prove
+104 migrations, 255 tables, 225 generic policy tables and 10 explicit exemptions,
+not production isolation. Domain fixes must update this mirror and the KB together.
+
 > Main project knowledge base: `KBID: erp-system-project-logic`
 > KB UUID: `ef47bf4b-83e1-42b2-a412-66912d04ea24`
 > Source review: 2026-09-07
@@ -9,6 +15,16 @@ This document is the source-backed project-logic mirror for future agents and
 maintainers. The KB is the primary continuity layer, while the current source and
 tests remain the implementation proof. When behavior changes, update this document,
 the relevant KB item and the tests in the same task.
+
+## Product quality and audit evidence
+
+The product-owner criteria are in [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md).
+The [2026-09-07 ERP specialist review](ERP_SPECIALIST_REVIEW_2026-09-07.md) records
+current Demo workflow, date/KPI, i18n/contrast and recovery-test findings. In particular,
+the seeded pending PO omits governed tax snapshot fields and cannot be invoiced after
+receipt; preserve the posting rejection and repair seed/upgrade consistency. No domain
+contract was changed by the audit. Production/scale/physical-device evidence remains
+separate from local PGlite and screen checks.
 
 ## 1. System boundary and execution contract
 
@@ -770,7 +786,7 @@ record only the active onboarding stages; the retired `modules` value remains ac
 by the database check only for compatibility with older rows.
 
 TASK-213 separately closes the production overlay's omitted `sales_enquiry_line` table and
-adds a generated-schema coverage guard. It currently verifies 222 generic policy tables,
+adds a generated-schema coverage guard. It currently verifies 225 generic policy tables,
 232 tables carrying both tenant keys and 10 explicit security/control-plane exemptions;
 this source-level result complements TASK-195's runtime-role and provisioning-context
 proof but does not replace target-host deployment evidence.

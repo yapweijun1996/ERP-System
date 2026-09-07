@@ -1,5 +1,10 @@
 # Epics
 
+Reviewed 2026-09-07: historical Done milestones retain their original scoped evidence.
+TASK-214 does not certify all modules. [TEST_COVERAGE.md](TEST_COVERAGE.md) records
+latest failures and untested boundaries; EPIC-066 now tracks TASK-215 documentation
+and TASK-216–223 runtime follow-up against [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md).
+
 Each epic describes a large work group. Small executable tasks live in
 `tasks/tasks.jsonl`. Status legend: ✅ done · 🔶 in progress · ⬜ not started.
 Current ground truth per epic → [STATUS.md](STATUS.md).
@@ -30,7 +35,8 @@ Acceptance criteria:
 - [x] Reset demo clears and reseeds browser data.
 - [x] GitHub Pages base path and refresh behavior are handled.
 - [x] GitHub Actions can build/deploy the static demo when Pages is enabled; the
-      workflow is currently disabled because this repository is private.
+      workflow is configured for main pushes/manual runs; remote enablement and the
+      hosted revision require independent verification and were not checked in TASK-215.
 - [x] PWA shell, update prompt, mobile safe areas (TASK-016).
 
 ## EPIC-003 — Core ERP Modules ✅
@@ -2656,9 +2662,19 @@ Current truth:
 | TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |
 | TASK-205 | In progress | Direct Vision failure/revoked-connector/no-fallback proof plus bounded dead-letter and same-chain manual requeue; production configuration remains |
 | TASK-213 | Done | Close production RLS coverage omission and add schema drift guard |
+| TASK-214 | Done | ERP specialist audit and product quality baseline with documentation/KB synchronization |
+| TASK-215 | Done | Synchronize ERP architecture requirements roadmap and module test coverage |
+| TASK-216 | Todo | Repair governed tax snapshots in seeded procurement |
+| TASK-217 | Todo | Correct date-only sales invoice due dates |
+| TASK-218 | Todo | Reconcile invoice aging and fiscal-period KPIs |
+| TASK-219 | Todo | Close sales invoice translation gaps |
+| TASK-220 | Todo | Correct filled-action contrast in both themes |
+| TASK-221 | Todo | Make procurement next actions and receiving scope clear |
+| TASK-222 | Todo | Improve mobile touch zoom and localized status usability |
+| TASK-223 | Todo | Resolve payment voucher recovery audit timing uncertainty |
 
 Exit criteria: TASK-195–202 and TASK-204–205 pass their source, PostgreSQL, browser and operational
-acceptance criteria; current CI executes rather than failing before startup; public
+acceptance criteria; all required current-HEAD CI gates pass; public
 health and deployed revision are independently verified; TASK-017 and TASK-193 remain
 separately truthful until physical-device and email-recovery evidence exists.
 

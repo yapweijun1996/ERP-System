@@ -1,5 +1,10 @@
 # ERP-System Codebase Review — 2026-09-06
 
+TASK-214 superseding execution note (2026-09-07): the baseline passes below are
+prior checkpoints. Latest evidence includes seeded PO invoicing, invoice date/KPI,
+i18n and contrast defects, a full-screen recovery assertion failure and an incomplete
+full Vitest attempt. See [TEST_COVERAGE.md](TEST_COVERAGE.md); TASK-216–223 track fixes.
+
 This review began from `main` at `2188f56` (`New`) and now records the completed
 TASK-195–197 and TASK-206–208 follow-up plus the source-level TASK-204 and TASK-205
 hardening in progress. Source and tests are the implementation truth; [STATUS.md](STATUS.md) is the current status summary; [SPEC.md](SPEC.md) and
@@ -30,8 +35,7 @@ matrices now pass locally. A fresh remote run for the current local HEAD remains
   and Demo showcase-pack verification. The current `test:e2e:setup-wizard` also passes
   desktop, iPhone-width and small-mobile layout checks. These checks do not prove live
   PostgreSQL provisioning, public deployment, or GitHub Actions execution.
-- The task registry currently reports **204 Done / 4 In Progress / 2 Todo / 3
-  Blocked / 213 Total**. The actionable boundary is concentrated in TASK-199–205 and
+- The task registry currently reports **206 Done / 4 In Progress / 10 Todo / 3 Blocked / 223 Total**. The actionable boundary is concentrated in TASK-199–205 and
   EPIC-067/TASK-209; the blocked items are external or operational, not silently
   treated as code failures.
 - TASK-204 source work is now in progress: migrations `0100`/`0101` add governed tax
@@ -146,10 +150,10 @@ matrices now pass locally. A fresh remote run for the current local HEAD remains
 - **TASK-200 — Done 2026-09-06: Canonical/API route parity closed.**
   - `staff-calendar` is now included in `API_SCREEN_ROUTES`; the static audit rejects
     future Canonical/API metadata gaps.
-  - Current `audit:screens` passes all 129 routes at desktop and mobile. API integration,
-    authenticated API browser, Staff Calendar Demo E2E, access-matrix and the full
-    129 × 5 × 2 i18n browser matrix pass separately from the Demo route audit. The
-    Staff Calendar API integration suite passes 6/6 tests.
+  - The pre-TASK-214 checkpoint recorded route/API/access-matrix and i18n passes,
+    including Staff Calendar API integration 6/6. TASK-214 subsequently found full-screen
+    recovery and targeted invoice-i18n failures; see TEST_COVERAGE.md. Calendar browser
+    creation is stubbed and is not persisted-create proof.
 
 - **TASK-202 — Receipt Pack repository implementation is complete; release evidence remains.**
   - **Source action completed 2026-09-07:** unique-key insert races converge to
@@ -224,7 +228,7 @@ matrices now pass locally. A fresh remote run for the current local HEAD remains
   including localized Unicode font embedding, governance/tombstone behavior and
   actor-scoped history; root/Web typecheck, lint, `build:demo`, `demo`, schema/RLS drift
   checks and the authenticated Company Receipts browser E2E pass.
-- The current full Vitest baseline completed with **172 passed files / 2 skipped files** and
+- The earlier pre-TASK-214 Vitest checkpoint completed with **172 passed files / 2 skipped files** and
   **699 passed tests / 2 skipped tests**. The current additions cover tax classification,
   the exclusive Expense policy boundary and bounded document-processing dead-letter/requeue
   behavior. CI, current public health, exact deployed revision, production tax-owner

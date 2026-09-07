@@ -1,5 +1,11 @@
 # Architecture
 
+Reviewed 2026-09-07: runtime architecture is unchanged by TASK-215.
+[TEST_COVERAGE.md](TEST_COVERAGE.md) separates shared-command implementation from
+Demo/API/PostgreSQL and deployed evidence. A Canonical route or API metadata entry
+is not a complete workflow guarantee. The current production/scale goals and safe
+client-update boundary are in [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md).
+
 Authorization terminology and the current-to-target migration are specified separately
 in [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md). In diagrams,
 `master` means customer tenant/group and `company` means legal entity; they are not

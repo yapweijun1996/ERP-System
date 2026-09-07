@@ -1,5 +1,10 @@
 # Release Checklist
 
+Latest release boundary (2026-09-07): see [TEST_COVERAGE.md](TEST_COVERAGE.md).
+Checked entries below retain named historical/local evidence only; rerun required
+gates for the selected release revision. TASK-214 found open runtime failures, so
+this checklist does not authorize or certify a production release.
+
 Two independent release paths from one repo — run the shared gate first, then the
 section for the path you are releasing. Deployment mechanics live in
 [DEPLOYMENT.md](DEPLOYMENT.md); this file is the go/no-go checklist.
@@ -14,9 +19,8 @@ For the current source-backed action backlog and evidence boundaries, see
       green. Never treat a zero-step infrastructure failure as validation.
 - [x] `npm run typecheck && npm run typecheck:web` — root and Web typechecks pass after
       aligning the Demo purchase-requisition adapter with the actor-input command shape.
-- [x] `npm test` — current local Vitest run passes 173 files / 705 tests with two
-      intentional file/test skips. This is local evidence; PostgreSQL runtime, CI and
-      production deployment remain separate gates.
+- [ ] `npm test` — latest TASK-214 attempt stopped without a result. The earlier
+      173-file/705-test pass with two skips is historical; rerun the full suite.
 - [x] `npm run demo` — PGlite transaction proof passed on 2026-08-10. A dedicated,
       disposable PostgreSQL 16 database also passed `POSTGRES_URL=... npm run demo`,
       including cross-engine parity and the true-concurrency race. The preflight
@@ -33,15 +37,12 @@ For the current source-backed action backlog and evidence boundaries, see
       failure.
 - [x] `npm run smoke` — desktop and mobile pass on 2026-09-07. The navigation assertion
       checks visible semantic badges; hidden zero-count badges remain in the DOM.
-- [x] `npm run audit:screens` — 2026-09-06 current HEAD passed all 129 Canonical routes
-      at desktop and 375px with no console/page errors, overflow, active-tab or declared-
-      layout failures. Payment Voucher retry is bounded to the full-matrix cold-start
-      allowance.
+- [ ] `npm run audit:screens` — TASK-214 rendered 129 routes but failed voucher Retry.
+      Focused desktop three-route rerun passed; full recovery gate remains TASK-223.
 - [x] `npm run audit:pwa-update` — PWA update lifecycle audit passes; physical-device
       acceptance remains TASK-017 and is not satisfied by emulated 375 px.
-- [x] `npm run audit:i18n` — 2026-09-07 exact CI-equivalent desktop and mobile runs
-      each passed 129 × 5 languages with no blocking findings; static resources are
-      1,726 keys / 72 packs.
+- [ ] `npm run audit:i18n` — TASK-214 targeted matrix failed Outstanding and Due date;
+      TASK-219 repair and fresh full release matrix are required.
 - [x] `npm run test:e2e:platform-workspace-layout` — 2026-09-07 passed isolated PGlite
       desktop/tablet/mobile Platform workspace, separate Admin/Employee modes, focus and
       overflow checks plus the focused five-language Platform workspace matrix.
@@ -57,8 +58,7 @@ For the current source-backed action backlog and evidence boundaries, see
 - [x] Local worker telemetry source gate — `src/worker/telemetry.ts` tests pass 3/3 and
       the primary/calendar entry points emit aggregate-only queue snapshots. Production
       metrics sink, alert thresholds, ownership and recovery exercise remain TASK-201.
-- [x] `tasks/tasks.jsonl` statuses current: 204 Done / 4 In progress / 2 Todo / 3
-      Blocked / 213 Total. Blockers are TASK-017, TASK-193 and TASK-209;
+- [x] `tasks/tasks.jsonl` statuses current: 206 Done / 4 In Progress / 10 Todo / 3 Blocked / 223 Total. Blockers are TASK-017, TASK-193 and TASK-209;
       TASK-203 remains In Progress until a fresh current-HEAD remote CI result, TASK-204 remains In progress until tax-owner production review and TASK-205 remains
       In progress until production Vision configuration and live dead-letter alert/recovery
       evidence is recorded.
@@ -75,10 +75,11 @@ For the current source-backed action backlog and evidence boundaries, see
 
 ## 1. Demo path (static bundle → public showcase)
 
-Current reality: this public repo publishes the static Demo through `deploy-pages.yml`
+Source configuration: `deploy-pages.yml` is configured to publish the static Demo
 at `https://yapweijun1996.github.io/ERP-System/`. The workflow contains only the
 PGlite/IndexedDB Demo bundle; production remains the separate Docker/API/PostgreSQL
-track.
+track. Remote Actions enablement, repository visibility and the current hosted revision
+were not checked in TASK-215.
 
 - [ ] `web/public/sw.js` `CACHE_VERSION` bumped **if** any precached asset was
       added/removed/renamed this release (stale-SW symptom: reused tabs serve old JS)

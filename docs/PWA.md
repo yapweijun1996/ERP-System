@@ -1,5 +1,10 @@
 # PWA Standard
 
+Current acceptance (2026-09-07): TASK-214 passed the v263 update lifecycle audit.
+Automatic discovery and explicit acceptance are implemented; multiple tabs, unsaved
+drafts, in-flight requests, interrupted upgrades and real-phone acceptance are not
+proven by that single lifecycle test. See [TEST_COVERAGE.md](TEST_COVERAGE.md).
+
 This project treats the GitHub Pages demo as an installable PWA shell. Production Docker
 deploys can use the same shell, but production data still flows through the API.
 

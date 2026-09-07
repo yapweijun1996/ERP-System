@@ -1,5 +1,8 @@
 # Task Index
 
+[TEST_COVERAGE.md](TEST_COVERAGE.md) is the module evidence map. TASK-216–223 are
+open F01–F08 repairs; TASK-215 is documentation reconciliation, not runtime completion.
+
 Reviewed: **2026-09-07**
 
 The machine-readable task source of truth is
@@ -8,21 +11,26 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **204**
+- Done: **206**
 - In progress: **4**
-- Todo: **2**
+- Todo: **10**
 - Blocked: **3**
-- Total: **213**
+- Total: **223**
 
 ## Current release-quality note
+
+TASK-214 completed the [ERP specialist audit](ERP_SPECIALIST_REVIEW_2026-09-07.md)
+and [product quality baseline](ERP_QUALITY_BASELINE.md). It records fresh failures
+and evidence limits; prior passing suite/audit statements below are historical and
+do not supersede the new findings. Runtime fixes remain open follow-up scope.
 
 TASK-194 audited historical HEAD `00e2533`. The current EPIC-067 worktree is 104 migrations
 through 0103, schema v103/255 tables, 129 Canonical / 0 Preview routes, 129 routes declaring
 API mode, 1,726 English i18n keys/72 local packs, 315 permission codes and PWA v263. HEAD
 collects 170 files / 666
-tests at the prior audit. The final EPIC-067 worktree instead passes the full local
-Vitest run at 173 files / 705 tests with two intentional skips. Current source
-also passes typechecks, lint, API/Demo builds, generated schema/drift/permission checks,
+tests at the prior audit. The pre-TASK-214 EPIC-067 checkpoint passed the full local
+Vitest run at 173 files / 705 tests with two intentional skips. That earlier checkpoint
+also passed typechecks, lint, API/Demo builds, generated schema/drift/permission checks,
 2 focused Platform files / 15 tests, 2 disposable PostgreSQL files / 2 tests, Staff Calendar API integration 6/6, Staff Calendar
 Demo E2E, Platform layout E2E with both tenant modes, Demo autofill E2E, the
 59-route/13-role access matrix, 129-screen desktop/mobile audit and 129-route ×
@@ -145,7 +153,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-208 | Done | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation, exact Employee integration and five-language browser proof |
 | TASK-209 | Blocked | PostgreSQL/RLS, current CI, release, documentation and KB proof; blocked by current-HEAD CI and deployed/production evidence |
 
-The registry therefore has **204 Done / 4 In progress / 2 Todo / 3 Blocked / 213 Total**.
+The registry therefore has **206 Done / 4 In Progress / 10 Todo / 3 Blocked / 223 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery) and TASK-209
 (release proof waiting for current-HEAD CI and deployed-production evidence). TASK-203
 is In Progress because the latest remote workflow executed but exposed a source i18n

@@ -1,6 +1,6 @@
 # Frontend Maintenance Plan
 
-> **Status (2026-08-12):** the original frontend build-out plan is complete and this
+> **Status (2026-09-07):** the original frontend build-out plan is complete and this
 > file now describes the maintained architecture and next quality boundary. Current
 > truth lives in [DESIGN.md](DESIGN.md), [STATUS.md](STATUS.md) and
 > [ERP_EXCELLENCE_REVIEW.md](ERP_EXCELLENCE_REVIEW.md).
@@ -43,17 +43,18 @@ covers all 129, including `staff-calendar`. The current HEAD screen audit covers
 route at desktop and 375px; the five-language and authenticated API evidence are recorded
 as separate gates rather than inferred from the route registry.
 
-The current full Vitest run passes 173 files/705 tests with two intentional file/test
-skips. Historical checkpoints remain dated in STATUS.
+The pre-TASK-214 full Vitest checkpoint passed 173 files/705 tests with two skips;
+the latest attempt has no result. TASK-214 route rendering succeeded but the full
+recovery gate and targeted invoice i18n failed. See [TEST_COVERAGE.md](TEST_COVERAGE.md).
 
 ## 4. Next frontend priorities
 
-1. **Close security-visible UI gaps.** Hide Company Receipt create actions from
-   read-only users, recheck Receipt Pack visibility after permission changes and keep
-   originals export purpose-bound and audited.
-2. **Finish the Company Receipt operator journey.** Add real detail/reopen,
-   metadata/date correction and void actions; make the evidence picker eligible-only,
-   searchable and paginated; decide how non-Employee finance users capture evidence.
+1. **Close latest verified defects.** TASK-216–223 cover seed/date/KPI correctness,
+   translation, palette contrast, procurement actions, mobile accessibility and recovery.
+2. **Preserve completed Receipt controls.** TASK-196/197 implemented permission-aware
+   Pack reads and Company Receipt detail/edit/void/date correction plus eligible evidence
+   selection. Upstream capture remains My Receipts; TASK-202 production artifact UAT
+   is still open. Do not present these completed source fixes as missing implementation.
 3. **Maintain route parity.** All 129 Canonical routes now declare API support,
    including `staff-calendar`; `audit:screens` fails closed on future metadata gaps.
    Keep the Demo screen audit, Staff Calendar API/Demo proofs and authenticated API
