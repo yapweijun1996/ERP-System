@@ -98,10 +98,12 @@ npm run verify:release -- <public-origin> --expected-revision <commit>
 ```
 
 It checks the root, `/health`, `/api/setup/status` and `/release.json` from the same
-origin, validates the manifest inventory and health/manifest revision equality, rejects
-redirects that end at an unreviewed origin or path, and emits machine-readable JSON with
-exit status `0` or `1`. `scripts/verify-release.test.ts` exercises the command against a
-local HTTP fixture, including revision mismatch and redirect-path failures. A local
+origin, fetches every manifest-listed asset as bounded binary evidence, validates each
+byte count and SHA-256 hash plus health/manifest revision equality, rejects redirects
+that end at an unreviewed origin or path, and emits machine-readable JSON with exit
+status `0` or `1`. `scripts/verify-release.test.ts` exercises the command against a
+local HTTP fixture, including asset byte/hash mismatch, revision mismatch and
+redirect-path failures. A local
 fixture pass remains source/tooling evidence; it does not replace the selected public
 origin's two independent read-only probes, deployed revision, monitoring or rollback
 evidence. A local build or a stale cached asset is not deployment evidence.

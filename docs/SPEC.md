@@ -303,7 +303,7 @@ Demo-pack, permission, static i18n and Demo build gates pass; 7 focused files / 
 pass. HEAD collected 170 files / 666 tests but the full collection was not executed in
 that review. Earlier 168-file/663-test, browser-matrix, PostgreSQL and deployment results
 remain dated checkpoints. Source inventory is schema v103/104 migrations/255 tables.
-The current 2026-09-08 local Vitest run passes 176 files / 722 tests with 2 skipped files
+The current 2026-09-08 local Vitest run passes 176 files / 724 tests with 2 skipped files
 and 2 skipped tests. TASK-214 failures and TASK-215 static schema/RLS verification are
 recorded in [TEST_COVERAGE.md](TEST_COVERAGE.md). Current public `/health` and setup probes
 remain a separate production evidence boundary; the historical zero-step GitHub Actions

@@ -28,8 +28,8 @@ TASK-218 repairs invoice aging/period presentation facts, TASK-219 repairs the s
 translation gaps, TASK-220 repairs the filled-action contrast gap and TASK-221 repairs the
 procurement receiving workflow; TASK-222 repairs the mobile/status usability gap and
 TASK-223 repairs the recovery audit timing boundary.
-The current full local Vitest run passes 176 files / 722 tests with 2 skipped files and 2
-skipped tests (178 files / 724 tests total). Production and current-HEAD remote CI remain
+The current full local Vitest run passes 176 files / 724 tests with 2 skipped files and 2
+skipped tests (178 files / 726 tests total). Production and current-HEAD remote CI remain
 separate evidence gates.
 
 TASK-216 follow-up is now complete on the local source: compact seed PO-APP-2026-0001
@@ -145,7 +145,7 @@ adds a current-path PostgreSQL/FORCE-RLS proof; TASK-206 and TASK-207 are done, 
 executable CI and the remaining Platform release chain remain TASK-203 and
 TASK-209 work. The pre-TASK-214 local full Vitest checkpoint passed 173 files /
 705 tests with two intentional file/test skips; the current full local Vitest run now passes
-176 files / 722 tests with 2 skipped files and 2 skipped tests. TASK-204 source-level tax interval,
+176 files / 724 tests with 2 skipped files and 2 skipped tests. TASK-204 source-level tax interval,
 classification and posting hardening is now in progress; targeted tax/purchasing/Expense
 tests pass, while production tax-owner review remains open. TASK-205 source hardening is
 also in progress: gateway status/malformed/timeout, paused-connector, retry-lease and
@@ -605,7 +605,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Project Finance Depth: Bank Receipt, Payment Voucher & project-scoped AP | ✅ Canonical Demo/API data and writes | Closes Project's third and final deferred sub-phase — every originally-scoped Phase 7 module is now real. `bank_receipt` (settles a posted progress claim's AR in full, Dr `1000` Cash / Cr `1100` AR) and `payment_voucher`+`payment_voucher_line` (settles one or more of a supplier's unpaid invoices, Dr `2100` AP / Cr `1000` Cash, and is the first code in this repo to ever flip a `supplier_invoice` to `paid`) added to `src/data/schema/finance.ts` — the first new Treasury documents here, in a new `src/modules/finance/` module (GL had been read-only until now, hence a new `finance.write` permission). `purchase_order`/`supplier_invoice` gained a nullable `project_id`: settable from the `new-purchase-order` wizard, auto-propagated onto the resulting invoice with no new user input. Seeded a new `1000` Cash & Bank chart-of-accounts row, which also fixed a long-dead `screens-fin2.js` GL tile that already summed codes `1000`+`1010` against accounts that never existed. `payment-voucher`/`new-payment-voucher` replaced 100%-fabricated screens (the old wizard's "open invoices" list was a hash of the supplier code, and "Post payment" never touched the adapter) with a real per-voucher detail and a real 2-step wizard reading genuine unpaid invoices; `project-detail` gained a real "Record receipt" action and a real "Project costs" panel. Verified live with a mathematically balanced result: one Payment Voucher (S$1,220.80 across two real unpaid invoices) and one Bank Receipt (S$54,500) left the General Ledger's Cash & Bank account at exactly S$53,279, with AP and AR each moving by the settled amounts — confirmed by resetting the demo database and re-deriving every balance from scratch. |
 | Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. Smoke now passes with visible-only semantic badge assertions; actionable counts remain in canonical module KPIs and approval queues. |
 | Full screen audit — TASK-214 / TASK-223 | ✅ Local audit passes | All 129 routes rendered desktop/mobile without console/page errors, identity leaks or layout failures. Payment Voucher Retry measured about 1333ms desktop / 949ms mobile against a bounded 10-second Promise-aware budget. Production and remote CI evidence remain separate; the full local Vitest result is recorded in the current verification baseline. |
-| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Current HEAD full suite passes | `npm test` passes 176 files / 722 tests with 2 skipped files and 2 skipped tests (178 files / 724 tests total). PostgreSQL target and production remain separate gates. |
+| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Current HEAD full suite passes | `npm test` passes 176 files / 724 tests with 2 skipped files and 2 skipped tests (178 files / 726 tests total). PostgreSQL target and production remain separate gates. |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemData.completeSetup()` → shared `completeDemoSetupWithin`, gated in `app.js` boot(). Production setup remains a separate empty-database/zero-user command and does not require a deployment setup token. |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemData.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -668,10 +668,11 @@ are not more module screens:
   restrictive same-directory temporary file, fsync/atomic rename and target-type checks;
   its local replacement, failure-preservation, symlink and permissions tests pass. This
   hardens release evidence generation. Commit
-  `7a06c47` adds `npm run verify:release`, a bounded read-only checker for the same-origin
-  root, health, setup-status and release manifest, including final-URL trust and exact
+  `7a06c47` adds `npm run verify:release`, and `df91653` adds bounded binary fetching and
+  per-asset byte/SHA-256 comparison. The checker covers same-origin root, health,
+  setup-status and release manifest, including final-URL trust and exact
   health/manifest/expected-revision matching; its local HTTP fixture and CLI contract
-  tests pass 4/4. This makes the live acceptance step repeatable but does not create
+  tests pass 6/6. This makes the live acceptance step repeatable but does not create
   deployed evidence. A read-only run against local HEAD `0d51d23` returned
   `health_http_404` from Pages and `root_http_502` from the production origin, both with
   exit 1 and empty stderr; this confirms the known public availability boundary without

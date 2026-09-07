@@ -19,8 +19,8 @@ For the current source-backed action backlog and evidence boundaries, see
       green. Never treat a zero-step infrastructure failure as validation.
 - [x] `npm run typecheck && npm run typecheck:web` — root and Web typechecks pass after
       aligning the Demo purchase-requisition adapter with the actor-input command shape.
-- [x] `npm test` — current 2026-09-08 HEAD run passes 176 files / 722 tests with 2 skipped
-      files and 2 skipped tests (178 files / 724 tests total). Production and current-HEAD
+- [x] `npm test` — current 2026-09-08 HEAD run passes 176 files / 724 tests with 2 skipped
+      files and 2 skipped tests (178 files / 726 tests total). Production and current-HEAD
       remote CI remain separate release gates.
 - [x] `npx vitest run scripts/verify-release.test.ts` — local HTTP-fixture release
       verifier passes root/health/setup/manifest, revision-mismatch, redirect-path and
