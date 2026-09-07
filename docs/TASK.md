@@ -139,7 +139,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-198 | Done | Approved the narrow dual-mode exception: reason/ticket for elevated Admin access, exact-user simulation without reason/ticket, and explicit no-MFA/no-step-up risk acceptance |
 | TASK-199 | Todo | Restore public availability and prove exact deployed revision |
 | TASK-200 | Done | Resolve 129/129 route parity and rerun current HEAD release evidence |
-| TASK-201 | Todo | Production SLO, scale and RPO/RTO proof; make worker telemetry bounded/non-blocking and claim-accurate before production alerting |
+| TASK-201 | Todo | Production SLO, scale and RPO/RTO proof; source telemetry is now single-flight/non-blocking and claim-aligned, while measured query-budget/plan and operational evidence remain |
 | TASK-202 | In progress | Receipt Pack repository lifecycle/timezone and disposable PostgreSQL concurrency proof are complete; production release evidence remains |
 | TASK-203 | In progress | Remote CI now executes; fix the i18n failure and rerun the current pushed HEAD |
 | TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |
@@ -203,7 +203,7 @@ audit measured approximately 1333ms/949ms recovery and passed with zero console/
 identity leaks or layout failures. The PO approval smoke also waits for its refresh Promise
 and checks the current TASK-221 authorized Receive goods action. No production deployment or
 remote CI result is claimed; the current full local Vitest run separately passes 174 files /
-710 tests with 2 skipped files and 2 skipped tests.
+713 tests with 2 skipped files and 2 skipped tests.
 
 TASK-213 closes the source-level RLS table-list omission for `sales_enquiry_line` and
 adds a deterministic generated-schema coverage gate. TASK-195 now establishes the

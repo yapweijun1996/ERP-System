@@ -328,11 +328,13 @@ every 60 seconds by default. `src/worker/telemetry.ts` reports pending/ready/in-
 retrying/failed/dead-letter counts and oldest pending age for the outbox, document,
 reporting, tax-evidence and calendar queues under their existing worker RLS flags. It
 does not include tenant identifiers, payloads, credentials, lock owners or raw errors.
-This telemetry is not yet an authoritative queue-state contract: the workers await it
-before processing, the aggregates are whole-table reads, and generic `ready` omits parts
-of real claim eligibility such as an expired/free lease and reminder time. TASK-201 owns
-bounded/non-blocking collection, claim-predicate parity, scale plans, the operational
-sink, thresholds and recovery ownership. No queue business rule changes in TASK-215.
+`createWorkerTelemetryEmitter` dispatches the snapshot single-flight without delaying the
+business tick. Queue-specific `ready` and active `inFlight` counts now mirror the worker
+claim boundaries for leases, report attempts, enabled calendar connections and reminder
+due time; focused tests cover the outbox lease and calendar-connection cases. The
+aggregate queries are still whole-table reads, so representative query budgets/plans,
+the operational sink, thresholds, production SLOs and recovery ownership remain
+TASK-201 evidence. No queue business rule changes in TASK-215.
 
 Sources: `src/worker/outbox.ts`, `src/worker/telemetry.ts`, `src/worker.ts`, and
 `src/modules/integration/eventLog.ts`.

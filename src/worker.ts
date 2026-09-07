@@ -20,7 +20,7 @@ import {
   createHttpLocalOcrExtractor,
   createHttpMalwareScanner,
 } from './modules/documents/processingDrivers';
-import { logWorkerQueueTelemetry } from './worker/telemetry';
+import { createWorkerTelemetryEmitter } from './worker/telemetry';
 
 const databaseUrl = process.env.DATABASE_URL;
 const encryptionKey = process.env.ERP_TOKEN_ENCRYPTION_KEY;
@@ -54,22 +54,16 @@ const telemetryPollMs = Math.max(
   Number(process.env.WORKER_TELEMETRY_POLL_MS) || 60_000,
 );
 let lastMaintenanceAt = 0;
-let lastTelemetryAt = 0;
-
-async function emitTelemetryIfDue(): Promise<void> {
-  const now = Date.now();
-  if (now - lastTelemetryAt < telemetryPollMs) return;
-  lastTelemetryAt = now;
-  try {
-    await logWorkerQueueTelemetry(db, workerId, { scope: 'primary' });
-  } catch (error) {
+const emitTelemetryIfDue = createWorkerTelemetryEmitter(db, workerId, 'primary', {
+  intervalMs: telemetryPollMs,
+  onError(error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[erp-worker] telemetry failed: ${message}`);
-  }
-}
+  },
+});
 
 async function tick(): Promise<void> {
-  await emitTelemetryIfDue();
+  emitTelemetryIfDue();
   if (transport && tokenEncryptionKey) {
     const result = await processOutboxBatch(db, transport, {
       tokenEncryptionKey,

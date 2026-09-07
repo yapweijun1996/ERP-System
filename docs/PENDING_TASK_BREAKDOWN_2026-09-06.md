@@ -152,7 +152,10 @@ outbox, reporting, tax-evidence, document scan/extraction and calendar/reminder 
 The query uses the existing reporting/document/calendar worker RLS flags, returns no
 tenant identifiers, payloads, credentials, worker locks or raw errors, and is emitted
 as `erp.worker.telemetry` JSON every 60 seconds by both worker entry points (configurable
-with `WORKER_TELEMETRY_POLL_MS`, minimum 10 seconds). Local telemetry tests pass 3/3;
+with `WORKER_TELEMETRY_POLL_MS`, minimum 10 seconds). The 2026-09-08 source slice now
+dispatches telemetry single-flight without delaying the business tick and aligns ready/
+active-lease counts with the outbox, report, document, calendar-connection and reminder
+claim predicates. Focused telemetry tests pass 6/6;
 production dashboards, alert thresholds, ownership, backup/restore, load budgets and
 failure-recovery exercise remain TASK-201 production evidence.
 
