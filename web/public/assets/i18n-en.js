@@ -859,6 +859,7 @@ window.__ERP_I18N_EN__=Object.freeze({
   "legacy.b7e8acdd522e6190": "Orders",
   "legacy.b9138f0942bf2eaa": "Live quantities, availability, reorder points and inventory value by item.",
   "legacy.b99e648ddc11a49a": "Posted this period",
+  "legacy.b9b011839fa6b056": "Full receipt posting & inventory",
   "legacy.b9d6ce25f9a014a2": "Office Workstations (x12)",
   "legacy.ba3033214fe41dad": "Visual",
   "legacy.bbf45efe4f37dcd6": "Discounts",
