@@ -28,7 +28,7 @@ This is the actionable view of every non-Done task currently registered in
 tests are implementation evidence, while deployment, CI, production configuration and
 physical-device checks remain separate evidence classes.
 
-Current registry: **214 Done / 4 In Progress / 2 Todo / 3 Blocked / 223 Total**.
+Current registry: **214 Done / 5 In Progress / 1 Todo / 3 Blocked / 223 Total**.
 
 2026-09-07 TASK-216 completion: the compact seed and generated showcase pack v16 now
 write governed GST/SST classification and recoverability snapshots. A deterministic

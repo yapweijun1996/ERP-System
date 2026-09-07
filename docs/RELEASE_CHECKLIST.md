@@ -19,8 +19,8 @@ For the current source-backed action backlog and evidence boundaries, see
       green. Never treat a zero-step infrastructure failure as validation.
 - [x] `npm run typecheck && npm run typecheck:web` — root and Web typechecks pass after
       aligning the Demo purchase-requisition adapter with the actor-input command shape.
-- [x] `npm test` — current 2026-09-08 HEAD run passes 174 files / 714 tests with 2 skipped
-      files and 2 skipped tests (176 files / 716 tests total). Production and current-HEAD
+- [x] `npm test` — current 2026-09-08 HEAD run passes 175 files / 718 tests with 2 skipped
+      files and 2 skipped tests (177 files / 720 tests total). Production and current-HEAD
       remote CI remain separate release gates.
 - [x] `npm run demo` — PGlite transaction proof passed on 2026-08-10. A dedicated,
       disposable PostgreSQL 16 database also passed `POSTGRES_URL=... npm run demo`,
@@ -72,7 +72,7 @@ For the current source-backed action backlog and evidence boundaries, see
       the primary/calendar entry points emit aggregate-only queue snapshots. This proves
       shape/redaction only: bounded non-blocking collection, claim-predicate parity,
       production metrics/alerts, ownership and recovery exercise remain TASK-201.
-- [x] `tasks/tasks.jsonl` statuses current: 214 Done / 4 In Progress / 2 Todo / 3 Blocked / 223 Total. Blockers are TASK-017, TASK-193 and TASK-209;
+- [x] `tasks/tasks.jsonl` statuses current: 214 Done / 5 In Progress / 1 Todo / 3 Blocked / 223 Total. Blockers are TASK-017, TASK-193 and TASK-209;
       TASK-203 remains In Progress until a fresh current-HEAD remote CI result, TASK-204 remains In progress until tax-owner production review and TASK-205 remains
       In progress until production Vision configuration and live dead-letter alert/recovery
       evidence is recorded.

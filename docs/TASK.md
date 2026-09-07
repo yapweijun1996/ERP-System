@@ -13,8 +13,8 @@ not a second task registry.
 ## Current totals
 
 - Done: **214**
-- In progress: **4**
-- Todo: **2**
+- In progress: **5**
+- Todo: **1**
 - Blocked: **3**
 - Total: **223**
 
@@ -23,7 +23,8 @@ not a second task registry.
 TASK-214 completed the [ERP specialist audit](ERP_SPECIALIST_REVIEW_2026-09-07.md)
 and [product quality baseline](ERP_QUALITY_BASELINE.md). It records fresh failures
 and evidence limits; prior passing suite/audit statements below are historical and
-do not supersede the new findings. TASK-216–223 now close F01–F08 locally; production,
+do not supersede the new findings. TASK-216–223 now close F01–F08 locally; TASK-199
+now also hardens release-manifest publication locally; production,
 CI, device and external-service gates remain separate.
 
 TASK-194 audited historical HEAD `00e2533`. The current EPIC-067 worktree is 104 migrations
@@ -137,7 +138,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-196 | Done | Receipt Pack visibility downgrade repair and export governance |
 | TASK-197 | Done | Capability-aware Company Receipts detail/correction/void and employee-independent eligible-evidence picker; governed My Receipts upload remains the explicit upstream capture boundary |
 | TASK-198 | Done | Approved the narrow dual-mode exception: reason/ticket for elevated Admin access, exact-user simulation without reason/ticket, and explicit no-MFA/no-step-up risk acceptance |
-| TASK-199 | Todo | Restore public availability and prove exact deployed revision |
+| TASK-199 | In progress | Restore public availability and prove exact deployed revision; local release-manifest publication is now atomic and target-safe, while live origin/revision proof remains |
 | TASK-200 | Done | Resolve 129/129 route parity and rerun current HEAD release evidence |
 | TASK-201 | Todo | Production SLO, scale and RPO/RTO proof; source telemetry is now single-flight/non-blocking and claim-aligned, while measured query-budget/plan and operational evidence remain |
 | TASK-202 | In progress | Receipt Pack repository lifecycle/timezone and disposable PostgreSQL concurrency proof are complete; production release evidence remains |
@@ -155,7 +156,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-208 | Done | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation, exact Employee integration and five-language browser proof |
 | TASK-209 | Blocked | PostgreSQL/RLS, current CI, release, documentation and KB proof; blocked by current-HEAD CI and deployed/production evidence |
 
-The registry therefore has **214 Done / 4 In Progress / 2 Todo / 3 Blocked / 223 Total**.
+The registry therefore has **214 Done / 5 In Progress / 1 Todo / 3 Blocked / 223 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery) and TASK-209
 (release proof waiting for current-HEAD CI and deployed-production evidence). TASK-203
 is In Progress because the latest remote workflow executed but exposed a source i18n
@@ -202,8 +203,8 @@ failures under a bounded 10-second budget. The full built-Demo 129-route desktop
 audit measured approximately 1333ms/949ms recovery and passed with zero console/page errors,
 identity leaks or layout failures. The PO approval smoke also waits for its refresh Promise
 and checks the current TASK-221 authorized Receive goods action. No production deployment or
-remote CI result is claimed; the current full local Vitest run separately passes 174 files /
-714 tests with 2 skipped files and 2 skipped tests.
+remote CI result is claimed; the current full local Vitest run separately passes 175 files /
+718 tests with 2 skipped files and 2 skipped tests.
 
 TASK-213 closes the source-level RLS table-list omission for `sales_enquiry_line` and
 adds a deterministic generated-schema coverage gate. TASK-195 now establishes the

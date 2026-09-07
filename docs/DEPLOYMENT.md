@@ -54,7 +54,7 @@ local HEAD. Pages `/health` and `/api/setup/status` remain HTTP 404 HTML fallbac
 expected for a static Demo origin, and do not prove API health. TASK-199 owns
 availability/revision proof; TASK-203 owns current-HEAD CI proof. A separate read-only probe
 on the production Cloudflare origin `https://gmb01.xyz/erp` and `/erp/health` still returns
-HTTP 502 text/plain; Cloudflare DNS resolves the proxy anycast addresses but exposes no
+HTTP 502 HTML responses; Cloudflare DNS resolves the proxy anycast addresses but exposes no
 origin health payload. No tenant write, reset, reseed or deployment was attempted. TASK-199
 remains open for authorized origin repair and current-revision proof. A source-only merged
 Compose configuration check passes on 2026-09-08; `web/nginx.conf` routes `/health` to the
@@ -77,7 +77,10 @@ The application now emits two non-secret release identity surfaces:
 - Static `web/dist/release.json` records the revision, optional workflow/run identity,
   data mode and SHA-256/byte size for every emitted file except the manifest itself.
   The Pages workflow writes it from `github.sha`; the Docker web image receives the
-  same revision through its build argument.
+  same revision through its build argument. The writer stages the manifest in a
+  same-directory `0600` temporary file, flushes it and atomically renames it after
+  rejecting symbolic-link or non-file targets, so an interrupted write cannot publish
+  a partial identity artifact.
 
 These surfaces make a deployed revision auditable but do not prove availability by
 themselves. After release, fetch `/health` and `/release.json` from the same public
