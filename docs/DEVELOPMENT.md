@@ -33,16 +33,17 @@ npm install
 | `npm run demo` | **Dual-adapter proof** — same repo code on PGlite (and PostgreSQL if `POSTGRES_URL` set) |
 | `npm run check:drift` | **Schema drift check** — compares every ordered Drizzle migration with the generated `web/public/db/erp-system-schema.sql`; fails with a readable diff on any mismatch. Demo SQL is generated, not copied by hand. Runs in CI on every PR. |
 | `npm run smoke` | **Browser smoke test** — requires `npm run build:demo` first. Launches headless Chromium (Playwright) at desktop (1280×800) and mobile (375×812), bypasses the first-run wizard/login, asserts the dashboard renders with zero console/page errors, and executes the core Demo ESM transaction proof. That proof also opens the freshly-created goods receipt and supplier invoice and asserts their stock/GL traces. Runs in CI on every PR. |
-| `npm run audit:screens` | **Screen audit** — requires `npm run build:demo` first. Boots desktop/mobile, reads live `SCREENS`/`SCREEN_META`, applies detail fixtures and drives every registered route (129 at HEAD). It fails on console/page errors, maturity/contract errors, overflow and hidden active navigation. |
-| `npm test` | **Vitest unit/integration suite** — domain transactions, API/auth, migrations, PGlite parity and conditional PostgreSQL security coverage. Current HEAD passes 173 files/705 tests with two intentional file/test skips. Most isolated tests use fresh PGlite state; the PostgreSQL suite requires its explicit URL/environment and otherwise records one conditional skip. |
+| `npm run audit:screens` | **Screen audit** — requires `npm run build:demo` first. Boots desktop/mobile, reads live `SCREENS`/`SCREEN_META`, applies detail fixtures and drives every registered route (129 at HEAD). It fails on console/page errors, maturity/contract errors, overflow and hidden active navigation; TASK-223 also waits for and measures the payment-voucher Retry navigation Promise with a bounded 10-second budget. |
+| `npm test` | **Vitest unit/integration suite** — domain transactions, API/auth, migrations, PGlite parity and conditional PostgreSQL security coverage. Earlier local evidence is 173 files/705 tests with two intentional file/test skips; the latest 2026-09-08 attempt did not complete after bounded observation and is not claimed as a current pass. Most isolated tests use fresh PGlite state; the PostgreSQL suite requires its explicit URL/environment and otherwise records one conditional skip. |
 | `npm run lint` | ESLint over the current root/Web source set |
 
 Current source note (2026-09-08): 129 Canonical / 0 Preview routes exist and all 129
 declare API mode, including `staff-calendar`. The current HEAD `audit:screens` passes
 all 129 routes at desktop and 375px; the full 129 × 5 × 2 i18n browser matrix, API Staff
 Calendar integration (6/6), Staff Calendar Demo E2E, authenticated API browser proof and
-access matrix pass as separate gates. Full local Vitest passes 173 files / 705 tests with
-two intentional file/test skips.
+access matrix pass as separate gates. The latest full local Vitest attempt did not complete;
+the earlier 173-file / 705-test result with two intentional file/test skips remains
+historical evidence.
 
 ### Browser smoke test
 

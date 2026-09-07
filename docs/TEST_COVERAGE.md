@@ -27,7 +27,7 @@ and colocated test entry points.
 | [crm](../src/modules/crm/) | 6 | PGlite proof passes conversion to order/stock/GL plus duplicate and insufficient-stock rejection; no fresh complete browser lead-to-cash cycle. |
 | [documents](../src/modules/documents/) | 5 | Route rendering only; external scanning/OCR/storage/provider and recovery evidence remains TASK-205. |
 | [expenses](../src/modules/expenses/) | 12 | Receipt/claim routes rendered; no fresh complete claim approval/reimbursement or Pack export business E2E; TASK-202 production evidence open. |
-| [finance](../src/modules/finance/) | 6 | Sales/purchasing/payroll GL assertions pass in PGlite proof; TASK-218 repairs invoice aging/period presentation KPIs with focused/browser evidence; voucher recovery has unresolved timing (F08). No full AR/AP closing cycle. |
+| [finance](../src/modules/finance/) | 6 | Sales/purchasing/payroll GL assertions pass in PGlite proof; TASK-218 repairs invoice aging/period presentation KPIs with focused/browser evidence; TASK-223 synchronizes and measures payment-voucher recovery in the full route audit. No full AR/AP closing cycle. |
 | [hr](../src/modules/hr/) | 14 | My Leave and Staff Calendar included in targeted i18n matrix; full onboarding/leave/balance/calendar mutation cycles not rerun. Existing Calendar browser fixture stubs reads AND appointment creation, so it is not persisted-create proof. |
 | [integration](../src/modules/integration/) | 3 | Route rendering only; real SMTP/calendar/provider delivery and recovery not proven. |
 | [inventory](../src/modules/inventory/) | 5 | PGlite stock issue, transactional rollback and sales/purchase effects pass; no full lot/serial/pick-pack/warehouse cycle. |
@@ -48,7 +48,7 @@ and colocated test entry points.
 | Gate | TASK-214 result | Required follow-up |
 | --- | --- | --- |
 | Demo build / PGlite domain proof | Passed | TASK-216 fresh seed and simulated v15→v16 upgrade complete the seeded PO approval → receipt → invoice chain with one balanced supplier invoice; TASK-217 date-only boundary tests and TASK-218 mixed invoice-fact tests plus built-Demo KPI/filter route checks pass; shared rejection guards remain green |
-| Desktop/mobile route rendering | 129 routes rendered, no console/page errors; full audit failed voucher Retry | TASK-223; a focused three-route desktop pass does not close the full gate |
+| Desktop/mobile route rendering | 129 routes rendered, no console/page errors; full audit passes recovery and layout checks | Production, remote CI and full Vitest evidence remain separate |
 | i18n | Current built-Demo PGlite audit passes 129 routes × five languages × two viewports with zero blocking findings; 1,728 canonical English keys and 72 local packs | Current local release evidence; current-HEAD remote CI rerun remains separate |
 | Theme/mobile | Focused filled-action contrast E2E and TASK-222 mobile usability E2E pass; five locales, desktop/mobile touch targets, zoom metadata, modal focus and 188px reflow are covered | Physical-device acceptance TASK-017 and exhaustive palette/device certification remain separate |
 | PWA update lifecycle | Passed explicit deferral/acceptance/reload flow | Physical devices, multiple tabs, unsaved drafts, in-flight requests and interrupted upgrades remain unverified |
@@ -78,16 +78,16 @@ capability gap, not a tested feature.
 F01–F08 map one-to-one to TASK-216–223 in [TASK.md](TASK.md) and the
 [task registry](../tasks/tasks.jsonl). TASK-218 depends on TASK-217's date contract;
 TASK-221 depended on restoring the seeded procurement journey in TASK-216 and is now
-complete. TASK-222 now closes the focused mobile/status finding; recovery investigation
-TASK-223 remains independent.
+complete. TASK-222 closes the focused mobile/status finding and TASK-223 closes the
+recovery audit timing finding with Promise-aware evidence.
 Existing production gates remain TASK-199/201/202/203/204/205/209, physical-device
 acceptance TASK-017, and SMTP-dependent recovery TASK-193. Documentation completion
 TASK-215 does not close any runtime finding or production gate.
 
 ## Documentation and KB reconciliation
 
-TASK-215 through TASK-222 are complete; TASK-223 remains Todo. Current registry:
-**213 Done / 4 In Progress / 3 Todo / 3 Blocked / 223 Total**. The project KB
+TASK-215 through TASK-223 are complete. Current registry:
+**214 Done / 4 In Progress / 2 Todo / 3 Blocked / 223 Total**. The project KB
 `erp-system-project-logic` (`ef47bf4b-83e1-42b2-a412-66912d04ea24`) now includes coverage
 item `8007eaf3-0ec3-4fa4-b4ca-1bdc3d8153b3`; the architecture inventory, EPIC-066 and
 specialist audit items plus KB description were updated and read back. TASK-216 changed
@@ -101,4 +101,8 @@ the existing full-receipt modal wiring, canonical register scope and its focused
 partial-receipt domain capability, production system, deployment or remote CI result is
 claimed. TASK-222 then changed only the mobile presentation boundary, viewport zoom metadata,
 localized PO status display, shared modal focus lifecycle and its focused browser E2E; the
-188px check is a repeatable reflow equivalent, not physical-device evidence.
+188px check is a repeatable reflow equivalent, not physical-device evidence. TASK-223
+changed only the screen-audit recovery synchronization/budget and its stale PO approval
+state expectation; focused case/posting audits and the full 129-route desktop/mobile audit
+pass with measured payment-voucher recovery. No production, remote CI or full Vitest pass
+is claimed.

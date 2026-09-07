@@ -8,8 +8,8 @@ upgraded Demo procurement rows, while sales due-date arithmetic uses a shared ca
 date helper and invoice aging/period KPIs derive from immutable facts without changing
 posting status. Shared posting rejection remains authoritative.
 [TEST_COVERAGE.md](TEST_COVERAGE.md) records every current module and evidence gaps;
-TASK-216–223 own the eight specialist findings; TASK-216 through TASK-222 are complete and
-TASK-223 remains Todo. Fresh schema/RLS checks prove
+TASK-216–223 own the eight specialist findings; TASK-216 through TASK-223 are complete
+locally. Fresh schema/RLS checks prove
 104 migrations, 255 tables, 225 generic policy tables and 10 explicit exemptions,
 not production isolation. Domain fixes must update this mirror and the KB together.
 
@@ -68,6 +68,13 @@ least 44px; row actions do not depend on hover. Shared modals focus their first 
 contain keyboard Tab focus and restore the opener on close. The built-Demo browser evidence
 covers five locales at 375px, desktop at 1280px and 188px half-width reflow; physical-device
 acceptance remains TASK-017.
+
+TASK-223 establishes the screen-audit recovery contract: payment-voucher Retry is considered
+recovered only after the actual route `navigate()` Promise completes with no visible posting
+error. The audit uses a bounded 10-second timeout, records the measured recovery milestone,
+and retains rejected-navigation, visible-error and timeout failures. The current full
+129-route desktop/mobile built-Demo audit measured approximately 1333ms/949ms and passed;
+this is local browser evidence, not production or remote CI evidence.
 
 ## 1. System boundary and execution contract
 

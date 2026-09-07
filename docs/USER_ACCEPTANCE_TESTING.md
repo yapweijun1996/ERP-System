@@ -28,7 +28,7 @@ TASK-219 closes F04 with five-language sales-invoice labels and a full local des
 i18n matrix; TASK-220 closes F05 with focused light/dark desktop/mobile filled-action
 contrast evidence; TASK-221 closes F06 with the focused desktop/mobile approval-to-receipt
 workflow; TASK-222 closes F07 with focused five-language touch/zoom/status/modal evidence;
-F08 remains open, and full
+TASK-223 closes F08 with Promise-aware recovery evidence and a full route audit, while full
 business E2E is incomplete. August health/reset and
 billing events are historical. Later CI executed but failed i18n; current green CI,
 target production evidence and TASK-017 physical-device acceptance remain open.

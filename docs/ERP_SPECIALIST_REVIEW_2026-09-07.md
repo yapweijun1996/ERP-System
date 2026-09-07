@@ -9,7 +9,7 @@ source/documentation, and official SG/MY market references. This review does not
 certify production readiness or fix runtime defects. Product direction is recorded
 in [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md).
 
-Follow-up status: TASK-216 through TASK-222 are now complete on the subsequent local worktree.
+Follow-up status: TASK-216 through TASK-223 are now complete on the subsequent local worktree.
 The compact
 seed and showcase pack v16 carry governed SG/MY tax snapshots, the untouched historical
 SG approval row has an idempotent upgrade repair, and fresh/upgraded shared-command
@@ -83,12 +83,12 @@ updates are automatically detected and explicitly accepted, not forced silently.
 | SO-3 insufficient stock | Pass rejection | UI reported product 2 had 94 versus required 120. `INV-SO-3` count remained 0 before/after; broader rollback proof is in `npm run demo`. |
 | PO-APP-2026-0001 → approve with reason → receive → invoice | Blocked at invoice | Approval saved the actor/reason; receipt changed PO to received. Invoice rejection and missing tax snapshot are detailed in F01. |
 | `npm run demo` | Pass | PGlite sales/stock/GL, duplicate/stock rollback, purchasing/returns/landed-cost, CRM, SG/MY payroll and re-post rejection. PostgreSQL parity/concurrency was not run. |
-| `npm run audit:screens` | Failed one recovery assertion | All 129 routes rendered at desktop and mobile with no console/page errors and shared shell/maturity checks passing. Desktop payment-voucher Retry did not recover within the harness budget. |
-| `AUDIT_VIEWPORT=desktop POSTING_DETAIL_ONLY=1 npm run audit:screens` | Pass | Focused 3-route desktop rerun including payment-voucher recovery. The script's generic final desktop/mobile wording must not be read as a mobile rerun. |
+| `npm run audit:screens` | Pass after TASK-223 | All 129 routes rendered at desktop and mobile with no console/page errors, identity leaks or layout failures. Payment-voucher Retry recovery measured about 1333ms desktop / 949ms mobile against a bounded 10-second Promise-aware budget. |
+| `CASE_DETAIL_ONLY=1 npm run audit:screens` and `POSTING_DETAIL_ONLY=1 npm run audit:screens` | Pass | Focused case/posting audits pass on desktop/mobile; PO approval now expects the authorized Receive goods action from TASK-221 and payment-voucher recovery is measured rather than polled by a fixed sleep. |
 | `npm run audit:pwa-update` | Pass | v263 audit-b deferred once; audit-c activated once. Does not cover real-device, dirty-form or multi-tab upgrade compatibility. |
 | Seven routes × five languages × desktop/mobile | Historical TASK-214 failure; TASK-219 follow-up passes | Original `Outstanding` and `Due date` finding on sales-invoices in ms/zh/ja/vi; no other reported matrix issues. See F04 and the TASK-219 follow-up above. |
 | Filled-action contrast E2E | Pass: 2 themes × 2 viewports × normal/hover/focus/disabled | Computed normal/hover contrast 5.567:1 / 6.947:1; zero browser errors and no mobile horizontal overflow. Focused palette evidence only. See F05 and the TASK-220 follow-up above. |
-| Manual 375px light/dark/Chinese and approval dialog | Mixed | Zero document overflow on sampled routes; readable structure and usable decision dialog. Touch/zoom/status usability and recovery remain open. |
+| Manual 375px light/dark/Chinese and approval dialog | Mixed | Zero document overflow on sampled routes; readable structure and usable decision dialog. Physical-device evidence remains TASK-017. |
 | Optional `npm test` full regression | Incomplete, stopped | No final result after about 10 minutes while another independent Vitest run was active. Stopped only this audit's process/workers to bound contention. No current full-suite pass or application failure is inferred. |
 
 Reproduce the bounded i18n matrix:
@@ -203,6 +203,15 @@ TASK-214 on completion. Historical passing tests in STATUS remain dated evidence
   measure actual recovery, synchronize with the documented domain milestone and
   agreed budget, and retain genuine timeout/error failures rather than hiding them.
 
+  **Follow-up 2026-09-08 — TASK-223 complete locally.** The audit now captures the
+  actual payment-voucher Retry `navigate()` Promise, records the recovery duration and
+  fails on rejected navigation, a visible posting error or a bounded 10-second timeout.
+  The full built-Demo 129-route audit measured approximately 1333ms desktop and 949ms
+  mobile recovery and passed with zero console/page errors, identity leaks or layout
+  failures. The PO approval state smoke was synchronized to its refresh Promise and its
+  current TASK-221 authorized Receive goods action. No production, remote CI or full
+  Vitest result is implied.
+
 ## Performance observations, not capacity certification
 
 - `web/dist/` is approximately 41 MiB. Build output includes ~10.09 MB PGlite WASM,
@@ -272,8 +281,8 @@ focus stability, which requires a settled-state check.
 ## Recommended order
 
 1. Repair F01–F03 with contract-level regressions and fresh Demo walkthroughs.
-2. F04–F07 now have local focused UI evidence; stabilize F08 and obtain the separate
-   physical-device evidence where required.
+2. F04–F08 now have local focused/full browser evidence; obtain the separate physical-
+   device evidence where required.
 3. Extend the AR/AP completion and Agent contracts according to approved business scope.
 4. Close current CI, production/security/tax-owner/restore/scale and client-upgrade
    gates before claiming production readiness. Keep evidence dated and reproducible.

@@ -44,6 +44,9 @@ const DIST_INDEX = path.join(WEB_DIR, 'dist', 'index.html');
 const PORT = process.env.AUDIT_PORT || '4311';
 const BASE_URL = `http://localhost:${PORT}`;
 const SETTLE_MS = 200;
+// Recovery checks wait for the route's real navigation milestone within the
+// bounded Demo cold-start allowance; a timeout remains a visible audit failure.
+const RECOVERY_TIMEOUT_MS = 10_000;
 const LIST_LAYOUT_ONLY = process.env.LIST_LAYOUT_ONLY === '1';
 const WORKSPACE_LAYOUT_ONLY = process.env.WORKSPACE_LAYOUT_ONLY === '1';
 const CALENDAR_WORKSPACE_ONLY = process.env.CALENDAR_WORKSPACE_ONLY === '1';
@@ -4010,8 +4013,9 @@ async function auditRoutes(browser, viewport) {
   }
 
   if (routes.includes('po-approval')) {
-    const poApprovalIssues = await page.evaluate(async () => {
+    const poApprovalIssues = await page.evaluate(async (recoveryTimeoutMs) => {
       const originalGetLang = window.getLang;
+      const originalNavigate = window.navigate;
       const originalPrepare = window.prepareCanonicalPurchasingData;
       const adapter = window.ErpSystemData;
       const originalAction = adapter.action;
@@ -4090,8 +4094,34 @@ async function auditRoutes(browser, viewport) {
         approvalRoot()?.querySelector('[data-po-approve]')?.click();
         const note = document.querySelector('#poApprovalNote');
         if (note) note.value = 'Approved by the PO approval audit.';
-        document.querySelector('#modalEl [data-po-decision-confirm]')?.click();
-        await new Promise((resolve) => setTimeout(resolve,300));
+        let refreshNavigation = null;
+        window.navigate = (route,params) => {
+          refreshNavigation = originalNavigate(route,params);
+          return refreshNavigation;
+        };
+        try {
+          document.querySelector('#modalEl [data-po-decision-confirm]')?.click();
+          const captureDeadline = performance.now() + recoveryTimeoutMs;
+          while (!refreshNavigation && performance.now() < captureDeadline) {
+            await new Promise((resolve) => setTimeout(resolve,0));
+          }
+        } finally {
+          window.navigate = originalNavigate;
+        }
+        if (!refreshNavigation || typeof refreshNavigation.then !== 'function') {
+          issues.push('approved action did not start an awaitable refresh navigation');
+        } else {
+          let timeoutId;
+          const outcome = await Promise.race([
+            refreshNavigation.then(() => 'completed', () => 'rejected'),
+            new Promise((resolve) => {
+              timeoutId = setTimeout(() => resolve('timed-out'), recoveryTimeoutMs);
+            }),
+          ]);
+          clearTimeout(timeoutId);
+          if (outcome === 'timed-out') issues.push(`approved state refresh timed out after ${recoveryTimeoutMs}ms`);
+          if (outcome === 'rejected') issues.push('approved state refresh navigation rejected');
+        }
         root = approvalRoot();
         if (actionCalls[0]?.resource !== 'purchasing/purchase-orders'
             || actionCalls[0]?.id !== fixture.orderId
@@ -4100,11 +4130,12 @@ async function auditRoutes(browser, viewport) {
             || !String(actionCalls[0]?.idempotencyKey||'').includes(`v${fixture.version}-approve`)) {
           issues.push('Approve did not preserve the canonical action contract');
         }
-        if (!root?.querySelector('[data-case-actions][hidden]')
-            || root?.querySelectorAll('[data-case-actions] button').length
+        if (!root
+            || root?.querySelectorAll('[data-case-actions] button').length !== 1
+            || !root?.querySelector('[data-po-receive]')
             || !root?.textContent.includes('Audit Approver')
             || !root?.textContent.includes('Approved by the PO approval audit.')) {
-          issues.push('approved state did not refresh the decision record and hide actions');
+          issues.push('approved state did not refresh the decision record and expose the authorized receive action');
         }
 
         DB.purchaseOrderApprovals = [{...fixture,status:'rejected',orderStatus:'rejected',
@@ -4153,13 +4184,14 @@ async function auditRoutes(browser, viewport) {
         closeModal();
       } finally {
         adapter.action = originalAction;
+        window.navigate = originalNavigate;
         window.prepareCanonicalPurchasingData = originalPrepare;
         window.getLang = originalGetLang;
         DB.purchaseOrderApprovals = originalApprovals;
         await navigate('po-approval');
       }
       return issues;
-    });
+    }, RECOVERY_TIMEOUT_MS);
     const result = results.find((row) => row.route === 'po-approval');
     if (result) {
       result.layoutIssues.push(...poApprovalIssues.map((issue)=>`PO Approval state smoke: ${issue}`));
@@ -4380,7 +4412,7 @@ async function auditRoutes(browser, viewport) {
   }
 
   if (routes.includes('payment-voucher')) {
-    const voucherIssues = await page.evaluate(async () => {
+    const voucherRecovery = await page.evaluate(async (recoveryTimeoutMs) => {
       const originalGetLang = window.getLang;
       const originalNavigate = window.navigate;
       const adapter = window.ErpSystemData;
@@ -4394,6 +4426,7 @@ async function auditRoutes(browser, viewport) {
       };
       const issues = [];
       const postingRoot = () => document.querySelector('#viewRoot [data-layout="posting-detail-v1"]');
+      let recoveryMs = null;
       try {
         for (const [locale,title] of Object.entries(expectedTitles)) {
           window.getLang = () => locale;
@@ -4466,10 +4499,34 @@ async function auditRoutes(browser, viewport) {
           issues.push('voucher read failure did not render the standard error state');
         }
         adapter.list = originalList;
-        errorRoot?.querySelector('[data-posting-retry]')?.click();
-        for (let attempt=0; attempt<20; attempt+=1) {
-          await new Promise((resolve) => setTimeout(resolve,100));
-          if (postingRoot()&&!postingRoot()?.querySelector('[data-posting-error]:not([hidden])')) break;
+        let retryNavigation = null;
+        const retryStartedAt = performance.now();
+        window.navigate = (route,params) => {
+          retryNavigation = originalNavigate(route,params);
+          return retryNavigation;
+        };
+        try {
+          errorRoot?.querySelector('[data-posting-retry]')?.click();
+        } finally {
+          window.navigate = originalNavigate;
+        }
+        if (!retryNavigation || typeof retryNavigation.then !== 'function') {
+          issues.push('Payment Voucher Retry did not start an awaitable navigation');
+        } else {
+          let timeoutId;
+          const outcome = await Promise.race([
+            retryNavigation.then(() => 'completed', () => 'rejected'),
+            new Promise((resolve) => {
+              timeoutId = setTimeout(() => resolve('timed-out'), recoveryTimeoutMs);
+            }),
+          ]);
+          clearTimeout(timeoutId);
+          recoveryMs = Math.round(performance.now() - retryStartedAt);
+          if (outcome === 'timed-out') {
+            issues.push(`Payment Voucher Retry timed out after ${recoveryMs}ms`);
+          } else if (outcome === 'rejected') {
+            issues.push('Payment Voucher Retry navigation rejected');
+          }
         }
         if (!postingRoot() || postingRoot()?.querySelector('[data-posting-error]:not([hidden])')) {
           issues.push('Retry did not recover Payment Voucher');
@@ -4480,8 +4537,12 @@ async function auditRoutes(browser, viewport) {
         window.getLang = originalGetLang;
         await navigate('payment-voucher');
       }
-      return issues;
-    });
+      return {issues,recoveryMs};
+    }, RECOVERY_TIMEOUT_MS);
+    const voucherIssues = voucherRecovery.issues;
+    if (voucherRecovery.recoveryMs !== null) {
+      console.log(`[payment-voucher] Retry recovery completed in ${voucherRecovery.recoveryMs}ms (budget ${RECOVERY_TIMEOUT_MS}ms).`);
+    }
     const result = results.find((row) => row.route === 'payment-voucher');
     if (result) {
       result.layoutIssues.push(...voucherIssues.map((issue)=>`Payment voucher smoke: ${issue}`));

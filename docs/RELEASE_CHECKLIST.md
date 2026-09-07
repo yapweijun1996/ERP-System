@@ -37,8 +37,11 @@ For the current source-backed action backlog and evidence boundaries, see
       failure.
 - [x] `npm run smoke` — desktop and mobile pass on 2026-09-07. The navigation assertion
       checks visible semantic badges; hidden zero-count badges remain in the DOM.
-- [ ] `npm run audit:screens` — TASK-214 rendered 129 routes but failed voucher Retry.
-      Focused desktop three-route rerun passed; full recovery gate remains TASK-223.
+- [x] `npm run audit:screens` — TASK-223 now waits for the actual payment-voucher Retry
+      navigation Promise with a bounded 10-second budget and measures recovery at about
+      1333ms desktop / 949ms mobile. The full 129-route desktop/mobile audit passed with
+      zero console/page errors, identity leaks or layout failures. Production and remote
+      CI evidence remain separate.
 - [x] `npm run audit:pwa-update` — PWA update lifecycle audit passes; physical-device
       acceptance remains TASK-017 and is not satisfied by emulated 375 px.
 - [x] `npm run audit:i18n` — TASK-219 repaired the sales-invoice labels; the current
@@ -68,7 +71,7 @@ For the current source-backed action backlog and evidence boundaries, see
       the primary/calendar entry points emit aggregate-only queue snapshots. This proves
       shape/redaction only: bounded non-blocking collection, claim-predicate parity,
       production metrics/alerts, ownership and recovery exercise remain TASK-201.
-- [x] `tasks/tasks.jsonl` statuses current: 213 Done / 4 In Progress / 3 Todo / 3 Blocked / 223 Total. Blockers are TASK-017, TASK-193 and TASK-209;
+- [x] `tasks/tasks.jsonl` statuses current: 214 Done / 4 In Progress / 2 Todo / 3 Blocked / 223 Total. Blockers are TASK-017, TASK-193 and TASK-209;
       TASK-203 remains In Progress until a fresh current-HEAD remote CI result, TASK-204 remains In progress until tax-owner production review and TASK-205 remains
       In progress until production Vision configuration and live dead-letter alert/recovery
       evidence is recorded.

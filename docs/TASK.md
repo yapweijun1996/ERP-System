@@ -1,7 +1,7 @@
 # Task Index
 
 [TEST_COVERAGE.md](TEST_COVERAGE.md) is the module evidence map. TASK-216 through
-TASK-222 is also complete through the F07 repair; TASK-223 remains the open F08 repair. TASK-215 is
+TASK-216 through TASK-223 are complete through the F08 recovery-audit repair. TASK-215 is
 documentation reconciliation, not runtime completion.
 
 Reviewed: **2026-09-08**
@@ -12,9 +12,9 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **213**
+- Done: **214**
 - In progress: **4**
-- Todo: **3**
+- Todo: **2**
 - Blocked: **3**
 - Total: **223**
 
@@ -23,8 +23,8 @@ not a second task registry.
 TASK-214 completed the [ERP specialist audit](ERP_SPECIALIST_REVIEW_2026-09-07.md)
 and [product quality baseline](ERP_QUALITY_BASELINE.md). It records fresh failures
 and evidence limits; prior passing suite/audit statements below are historical and
-do not supersede the new findings. TASK-216–222 now close F01–F07 locally; the
-remaining runtime follow-up is TASK-223.
+do not supersede the new findings. TASK-216–223 now close F01–F08 locally; production,
+CI, device and external-service gates remain separate.
 
 TASK-194 audited historical HEAD `00e2533`. The current EPIC-067 worktree is 104 migrations
 through 0103, schema v103/255 tables, 129 Canonical / 0 Preview routes, 129 routes declaring
@@ -155,7 +155,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-208 | Done | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation, exact Employee integration and five-language browser proof |
 | TASK-209 | Blocked | PostgreSQL/RLS, current CI, release, documentation and KB proof; blocked by current-HEAD CI and deployed/production evidence |
 
-The registry therefore has **213 Done / 4 In Progress / 3 Todo / 3 Blocked / 223 Total**.
+The registry therefore has **214 Done / 4 In Progress / 2 Todo / 3 Blocked / 223 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery) and TASK-209
 (release proof waiting for current-HEAD CI and deployed-production evidence). TASK-203
 is In Progress because the latest remote workflow executed but exposed a source i18n
@@ -177,7 +177,7 @@ and diff check pass. TASK-219 is also Done: canonical sales-invoice locale label
 live desktop/mobile switch E2E and current full PGlite i18n audit. TASK-220 is Done: the
 new contrast E2E passes light/dark desktop/mobile action controls at 5.567:1 normal and
 6.947:1 hover, with visible focus and disabled-state treatment; generated/build/docs gates
-pass. TASK-221 and TASK-222 are Done; TASK-223 remains Todo.
+pass. TASK-221, TASK-222 and TASK-223 are Done.
 
 TASK-221 is Done: approved/open PO approval detail now exposes the authorized receive
 action and Goods Receipts opens the same workflow or returns to Purchase Orders when no
@@ -195,6 +195,14 @@ Shared modals enter focus into the first field, contain Tab focus and restore th
 close. The built-Demo `test:e2e:mobile-usability` passes five locales at 375px, en at 1280px
 and a 188px half-width reflow check with zero browser errors/no document overflow. TASK-221's
 receiving E2E remains green; physical-device evidence remains TASK-017.
+
+TASK-223 is Done: the screen audit now captures the actual payment-voucher Retry
+`navigate()` Promise, measures its completion and retains explicit rejected/error/timeout
+failures under a bounded 10-second budget. The full built-Demo 129-route desktop/mobile
+audit measured approximately 1333ms/949ms recovery and passed with zero console/page errors,
+identity leaks or layout failures. The PO approval smoke also waits for its refresh Promise
+and checks the current TASK-221 authorized Receive goods action. No production deployment,
+remote CI or full Vitest pass is claimed.
 
 TASK-213 closes the source-level RLS table-list omission for `sales_enquiry_line` and
 adds a deterministic generated-schema coverage gate. TASK-195 now establishes the
