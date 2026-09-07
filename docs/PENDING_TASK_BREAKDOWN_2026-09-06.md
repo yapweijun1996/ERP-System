@@ -66,10 +66,32 @@ same bounded-failure shape as document processing: five automatic attempts by de
 integration-event status. The focused outbox suite passes 2 files / 5 tests; production SMTP, alerting
 and operator recovery remain TASK-193/TASK-201 evidence rather than local claims.
 
-2026-09-07 full-regression addendum: after the auth outbox change, `npm test
--- --reporter=dot` passes 172 files / 702 tests with two intentional file/test skips.
+2026-09-07 full-regression addendum: after the auth outbox, worker telemetry and
+browser-boundary changes, `npm test -- --reporter=dot` passes 173 files / 705 tests
+with two intentional file/test skips.
 The malformed-JSON, locale-503 and unsafe-markup stderr lines are expected assertions;
 they did not fail the suite. This updates the previous 697-test local baseline.
+
+2026-09-07 worker telemetry addendum: `src/worker/telemetry.ts` now provides a
+read-only, structured queue snapshot for the primary and calendar workers. It reports
+pending/ready/in-flight/retrying/failed/dead-letter counts and oldest pending age for
+outbox, reporting, tax-evidence, document scan/extraction and calendar/reminder queues.
+The query uses the existing reporting/document/calendar worker RLS flags, returns no
+tenant identifiers, payloads, credentials, worker locks or raw errors, and is emitted
+as `erp.worker.telemetry` JSON every 60 seconds by both worker entry points (configurable
+with `WORKER_TELEMETRY_POLL_MS`, minimum 10 seconds). Local telemetry tests pass 3/3;
+production dashboards, alert thresholds, ownership, backup/restore, load budgets and
+failure-recovery exercise remain TASK-201 production evidence.
+
+2026-09-07 Demo-boundary addendum: `npm run build:demo` initially exposed a browser
+bundle failure because the connector read path imported the server-only
+`tokenCrypto -> node:crypto -> session` chain. Format validation now lives in the
+browser-safe `src/auth/tokenEnvelope.ts`; `src/auth/tokenCrypto.ts` re-exports the
+same public validator and envelope type, so server callers remain compatible. The
+serial Demo build, root/Web typechecks, lint and affected auth/connector/telemetry
+tests pass; `npm run smoke` also passes at desktop and 375px with zero console/page
+errors. This is a local source/build correction, not a substitute for TASK-199 Pages
+revision/API health evidence.
 
 ## Recommended order
 
@@ -207,6 +229,10 @@ they did not fail the suite. This updates the previous 697-test local baseline.
     exposes `dead_letter` through the sanitized integration-event read model and supports
     the bounded configuration `OUTBOX_MAX_ATTEMPTS` (1–20). This is not production alert
     or recovery evidence.
+  - Source preparation now emits aggregate-only `erp.worker.telemetry` snapshots from
+    both worker entry points for queue depth, readiness, leases, retries, failures,
+    dead letters and oldest pending age across outbox/document/reporting/tax-evidence/
+    calendar queues. Local tests pass 3/3; no production sink or alert is claimed.
   - Define and exercise availability/error/latency SLOs, alert ownership, encrypted
     backup retention/integrity, timed restore RPO/RTO, worker/outbox/document/calendar/
     reporting backlog and dead-letter metrics, and representative 100–800 GB query/load

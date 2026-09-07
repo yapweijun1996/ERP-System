@@ -6,6 +6,7 @@ import {
   processStaffAppointmentOutboundBatch,
 } from '../modules/hr/calendarSync';
 import { processStaffAppointmentReminderBatch } from '../modules/hr/appointmentReminders';
+import { logWorkerQueueTelemetry } from './telemetry';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -21,8 +22,26 @@ const calendarDrivers = calendarDriver
   : null;
 const workerId = process.env.CALENDAR_WORKER_ID ?? `erp-calendar-${process.pid}`;
 const pollMs = Math.max(1000, Number(process.env.CALENDAR_POLL_MS) || 15000);
+const telemetryPollMs = Math.max(
+  10_000,
+  Number(process.env.WORKER_TELEMETRY_POLL_MS) || 60_000,
+);
+let lastTelemetryAt = 0;
+
+async function emitTelemetryIfDue(): Promise<void> {
+  const now = Date.now();
+  if (now - lastTelemetryAt < telemetryPollMs) return;
+  lastTelemetryAt = now;
+  try {
+    await logWorkerQueueTelemetry(db, workerId, { scope: 'calendar' });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[erp-calendar-worker] telemetry failed: ${message}`);
+  }
+}
 
 async function tick(): Promise<void> {
+  await emitTelemetryIfDue();
   const reminders = await withCalendarWorkerTransaction(db, tx => (
     processStaffAppointmentReminderBatch(tx, { workerId })
   ));

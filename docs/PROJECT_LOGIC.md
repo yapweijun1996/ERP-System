@@ -257,7 +257,14 @@ integration event log. This bounds provider outages without exposing encrypted t
 payloads; production alerting and the operator recovery procedure remain TASK-201/
 TASK-193 release evidence.
 
-Sources: `src/worker/outbox.ts`, `src/worker.ts`, and
+Both worker entry points also emit an aggregate-only `erp.worker.telemetry` snapshot
+every 60 seconds by default. `src/worker/telemetry.ts` reports pending/ready/in-flight/
+retrying/failed/dead-letter counts and oldest pending age for the outbox, document,
+reporting, tax-evidence and calendar queues under their existing worker RLS flags. It
+does not include tenant identifiers, payloads, credentials, lock owners or raw errors;
+an operational sink, thresholds and recovery ownership remain production evidence.
+
+Sources: `src/worker/outbox.ts`, `src/worker/telemetry.ts`, `src/worker.ts`, and
 `src/modules/integration/eventLog.ts`.
 
 Sources: `src/modules/hr/teamCalendar.ts`,

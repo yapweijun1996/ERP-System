@@ -14,7 +14,7 @@ For the current source-backed action backlog and evidence boundaries, see
       green. Never treat a zero-step infrastructure failure as validation.
 - [x] `npm run typecheck && npm run typecheck:web` — root and Web typechecks pass after
       aligning the Demo purchase-requisition adapter with the actor-input command shape.
-- [x] `npm test` — current local Vitest run passes 172 files / 702 tests with two
+- [x] `npm test` — current local Vitest run passes 173 files / 705 tests with two
       intentional file/test skips. This is local evidence; PostgreSQL runtime, CI and
       production deployment remain separate gates.
 - [x] `npm run demo` — PGlite transaction proof passed on 2026-08-10. A dedicated,
@@ -27,9 +27,11 @@ For the current source-backed action backlog and evidence boundaries, see
       This is disposable-environment evidence, not target-production deployment proof.
 - [x] `npm run check:demo-schema && npm run check:drift` — passed on 2026-08-10;
       generated PGlite artifacts and all Drizzle migrations agree
-- [x] `npm run build:demo` — serial build passed on 2026-08-10; a parallel attempt raced
-      on the shared `web/dist` output and is not a source failure.
-- [x] `npm run smoke` — desktop and mobile pass on 2026-08-10. The navigation assertion
+- [x] `npm run build:demo` — serial build passed on 2026-09-07 after isolating the
+      browser-safe connector envelope validator from the server-only `node:crypto` chain;
+      the earlier parallel attempt raced on shared `web/dist` output and was not a source
+      failure.
+- [x] `npm run smoke` — desktop and mobile pass on 2026-09-07. The navigation assertion
       checks visible semantic badges; hidden zero-count badges remain in the DOM.
 - [x] `npm run audit:screens` — 2026-09-06 current HEAD passed all 129 Canonical routes
       at desktop and 375px with no console/page errors, overflow, active-tab or declared-
@@ -52,6 +54,9 @@ For the current source-backed action backlog and evidence boundaries, see
       browser access audit. This is local evidence, not production authorization proof.
 - [x] `npm run docs:check` — validates all README/docs Markdown local links before release;
       external URLs remain outside this deterministic gate.
+- [x] Local worker telemetry source gate — `src/worker/telemetry.ts` tests pass 3/3 and
+      the primary/calendar entry points emit aggregate-only queue snapshots. Production
+      metrics sink, alert thresholds, ownership and recovery exercise remain TASK-201.
 - [x] `tasks/tasks.jsonl` statuses current: 204 Done / 4 In progress / 2 Todo / 3
       Blocked / 213 Total. Blockers are TASK-017, TASK-193 and TASK-209;
       TASK-203 remains In Progress until a fresh current-HEAD remote CI result, TASK-204 remains In progress until tax-owner production review and TASK-205 remains

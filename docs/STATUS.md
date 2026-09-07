@@ -48,8 +48,8 @@ switcher, while Demo autofill E2E, the 59-route/13-role access matrix, 129-scree
 desktop/mobile audit and 129-route × 5-language × 2-viewport audit pass. TASK-195 now
 adds a current-path PostgreSQL/FORCE-RLS proof; TASK-206 and TASK-207 are done, while
 executable CI and the remaining Platform release chain remain TASK-203 and
-TASK-209 work. The final local full Vitest run passes 172 files /
-702 tests with two intentional file/test skips. TASK-204 source-level tax interval,
+TASK-209 work. The final local full Vitest run passes 173 files /
+705 tests with two intentional file/test skips. TASK-204 source-level tax interval,
 classification and posting hardening is now in progress; targeted tax/purchasing/Expense
 tests pass, while production tax-owner review remains open. TASK-205 source hardening is
 also in progress: gateway status/malformed/timeout, paused-connector, retry-lease and
@@ -59,15 +59,23 @@ now bounds document processing at five
 automatic attempts by default, records `dead_letter`/`dead_lettered_at` and supports an
 explicit same-chain manual requeue. Authentication outbox delivery now has a five-attempt
 default cap, bounded `OUTBOX_MAX_ATTEMPTS` configuration and sanitized dead-letter visibility
-through the integration event log. Production Vision gateway/account/region/retention,
-secret rotation and live dead-letter alert/recovery evidence remain open.
+through the integration event log. TASK-201 source preparation now emits aggregate-only
+`erp.worker.telemetry` JSON snapshots for primary/calendar queue depth, age, leases,
+attempts, failures and dead letters under the existing worker RLS flags; production
+metrics/alerts, incident ownership, backup/restore and capacity evidence remain open.
+Production Vision gateway/account/region/retention, secret rotation and live dead-letter
+alert/recovery evidence remain open.
+The Demo connector read path is also browser-safe again: encrypted-token format
+validation is isolated in `src/auth/tokenEnvelope.ts`, while cryptographic operations
+remain server-only in `src/auth/tokenCrypto.ts`; the serial `npm run build:demo` gate
+passes on the current worktree.
 
 The TASK-194 correction aligns deployment, security, architecture, role-permission, Demo
 and UAT material to that boundary: current inventory is 129
 Canonical / 0 Preview routes, 129 API-mode metadata routes, 1,726 English keys/72 local
 packs, 315 permission codes, 59 access-matrix routes, Company Owner 115 and PWA v263.
 The older 170-file / 666-test collection is a dated TASK-194 checkpoint; the current
-local full Vitest result is 172 files / 702 tests with two intentional file/test skips.
+local full Vitest result is 173 files / 705 tests with two intentional file/test skips.
 TASK-017 remains
 the physical-device blocker, TASK-193 is blocked by missing production SMTP/recovery,
 and TASK-203 is In Progress: the latest remote workflow executed but exposed one i18n
@@ -176,7 +184,7 @@ That full Vitest run was green: 156 passed files plus 1 skipped file (635 passed
 skipped tests). A later 2026-08-12 checkpoint was green at 168 passed files plus 1
 skipped file (663 passed, 1 skipped tests). TASK-194 subsequently recorded a
 170-file / 666-test collection checkpoint without executing the full collection. The
-2026-09-07 current run passes 172 files / 702 tests with two skips. The authenticated `account/*`
+2026-09-07 current run passes 173 files / 705 tests with two skips. The authenticated `account/*`
 service prefix is explicitly
 non-module-gated while notification permissions remain enforced, and the 15-test
 targeted notification/matrix/module regression passes. HR Calendar fixtures now use
@@ -468,7 +476,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | GitHub Pages deploy | ✅ Working | `.github/workflows/deploy-pages.yml` builds the static PGlite/IndexedDB Demo and publishes only the `web/dist/` artifact; it does not publish the Node API, PostgreSQL data, `.env` files or production secrets. The repository is public and Pages is configured for workflow deployment at `https://yapweijun1996.github.io/ERP-System/`. On 2026-09-05, run `33940353016` passed both Build and Deploy; a fresh-browser smoke check reached the setup wizard, completed local demo setup, opened the dashboard and confirmed `window.ErpSystemData.mode === 'pglite'` with no `/api` requests. Production remains the separate Docker/API/PostgreSQL track. |
 | CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ⚠️ Workflow executes; current-HEAD rerun pending | CI run `34017037310` executed all Vitest shards and the typecheck/transaction/build job but failed the i18n browser matrix on a hardcoded `timesheet: Projects` label. The locale fix passes exact desktop/mobile matrices locally; TASK-203 remains In Progress until a fresh run for the current pushed HEAD is recorded. |
 | Generated PGlite schema + drift check | ✅ Working | `scripts/generate-demo-schema.mjs` generates fresh/upgrade SQL from ordered Drizzle migrations; `npm run check:demo-schema` and `npm run check:drift` run in CI. |
-| Browser smoke test (desktop + mobile, zero console/page errors, dashboard content verified) | ✅ Green | `scripts/smoke.mjs`, `npm run smoke`, Playwright, wired into CI with browser caching, TASK-015. The 2026-08-10 run passes desktop/mobile; the assertion now considers only visible semantic navigation badges while hidden zero-count badges remain in the DOM. |
+| Browser smoke test (desktop + mobile, zero console/page errors, dashboard content verified) | ✅ Green | `scripts/smoke.mjs`, `npm run smoke`, Playwright, wired into CI with browser caching, TASK-015. The 2026-09-07 current worktree run passes desktop/mobile; the assertion now considers only visible semantic navigation badges while hidden zero-count badges remain in the DOM. |
 | Route production metadata and Preview contract | ✅ 129-route parity | `SCREEN_META` covers **129 Canonical / 0 Preview** routes and all 129 declare API mode, including `staff-calendar`. The screen audit fails closed on future Canonical/API metadata gaps. Preview pages, if reintroduced, distinguish Sample Data from Canonical Data and lock write-like actions. |
 | Cross-layer authorization matrix | ✅ Regression foundation | `src/auth/accessMatrix.ts` is shared by `src/api/permissionMatrix.integration.test.ts` and `scripts/audit-access-matrix.ts`; the API/browser checks cover authenticated role fixtures, 401/403 boundaries, route metadata, list/detail probes and fail-closed UI visibility. Unknown business-module keys now fail closed; authenticated `account/*` services are explicitly non-module-gated but still permission-protected. TASK-174 now supplies authorization-version invalidation, session recovery and direct-URL revocation coverage. |
 | Item Master (create/edit product master data) | ✅ Canonical Demo/API data and writes | Migration 0019 adds `category`/`reorder_point`/`reorder_qty`/`version` to `product`. `src/modules/inventory/product.ts` provides tenant-scoped create/update; both `item-master` and the separate five-language `new-item` composer write through that audited Demo/API command. `new-item` now stores only real product fields, accepts a company-unique SKU and removes the sample form's fabricated USD/GST, accounting, costing, shelf-life and negative-stock controls. New items start at 0 on hand with no stock projection or movement — initial quantity must use Purchase Receipt or Stock Adjustment. Duplicate SKU is an atomic 409; delete remains honestly unsupported rather than mutating local sample data. |
@@ -496,7 +504,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Project Finance Depth: Bank Receipt, Payment Voucher & project-scoped AP | ✅ Canonical Demo/API data and writes | Closes Project's third and final deferred sub-phase — every originally-scoped Phase 7 module is now real. `bank_receipt` (settles a posted progress claim's AR in full, Dr `1000` Cash / Cr `1100` AR) and `payment_voucher`+`payment_voucher_line` (settles one or more of a supplier's unpaid invoices, Dr `2100` AP / Cr `1000` Cash, and is the first code in this repo to ever flip a `supplier_invoice` to `paid`) added to `src/data/schema/finance.ts` — the first new Treasury documents here, in a new `src/modules/finance/` module (GL had been read-only until now, hence a new `finance.write` permission). `purchase_order`/`supplier_invoice` gained a nullable `project_id`: settable from the `new-purchase-order` wizard, auto-propagated onto the resulting invoice with no new user input. Seeded a new `1000` Cash & Bank chart-of-accounts row, which also fixed a long-dead `screens-fin2.js` GL tile that already summed codes `1000`+`1010` against accounts that never existed. `payment-voucher`/`new-payment-voucher` replaced 100%-fabricated screens (the old wizard's "open invoices" list was a hash of the supplier code, and "Post payment" never touched the adapter) with a real per-voucher detail and a real 2-step wizard reading genuine unpaid invoices; `project-detail` gained a real "Record receipt" action and a real "Project costs" panel. Verified live with a mathematically balanced result: one Payment Voucher (S$1,220.80 across two real unpaid invoices) and one Bank Receipt (S$54,500) left the General Ledger's Cash & Bank account at exactly S$53,279, with AP and AR each moving by the settled amounts — confirmed by resetting the demo database and re-deriving every balance from scratch. |
 | Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. Smoke now passes with visible-only semantic badge assertions; actionable counts remain in canonical module KPIs and approval queues. |
 | Full screen audit — current route checkpoint | ✅ 129 desktop/mobile routes | The current 2026-09-07 `npm run audit:screens` rendered all 129 Canonical / 0 Preview routes at desktop and mobile without console/page, document-layout, active-tab, action-bar or shared-shell failures. The dedicated workspace audit also passed. |
-| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Local full suite | Current local Vitest run passes 172 files / 702 tests with two intentional file/test skips. PostgreSQL runtime, CI execution and production deployment remain separate evidence boundaries. |
+| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Local full suite | Current local Vitest run passes 173 files / 705 tests with two intentional file/test skips. PostgreSQL runtime, CI execution and production deployment remain separate evidence boundaries. |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemData.completeSetup()` → shared `completeDemoSetupWithin`, gated in `app.js` boot(). Production setup remains a separate empty-database/zero-user command and does not require a deployment setup token. |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemData.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |

@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import { integrationConnector } from '../../data/schema';
 import { appendAudit } from '../../api/audit';
-import { isEncryptedToken, type EncryptedToken } from '../../auth/tokenCrypto';
+import { isEncryptedToken, type EncryptedToken } from '../../auth/tokenEnvelope';
 
 export interface ConnectorScope { masterFn: string; companyFn: string }
 export interface ConnectorActor { userId: number; requestId: string }

@@ -76,6 +76,24 @@ themselves. After release, fetch `/health` and `/release.json` from the same pub
 origin and require their revision to match the intended commit before recording TASK-199
 as complete. A local build or a stale cached asset is not deployment evidence.
 
+### Worker telemetry source boundary
+
+`src/worker/telemetry.ts` provides a read-only structured queue snapshot for `npm run
+worker` and `npm run worker:calendar`. Every 60 seconds by default, each process emits
+one `erp.worker.telemetry` JSON record with pending, ready, in-flight, attempted/retrying,
+failed, dead-letter and oldest-pending-age values. The primary worker covers auth/document
+outbox, reporting, tax-evidence, document scan/extraction and calendar/reminder queues;
+the dedicated calendar worker covers its three calendar/reminder queues. Set
+`WORKER_TELEMETRY_POLL_MS` to change the interval, subject to a 10-second minimum.
+
+The snapshot is deliberately aggregate-only: it contains no tenant identifiers, queue
+payloads, credentials, lock owners or raw transport errors. Reporting, document and
+calendar reads run under the same transaction-local worker flags used by the processing
+commands; `outbox_event` remains a separately restricted operational table. This is a
+source-level observability primitive, not production proof. TASK-201 still requires an
+operational log/metrics sink, alert thresholds and ownership, exercised recovery, backup
+integrity and restore timing, load/plan budgets, and reviewed capacity/failover runbooks.
+
 ### Platform switch-scroll hotfix evidence (2026-08-13)
 
 Commits `e411931` and `9bcdb50` were released through the application-only path. The

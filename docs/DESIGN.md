@@ -61,7 +61,7 @@ Current source inventory on 2026-09-07 is **129 Canonical / 0 Preview** routes. 
 `/api/hr/calendar/staff` contract. The current `audit:screens` run covers all
 129 routes at desktop/mobile; API integration, authenticated API browser, access-matrix
 and i18n evidence remain separately recorded. The current HEAD full Vitest run passes
-172 files / 702 tests with two intentional file/test skips; the Staff Calendar API
+173 files / 705 tests with two intentional file/test skips; the Staff Calendar API
 integration passes 6/6 and its Demo E2E covers mixed events, create, filtering and list
 search.
 Business-record values are not treated as UI copy. Physical-device acceptance remains
@@ -192,6 +192,13 @@ cross the fulfilment/accounting boundary, preserving one authoritative posting p
   database session and run shared commands with RBAC, CSRF, idempotency and audit.
   Remaining Preview business areas still require their own schema and commands before
   they may join this API surface.
+- **Workers expose aggregate operational evidence, not business payloads.** The primary
+  and calendar worker entry points periodically emit the read-only
+  `erp.worker.telemetry` JSON record from `src/worker/telemetry.ts`. It aggregates queue
+  depth, ready work, active leases, attempted/retrying rows, failures, dead letters and
+  oldest pending age under the existing worker RLS flags. It intentionally omits tenant
+  identifiers, payloads, credentials, lock owners and raw errors; a production metrics/
+  alert sink and incident ownership remain TASK-201 deployment work.
 - **Local Postgres proof** (no Docker required): `createdb erp_system_proof` against
   PostgreSQL 16+, then point `POSTGRES_URL` at that empty database and run `npm run
   demo`. Do not migrate or seed it first: the proof's read-only preflight requires zero

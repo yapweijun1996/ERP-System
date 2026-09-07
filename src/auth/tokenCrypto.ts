@@ -4,37 +4,10 @@ import {
   randomBytes,
 } from 'node:crypto';
 import { hashSecret } from './session';
+import type { EncryptedToken } from './tokenEnvelope';
 
-export interface EncryptedToken {
-  v: 1;
-  alg: 'A256GCM';
-  iv: string;
-  ciphertext: string;
-  tag: string;
-}
-
-export function isEncryptedToken(value: unknown): value is EncryptedToken {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-  const candidate = value as Partial<EncryptedToken>;
-  const keys = Object.keys(value);
-  const exactKeys = ['v', 'alg', 'iv', 'ciphertext', 'tag'];
-  if (keys.length !== exactKeys.length || exactKeys.some((key) => !keys.includes(key))) return false;
-  if (
-    candidate.v !== 1
-    || candidate.alg !== 'A256GCM'
-    || typeof candidate.iv !== 'string'
-    || typeof candidate.ciphertext !== 'string'
-    || typeof candidate.tag !== 'string'
-    || !/^[A-Za-z0-9_-]+$/.test(candidate.iv)
-    || !/^[A-Za-z0-9_-]*$/.test(candidate.ciphertext)
-    || !/^[A-Za-z0-9_-]+$/.test(candidate.tag)
-    || candidate.iv.length % 4 === 1
-    || candidate.ciphertext.length % 4 === 1
-    || candidate.tag.length % 4 === 1
-  ) return false;
-  return Buffer.from(candidate.iv, 'base64url').length === 12
-    && Buffer.from(candidate.tag, 'base64url').length === 16;
-}
+export { isEncryptedToken } from './tokenEnvelope';
+export type { EncryptedToken } from './tokenEnvelope';
 
 export function newOpaqueToken(bytes = 32): string {
   return randomBytes(bytes).toString('base64url');
