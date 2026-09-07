@@ -647,14 +647,19 @@ are not more module screens:
   current HEAD or production API health/revision. Current source now adds API
   `/health.revision` and static `release.json` SHA-256 evidence, but these are not
   deployed proof until the public endpoints return the intended current revision. A fresh
-  2026-09-07 Node fetch confirms root HTTP 200 HTML, but `/release.json`, `/health` and
-  `/api/setup/status` are HTTP 404 HTML fallbacks on the hosted Pages origin. The
+  read-only probe on 2026-09-08 returns the Pages root and `/release.json` as HTTP 200;
+  the manifest reports revision `4a49706bdb95e060714febe32859aa9d6a0a5fbd`, workflow
+  `34132475902`, builtAt `2026-09-07T14:22:17.337Z`, and `dataMode: demo`, so static Demo
+  availability is now independently visible but the hosted revision is stale relative to
+  current local HEAD. Pages `/health` and `/api/setup/status` remain HTTP 404 HTML
+  fallbacks, as expected for the static Demo origin, and do not prove API health. The
   application-only release now checks `/health` from inside the web container through the
   Compose network because production keeps DB/API ports private; this is source-level
   release hardening, not live deployment proof. A separate read-only probe of the
-  production Cloudflare origin `https://gmb01.xyz/erp` and `/erp/health` returned HTTP 502;
-  the proxy classified it as a `Host Error` without exposing an origin health payload; no
-  tenant write, reset, reseed or deployment was attempted;
+  production Cloudflare origin `https://gmb01.xyz/erp` and `/erp/health` still returns
+  HTTP 502 text/plain; Cloudflare DNS resolves the proxy anycast addresses but exposes no
+  origin health payload. No tenant write, reset, reseed or deployment was attempted;
+  TASK-199 remains open for authorized origin repair and current-revision proof;
 - TASK-200 is source-closed; TASK-201 still owns SLO/RPO/RTO, scale and worker telemetry.
   TASK-202's governed localized Pack lifecycle and Company timezone are implemented with
   local proof; the disposable PostgreSQL same-key race is verified, while production

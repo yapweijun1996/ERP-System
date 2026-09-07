@@ -46,13 +46,17 @@ i18n browser matrix on `timesheet: Projects`; the local `route.project-pl` fix p
 exact desktop/mobile matrices and needs a fresh current-HEAD remote run. Later source
 adds Platform Demo quick login, password visibility, responsive containment and safe
 existing-Company resume, but no current deployed revision/asset hash was independently
-proven. A fresh read-only probe on 2026-09-07 returned the Pages root as HTTP 200 HTML,
-while `/release.json`, `/health` and `/api/setup/status` returned HTTP 404 HTML fallback
-responses; no API or release identity was exposed. TASK-199 owns availability/revision
-proof; TASK-203 owns current-HEAD CI proof. A separate read-only probe on the production
-Cloudflare origin `https://gmb01.xyz/erp` and `/erp/health` returned HTTP 502 on the same
-date; the proxy classified it as a `Host Error` without exposing an origin health payload.
-No tenant write, reset, reseed or deployment was attempted.
+proven. A fresh read-only probe on 2026-09-08 returned the Pages root and `/release.json`
+as HTTP 200. The manifest reports revision `4a49706bdb95e060714febe32859aa9d6a0a5fbd`,
+workflow `34132475902`, builtAt `2026-09-07T14:22:17.337Z`, and `dataMode: demo`; this
+proves static Demo availability but identifies a hosted revision stale relative to current
+local HEAD. Pages `/health` and `/api/setup/status` remain HTTP 404 HTML fallbacks, as
+expected for a static Demo origin, and do not prove API health. TASK-199 owns
+availability/revision proof; TASK-203 owns current-HEAD CI proof. A separate read-only probe
+on the production Cloudflare origin `https://gmb01.xyz/erp` and `/erp/health` still returns
+HTTP 502 text/plain; Cloudflare DNS resolves the proxy anycast addresses but exposes no
+origin health payload. No tenant write, reset, reseed or deployment was attempted. TASK-199
+remains open for authorized origin repair and current-revision proof.
 
 The final-review Platform workspace edits were later committed in `84a18b5`: they
 further refactor that resume behavior into an explicit presentation state machine and
