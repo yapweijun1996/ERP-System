@@ -2182,8 +2182,8 @@ release/download/Print UAT remains an explicit EPIC-066 release-evidence gap.
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
 - Done: 214 tasks
-- In progress: TASK-202, TASK-203, TASK-204 and TASK-205 (4)
-- Todo: 2
+- In progress: TASK-199, TASK-202, TASK-203, TASK-204 and TASK-205 (5)
+- Todo: TASK-201 (1)
 - Blocked: TASK-017, TASK-193 and TASK-209 (3)
 - EPIC-056, EPIC-057, EPIC-059 and EPIC-060 are complete at the current 129 Canonical /
   0 Preview boundary. EPIC-058 remediation and EPIC-061 are complete. EPIC-062 has a
