@@ -12,7 +12,7 @@ const assetBody = Buffer.from('asset-body');
 const assetHash = createHash('sha256').update(assetBody).digest('hex');
 const scriptPath = path.join(process.cwd(), 'scripts', 'verify-release.mjs');
 
-type FixtureMode = 'ok' | 'mismatch' | 'redirect' | 'asset-mismatch' | 'asset-hash-mismatch';
+type FixtureMode = 'ok' | 'mismatch' | 'redirect' | 'same-redirect' | 'asset-mismatch' | 'asset-hash-mismatch';
 
 interface RunningFixture {
   baseUrl: string;
@@ -33,12 +33,14 @@ function handleFixtureRequest(request: IncomingMessage, response: ServerResponse
     response.end('<!doctype html><title>ERP</title>');
     return;
   }
-  if (requestUrl.pathname === '/erp/health') {
-    if (mode === 'redirect') {
-      response.writeHead(302, { location: '/erp/wrong-health' });
-      response.end();
-      return;
-    }
+  if (requestUrl.pathname === '/erp/health' && ['redirect', 'same-redirect'].includes(mode)) {
+    response.writeHead(302, {
+      location: mode === 'redirect' ? '/erp/wrong-health' : '/erp/health/',
+    });
+    response.end();
+    return;
+  }
+  if (requestUrl.pathname === '/erp/health' || requestUrl.pathname === '/erp/health/') {
     sendJson(response, {
       status: 'ok',
       service: 'erp-system-api',
@@ -180,7 +182,7 @@ describe('verifyRelease', () => {
   });
 
   it('returns machine-readable success and failure status from the CLI', async () => {
-    running.setMode('ok');
+    running.setMode('same-redirect');
     const success = await runVerifier([
       running.baseUrl,
       '--expected-revision',
