@@ -672,7 +672,8 @@ are not more module screens:
   per-asset byte/SHA-256 comparison. The checker covers same-origin root, health,
   setup-status and release manifest, including final-URL trust and exact
   health/manifest/expected-revision matching; its local HTTP fixture and CLI contract
-  tests pass 6/6. This makes the live acceptance step repeatable but does not create
+  tests pass 6/6, including a same-path redirect acceptance case. This makes the live
+  acceptance step repeatable but does not create
   deployed evidence. A read-only run against local HEAD `0d51d23` returned
   `health_http_404` from Pages and `root_http_502` from the production origin, both with
   exit 1 and empty stderr; this confirms the known public availability boundary without

@@ -1,7 +1,7 @@
 # ERP module verification coverage
 
 Reviewed: **2026-09-08**, audit baseline `243af56` with current verification follow-up
-sources `3a4b6e8`, `7a06c47` and `df91653`; TASK-214 evidence and TASK-219/220/221/222 follow-up; TASK-215
+sources `3a4b6e8`, `7a06c47`, `df91653` and `2a43c95`; TASK-214 evidence and TASK-219/220/221/222 follow-up; TASK-215
 documentation reconciliation.
 
 **All modules have not passed complete end-to-end testing.** All 129 registered routes
@@ -57,7 +57,7 @@ colocated test entry points.
 | PWA update lifecycle | Passed explicit deferral/acceptance/reload flow | Physical devices, multiple tabs, unsaved drafts, in-flight requests and interrupted upgrades remain unverified |
 | Performance | Warm route and bundle observations only | TASK-201; cold-start, interaction percentiles, realistic data and concurrent tenant workloads |
 | Worker telemetry | Focused telemetry tests pass 6/6; ready/in-flight predicates cover active leases, enabled calendar connections and reminder due time; emission is single-flight and non-blocking | TASK-201; whole-table query budget/plan evidence, operational sink/alerts and production SLO/DR/load evidence remain |
-| Release identity and read-only release evidence | `scripts/write-release-manifest.test.ts` passes 4/4 for replacement, `0600` permissions, cleanup, failure preservation and symlink/non-file rejection; `scripts/verify-release.test.ts` passes 6/6 against a local HTTP fixture for root/health/setup/manifest, asset byte/hash matching, revision mismatch, redirect-path rejection and CLI exit/status parity | Run `npm run verify:release -- <origin> --expected-revision <commit>` against the selected release origin; live deployed `/health` + `/release.json` and every listed asset hash/byte count must match, while remote revision and rollback evidence remain TASK-199 |
+| Release identity and read-only release evidence | `scripts/write-release-manifest.test.ts` passes 4/4 for replacement, `0600` permissions, cleanup, failure preservation and symlink/non-file rejection; `scripts/verify-release.test.ts` passes 6/6 against a local HTTP fixture for root/health/setup/manifest, asset byte/hash matching, revision mismatch, same-path redirect acceptance, changed-path rejection and CLI exit/status parity | Run `npm run verify:release -- <origin> --expected-revision <commit>` against the selected release origin; live deployed `/health` + `/release.json` and every listed asset hash/byte count must match, while remote revision and rollback evidence remain TASK-199 |
 | Full unit/integration suite | Current HEAD passes 176 files / 724 tests with 2 skipped files and 2 skipped tests | PostgreSQL target and production evidence remain separate |
 | PostgreSQL/API/production | Current disposable PostgreSQL 16 security/provisioning gate passes 2 files / 2 tests | Production database, deployed revision, remote CI and module-specific PostgreSQL/API UAT remain TASK-199/203/209 gates |
 | Generated schema/RLS static coverage | TASK-215 fresh check passed: 104 migrations, 255 tables, 225 policies + 10 exemptions | This does not execute PostgreSQL RLS or prove target-host deployment |

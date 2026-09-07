@@ -137,7 +137,8 @@ same-origin root, `/health`, `/api/setup/status` and `release.json`; its local H
 fixture tests pass 6/6 for success, revision mismatch,
 asset byte/hash mismatch, unreviewed redirect-path rejection and CLI exit/status parity.
 It fetches every manifest-listed asset as bounded binary evidence and compares its actual
-byte count and SHA-256. Against local HEAD
+byte count and SHA-256; commit `2a43c95` also records acceptance of a redirect that
+normalizes to the same reviewed path. Against local HEAD
 `0d51d23`, the current Pages origin fails closed with `health_http_404` and the production
 Cloudflare origin fails closed with `root_http_502`; both exits are 1 with empty stderr.
 This confirms the known availability boundary without claiming a release or root cause.
