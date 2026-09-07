@@ -3,6 +3,7 @@ import {
   decryptToken,
   encryptToken,
   hashOpaqueToken,
+  isEncryptedToken,
   newOpaqueToken,
   parseTokenEncryptionKey,
 } from './tokenCrypto';
@@ -21,5 +22,13 @@ describe('auth token encryption', () => {
     expect(() => parseTokenEncryptionKey('short')).toThrow('32-byte');
     const encrypted = encryptToken('secret', Buffer.alloc(32, 1));
     expect(() => decryptToken(encrypted, Buffer.alloc(32, 2))).toThrow();
+  });
+
+  it('accepts only the exact v1 AES-GCM envelope shape and lengths', () => {
+    const encrypted = encryptToken('secret', Buffer.alloc(32, 3));
+    expect(isEncryptedToken(encrypted)).toBe(true);
+    expect(isEncryptedToken({ ...encrypted, secret: 'plaintext' })).toBe(false);
+    expect(isEncryptedToken({ ...encrypted, iv: 'not-an-iv' })).toBe(false);
+    expect(isEncryptedToken({ ...encrypted, tag: encrypted.tag.slice(0, -1) })).toBe(false);
   });
 });

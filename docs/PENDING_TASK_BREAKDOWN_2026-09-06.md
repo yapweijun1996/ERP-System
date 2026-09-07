@@ -67,7 +67,7 @@ integration-event status. The focused outbox suite passes 2 files / 5 tests; pro
 and operator recovery remain TASK-193/TASK-201 evidence rather than local claims.
 
 2026-09-07 full-regression addendum: after the auth outbox change, `npm test
--- --reporter=dot` passes 172 files / 701 tests with two intentional file/test skips.
+-- --reporter=dot` passes 172 files / 702 tests with two intentional file/test skips.
 The malformed-JSON, locale-503 and unsafe-markup stderr lines are expected assertions;
 they did not fail the suite. This updates the previous 697-test local baseline.
 

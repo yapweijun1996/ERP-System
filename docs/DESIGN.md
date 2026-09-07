@@ -61,7 +61,7 @@ Current source inventory on 2026-09-07 is **129 Canonical / 0 Preview** routes. 
 `/api/hr/calendar/staff` contract. The current `audit:screens` run covers all
 129 routes at desktop/mobile; API integration, authenticated API browser, access-matrix
 and i18n evidence remain separately recorded. The current HEAD full Vitest run passes
-172 files / 701 tests with two intentional file/test skips; the Staff Calendar API
+172 files / 702 tests with two intentional file/test skips; the Staff Calendar API
 integration passes 6/6 and its Demo E2E covers mixed events, create, filtering and list
 search.
 Business-record values are not treated as UI copy. Physical-device acceptance remains
