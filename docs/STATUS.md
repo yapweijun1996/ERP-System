@@ -185,23 +185,27 @@ The older 170-file / 666-test collection is a dated TASK-194 checkpoint; the pre
 local full Vitest result was 173 files / 705 tests with two intentional file/test skips.
 TASK-017 remains
 the physical-device blocker, TASK-193 is blocked by missing production SMTP/recovery,
-and TASK-203 is In Progress: the latest remote workflow executed but exposed one i18n
-source failure, which is fixed locally and still needs a fresh current-HEAD remote run.
+and TASK-203 is In Progress: the latest public workflow exposed an old PostgreSQL
+`deadLettered: 0` assertion, which is fixed locally and still needs a fresh current-HEAD
+remote run.
 The current source worktree includes the Platform Bootstrap & Tenant Provisioning implementation
 and migration 0099. On 2026-08-12 the existing Compose production database was released,
 backed up and verified, then the exact `erp-system_pgdata` and
 `erp-system_document_storage` volumes were reset without seed. The new database is empty
 while schema/RLS remain intact. That is dated TASK-192 production evidence, not current
 availability or exact-HEAD deployment proof. TASK-194 public `/health` and setup probes
-returned 502. Latest CI run `34017037310` on remote head `2188f56` executed all four
-Vitest shards and the typecheck/transaction/build job, then failed the i18n browser
-matrix on the hardcoded `timesheet: Projects` label. The local `route.project-pl` fix
-passes the exact desktop and mobile matrices; a fresh current-HEAD remote run remains
-pending. GitHub Pages run `34017037276` succeeded for the static Demo only.
+returned 502. The latest public CI run `34132475891` on remote head
+`4a49706bdb95e060714febe32859aa9d6a0a5fbd` executed all four Vitest shards successfully,
+but the validation job failed at the PostgreSQL 16 security lifecycle proof because the
+old remote assertion at `src/api/postgresSecurity.integration.test.ts:278` omitted the
+returned `deadLettered: 0` field. Local commit `dc0f10d` includes the corrected assertion,
+and a temporary PostgreSQL 16 rerun passes 2 files / 2 tests. The older `34017037310`
+i18n failure is historical; a fresh current-HEAD remote run remains pending. GitHub Pages
+run `34132475902` succeeded for the static Demo only.
 TASK-211 is done: the source business i18n allowlist and generated artifact are
 synchronized, and the required CI workflow now runs the artifact drift check. TASK-203
-is In Progress until the scoped locale fix is run on the current pushed HEAD; no remote
-green CI result is claimed yet.
+is In Progress until the current source fixes are run on the current pushed HEAD; no
+remote green CI result is claimed yet.
 
 Authorization documentation distinguishes the implemented platform-owned module
 boundary from the historical tenant-controlled design. Tenant authorization still uses
@@ -582,7 +586,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Canonical UI i18n | ✅ Current browser verified | `node scripts/audit-i18n.mjs` verifies 1,728 English resources and 72 registered local five-language packs. The current built-Demo PGlite desktop/mobile runs passed 129 routes × 5 languages × 2 viewports with zero runtime errors, raw keys, blocking hardcoded system copy or page-level horizontal overflow. `setLang()` remains atomic and state-preserving; business-record values remain outside UI i18n. |
 | Filled-action contrast | ✅ Current browser verified | `tests/e2e/action-contrast.spec.mjs` covers primary/PWA actions across light/dark desktop/mobile. Computed normal/hover contrast is 5.567:1 / 6.947:1; focus and disabled states pass. This is focused palette evidence, not exhaustive chart/print/device certification. |
 | GitHub Pages deploy | ✅ Working | `.github/workflows/deploy-pages.yml` builds the static PGlite/IndexedDB Demo and publishes only the `web/dist/` artifact; it does not publish the Node API, PostgreSQL data, `.env` files or production secrets. The repository is public and Pages is configured for workflow deployment at `https://yapweijun1996.github.io/ERP-System/`. On 2026-09-05, run `33940353016` passed both Build and Deploy; a fresh-browser smoke check reached the setup wizard, completed local demo setup, opened the dashboard and confirmed `window.ErpSystemData.mode === 'pglite'` with no `/api` requests. Production remains the separate Docker/API/PostgreSQL track. |
-| CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ⚠️ Workflow executes; current-HEAD rerun pending | CI run `34017037310` is a historical remote failure on a hardcoded `timesheet: Projects` label. TASK-219/220 current source passes the full local i18n and focused contrast browser gates; TASK-203 remains In Progress until a fresh run for the current pushed HEAD is recorded. |
+| CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ⚠️ Workflow executes; current-HEAD rerun pending | Latest run `34132475891` passed all four Vitest shards but failed the PostgreSQL security proof on the old remote `deadLettered: 0` assertion. Local `dc0f10d` plus a temporary PostgreSQL 16 rerun passes 2/2; TASK-203 remains In Progress until a fresh run for the current pushed HEAD is recorded. |
 | Generated PGlite schema + drift check | ✅ Working | `scripts/generate-demo-schema.mjs` generates fresh/upgrade SQL from ordered Drizzle migrations; `npm run check:demo-schema` and `npm run check:drift` run in CI. |
 | Browser smoke test (desktop + mobile, zero console/page errors, dashboard content verified) | ✅ Green | `scripts/smoke.mjs`, `npm run smoke`, Playwright, wired into CI with browser caching, TASK-015. The 2026-09-07 current worktree run passes desktop/mobile; the assertion now considers only visible semantic navigation badges while hidden zero-count badges remain in the DOM. |
 | Route production metadata and Preview contract | ✅ 129-route parity | `SCREEN_META` covers **129 Canonical / 0 Preview** routes and all 129 declare API mode, including `staff-calendar`. The screen audit fails closed on future Canonical/API metadata gaps. Preview pages, if reintroduced, distinguish Sample Data from Canonical Data and lock write-like actions. |

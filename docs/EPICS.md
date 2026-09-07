@@ -163,9 +163,11 @@ matrix, smoke script and transaction proof are release-green. The navigation ass
 checks visible semantic badges; hidden zero-count badges remain in the DOM. The
 physical-device gate remains open separately under TASK-017. TASK-211 is done: the
 business allowlist artifact is regenerated and its drift check is configured in CI;
-the latest remote CI run `34017037310` executed all Vitest shards and the build gate but
-failed on one hardcoded i18n navigation value. The `route.project-pl` fix passes the
-exact desktop/mobile matrices locally; a fresh current-HEAD remote run remains pending.
+the latest public CI run `34132475891` executed all four Vitest shards successfully but
+failed the PostgreSQL security proof on the old remote `deadLettered: 0` assertion at
+`src/api/postgresSecurity.integration.test.ts:278`. Local `dc0f10d` plus a temporary
+PostgreSQL 16 rerun passes 2/2; the earlier i18n failure is historical and a fresh
+current-HEAD remote run remains pending.
 
 - [x] **TASK-211 — Enforce generated i18n business allowlist in CI.** Regenerated the
       committed `web/public/assets/i18n-business.js` artifact from the source allowlist
@@ -2601,9 +2603,9 @@ the deployed release, preserves old data before the reset, validates custom dump
 isolated restore, clears only `erp-system_pgdata` and `erp-system_document_storage`,
 recreates without seed, and leaves the public site on the first Platform Superadmin
 registration page without creating a real account. TASK-193 remains blocked while SMTP is
-unset. Source CI run `31570902479` passed all four Vitest shards; latest CI run
-`34017037310` executed all four shards and the build gate but exposed the i18n source
-failure described above. EPIC-066 owns the newly verified
+unset. Source CI run `31570902479` passed all four Vitest shards; latest public CI run
+`34132475891` executed all four shards but exposed the old PostgreSQL assertion failure
+described above. EPIC-066 owns the newly verified
 RLS/runtime-role, deployment-health and privileged-access hardening requirements.
 
 ## EPIC-066 — Production Trust & ERP Excellence Hardening 🔶
@@ -2636,9 +2638,9 @@ Current truth:
 - Support Grant is not a tenant-data proxy, while exact-user Superadmin simulation does
   not require a grant/reason/ticket. Platform MFA/step-up is absent.
 - Public health/setup probes returned 502 and the exact deployed HEAD revision is not
-  proven. Current CI executes, but the latest remote run failed its i18n matrix; the
-  local source fix passes exact desktop/mobile matrices and a current-HEAD remote rerun
-  remains pending. Source inventory is 129 Canonical
+  proven. Current CI executes, but the latest public run failed its PostgreSQL security
+  proof on the old `deadLettered: 0` assertion; local `dc0f10d` plus a temporary
+  PostgreSQL 16 rerun passes 2/2, and a current-HEAD remote rerun remains pending. Source inventory is 129 Canonical
   routes and all 129 now declare API-mode metadata; TASK-200 closed the prior
   `staff-calendar` exception with current route evidence.
 - TASK-204 source hardening now aligns `valid_to` to one exclusive interval and makes
@@ -2659,7 +2661,7 @@ Current truth:
 | TASK-200 | Done | Resolve 129/129 route parity and rerun current HEAD release evidence |
 | TASK-201 | Todo | Production SLO, scale and RPO/RTO proof; bounded/non-blocking, claim-accurate worker observability |
 | TASK-202 | In progress | Receipt Pack lifecycle/timezone and disposable PostgreSQL concurrency proof are complete; production release evidence remains |
-| TASK-203 | In Progress | Latest CI executes but the i18n matrix failed on `timesheet: Projects`; local fix passes, current-HEAD rerun pending |
+| TASK-203 | In Progress | Latest CI executes but the old remote PostgreSQL security assertion omitted `deadLettered: 0`; local `dc0f10d` and PG16 rerun pass, current-HEAD rerun pending |
 | TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |
 | TASK-205 | In progress | Direct Vision failure/revoked-connector/no-fallback proof plus bounded dead-letter and same-chain manual requeue; production configuration remains |
 | TASK-213 | Done | Close production RLS coverage omission and add schema drift guard |

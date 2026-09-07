@@ -195,8 +195,8 @@ remain green; TASK-199 still needs a target-host release and health proof.
   versioned SG/MY configuration after the source-level fix and targeted regression proof.
 - **2. Run TASK-199 and TASK-203 in parallel when external access is available:** restore
   public availability/deployment evidence and run CI against the current pushed HEAD.
-  The prior billing blocker is no longer observed, but the latest remote run exposed
-  and now has a local source fix for the i18n matrix failure.
+  The prior billing blocker is no longer observed, but the latest remote run exposed an
+  old PostgreSQL assertion failure; the local source fix and temporary PG16 proof pass.
 - **3. Close the Platform chain in dependency order:** TASK-209 remains the release proof
   after TASK-203/external deployment evidence. TASK-206's hidden actor/session foundation,
   TASK-207 authorization proof and TASK-208 browser/workspace proof are now done.
@@ -252,14 +252,17 @@ remain green; TASK-199 still needs a target-host release and health proof.
   - Guardrail: do not reset tenant data or reseed as a diagnostic shortcut. Source-present
     UI changes are not live evidence until the deployed revision is identified.
 
-- **TASK-203 — In Progress (P0) — restore GitHub Actions execution and close the i18n failure**
+- **TASK-203 — In Progress (P0) — restore GitHub Actions execution and prove the current HEAD**
   - Depends on: `TASK-194`.
-  - Evidence: CI run `34017037310` executed all four Vitest shards and the
-    typecheck/transaction/build job, but the i18n matrix reported one hardcoded
-    `Projects` value on `timesheet`.
-  - Source action completed locally: `route.project-pl` was added to en/ms/zh/ja/vi
-    resources and `web/public/assets/i18n-en.js` was regenerated; the exact desktop
-    and mobile 129-route × 5-language matrices pass locally.
+  - Latest evidence: CI run `34132475891` on remote head
+    `4a49706bdb95e060714febe32859aa9d6a0a5fbd` executed all four Vitest shards
+    successfully, but the validation job failed at PostgreSQL security proof. The
+    failure annotation identifies `src/api/postgresSecurity.integration.test.ts:278`,
+    where the old remote assertion omitted the returned `deadLettered: 0` field.
+  - Source action completed locally: commit `dc0f10d` includes that outbox assertion
+    update; a temporary PostgreSQL 16 rerun passes 2 files / 2 tests. The earlier
+    `34017037310` i18n failure is historical; its `route.project-pl` fix and exact
+    desktop/mobile 129-route × 5-language matrices also pass locally.
   - Remaining action: commit/push the scoped fix and record a fresh current-HEAD CI
     run with every required shard/typecheck/build gate. Keep zero-step failures and
     source failures distinct; neither is a green gate.

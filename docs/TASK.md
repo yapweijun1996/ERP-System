@@ -40,9 +40,11 @@ Demo E2E, Platform layout E2E with both tenant modes, Demo autofill E2E, the
 59-route/13-role access matrix, 129-screen desktop/mobile audit and 129-route ×
 5-language × 2-viewport audit. The current disposable PostgreSQL/FORCE-RLS proof is
 recorded in TASK-195; current-HEAD remote CI and production release remain open, while
-public probes and older suite totals are historical evidence. The latest remote CI run
-`34017037310` executed all Vitest shards but failed on one hardcoded i18n label; the
-locale fix passes exact desktop/mobile matrices locally. TASK-211 is done:
+public probes and older suite totals are historical evidence. The latest public CI run
+`34132475891` on remote head `4a49706bdb95e060714febe32859aa9d6a0a5fbd` executed all
+Vitest shards but failed the PostgreSQL security proof because the old remote assertion
+omitted `deadLettered: 0`; local `dc0f10d` and a temporary PostgreSQL 16 rerun pass 2/2.
+The earlier `34017037310` i18n failure is historical and its locale fix passes locally. TASK-211 is done:
 the generated business i18n allowlist is synchronized and its CI drift check is configured;
 remote workflow execution remains subject to TASK-203. TASK-212 is done: active-route
 locale switching now refreshes the shell and route in place while preserving recoverable
@@ -143,7 +145,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-200 | Done | Resolve 129/129 route parity and rerun current HEAD release evidence |
 | TASK-201 | Todo | Production SLO, scale and RPO/RTO proof; source telemetry is now single-flight/non-blocking and claim-aligned, while measured query-budget/plan and operational evidence remain |
 | TASK-202 | In progress | Receipt Pack repository lifecycle/timezone and disposable PostgreSQL concurrency proof are complete; production release evidence remains |
-| TASK-203 | In progress | Remote CI now executes; fix the i18n failure and rerun the current pushed HEAD |
+| TASK-203 | In progress | Remote CI now executes; local PostgreSQL assertion and i18n fixes pass, but the current pushed HEAD still needs a green rerun |
 | TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |
 | TASK-205 | In progress | Direct Vision failure/revoked-connector/no-fallback proof plus bounded dead-letter and same-chain manual requeue; production configuration remains |
 | TASK-213 | Done | Close production RLS coverage omission and add schema drift guard |
@@ -160,8 +162,8 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 The registry therefore has **214 Done / 5 In Progress / 1 Todo / 3 Blocked / 223 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery) and TASK-209
 (release proof waiting for current-HEAD CI and deployed-production evidence). TASK-203
-is In Progress because the latest remote workflow executed but exposed a source i18n
-failure that now passes locally; a fresh current-HEAD run remains required. Dependencies and
+is In Progress because the latest remote workflow executed but exposed an old PostgreSQL
+assertion that now passes locally; a fresh current-HEAD run remains required. Dependencies and
 epic references are valid.
 
 TASK-216 is Done: compact seed PO-APP-2026-0001 and showcase pack v16 carry governed
@@ -411,10 +413,11 @@ statuses above and keep each change independently testable:
   checks do not satisfy the real-device acceptance criterion.
 - **TASK-193:** administrator email recovery. Production SMTP and Platform recovery are
   not configured/proven.
-- **TASK-203:** GitHub Actions current-HEAD verification. Run `34017037310` executed
-  all four Vitest shards and the build gate but failed the i18n browser matrix on
-  `timesheet: Projects`; the locale fix passes locally and must still be run remotely
-  on the current pushed HEAD. No green CI result is inferred yet.
+- **TASK-203:** GitHub Actions current-HEAD verification. Run `34132475891` executed
+  all four Vitest shards but failed the PostgreSQL security proof on the old
+  `deadLettered: 0` assertion at `src/api/postgresSecurity.integration.test.ts:278`.
+  Local commit `dc0f10d` and a temporary PostgreSQL 16 rerun pass; the current pushed
+  HEAD still needs a remote green result. No green CI result is inferred yet.
 
 See [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md) for the current
 implementation boundary and migration dependencies, and [EPICS.md](EPICS.md) for epic

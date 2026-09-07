@@ -40,10 +40,14 @@ The 0098 reset/release paragraphs below are immutable historical checkpoints. Th
 not proof that HEAD `00e2533` is deployed or that the service is currently healthy.
 Public `/health` and `/api/setup/status` probes returned HTTP 502 during TASK-194. The
 historical HEAD workflow run `31603746668` started zero jobs because GitHub reported
-failed account payment or an exhausted spending limit. Latest CI run `34017037310` did
-execute all four Vitest shards and the typecheck/transaction/build job, but failed the
-i18n browser matrix on `timesheet: Projects`; the local `route.project-pl` fix passes
-exact desktop/mobile matrices and needs a fresh current-HEAD remote run. Later source
+failed account payment or an exhausted spending limit. The latest public CI run
+`34132475891` on remote head `4a49706bdb95e060714febe32859aa9d6a0a5fbd` executed all
+four Vitest shards successfully, but its validation job failed at the PostgreSQL 16
+security lifecycle proof: the old remote assertion at
+`src/api/postgresSecurity.integration.test.ts:278` omitted the returned `deadLettered: 0`
+field. Local commit `dc0f10d` includes the corrected contract and a temporary PostgreSQL
+16 rerun passes 2 files / 2 tests. The older `34017037310` i18n failure is historical;
+both local fixes pass, but a fresh current-HEAD remote run is still required. Later source
 adds Platform Demo quick login, password visibility, responsive containment and safe
 existing-Company resume, but no current deployed revision/asset hash was independently
 proven. A fresh read-only probe on 2026-09-08 returned the Pages root and `/release.json`

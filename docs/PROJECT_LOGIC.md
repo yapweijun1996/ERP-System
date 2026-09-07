@@ -865,10 +865,11 @@ without seed; the checkpoint status was `requiresPlatformBootstrap:true` with
 `hasTenantAdmin:false`. Health/root are 200, the retired anonymous setup endpoint is 410,
 and the browser showed Create Platform Superadmin. No account was created by the reset.
 Later HEAD source is not immutable deployment proof. TASK-194 public health/setup probes
-returned 502. The latest CI run `34017037310` did execute but failed the i18n browser
-matrix on `timesheet: Projects`; the local `route.project-pl` fix passes exact
-desktop/mobile matrices, and TASK-199/203 own the remaining production/current-HEAD
-evidence gaps.
+returned 502. The latest public CI run `34132475891` did execute all four Vitest shards
+but failed the PostgreSQL security proof on the old remote `deadLettered: 0` assertion at
+`src/api/postgresSecurity.integration.test.ts:278`; local `dc0f10d` plus a temporary
+PostgreSQL 16 rerun passes 2/2, and the earlier i18n failure is historical. TASK-199/203
+own the remaining production/current-HEAD evidence gaps.
 
 ## 12. Production Trust & ERP Excellence logic boundary
 

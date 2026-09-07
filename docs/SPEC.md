@@ -307,9 +307,11 @@ The current 2026-09-08 local Vitest run passes 176 files / 724 tests with 2 skip
 and 2 skipped tests. TASK-214 failures and TASK-215 static schema/RLS verification are
 recorded in [TEST_COVERAGE.md](TEST_COVERAGE.md). Current public `/health` and setup probes
 remain a separate production evidence boundary; the historical zero-step GitHub Actions
-run was billing-blocked. The latest CI run `34017037310` did execute
-but failed the i18n browser matrix on `timesheet: Projects`; the local `route.project-pl`
-fix passes exact desktop/mobile matrices, and a current-HEAD remote rerun remains pending.
+run was billing-blocked. The latest public CI run `34132475891` executed all four
+Vitest shards but failed the PostgreSQL security proof on the old remote
+`deadLettered: 0` assertion at `src/api/postgresSecurity.integration.test.ts:278`.
+Local `dc0f10d` plus a temporary PostgreSQL 16 rerun passes 2/2; the earlier i18n
+failure is historical and a current-HEAD remote rerun remains pending.
 Physical-device PWA acceptance remains a
 separate human gate.
 

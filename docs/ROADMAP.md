@@ -1269,8 +1269,10 @@ more module breadth. The source-backed review is
    simulation. The owner explicitly accepted password-only access with no MFA or recent
    step-up as a high-severity residual risk.
 5. **Current release proof** (TASK-199/203): restore public availability, identify the
-   exact deployed revision, and obtain a current-HEAD green CI run. The later remote
-   workflow executed and failed i18n; the zero-step billing incident is historical.
+   exact deployed revision, and obtain a current-HEAD green CI run. The latest public
+   workflow executed all four Vitest shards but failed the old remote PostgreSQL
+   `deadLettered: 0` assertion; the zero-step billing incident and earlier i18n failure
+   are historical.
    TASK-200 is source-closed: all 129 Canonical routes declare API metadata and the
    earlier screen, i18n, access-matrix and Staff Calendar/API evidence was recorded.
    TASK-214 subsequently found recovery and invoice-i18n gaps; see TEST_COVERAGE.md.
