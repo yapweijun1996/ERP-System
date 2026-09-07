@@ -26,7 +26,8 @@ F01 is command-level repaired under TASK-216, F02 date-only arithmetic is repair
 under TASK-217, and F03 invoice aging/period presentation is repaired under TASK-218,
 TASK-219 closes F04 with five-language sales-invoice labels and a full local desktop/mobile
 i18n matrix; TASK-220 closes F05 with focused light/dark desktop/mobile filled-action
-contrast evidence; F06–F08 remain open, and full
+contrast evidence; TASK-221 closes F06 with the focused desktop/mobile approval-to-receipt
+workflow; F07–F08 remain open, and full
 business E2E is incomplete. August health/reset and
 billing events are historical. Later CI executed but failed i18n; current green CI,
 target production evidence and TASK-017 physical-device acceptance remain open.

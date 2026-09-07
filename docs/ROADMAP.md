@@ -4,10 +4,11 @@
 
 1. TASK-216 is Done at the seed/upgrade command boundary, TASK-217 is Done at the
    date-only presentation boundary, and TASK-218 is Done at the sales aging/period
-   presentation boundary; TASK-219 is Done at the sales-invoice i18n boundary. Rerun the
-   affected browser journeys so command repair is not mistaken for complete E2E.
+   presentation boundary; TASK-219 is Done at the sales-invoice i18n boundary and TASK-221
+   is Done at the procurement receiving presentation/workflow boundary. Rerun the affected
+   browser journeys so command repair is not mistaken for complete E2E.
 2. TASK-222/223: close mobile/zoom/status and
-   recovery verification gaps; TASK-221 follows TASK-216 for procurement usability.
+   recovery verification gaps.
 3. TASK-203: obtain current-HEAD green CI after fixes; TASK-199: verify target health
    and revision. TASK-209 release requires both, plus its completed security chain.
 4. Finish TASK-202/204/205 production artifact, tax-owner and provider/recovery evidence;
@@ -15,7 +16,7 @@
    measures scale, alerting and restore objectives after TASK-199.
    TASK-017 and TASK-193 still require devices and SMTP respectively.
 
-TASK-214 audit is complete; TASK-215, TASK-219 and TASK-220 synchronize this plan. Historic phase checkmarks
+TASK-214 audit is complete; TASK-215, TASK-219, TASK-220 and TASK-221 synchronize this plan. Historic phase checkmarks
 mean the scoped milestone was delivered, not current all-module or production acceptance.
 Use [TEST_COVERAGE.md](TEST_COVERAGE.md) for latest results and
 [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md) for the full product goals.

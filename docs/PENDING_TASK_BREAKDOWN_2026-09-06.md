@@ -2,8 +2,8 @@
 
 ## Latest specialist follow-up
 
-TASK-215 reconciles documentation/KB only. TASK-216 through TASK-220 are complete and
-TASK-221–223 remain open, one per F06–F08 in
+TASK-215 reconciles documentation/KB only. TASK-216 through TASK-221 are complete and
+TASK-222–223 remain open, one per F07–F08 in
 [ERP_SPECIALIST_REVIEW_2026-09-07.md](ERP_SPECIALIST_REVIEW_2026-09-07.md).
 
 | Task | Status | Required outcome |
@@ -13,7 +13,7 @@ TASK-221–223 remain open, one per F06–F08 in
 | TASK-218 | Done | Derive invoice aging and fiscal-period KPIs from date-only presentation facts while preserving posting status |
 | TASK-219 | Done | Close sales invoice translation gaps; canonical labels and current full i18n matrix pass |
 | TASK-220 | Done | Correct filled-action contrast in both themes; focused action-token E2E passes |
-| TASK-221 | Todo | Make procurement next actions and receiving scope clear |
+| TASK-221 | Done | Make procurement next actions and receiving scope clear; built-Demo desktop/mobile full-receipt workflow passes |
 | TASK-222 | Todo | Improve mobile touch zoom and localized status usability |
 | TASK-223 | Todo | Resolve payment voucher recovery audit timing uncertainty |
 
@@ -28,7 +28,7 @@ This is the actionable view of every non-Done task currently registered in
 tests are implementation evidence, while deployment, CI, production configuration and
 physical-device checks remain separate evidence classes.
 
-Current registry: **211 Done / 4 In Progress / 5 Todo / 3 Blocked / 223 Total**.
+Current registry: **212 Done / 4 In Progress / 4 Todo / 3 Blocked / 223 Total**.
 
 2026-09-07 TASK-216 completion: the compact seed and generated showcase pack v16 now
 write governed GST/SST classification and recoverability snapshots. A deterministic
@@ -70,7 +70,7 @@ continues to capture/restore scroll state. The specialist seven-route matrix and
 PGlite release audit pass at 129 routes × 5 languages × 2 viewports with zero blocking
 findings. The i18n audit's dynamic-date allowlist now accepts locale-generated month names
 such as `Sept` without classifying runtime business dates as untranslated system copy.
-TASK-221–223 remain independently actionable.
+TASK-222–223 remain independently actionable.
 
 2026-09-08 TASK-220 completion: shared `--accent-action` and `--accent-action-hover`
 tokens now govern white-text filled controls while `--accent` remains available for
@@ -78,7 +78,7 @@ accent text and charts. Primary buttons, PWA Install and related selected contro
 the focused action-contrast E2E at 5.567:1 normal and 6.947:1 hover across light/dark
 desktop/mobile, with visible focus and disabled states, zero browser errors and no mobile
 horizontal overflow. The four matching screenshots were visually inspected and removed
-after verification. TASK-221–223 remain independently actionable.
+after verification. TASK-222–223 remain independently actionable.
 
 2026-09-07 CI addendum: the latest GitHub Actions CI run `34017037310` on remote
 head `2188f56186e88e542351ec3a49e07d73057182bf` executed all four Vitest shards and

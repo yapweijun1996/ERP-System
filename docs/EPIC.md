@@ -2,7 +2,8 @@
 
 Latest EPIC-066 follow-up: TASK-214 audit, TASK-215 documentation reconciliation,
 TASK-216 seed repair, TASK-217 date-only repair, TASK-218 invoice KPI reconciliation,
-TASK-219 translation repair, TASK-220 contrast repair, and TASK-221–223 Todo.
+TASK-219 translation repair, TASK-220 contrast repair, TASK-221 procurement workflow repair,
+and TASK-222–223 Todo.
 [TEST_COVERAGE.md](TEST_COVERAGE.md) distinguishes
 route coverage from business E2E; see [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md)
 for the product acceptance direction.

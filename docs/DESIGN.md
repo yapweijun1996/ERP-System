@@ -2,10 +2,11 @@
 
 Reviewed 2026-09-08: the shared schema/domain and Demo/API boundaries remain unchanged.
 Newly verified seed, date, reporting and presentation defects are tracked in
-[TEST_COVERAGE.md](TEST_COVERAGE.md), TASK-221–223. TASK-216 seed/Demo-pack repair,
+[TEST_COVERAGE.md](TEST_COVERAGE.md), TASK-222–223. TASK-216 seed/Demo-pack repair,
 TASK-217 date-only due-date repair and TASK-218 invoice KPI reconciliation are complete
 locally, TASK-219's sales-invoice labels now use canonical i18n keys and TASK-220's
-filled controls now use a contrast-safe action token: seed repair
+filled controls now use a contrast-safe action token and TASK-221's procurement
+receiving workflow now exposes the existing full-receipt command honestly: seed repair
 belongs in governed fixture generation/upgrade; date and aging rules
 share one business-owned date-only presentation contract;
 translations and theme tokens remain presentation responsibilities. Do not weaken

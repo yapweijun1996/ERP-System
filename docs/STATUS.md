@@ -24,7 +24,8 @@ shift, incorrect invoice aging/period KPIs and a dark-button contrast gap. These
 historical audit findings, not fixed by the documentation audit. TASK-216 subsequently
 repairs the seeded procurement path, TASK-217 repairs the date-only due-date path, and
 TASK-218 repairs invoice aging/period presentation facts, TASK-219 repairs the sales-invoice
-translation gaps and TASK-220 repairs the filled-action contrast gap; TASK-221–223 remain open.
+translation gaps, TASK-220 repairs the filled-action contrast gap and TASK-221 repairs the
+procurement receiving workflow; TASK-222–223 remain open.
 The audit's
 optional full Vitest run stopped without a result; earlier suite totals below remain
 historical evidence.
@@ -70,6 +71,17 @@ focus outlines, disabled-state checks, zero browser errors and no mobile horizon
 The four screenshots from those combinations were visually inspected and removed after the
 check. This is local source/Demo evidence, not current-HEAD remote CI or deployment evidence.
 
+TASK-221 follow-up is complete on the local source: approved/open purchase-order approval
+detail now exposes the authorized Receive goods action, while the Goods Receipts entry
+point opens the same workflow or returns to Purchase Orders when no eligible order exists.
+The review modal lets the operator choose warehouse and receipt date, shows every order line
+at read-only full quantity, and states that partial receiving and QC disposition are not
+modeled. The canonical register no longer exposes unsupported open/QC/partial filters,
+columns or inspection actions. The focused built-Demo Playwright E2E passes the approval →
+review → full receipt → register flow at 1280px and 375px with zero browser errors and no
+mobile horizontal overflow. This is local Demo/source evidence, not partial-receipt domain
+capability, production deployment or remote CI evidence.
+
 ## Source-of-truth synchronization
 
 The synchronized review/status baseline started at `2188f56` (`New`). The current
@@ -79,7 +91,7 @@ production deployment is still a separate release gate.
 
 The current worktree adds migrations 0100/0101/0102/0103: the Drizzle journal contains **104 migration
 entries**, generated canonical SQL contains **255 tables**, and the task registry contains
-**211 Done / 4 In Progress / 5 Todo / 3 Blocked / 223 Total**. TASK-200 now closes the
+**212 Done / 4 In Progress / 4 Todo / 3 Blocked / 223 Total**. TASK-200 now closes the
 Canonical/API route parity gap by including `staff-calendar` in `API_SCREEN_ROUTES`.
 TASK-212 is done: the
 active route and dynamic shell now refresh in place on locale change while preserving

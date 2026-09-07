@@ -11,7 +11,7 @@ are acceptance targets, not declarations that every module is production-ready.
 Required corrections are TASK-216–223: governed seed snapshots, date-only due dates,
 reconciled invoice aging/period KPIs, complete translated labels, filled-action
 contrast, usable procurement actions, mobile/zoom/status accessibility and reliable
-recovery verification. TASK-216 through TASK-220 are complete; TASK-221–223 are Todo. Complete them
+recovery verification. TASK-216 through TASK-221 are complete; TASK-222–223 are Todo. Complete them
 with negative-path and regression evidence before changing their acceptance status.
 Automatic client updates currently mean background detection plus explicit user
 activation; unattended forced refresh and multi-tab draft safety are not guaranteed.

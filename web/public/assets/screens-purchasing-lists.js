@@ -36,8 +36,8 @@ function buildPurTxn(kind, r){
     const pct=r.recvPct;
     Object.assign(C,{ icon:'receive', title:'Goods Receipt', active:'goods-receipts', crumbLabel:'Goods Receipts', crumbRoute:'goods-receipts',
       subtitle:`${esc(r.supplier)} · against ${esc(r.po)} · ${esc(r.warehouse)}`, tone:GRN_TONE[r.status],
-      meta:[['Supplier',suppCellInline(r.supplier)],['PO reference',`<b>${esc(r.po)}</b>`],['Receipt date',`<b>${esc(r.date)}</b>`],['Warehouse',`<b>${esc(r.warehouse)}</b>`],['QC',`<b>${esc(r.qc)}</b>`]],
-      main: txnDetails([['Lines',String(r.lines)],['Received',`${pct}%`],['QC status',esc(r.qc)]]) +
+      meta:[['Supplier',suppCellInline(r.supplier)],['PO reference',`<b>${esc(r.po)}</b>`],['Receipt date',`<b>${esc(r.date)}</b>`],['Warehouse',`<b>${esc(r.warehouse)}</b>`]],
+      main: txnDetails([['Lines',String(r.lines)],['Received',`${pct}%`]]) +
         txnActivity([{kind:'current',when:r.date,what:`Status — <b>${esc(r.status)}</b>`,who:'Warehouse'},{kind:'add',when:r.date,what:`Goods received against ${esc(r.po)}`,who:'M. Silva'}]),
       summary: sumCard(null,[['Lines',String(r.lines)],['Received',pct+'%']]) +
         `<div class="sumcard"><div class="sectitle" style="margin-top:0">Related</div>${relatedDocs([{no:r.po,label:'Purchase order',meta:r.supplier,status:'Approved'}])}</div>`,
@@ -708,13 +708,12 @@ registerPurchasingTransactionList({
   prepare:prepareCanonicalPurchasingData,
   sub:'Confirmed orders issued to suppliers after approval or supplier selection. Track approval, receiving, invoicing and payment status through to close.',
   rows:()=>DB.purchaseOrders, rowId:p=>p.no,
-  chips:[['all','All'],['pending','Pending approval'],['approved','Approved'],['receiving','Receiving'],['done','Completed']],
-  filterFn:(p,f)=>f==='pending'?p.status==='Pending Approval':f==='approved'?p.status==='Approved':f==='receiving'?p.status==='Partially Completed':p.status==='Completed',
+  chips:[['all','All'],['pending','Pending approval'],['approved','Approved'],['done','Completed']],
+  filterFn:(p,f)=>f==='pending'?p.status==='Pending Approval':f==='approved'?p.status==='Approved':p.status==='Completed',
   kpis:(r)=>[
     {label:'Open POs', val:r.filter(p=>!['Completed','Cancelled'].includes(p.status)).length},
     {label:'Open commitment', val:money0(r.filter(p=>!['Completed','Cancelled'].includes(p.status)).reduce((a,p)=>a+p.total,0))},
     {label:'Pending approval', val:r.filter(p=>p.status==='Pending Approval').length, accent:true, f:'pending'},
-    {label:'Receiving', val:r.filter(p=>p.status==='Partially Completed').length, f:'receiving'},
   ],
   newBtn:{label:'New PO', onClick:()=>navigate('new-purchase-order')},
   columns:[
@@ -731,7 +730,7 @@ registerPurchasingTransactionList({
   rowMenu:(p)=>[
     ...(p.approval?[{id:'view',icon:'ext',label:'Open PO',run:()=>openPO(p)}]:[]),
     ...(p.approval?[{id:'approve',icon:'flow',label:'Review approval',run:()=>navigate('po-approval',{purchaseOrderId:p.id})}]:[]),
-    {id:'grn',icon:'receive',label:'Receive goods',run:()=>doReceiveGoods(p)},
+    ...(p.status==='Approved'&&purchasingWriteAllowed()?[{id:'grn',icon:'receive',label:'Receive goods',run:()=>doReceiveGoods(p)}]:[]),
     {id:'inv',icon:'receipt',label:'Post supplier invoice',run:()=>doPostSupplierInvoice(p)},
   ],
   rowAction:{
@@ -742,6 +741,10 @@ registerPurchasingTransactionList({
 });
 function openPO(p){ if(p.approval) navigate('po-approval',{purchaseOrderId:p.id}); }
 
+function purchasingWriteAllowed(){
+  return typeof userHasAnyPermission!=='function'||userHasAnyPermission('purchasing.write');
+}
+
 /* TASK-023: the live counterparts of confirmOrder's UI pattern — await the
    real adapter transaction, toast the real result or the real error, and
    re-navigate so the list re-renders from freshly refreshed DB.* data (the
@@ -749,26 +752,71 @@ function openPO(p){ if(p.approval) navigate('po-approval',{purchaseOrderId:p.id}
    the PO's real status ('Approved'/'Completed' — this schema's only two live
    states, see erp-system-data-adapter.js) rather than hidden/disabled menu
    items, since the transaction list row menu supports conditional items. */
-async function doReceiveGoods(p){
+function purchaseReceiveCopy(){
+  const packs={
+    en:{title:'Receive approved purchase order',action:'Receive goods',actionHint:'This approved order can now be received. Review the warehouse, date and full quantities.',description:'Review the warehouse, receipt date and full purchase-order quantities before posting inventory.',scope:'The current receiving command posts every order line once. Partial receiving and QC disposition are not modeled.',warehouse:'Warehouse',date:'Receipt date',receiptNo:'Receipt number',lines:'Order lines',item:'Item',quantity:'Quantity',cancel:'Cancel',confirm:'Post full receipt',required:'Choose a warehouse and receipt date.',posted:'Goods receipt posted',failed:'Receive goods failed'},
+    ms:{title:'Terima pesanan belian yang diluluskan',action:'Terima barang',actionHint:'Pesanan yang diluluskan ini boleh diterima. Semak gudang, tarikh dan kuantiti penuh.',description:'Semak gudang, tarikh penerimaan dan kuantiti penuh pesanan belian sebelum mempos inventori.',scope:'Arahan penerimaan semasa mempos setiap baris pesanan sekali. Penerimaan separa dan pelupusan QC tidak dimodelkan.',warehouse:'Gudang',date:'Tarikh penerimaan',receiptNo:'Nombor penerimaan',lines:'Baris pesanan',item:'Item',quantity:'Kuantiti',cancel:'Batal',confirm:'Pos penerimaan penuh',required:'Pilih gudang dan tarikh penerimaan.',posted:'Penerimaan barang telah dipos',failed:'Penerimaan barang gagal'},
+    zh:{title:'接收已批准的采购订单',action:'接收货物',actionHint:'这张已批准的订单现在可以收货。请核对仓库、日期和完整数量。',description:'过账库存前，请核对仓库、收货日期和采购订单的完整数量。',scope:'当前收货命令会一次过账订单的每一行。系统尚未建模部分收货或 QC 处置。',warehouse:'仓库',date:'收货日期',receiptNo:'收货单号',lines:'订单明细',item:'物料',quantity:'数量',cancel:'取消',confirm:'过账完整收货',required:'请选择仓库和收货日期。',posted:'收货单已过账',failed:'收货失败'},
+    ja:{title:'承認済み購買発注を入荷',action:'入荷する',actionHint:'この承認済み発注は入荷できます。倉庫、日付、全数量を確認してください。',description:'在庫を転記する前に、倉庫、入荷日、購買発注の全数量を確認します。',scope:'現在の入荷コマンドは発注明細を一度にすべて転記します。分割入荷とQC処置はモデル化されていません。',warehouse:'倉庫',date:'入荷日',receiptNo:'入荷番号',lines:'発注明細',item:'品目',quantity:'数量',cancel:'キャンセル',confirm:'全量を入荷',required:'倉庫と入荷日を選択してください。',posted:'入荷を転記しました',failed:'入荷に失敗しました'},
+    vi:{title:'Nhận đơn mua hàng đã duyệt',action:'Nhận hàng',actionHint:'Đơn mua đã duyệt này có thể được nhận. Kiểm tra kho, ngày và toàn bộ số lượng.',description:'Kiểm tra kho, ngày nhận và toàn bộ số lượng trên đơn mua trước khi ghi sổ tồn kho.',scope:'Lệnh nhận hiện tại ghi nhận toàn bộ từng dòng đơn một lần. Chưa mô hình hóa nhận một phần hoặc xử lý QC.',warehouse:'Kho',date:'Ngày nhận',receiptNo:'Số phiếu nhận',lines:'Dòng đơn mua',item:'Mặt hàng',quantity:'Số lượng',cancel:'Hủy',confirm:'Ghi nhận toàn bộ',required:'Chọn kho và ngày nhận.',posted:'Đã ghi nhận phiếu nhập',failed:'Không thể nhận hàng'},
+  };
+  const pack=i18nLegacy(packs);
+  return key=>pack[key]||packs.en[key]||key;
+}
+
+function openPurchaseOrderReceiveModal(order,{onSuccess}={}){
+  const c=purchaseReceiveCopy();
+  const warehouses=Array.isArray(DB.purchasingWarehouses)?DB.purchasingWarehouses:[];
+  if(!warehouses.length){ toast('Create a warehouse before receiving goods.','warn'); return; }
+  const lines=(DB.purchaseOrderLines||[]).filter(line=>line.orderId===order.id);
+  const receivedDate=typeof workingBusinessDate==='function'
+    ?workingBusinessDate():new Date().toISOString().slice(0,10);
+  const docNo=`GR-PO-${order.id}`;
+  const warehouseOptions=warehouses.map((location,index)=>`<option value="${esc(String(location.id))}" ${index===0?'selected':''}>${esc(location.code)} · ${esc(location.name)}</option>`).join('');
+  const lineRows=lines.map(line=>`<tr><td class="l"><b>${esc(line.name)}</b><small>${esc(line.sku)} · ${esc(line.uom)}</small></td><td class="tnum"><b>${num(line.qty)}</b> ${esc(line.uom)}</td></tr>`).join('');
+  appModal({
+    icon:'receive',title:c('title'),width:'min(720px, calc(100vw - 24px))',body:`
+      <p class="hint" style="margin:0 0 14px;line-height:1.5">${esc(c('description'))}</p>
+      <div class="callout info">${ic('lock')}<span>${esc(c('scope'))}</span></div>
+      <div class="fldrow c2" style="margin-top:14px">
+        <label class="fld"><span>${esc(c('warehouse'))}</span><select data-po-receive-warehouse>${warehouseOptions}</select></label>
+        <label class="fld"><span>${esc(c('date'))}</span><input type="date" data-po-receive-date value="${esc(receivedDate)}"></label>
+      </div>
+      <div class="fld" style="margin-top:12px"><span>${esc(c('receiptNo'))}</span><input value="${esc(docNo)}" disabled></div>
+      <div class="panel" style="margin-top:14px"><div class="panel-h"><h3>${esc(c('lines'))}</h3><span class="case-detail-panel-count">${lines.length}</span></div>
+        <div class="posting-lines-scroll"><table class="lines"><thead><tr><th class="l">${esc(c('item'))}</th><th>${esc(c('quantity'))}</th></tr></thead><tbody>${lineRows||`<tr><td colspan="2">—</td></tr>`}</tbody></table></div>
+      </div>`,
+    actions:btn(c('cancel'),{cls:'soft',attrs:'data-po-receive-cancel'})+btn(c('confirm'),{icon:'receive',cls:'primary',sm:false,attrs:'data-po-receive-confirm'}),
+  });
+  document.querySelector('[data-po-receive-cancel]')?.addEventListener('click',closeModal);
+  document.querySelector('[data-po-receive-confirm]')?.addEventListener('click',async event=>{
+    const button=event.currentTarget;
+    const warehouseId=Number(document.querySelector('[data-po-receive-warehouse]')?.value);
+    const date=document.querySelector('[data-po-receive-date]')?.value||'';
+    if(!Number.isSafeInteger(warehouseId)||warehouseId<=0||!/^\d{4}-\d{2}-\d{2}$/.test(date)){
+      toast(c('required'),'warn');
+      return;
+    }
+    const adapter=window.ErpSystemData;
+    if(!adapter||typeof adapter.action!=='function'){ toast('ERP data adapter not loaded','warn'); return; }
+    button.disabled=true;
+    try{
+      const response=await adapter.action('purchasing/purchase-orders',order.id,'receive',{warehouseId,docNo,receivedDate:date},`purchase-receive-${order.id}`);
+      const result=response&&response.data||{};
+      closeModal();
+      toast(`${c('posted')} — ${docNo} (${result.lines||lines.length} ${c('lines')})`,'ok');
+      if(typeof onSuccess==='function') await onSuccess(result);
+      else await navigate('purchase-orders');
+    }catch(error){
+      button.disabled=false;
+      toast(error&&error.message||c('failed'),'danger');
+    }
+  });
+}
+
+function doReceiveGoods(p){
   if(p.status!=='Approved'){ toast(`${p.no} is '${p.status}' — cannot receive goods (already received, or cancelled).`,'warn'); return; }
-  const adapter=window.ErpSystemData;
-  const location=(DB.purchasingWarehouses||[])[0];
-  if(!adapter||typeof adapter.action!=='function'){ toast('ERP data adapter not loaded','warn'); return; }
-  if(!location){ toast('Create a warehouse before receiving goods.','warn'); return; }
-  const receivedDate=new Date().toISOString().slice(0,10);
-  const docNo=`GR-PO-${p.id}`;
-  try{
-    const response=await adapter.action(
-      'purchasing/purchase-orders',
-      p.id,
-      'receive',
-      {warehouseId:location.id,docNo,receivedDate},
-      `purchase-receive-${p.id}`,
-    );
-    const res=response.data;
-    toast(`${docNo} posted — stock updated for ${p.no} (${res.lines} line${res.lines===1?'':'s'}).`,'ok');
-    await navigate('purchase-orders');
-  }catch(e){ toast((e&&e.message)||'Receive goods failed','danger'); }
+  openPurchaseOrderReceiveModal(p);
 }
 async function doPostSupplierInvoice(p){
   if(p.status!=='Completed'){ toast(`${p.no} is '${p.status}' — receive goods before posting an invoice.`,'warn'); return; }
@@ -795,30 +843,28 @@ async function doPostSupplierInvoice(p){
 registerPurchasingTransactionList({
   route:'goods-receipts', active:'goods-receipts', title:'Goods Receipts', unit:'receipts',
   prepare:prepareCanonicalPurchasingData,
-  sub:'Receiving against purchase orders — full or partial, with QC disposition and putaway. Posting updates inventory and feeds the 3-way match.',
+  sub:'Review full receipts posted against approved purchase orders. Posting updates inventory and feeds the 3-way match.',
   rows:()=>DB.goodsReceipts, rowId:g=>g.no,
-  chips:[['all','All'],['open','Open'],['qc','QC'],['posted','Posted'],['rejected','Rejected']],
-  filterFn:(g,f)=>f==='open'?['Received','Partially Received','Pending QC'].includes(g.status):f==='qc'?g.status==='Pending QC':f==='posted'?g.status==='Posted':g.status==='Rejected',
+  chips:[['all','All'],['posted','Posted']],
+  filterFn:(g,f)=>f==='posted'&&g.status==='Posted',
   kpis:(r)=>[
-    {label:'Open receipts', val:r.filter(g=>!['Posted','Cancelled'].includes(g.status)).length, f:'open'},
-    {label:'Pending QC', val:r.filter(g=>g.status==='Pending QC').length, accent:true, f:'qc'},
-    {label:'Partially received', val:r.filter(g=>g.status==='Partially Received').length},
     {label:'Posted', val:r.filter(g=>g.status==='Posted').length, f:'posted'},
   ],
-  newBtn:{label:'Receive approved PO', onClick:()=>navigate('purchase-orders')},
+  newBtn:{label:'Receive approved PO', onClick:()=>{
+    const order=(DB.purchaseOrders||[]).find(row=>row.rawStatus==='open'&&purchasingWriteAllowed());
+    if(order) openPurchaseOrderReceiveModal(order); else navigate('purchase-orders');
+  }},
   columns:[
     {label:'GRN', w:'minmax(140px,1.2fr)', render:g=>docNoCell(g.no, g.date)},
     {label:'Supplier', align:'l', w:'minmax(160px,1.6fr)', render:g=>suppCell(g.supplier,g.code)},
     {label:'Against PO', align:'l', w:'minmax(116px,1fr)', render:g=>`<span class="mono" style="font-size:12px">${esc(g.po)}</span>`},
     {label:'Warehouse', align:'l', w:'minmax(100px,1fr)', render:g=>`<span style="color:var(--muted)">${esc(g.warehouse)}</span>`},
     {label:'Received', align:'l', w:'minmax(110px,1.1fr)', render:g=>{const p=g.recvPct,tone=p>=100?'ok':p>0?'warn':'';return `<span class="fulcell"><span class="minibar"><i class="${tone}" style="width:${p}%"></i></span><b class="fnum">${p}%</b></span>`;}},
-    {label:'QC', align:'l', cls:'cap-cell', w:'minmax(110px,1fr)', render:g=>cap(g.qc, g.qc==='Accepted'?'ok':g.qc==='Rejected'?'danger':'warn')},
     {label:'Status', align:'l', cls:'cap-cell', w:'minmax(128px,1.2fr)', render:g=>cap(g.status,GRN_TONE[g.status])},
     {label:'', align:'c', w:'52px', render:()=>transactionRowMenuButton()},
   ],
   rowMenu:(g)=>[
     {id:'view',icon:'ext',label:'Open receipt',run:()=>openGRN(g)},
-    {id:'qc',icon:'checkc',label:'Open inspection',run:()=>navigate('qc-inspection')},
     {id:'inv',icon:'receipt',label:'Match to invoice',run:()=>navigate('supplier-invoices')},
     {id:'ret',icon:'refresh',label:'Create return',danger:false,sep:true,run:()=>navigate('purchase-returns')},
   ],

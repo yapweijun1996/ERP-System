@@ -20,7 +20,7 @@ const PUR_SECTIONS = [
     { route:'rfqs',                  label:'RFQs',         icon:'comment', desc:'Requests for quotation' },
     { route:'supplier-quotations',   label:'Quotations',   icon:'receipt', desc:'Supplier offers & comparison' },
     { route:'purchase-orders',       label:'Purchase Orders', icon:'cart', desc:'Confirmed supplier orders' },
-    { route:'goods-receipts',        label:'Goods Receipts', icon:'receive', desc:'Receiving & putaway' },
+    { route:'goods-receipts',        label:'Goods Receipts', icon:'receive', desc:'Full receipt posting & inventory' },
     { route:'supplier-invoices',     label:'Supplier Invoices', icon:'receipt', desc:'AP invoices & 3-way match' },
     { route:'purchase-returns',      label:'Purchase Returns', icon:'refresh', desc:'Returns to supplier' },
     { route:'supplier-credit-notes', label:'Credit Notes', icon:'coins',   desc:'Supplier credit adjustments' },
@@ -245,7 +245,6 @@ async function prepareCanonicalPurchasingData(){
       warehouse:location.code||`Warehouse #${row.warehouseId}`,
       lines:lineCountByOrder.get(row.orderId)||0,
       recvPct:100,
-      qc:'Not modeled',
       status:'Posted',
     };
   });
@@ -635,7 +634,7 @@ SCREENS['purchasing-home'] = function(root){
   const openPO=PO.filter(p=>!['Completed','Cancelled'].includes(p.status));
   const openVal=openPO.reduce((a,p)=>a+p.total,0);
   const pending=PO.filter(p=>p.status==='Pending Approval').length;
-  const pendingGRN=PO.filter(p=>['Approved','Partially Completed'].includes(p.status)).length;
+  const pendingGRN=PO.filter(p=>p.status==='Approved').length;
   const grnNotInv=GRN.filter(g=>g.status==='Posted').length - SI.filter(i=>i.grn&&i.status!=='Draft').length + 1;
   const invPendingMatch=SI.filter(i=>['Pending Matching','Mismatch'].includes(i.status)).length;
   const overdueAP=SI.filter(i=>['Posted','Partially Paid','Overdue'].includes(i.status)).reduce((a,i)=>a+i.total,0);

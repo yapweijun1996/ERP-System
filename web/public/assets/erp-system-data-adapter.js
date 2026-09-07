@@ -891,7 +891,7 @@
         id: g.id, orderId: g.order_id, warehouseId: g.warehouse_id,
         no: g.doc_no, date: g.received_date, po: g.po_no,
         supplier: g.supplier, code: g.supplier_code, warehouse: g.warehouse,
-        lines: 1, recvPct: 100, qc: 'Accepted', status: 'Posted',
+        lines: 1, recvPct: 100, status: 'Posted',
       };
     });
     DB.supplierInvoices = (d.supplierInvoices || []).map(function(i){

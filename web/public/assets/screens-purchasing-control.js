@@ -119,6 +119,7 @@ registerPurchasingTransactionList({
 
 SCREENS['po-approval']=async function(root,params){
   const s=poApprovalCopy();
+  const receiveCopy=purchaseReceiveCopy();
   await prepareCanonicalPurchasingData();
   const requestedId=params&&params.purchaseOrderId?Number(params.purchaseOrderId):null;
   const requests=DB.purchaseOrderApprovals||[];
@@ -155,11 +156,16 @@ SCREENS['po-approval']=async function(root,params){
   const decision=request.status==='pending'
     ?`<div class="callout info">${ic('clock')}<span>${esc(s('pendingDecision'))}</span></div>`
     :`<div class="timeline"><div class="tl ${request.status==='approved'?'ok':'danger'}"><span class="tldot"></span><div class="tlbody"><div class="when">${esc(request.decidedAt||'—')}</div><div class="what">${esc(poApprovalLabel(request.status))} · ${esc(request.decidedByName||'—')}</div><div class="det">${esc(request.decisionNote||'—')}</div></div></div></div>`;
+  const canReceive=request.status==='approved'&&request.orderStatus==='open'&&purchasingWriteAllowed();
   const actions=request.status==='pending'?`
     <span class="case-detail-action-note">${esc(s('actionHint'))}</span>
     <div class="grow"></div>
     ${btn(s('reject'),{icon:'x',cls:'danger',attrs:'data-po-reject'})}
-    ${btn(s('approve'),{icon:'check',cls:'primary',sm:false,attrs:'data-po-approve'})}`:'';
+    ${btn(s('approve'),{icon:'check',cls:'primary',sm:false,attrs:'data-po-approve'})}`
+    :canReceive?`
+      <span class="case-detail-action-note">${esc(receiveCopy('actionHint'))}</span>
+      <div class="grow"></div>
+      ${btn(receiveCopy('action'),{icon:'receive',cls:'primary',sm:false,attrs:'data-po-receive'})}`:'';
   caseDetailPage(root,{
     module:'purchasing',
     route:'po-approval',
@@ -203,6 +209,11 @@ SCREENS['po-approval']=async function(root,params){
       caseRoot?.setAttribute('data-canonical-po-approval','true');
       root.querySelector('[data-po-approve]')?.addEventListener('click',()=>openPoApprovalDecision(request,'approve'));
       root.querySelector('[data-po-reject]')?.addEventListener('click',()=>openPoApprovalDecision(request,'reject'));
+      root.querySelector('[data-po-receive]')?.addEventListener('click',()=>{
+        const order=DB.purchaseOrders.find(row=>row.id===request.orderId);
+        if(!order){ toast('The purchase order could not be loaded.','danger'); return; }
+        openPurchaseOrderReceiveModal(order,{onSuccess:()=>navigate('po-approval',{purchaseOrderId:request.orderId})});
+      });
     },
   });
 };

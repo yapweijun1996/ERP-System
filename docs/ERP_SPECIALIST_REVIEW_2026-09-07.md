@@ -9,7 +9,7 @@ source/documentation, and official SG/MY market references. This review does not
 certify production readiness or fix runtime defects. Product direction is recorded
 in [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md).
 
-Follow-up status: TASK-216 through TASK-220 are now complete on the subsequent local worktree.
+Follow-up status: TASK-216 through TASK-221 are now complete on the subsequent local worktree.
 The compact
 seed and showcase pack v16 carry governed SG/MY tax snapshots, the untouched historical
 SG approval row has an idempotent upgrade repair, and fresh/upgraded shared-command
@@ -167,6 +167,16 @@ TASK-214 on completion. Historical passing tests in STATUS remain dated evidence
   describe implemented scope, and let the operator review warehouse/date/quantity
   where the business contract supports them. This is a usability/capability
   improvement; partial receiving is not claimed as a newly broken feature.
+
+  **Follow-up 2026-09-08 — TASK-221 complete.** The approved/open PO detail now exposes
+  the authorized Receive goods action, and Goods Receipts opens the same receive workflow
+  instead of routing blindly to the PO list. The modal reviews a selectable warehouse,
+  receipt date and read-only full line quantities, and explicitly states that partial
+  receiving and QC disposition are not modeled. Unsupported open/QC/partial register
+  controls and inspection actions were removed. The focused built-Demo Playwright E2E
+  passes approval → review → full receipt → register at 1280px and 375px with zero browser
+  errors and no mobile horizontal overflow. The underlying shared receive command remains
+  full-receipt only; no new partial-receipt capability is claimed.
 
 - **F07 — P2 — Mobile accessibility and business language need focused follow-up.**
   Top-bar controls measure 34px and filter chips about 30px high at 375px; improve

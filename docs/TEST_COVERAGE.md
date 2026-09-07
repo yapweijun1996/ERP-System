@@ -1,6 +1,6 @@
 # ERP module verification coverage
 
-Reviewed: **2026-09-08**, source `243af56`, TASK-214 evidence and TASK-219/220 follow-up; TASK-215 documentation reconciliation.
+Reviewed: **2026-09-08**, source `243af56`, TASK-214 evidence and TASK-219/220/221 follow-up; TASK-215 documentation reconciliation.
 
 **All modules have not passed complete end-to-end testing.** All 129 registered routes
 rendered at desktop/mobile, but the complete screen audit failed one recovery assertion.
@@ -35,7 +35,7 @@ and colocated test entry points.
 | [manufacturing](../src/modules/manufacturing/) | 2 | Route rendering only; BOM/work-order/material/finished-goods cycle not rerun. |
 | [payroll](../src/modules/payroll/) | 3 | PGlite SG/MY fixture totals, balanced journals and repost denial pass; browser payroll lifecycle and statutory submissions not rerun. |
 | [project](../src/modules/project/) | 3 | Route rendering only; progress claim, timesheet, billing and receipt lifecycle not rerun. |
-| [purchasing](../src/modules/purchasing/) | 11 | Fresh compact seed and simulated historical-pack upgrade now approve/receive/post exactly one balanced supplier invoice through shared commands; the fail-closed unclassified/regime-mismatch guard remains covered. Browser/API production tax-owner evidence is separate. |
+| [purchasing](../src/modules/purchasing/) | 11 | Fresh compact seed and simulated historical-pack upgrade now approve/receive/post exactly one balanced supplier invoice through shared commands; the fail-closed unclassified/regime-mismatch guard remains covered. TASK-221's built-Demo E2E now verifies approval → warehouse/date/full-quantity review → receipt posting at desktop/mobile with no unsupported partial/QC register controls. Browser/API production tax-owner evidence is separate. |
 | [quality](../src/modules/quality/) | 1 | Route rendering only; inspection/disposition business cycle not rerun. |
 | [reporting](../src/modules/reporting/) | 1 | Routes rendered; aggregate report reconciliation, export correctness and large-data plans not comprehensively tested. |
 | [sales](../src/modules/sales/) | 8 | MCP SO-2 confirmation/stock/invoice/balanced GL and SO-3 rejection pass; TASK-217 fixes F02 date-only due-date arithmetic, TASK-218 fixes F03 invoice aging/period presentation and TASK-219 fixes sales-invoice locale labels with focused/browser evidence; TASK-220 separately covers shared filled-action palette evidence; no complete customer settlement chain. |
@@ -77,7 +77,8 @@ capability gap, not a tested feature.
 
 F01–F08 map one-to-one to TASK-216–223 in [TASK.md](TASK.md) and the
 [task registry](../tasks/tasks.jsonl). TASK-218 depends on TASK-217's date contract;
-TASK-221 depends on restoring the seeded procurement journey in TASK-216. Translation,
+TASK-221 depended on restoring the seeded procurement journey in TASK-216 and is now
+complete. Translation,
 contrast, mobile usability and recovery investigation can proceed independently.
 Existing production gates remain TASK-199/201/202/203/204/205/209, physical-device
 acceptance TASK-017, and SMTP-dependent recovery TASK-193. Documentation completion
@@ -85,8 +86,8 @@ TASK-215 does not close any runtime finding or production gate.
 
 ## Documentation and KB reconciliation
 
-TASK-215 through TASK-220 are complete; TASK-221–223 remain Todo. Current registry:
-**211 Done / 4 In Progress / 5 Todo / 3 Blocked / 223 Total**. The project KB
+TASK-215 through TASK-221 are complete; TASK-222–223 remain Todo. Current registry:
+**212 Done / 4 In Progress / 4 Todo / 3 Blocked / 223 Total**. The project KB
 `erp-system-project-logic` (`ef47bf4b-83e1-42b2-a412-66912d04ea24`) now includes coverage
 item `8007eaf3-0ec3-4fa4-b4ca-1bdc3d8153b3`; the architecture inventory, EPIC-066 and
 specialist audit items plus KB description were updated and read back. TASK-216 changed
@@ -95,5 +96,7 @@ regression test, TASK-218 changed only sales presentation facts/list predicates 
 their regression test, TASK-219 changed only sales-invoice locale bindings, locale
 resources, generated bootstrap and dynamic-date audit classification, and TASK-220 changed
 only presentation tokens, filled-state selectors, PWA disabled styling, cache-bust
-references and its focused E2E; no production system, deployment or remote CI result is
+references and its focused E2E. TASK-221 changed only procurement workflow presentation,
+the existing full-receipt modal wiring, canonical register scope and its focused E2E; no
+partial-receipt domain capability, production system, deployment or remote CI result is
 claimed.
