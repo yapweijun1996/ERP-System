@@ -50,7 +50,8 @@ recovery gate and targeted invoice i18n failed. See [TEST_COVERAGE.md](TEST_COVE
 ## 4. Next frontend priorities
 
 1. **Close latest verified defects.** TASK-216 completed seed correctness at the shared
-   command/Demo-pack boundary. TASK-217–223 cover date/KPI correctness, translation,
+   command/Demo-pack boundary and TASK-217 completed date-only due-date correctness.
+   TASK-218–223 cover KPI correctness, translation,
    palette contrast, procurement actions, mobile accessibility and recovery.
 2. **Preserve completed Receipt controls.** TASK-196/197 implemented permission-aware
    Pack reads and Company Receipt detail/edit/void/date correction plus eligible evidence

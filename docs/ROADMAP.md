@@ -2,8 +2,9 @@
 
 ## Immediate execution order
 
-1. TASK-216 is Done at the seed/upgrade command boundary. Complete TASK-217–218 for
-   sales date/aging/period behavior; TASK-218 depends on TASK-217. Then rerun the
+1. TASK-216 is Done at the seed/upgrade command boundary and TASK-217 is Done at the
+   date-only presentation boundary. Complete TASK-218 for sales aging/period behavior;
+   then rerun the
    affected browser journeys so command repair is not mistaken for complete E2E.
 2. TASK-219/220/222/223: close translation, theme contrast, mobile/zoom/status and
    recovery verification gaps; TASK-221 follows TASK-216 for procurement usability.

@@ -22,7 +22,8 @@ failed on sales-invoice `Outstanding` and `Due date`. Manual Chrome DevTools MCP
 found seeded-PO invoicing blocked by unclassified tax snapshots, a one-day SG due-date
 shift, incorrect invoice aging/period KPIs and a dark-button contrast gap. These were
 historical audit findings, not fixed by the documentation audit. TASK-216 subsequently
-repairs the seeded procurement path while TASK-217–223 remain open. The audit's
+repairs the seeded procurement path and TASK-217 repairs the date-only due-date path;
+TASK-218–223 remain open. The audit's
 optional full Vitest run stopped without a result; earlier suite totals below remain
 historical evidence.
 
@@ -34,6 +35,13 @@ GL, and separate rejection coverage still denies unclassified or regime-incompat
 lines. This does not constitute production tax-owner approval, current-HEAD CI or
 deployment evidence.
 
+TASK-217 follow-up is complete on the local source: sales invoice due-date arithmetic now
+uses the shared `addCalendarDays` date-only helper, avoiding local-midnight-to-UTC date
+truncation. Focused boundary tests and a built-Demo Playwright check pass; the browser
+route rendered without console errors and runtime probes returned `2026-07-28`,
+`2027-01-30` and `2028-02-29`. No monetary posting code changed. F03 invoice aging and
+period KPI reconciliation remains TASK-218.
+
 ## Source-of-truth synchronization
 
 The synchronized review/status baseline started at `2188f56` (`New`). The current
@@ -43,7 +51,7 @@ production deployment is still a separate release gate.
 
 The current worktree adds migrations 0100/0101/0102/0103: the Drizzle journal contains **104 migration
 entries**, generated canonical SQL contains **255 tables**, and the task registry contains
-**207 Done / 4 In Progress / 9 Todo / 3 Blocked / 223 Total**. TASK-200 now closes the
+**208 Done / 4 In Progress / 8 Todo / 3 Blocked / 223 Total**. TASK-200 now closes the
 Canonical/API route parity gap by including `staff-calendar` in `API_SCREEN_ROUTES`.
 TASK-212 is done: the
 active route and dynamic shell now refresh in place on locale change while preserving

@@ -2,14 +2,14 @@
 
 ## Latest specialist follow-up
 
-TASK-215 reconciles documentation/KB only. TASK-216 is complete and TASK-217–223 remain
-open, one per F02–F08 in
+TASK-215 reconciles documentation/KB only. TASK-216 and TASK-217 are complete and
+TASK-218–223 remain open, one per F03–F08 in
 [ERP_SPECIALIST_REVIEW_2026-09-07.md](ERP_SPECIALIST_REVIEW_2026-09-07.md).
 
 | Task | Status | Required outcome |
 | --- | --- | --- |
 | TASK-216 | Done | Compact seed and Demo-pack v16 carry governed SG/MY tax snapshots; fresh/upgraded approval → receipt → invoice proof passes |
-| TASK-217 | Todo | Correct date-only sales invoice due dates |
+| TASK-217 | Done | Shared date-only due-date arithmetic and SG/MY boundary regression/browser proof |
 | TASK-218 | Todo | Reconcile invoice aging and fiscal-period KPIs |
 | TASK-219 | Todo | Close sales invoice translation gaps |
 | TASK-220 | Todo | Correct filled-action contrast in both themes |
@@ -28,7 +28,7 @@ This is the actionable view of every non-Done task currently registered in
 tests are implementation evidence, while deployment, CI, production configuration and
 physical-device checks remain separate evidence classes.
 
-Current registry: **207 Done / 4 In Progress / 9 Todo / 3 Blocked / 223 Total**.
+Current registry: **208 Done / 4 In Progress / 8 Todo / 3 Blocked / 223 Total**.
 
 2026-09-07 TASK-216 completion: the compact seed and generated showcase pack v16 now
 write governed GST/SST classification and recoverability snapshots. A deterministic
@@ -40,6 +40,16 @@ files/11 tests, existing HTTP purchasing coverage passes `src/api/app.test.ts` 2
 and `npm run demo`, generated pack/schema and drift checks also pass. This is local
 Demo/API shared-command evidence, not
 production tax-owner approval or deployment evidence.
+
+2026-09-07 TASK-217 completion: `screens-common.js` now exposes the shared
+`addCalendarDays` date-only helper, and `screens-sales-hub.js` uses it for the 30-day
+invoice term instead of serializing a local midnight through UTC. The focused browser
+date test covers SG/MY-relevant month/year and leap-day boundaries plus invalid input;
+the built Demo `#sales-invoices` route rendered without console errors and returned
+`2026-07-28`, `2027-01-30` and `2028-02-29` for runtime boundary probes. Lint,
+typechecks, Demo build/proof, generated checks, documentation links and diff checks pass;
+no monetary posting code changed. This is local source/Demo evidence, not production or
+remote-CI evidence.
 
 2026-09-07 CI addendum: the latest GitHub Actions CI run `34017037310` on remote
 head `2188f56186e88e542351ec3a49e07d73057182bf` executed all four Vitest shards and

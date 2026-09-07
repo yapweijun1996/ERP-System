@@ -9,12 +9,19 @@ source/documentation, and official SG/MY market references. This review does not
 certify production readiness or fix runtime defects. Product direction is recorded
 in [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md).
 
-Follow-up status: TASK-216 is now complete on the subsequent local worktree. The compact
+Follow-up status: TASK-216 and TASK-217 are now complete on the subsequent local worktree.
+The compact
 seed and showcase pack v16 carry governed SG/MY tax snapshots, the untouched historical
 SG approval row has an idempotent upgrade repair, and fresh/upgraded shared-command
 proof completes exactly one balanced supplier invoice. The original F01 reproduction
 below remains the historical audit observation; production tax-owner approval and
 deployment evidence remain separate.
+
+TASK-217 fixes the historical F02 date-only arithmetic defect: shared
+`addCalendarDays` now owns sales invoice term calculation, focused SG/MY-relevant
+month/year and leap-day tests pass, and the built Demo `#sales-invoices` route rendered
+without console errors. The original F02 reproduction below is retained as a dated
+baseline observation; F03 invoice aging/period KPI reconciliation remains open.
 
 ## Executive assessment
 

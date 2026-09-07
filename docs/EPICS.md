@@ -4,6 +4,7 @@ Reviewed 2026-09-07: historical Done milestones retain their original scoped evi
 TASK-214 does not certify all modules. [TEST_COVERAGE.md](TEST_COVERAGE.md) records
 latest failures and untested boundaries; EPIC-066 now tracks TASK-215 documentation
 and TASK-216–223 runtime follow-up against [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md).
+TASK-216 and TASK-217 are complete locally; TASK-218–223 remain open.
 
 Each epic describes a large work group. Small executable tasks live in
 `tasks/tasks.jsonl`. Status legend: ✅ done · 🔶 in progress · ⬜ not started.
@@ -2665,7 +2666,7 @@ Current truth:
 | TASK-214 | Done | ERP specialist audit and product quality baseline with documentation/KB synchronization |
 | TASK-215 | Done | Synchronize ERP architecture requirements roadmap and module test coverage |
 | TASK-216 | Done | Compact seed and Demo-pack v16 carry governed SG/MY tax snapshots; fresh/upgraded approval → receipt → invoice and fail-closed rejection proof passes |
-| TASK-217 | Todo | Correct date-only sales invoice due dates |
+| TASK-217 | Done | Shared date-only sales invoice arithmetic, boundary regression and built-Demo browser proof |
 | TASK-218 | Todo | Reconcile invoice aging and fiscal-period KPIs |
 | TASK-219 | Todo | Close sales invoice translation gaps |
 | TASK-220 | Todo | Correct filled-action contrast in both themes |

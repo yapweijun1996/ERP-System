@@ -1,11 +1,12 @@
 # ERP-System Project Logic
 
-TASK-216 fixture repair (2026-09-07) changes no posting contract: governed tax facts are
-now present in fresh and upgraded Demo procurement rows, while shared posting rejection
-remains authoritative.
+TASK-216 fixture repair and TASK-217 date-only repair (2026-09-07) change no posting
+contract: governed tax facts are now present in fresh and upgraded Demo procurement rows,
+while sales due-date arithmetic uses a shared calendar-date helper and shared posting
+rejection remains authoritative.
 [TEST_COVERAGE.md](TEST_COVERAGE.md) records every current module and evidence gaps;
-TASK-216–223 own the eight specialist findings; TASK-216 is complete and TASK-217–223
-remain Todo. Fresh schema/RLS checks prove
+TASK-216–223 own the eight specialist findings; TASK-216 and TASK-217 are complete and
+TASK-218–223 remain Todo. Fresh schema/RLS checks prove
 104 migrations, 255 tables, 225 generic policy tables and 10 explicit exemptions,
 not production isolation. Domain fixes must update this mirror and the KB together.
 
@@ -30,6 +31,15 @@ command proof completes exactly one balanced supplier invoice; production rows t
 still unclassified or regime-incompatible remain rejected. No posting contract was
 weakened. Production/scale/physical-device evidence remains separate from local PGlite
 and screen checks.
+
+TASK-217 establishes the browser date-only contract: `screens-common.js` owns
+`addCalendarDays`, which parses an ISO calendar date at a fixed UTC calendar origin,
+uses `setUTCDate` for arithmetic and returns an ISO date without truncating a local
+midnight timestamp. `screens-sales-hub.js` uses this helper for the 30-day invoice term;
+invalid input preserves the prior display value. `src/browserDateOnly.test.ts` and the
+built-Demo `#sales-invoices` route proof cover month/year and leap-day boundaries. This
+is presentation/date derivation logic; stored monetary and posting facts remain owned by
+the shared domain commands.
 
 ## 1. System boundary and execution contract
 

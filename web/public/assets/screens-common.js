@@ -1651,9 +1651,8 @@ function requireField(value, message, focusTarget){
  * implementation.
  *
  * Deliberately returns a re-parseable ISO string, not a localized label --
- * several existing call sites feed the result straight back into
- * `new Date(dateValue(x)+'T00:00:00')` for due-date arithmetic (e.g.
- * salesDueDate, serviceContractStatus), which a human-readable format like
+ * date-only arithmetic should use `addCalendarDays(dateValue(x), days)` instead
+ * of constructing a local-midnight timestamp, which a human-readable format like
  * "Aug 19, 2026" would silently break. For a pure-display, locale-aware
  * label with no further parsing, use dateLabel() below instead. Also useful
  * directly on two Date values for a chronological sort:
@@ -1669,6 +1668,24 @@ function dateValue(value){
   if(match) return match[0];
   const parsed=new Date(value);
   return Number.isNaN(parsed.getTime())?text:parsed.toISOString().slice(0,10);
+}
+
+/**
+ * Adds calendar days to an ISO date-only value without interpreting the value
+ * in the host timezone. UTC is used only as a stable arithmetic calendar; the
+ * returned value is always formatted from UTC and never truncated from a local
+ * midnight timestamp.
+ */
+function addCalendarDays(value, days){
+  const normalized=dateValue(value);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return null;
+  const date=new Date(`${normalized}T00:00:00.000Z`);
+  const offset=Number(days);
+  if(Number.isNaN(date.getTime())
+    ||date.toISOString().slice(0,10)!==normalized
+    ||!Number.isInteger(offset)) return null;
+  date.setUTCDate(date.getUTCDate()+offset);
+  return date.toISOString().slice(0,10);
 }
 
 /** Timestamp counterpart of dateValue() -- replaces purchasingDateTimeValue,

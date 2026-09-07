@@ -1,7 +1,7 @@
 # Task Index
 
-[TEST_COVERAGE.md](TEST_COVERAGE.md) is the module evidence map. TASK-216 is the
-completed F01 repair; TASK-217–223 remain open F02–F08 repairs. TASK-215 is
+[TEST_COVERAGE.md](TEST_COVERAGE.md) is the module evidence map. TASK-216 and
+TASK-217 are the completed F01/F02 repairs; TASK-218–223 remain open F03–F08 repairs. TASK-215 is
 documentation reconciliation, not runtime completion.
 
 Reviewed: **2026-09-07**
@@ -12,9 +12,9 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **207**
+- Done: **208**
 - In progress: **4**
-- Todo: **9**
+- Todo: **8**
 - Blocked: **3**
 - Total: **223**
 
@@ -154,7 +154,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-208 | Done | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation, exact Employee integration and five-language browser proof |
 | TASK-209 | Blocked | PostgreSQL/RLS, current CI, release, documentation and KB proof; blocked by current-HEAD CI and deployed/production evidence |
 
-The registry therefore has **207 Done / 4 In Progress / 9 Todo / 3 Blocked / 223 Total**.
+The registry therefore has **208 Done / 4 In Progress / 8 Todo / 3 Blocked / 223 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery) and TASK-209
 (release proof waiting for current-HEAD CI and deployed-production evidence). TASK-203
 is In Progress because the latest remote workflow executed but exposed a source i18n
@@ -165,7 +165,9 @@ TASK-216 is Done: compact seed PO-APP-2026-0001 and showcase pack v16 carry gove
 SG/MY tax snapshots; the historical upgrade repair is idempotent and guarded against
 rewriting received/invoiced rows. Fresh and upgraded approval → receipt → supplier
 invoice proof, balanced GL and fail-closed rejection tests are recorded in its task
-registry entry. TASK-217–223 remain Todo.
+registry entry. TASK-217 is also Done: shared `addCalendarDays` now owns sales invoice
+date-only arithmetic, the focused boundary test and built-Demo browser route proof pass,
+and no monetary posting code changed. TASK-218–223 remain Todo.
 
 TASK-213 closes the source-level RLS table-list omission for `sales_enquiry_line` and
 adds a deterministic generated-schema coverage gate. TASK-195 now establishes the

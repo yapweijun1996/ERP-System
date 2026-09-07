@@ -73,11 +73,7 @@ function salesNumber(value){
 }
 
 function salesDueDate(value){
-  const normalized=dateValue(value);
-  const date=new Date(`${normalized}T00:00:00`);
-  if(Number.isNaN(date.getTime())) return value;
-  date.setDate(date.getDate()+30);
-  return date.toISOString().slice(0,10);
+  return addCalendarDays(value,30)||value;
 }
 
 /* Canonical order-to-cash presentation model. Every row comes from the
