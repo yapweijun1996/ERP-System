@@ -668,6 +668,15 @@ async function auditRoutes(browser, viewport) {
     }, { r: route, fixture: meta && meta.fixture });
 
     await page.waitForTimeout(SETTLE_MS);
+    if (route === 'timesheet') {
+      // Timesheet deliberately renders a loading transaction-list shell before
+      // its actor-owned weekly reads resolve. Wait for the ready-only marker
+      // before checking the canonical KPI contract; otherwise a slow Demo
+      // cold start is reported as a false missing-layout failure.
+      await page.waitForFunction(() => Boolean(document.querySelector(
+        '#viewRoot [data-layout="transaction-list-v1"][data-list-route="timesheet"][data-canonical-timesheet="true"]',
+      )), null, { timeout: RECOVERY_TIMEOUT_MS }).catch(() => {});
+    }
 
     const rendered = await page.evaluate(() => {
       const el = document.getElementById('viewRoot');
