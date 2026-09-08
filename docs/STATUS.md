@@ -127,7 +127,7 @@ production deployment is still a separate release gate.
 
 The current worktree adds migrations 0100/0101/0102/0103: the Drizzle journal contains **104 migration
 entries**, generated canonical SQL contains **255 tables**, and the task registry contains
-**216 Done / 4 In Progress / 1 Todo / 3 Blocked / 224 Total**. TASK-200 now closes the
+**218 Done / 4 In Progress / 1 Todo / 3 Blocked / 226 Total**. TASK-200 now closes the
 Canonical/API route parity gap by including `staff-calendar` in `API_SCREEN_ROUTES`.
 TASK-212 is done: the
 active route and dynamic shell now refresh in place on locale change while preserving

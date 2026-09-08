@@ -170,7 +170,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-208 | Done | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation, exact Employee integration and five-language browser proof |
 | TASK-209 | Blocked | PostgreSQL/RLS, current CI, release, documentation and KB proof; current CI is complete, but deployed/production evidence remains |
 
-The registry therefore has **216 Done / 4 In Progress / 1 Todo / 3 Blocked / 224 Total**.
+The registry therefore has **218 Done / 4 In Progress / 1 Todo / 3 Blocked / 226 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery) and TASK-209
 (release proof waiting for deployed-production evidence). TASK-203 is Done with current-HEAD
 remote evidence; TASK-209 remains blocked only by the separate production release chain.
