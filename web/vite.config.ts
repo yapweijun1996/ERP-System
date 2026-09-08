@@ -1,6 +1,7 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { defineConfig, transformWithEsbuild, type ResolvedConfig } from 'vite';
+import { resolveViteBasePath } from '../scripts/public-base-path.mjs';
 
 function minifyLegacyAssets(){
   let resolvedConfig: ResolvedConfig;
@@ -56,7 +57,7 @@ export default defineConfig({
   }],
   base: process.env.GITHUB_PAGES === 'true'
     ? `/${process.env.GITHUB_REPOSITORY?.split('/')[1] ?? 'ERP-System'}/`
-    : './',
+    : resolveViteBasePath(),
   // PGlite loads these files through URL-relative WASM/data imports. Keeping
   // the package out of dependency pre-bundling lets Vite preserve those URLs
   // instead of serving the SPA fallback as a tiny HTML "asset" in dev.

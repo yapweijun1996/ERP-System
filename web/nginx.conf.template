@@ -1,7 +1,6 @@
-# Same-origin reverse proxy to the api service — this is why
-# erp-system-api-adapter.js's API_BASE defaults to a relative '/api': the browser
-# never needs CORS because /health and /api/* are proxied by nginx to the api
-# container over the Docker Compose network, not fetched cross-origin.
+# Same-origin reverse proxy to the api service. The image build derives an
+# optional public subpath from ERP_PUBLIC_URL, then rewrites it exactly once
+# before these root-owned API/static locations handle the request.
 server {
   listen 80;
   server_name _;
@@ -17,6 +16,8 @@ server {
     proxy_pass http://api:3000/api/;
     proxy_set_header Host $host;
   }
+
+  __ERP_PUBLIC_PREFIX_LOCATIONS__
 
   # The shell and service worker must be revalidated so an installed PWA can
   # discover source releases and present its explicit Update action.

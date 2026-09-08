@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'erp-system-pwa-v263';
+const CACHE_VERSION = 'erp-system-pwa-v264';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -215,7 +215,10 @@ self.addEventListener('fetch', (event) => {
      authenticated" response after the user signs out, since the browser's
      own cookie jar (correctly cleared) never gets consulted. Always hit the
      network for /api/* and /health. */
-  if (url.pathname.startsWith('/api/') || url.pathname === '/health') {
+  const scopePath = new URL(self.registration.scope).pathname.replace(/\/$/, '');
+  const apiPath = `${scopePath}/api`;
+  const healthPath = `${scopePath}/health`;
+  if (url.pathname === apiPath || url.pathname.startsWith(`${apiPath}/`) || url.pathname === healthPath) {
     event.respondWith(fetch(request));
     return;
   }

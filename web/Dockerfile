@@ -17,15 +17,19 @@ ARG VITE_DATA_MODE=api
 ENV VITE_DATA_MODE=$VITE_DATA_MODE
 ARG VITE_PLATFORM_DEMO_AUTOFILL=false
 ENV VITE_PLATFORM_DEMO_AUTOFILL=$VITE_PLATFORM_DEMO_AUTOFILL
+ARG ERP_PUBLIC_URL=http://localhost:8080
+ENV ERP_PUBLIC_URL=$ERP_PUBLIC_URL
 ARG ERP_RELEASE_COMMIT=unknown
 ENV RELEASE_COMMIT=$ERP_RELEASE_COMMIT
 ARG ERP_RELEASE_DATA_MODE=api
 ENV RELEASE_DATA_MODE=$ERP_RELEASE_DATA_MODE
-COPY scripts/write-release-manifest.mjs /app/scripts/write-release-manifest.mjs
+COPY scripts/public-base-path.mjs scripts/public-base-path.d.mts scripts/write-nginx-config.mjs scripts/write-release-manifest.mjs /app/scripts/
 WORKDIR /app/web
-RUN npm run build && node /app/scripts/write-release-manifest.mjs /app/web/dist
+RUN npm run build \
+  && node /app/scripts/write-release-manifest.mjs /app/web/dist \
+  && node /app/scripts/write-nginx-config.mjs /app/web/nginx.conf.template /app/web/nginx.conf
 
 FROM nginx:alpine
 COPY --from=build /app/web/dist /usr/share/nginx/html
-COPY web/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/web/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80

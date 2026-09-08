@@ -188,7 +188,7 @@ cross the fulfilment/accounting boundary, preserving one authoritative posting p
 
 - API is the only writer for stock/money. Session (cookie) carries tenant scope.
 - **`docker-compose.yml` + `docker-compose.production.yml` + `Dockerfile.api` +
-  `web/Dockerfile` + `web/nginx.conf`**
+  `web/Dockerfile` + `web/nginx.conf.template`**
   (TASK-012) implement the diagram above for real: `db` = `postgres:16-alpine`,
   `api` = `Dockerfile.api` (repo-root context — no separate `api/` workspace, ships
   devDependencies since `tsx`/`drizzle-kit` run untranspiled), `web` = multi-stage

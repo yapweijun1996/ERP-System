@@ -57,6 +57,11 @@ is an explicit hosted-Demo presentation option only; customer builds default it 
 false. Public sample credentials, one-click Platform login and autofill must never be
 treated as a production authentication configuration.
 
+`ERP_PUBLIC_URL` is the single deployment URL input for an API build. Its path is
+compiled into Vite asset/API URLs and the Docker image's nginx rewrite. For example,
+`https://erp.example.com/erp` serves the shell and API at `/erp/` and `/erp/api/*`,
+while the upstream Compose services remain root-mounted internally.
+
 ## Development and verification
 
 From the repository root:

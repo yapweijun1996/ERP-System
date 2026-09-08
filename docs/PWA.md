@@ -1,6 +1,7 @@
 # PWA Standard
 
-Current acceptance (2026-09-07): TASK-214 passed the v263 update lifecycle audit.
+Current acceptance (2026-09-08): TASK-214 passed the v263 update lifecycle audit; TASK-199
+advanced the worker to v264 so API/health cache bypass follows the configured public subpath.
 Automatic discovery and explicit acceptance are implemented; multiple tabs, unsaved
 drafts, in-flight requests, interrupted upgrades and real-phone acceptance are not
 proven by that single lifecycle test. See [TEST_COVERAGE.md](TEST_COVERAGE.md).
@@ -56,7 +57,7 @@ This avoids surprise reloads in the middle of an ERP workflow.
 Service worker file: `web/public/sw.js`.
 
 The source-of-truth cache identifier at this review boundary is
-`erp-system-pwa-v263` in both `web/public/sw.js` and
+`erp-system-pwa-v264` in both `web/public/sw.js` and
 `web/public/assets/pwa.js`. A cache number proves source consistency only; it does not
 prove that the same revision has reached a hosted environment.
 
@@ -64,6 +65,8 @@ Rules:
 
 - Navigation requests use network-first, then cached `index.html`.
 - Same-origin static assets use stale-while-revalidate.
+- API and health requests remain network-only at either the root mount or the
+  configured public subpath; session-scoped responses never enter Cache API.
 - JS/CSS/module requests are never served `index.html` as a fallback. That avoids blank
   screens caused by loading HTML where JavaScript was expected.
 - Demo data is still mock/demo only. Offline does not make IndexedDB a production ERP

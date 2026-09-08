@@ -65,8 +65,9 @@ on the production Cloudflare origin `https://gmb01.xyz/erp` and `/erp/health` st
 HTTP 502 HTML responses; Cloudflare DNS resolves the proxy anycast addresses but exposes no
 origin health payload. No tenant write, reset, reseed or deployment was attempted. TASK-199
 remains open for authorized origin repair and current-revision proof. A source-only merged
-Compose configuration check passes on 2026-09-08; `web/nginx.conf` routes `/health` to the
-private `api:3000` service and `deploy/release.sh` probes that same path from inside `web`.
+Compose configuration check passes on 2026-09-08; the generated `web/nginx.conf` from
+`web/nginx.conf.template` routes `/health` to the private `api:3000` service and
+`deploy/release.sh` probes that same path from inside `web`.
 This validates repository release wiring only and cannot prove the remote Cloudflare
 tunnel/host process is running.
 
@@ -321,6 +322,12 @@ convenient local/base-Compose variant:
 This first-install path intentionally applies the committed migrations to the selected
 database. Take a backup and use a staging copy first when the external database already
 contains client data. It is not the command to use for routine source-code releases.
+
+`ERP_PUBLIC_URL` is also the public mount contract for API builds. A root URL keeps
+the application at `/`; a URL such as `https://gmb01.xyz/erp` builds `/erp/` asset and
+API paths, then generates nginx's one-time `/erp/` to root rewrite for the private
+Compose network. The build rejects credentials, query strings and fragments. This
+source-level mapping does not prove that a Cloudflare tunnel or remote origin is live.
 
 This only takes effect the first time — once `.env` exists, `make setup`,
 `make setup-interactive`, and `make setup-production` leave it untouched. To switch an

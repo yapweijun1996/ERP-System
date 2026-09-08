@@ -185,3 +185,6 @@ jobs:
 
       - name: Operational workspace layout audit (declared SSOT routes, desktop + mobile)
         run: npm run audit:workspaces
+
+      - name: Production public-subpath browser contract
+        run: npm run test:e2e:production-subpath

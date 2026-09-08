@@ -92,7 +92,7 @@ Goal: run the ERP as a self-hosted Docker deployment.
 
 Deliverables: wire the `VITE_DATA_MODE` seam (TASK-019 ✅); API server (TASK-011 ✅);
 Docker Compose stack `web`+`api`+`db` (TASK-012 ✅ done 2026-07-16 —
-`docker-compose.yml` + `Dockerfile.api` + `web/Dockerfile` + `web/nginx.conf`, built
+`docker-compose.yml` + `Dockerfile.api` + `web/Dockerfile` + `web/nginx.conf.template`, built
 and run end-to-end for real: healthchecks pass, `docker compose exec api npm run
 migrate`/`npm run seed` work, the dashboard renders through the nginx reverse proxy
 with zero CORS needed); PostgreSQL concurrency proof (TASK-013 ✅ — proven against
@@ -1255,7 +1255,7 @@ more module breadth. The source-backed review is
 1. **Truth sync** (TASK-194/TASK-200 done; EPIC-067 source newer): current inventory is 104
    migrations/schema v103/255
    tables, 129 Canonical routes with 129 API metadata routes, 1,728 i18n keys/72 packs,
-   315 permission codes and PWA v263. Historical test/deploy checkpoints remain dated.
+   315 permission codes and PWA v264. Historical test/deploy checkpoints remain dated.
 2. **Isolation first** (TASK-195 done 2026-09-06): deploy configuration now separates
    migration/bootstrap, API and worker roles; Platform provisioning establishes the
    generated Company context before its first FORCE-RLS write, and a PostgreSQL 16

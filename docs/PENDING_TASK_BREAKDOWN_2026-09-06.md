@@ -264,7 +264,11 @@ remain green; TASK-199 still needs a target-host release and health proof.
     rejection; focused replacement/failure/permission tests pass 4/4. The new
     `verify:release` command validates root/health/setup/manifest final URLs, every
     listed asset's byte count/SHA-256 and exact revision equality with bounded response
-    bodies; its local fixture/CLI tests pass 6/6.
+    bodies; its local fixture/CLI tests pass 6/6. `ERP_PUBLIC_URL` now drives Vite's
+    public API/assets, Docker's generated nginx one-time mount rewrite and the service
+    worker's API/health cache bypass. A built `/erp/` Playwright fixture proves the
+    canonical redirect, static shell, scoped service-worker network bypass and no root
+    API request; the image config passes `nginx -t` locally.
   - Steps: perform read-only `/health`, root and setup-status probes from two independent
     checks; identify the 502 cause; restore the service; capture running commit and
     static-asset hashes; verify Compose tunnel/database/storage/monitoring health; record

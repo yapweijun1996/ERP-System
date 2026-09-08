@@ -25,14 +25,14 @@ TASK-214 completed the [ERP specialist audit](ERP_SPECIALIST_REVIEW_2026-09-07.m
 and [product quality baseline](ERP_QUALITY_BASELINE.md). It records fresh failures
 and evidence limits; prior passing suite/audit statements below are historical and
 do not supersede the new findings. TASK-216–223 now close F01–F08 locally, and TASK-224
-repairs the setup wizard's narrow progress rail; TASK-199
-now also hardens release-manifest publication and provides a bounded read-only release
-evidence verifier locally; production,
+repairs the setup wizard's narrow progress rail; TASK-199 now also hardens
+release-manifest publication, adds a bounded read-only release evidence verifier and
+aligns the configured `/erp/` public path across Vite, nginx and the service worker locally; production,
 CI, device and external-service gates remain separate.
 
 TASK-194 audited historical HEAD `00e2533`. The current EPIC-067 worktree is 104 migrations
 through 0103, schema v103/255 tables, 129 Canonical / 0 Preview routes, 129 routes declaring
-API mode, 1,728 English i18n keys/72 local packs, 315 permission codes and PWA v263. HEAD
+API mode, 1,728 English i18n keys/72 local packs, 315 permission codes and PWA v264. HEAD
 collects 170 files / 666
 tests at the prior audit. The pre-TASK-214 EPIC-067 checkpoint passed the full local
 Vitest run at 173 files / 705 tests with two intentional skips. That earlier checkpoint
@@ -148,7 +148,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-196 | Done | Receipt Pack visibility downgrade repair and export governance |
 | TASK-197 | Done | Capability-aware Company Receipts detail/correction/void and employee-independent eligible-evidence picker; governed My Receipts upload remains the explicit upstream capture boundary |
 | TASK-198 | Done | Approved the narrow dual-mode exception: reason/ticket for elevated Admin access, exact-user simulation without reason/ticket, and explicit no-MFA/no-step-up risk acceptance |
-| TASK-199 | In progress | Restore public availability and prove exact deployed revision; local manifest publication is atomic/target-safe and a read-only verifier now checks root, health, setup, manifest and revision consistency, while live origin/revision proof remains |
+| TASK-199 | In progress | Restore public availability and prove exact deployed revision; manifest publication is atomic/target-safe, the verifier checks root/health/setup/manifest consistency, and a built `/erp/` browser/PWA contract guards local path wiring, while live origin/revision proof remains |
 | TASK-200 | Done | Resolve 129/129 route parity and rerun current HEAD release evidence |
 | TASK-201 | Todo | Production SLO, scale and RPO/RTO proof; source telemetry is now single-flight/non-blocking and claim-aligned, while measured query-budget/plan and operational evidence remain |
 | TASK-202 | In progress | Receipt Pack repository lifecycle/timezone and disposable PostgreSQL concurrency proof are complete; production release evidence remains |
