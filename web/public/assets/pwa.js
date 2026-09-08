@@ -6,7 +6,7 @@
   let offeredUpdateKey = null;
   let applyingUpdate = false;
   const UPDATE_CHECK_INTERVAL_MS = 60 * 1000;
-  const SERVICE_WORKER_VERSION = 'erp-system-pwa-v264';
+  const SERVICE_WORKER_VERSION = 'erp-system-pwa-v265';
   const DISMISSED_UPDATE_KEY = 'erp-system-dismissed-pwa-update';
   const LEGACY_SOURCE_FINGERPRINT_KEY = 'erp-system-source-fingerprint';
   const copy = (key, fallback) => typeof window.t === 'function' ? window.t(key) : fallback;

@@ -291,3 +291,68 @@ html,body{
   #setupWizardView .stepper .step.current .sdot{box-shadow:0 0 0 3px var(--accent-tint);}
   #setupWizardView .stepper .stepline{display:block;flex:1 1 8px;min-width:4px;margin:0 3px;}
 }
+
+/* The initial language choice is a short decision, not a scrolling form.
+   These scoped reductions retain 44px touch targets and leave the longer
+   data-entry steps free to use the panel's normal vertical scrolling. */
+@media (max-width:980px){
+  #setupWizardView .wizard-panel{padding:24px 28px 18px;}
+  #setupWizardView .wizard-brandbar{align-items:center;gap:12px;}
+  #setupWizardView .wizard-brandbar .auth-brand{gap:12px;}
+  #setupWizardView .wizard-brandbar .auth-brand .mark{width:52px;height:52px;border-radius:16px;}
+  #setupWizardView .wizard-brandbar .auth-brand .mark .ico{width:26px;height:26px;}
+  #setupWizardView .wizard-brandbar .auth-brand b{font-size:calc(21px * var(--fs,1));}
+  #setupWizardView .wizard-brandbar .auth-brand small{margin-top:2px;font-size:calc(11px * var(--fs,1));}
+  #setupWizardView .stepper{margin-top:20px;}
+  #setupWizardView .wizard-step-body{margin-top:16px;}
+  #setupWizardView .wizard-step-body .wiz-h{font-size:calc(23px * var(--fs,1));line-height:1.18;}
+  #setupWizardView .wizard-step-body .wiz-p{margin-top:5px;font-size:calc(12.5px * var(--fs,1));line-height:1.35;}
+  #setupWizardView .wiz-language-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px;}
+  #setupWizardView .wiz-language-card,
+  #setupWizardView .wiz-language-card.is-wide{grid-column:auto;min-height:60px;padding:8px 9px;gap:8px;border-radius:12px;}
+  #setupWizardView .wiz-language-badge{width:30px;height:30px;font-size:10px;}
+  #setupWizardView .wiz-language-badge .ico{width:16px;height:16px;}
+  #setupWizardView .wiz-language-copy{gap:1px;padding-right:14px;}
+  #setupWizardView .wiz-language-copy b{font-size:calc(13px * var(--fs,1));}
+  #setupWizardView .wiz-language-copy small{font-size:calc(10.5px * var(--fs,1));line-height:1.2;}
+  #setupWizardView .wiz-language-check{top:7px;right:7px;width:18px;height:18px;}
+  #setupWizardView .wiz-language-check .ico{width:11px;height:11px;}
+  #setupWizardView .wiz-language-note{gap:8px;margin-top:8px;padding:8px 10px;border-radius:10px;font-size:calc(11px * var(--fs,1));line-height:1.3;}
+  #setupWizardView .wiz-language-note>.ico{width:15px;height:15px;}
+  #setupWizardView .wizard-savebar{padding-top:10px;gap:8px;}
+  #setupWizardView .wizard-primary,
+  #setupWizardView #wizBack{min-height:44px;border-radius:11px;}
+  #setupWizardView .wizard-primary{font-size:calc(14px * var(--fs,1));}
+  #setupWizardView .wizard-primary .ico{right:15px;width:18px;height:18px;}
+}
+
+@media (min-width:680px) and (max-width:980px){
+  #setupWizardView .wiz-language-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+}
+
+@media (max-width:560px){
+  #setupWizardView .wizard-panel{padding:22px 20px 16px;}
+  #setupWizardView .wizard-brandbar .auth-brand{gap:10px;}
+  #setupWizardView .wizard-brandbar .auth-brand .mark{width:48px;height:48px;border-radius:14px;}
+  #setupWizardView .wizard-brandbar .auth-brand .mark .ico{width:24px;height:24px;}
+  #setupWizardView .wizard-brandbar .auth-brand b{font-size:calc(19px * var(--fs,1));}
+  #setupWizardView .wizard-brandbar .auth-brand small{font-size:calc(10.5px * var(--fs,1));}
+  #setupWizardView .stepper{margin-top:18px;}
+  #setupWizardView .wizard-step-body{margin-top:14px;}
+  #setupWizardView .wizard-step-body .wiz-h{font-size:calc(22px * var(--fs,1));}
+  #setupWizardView .wiz-language-grid{margin-top:10px;}
+  #setupWizardView .wiz-language-card,
+  #setupWizardView .wiz-language-card.is-wide{min-height:56px;padding:7px;gap:6px;}
+  #setupWizardView .wiz-language-badge{width:28px;height:28px;}
+  #setupWizardView .wiz-language-copy{padding-right:12px;}
+  #setupWizardView .wiz-language-copy b{font-size:calc(12.5px * var(--fs,1));}
+  #setupWizardView .wiz-language-copy small{font-size:calc(10px * var(--fs,1));}
+  #setupWizardView .wiz-language-note{margin-top:8px;padding:8px;font-size:calc(10.5px * var(--fs,1));}
+}
+
+/* Portrait phones and split panes have enough height for the compact language
+   chooser. Very short landscape windows retain scrolling instead of clipping
+   localized copy or controls. */
+@media (max-width:980px) and (min-height:680px){
+  #setupWizardView .wizard-panel.wizard-language-panel{overflow:hidden;scrollbar-width:none;}
+}

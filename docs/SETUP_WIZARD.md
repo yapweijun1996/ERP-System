@@ -76,8 +76,11 @@ same UI shell and data adapter strategy described in [FRONTEND_PLAN.md](FRONTEND
 Responsive progress contract: wide desktop keeps the six-step progress rail with every
 label on one row. At `980px` and below it remains a single six-marker rail: every numbered
 stage stays visible, while only the active stage shows its localized label. Each marker
-retains its accessible name, the active marker keeps its accent treatment, and the wizard
-panel remains vertically scrollable for longer steps without horizontal scrolling.
+retains its accessible name and the active marker keeps its accent treatment. The Language
+step uses compact cards and a 44px minimum action target so it fits without vertical or
+horizontal scrolling at the supported `753×837`, `390×844`, and `375×812` viewports.
+Longer data-entry steps retain vertical panel scrolling rather than clipping localized copy
+or form controls; no wizard step may create horizontal scrolling.
 
 For production, the former anonymous `POST /api/setup/actions/complete` tenant foundation
 flow is retired and returns `410 legacy_setup_disabled`. A truly empty database first

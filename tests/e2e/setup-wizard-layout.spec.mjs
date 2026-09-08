@@ -2,9 +2,10 @@
 /*
  * First-run setup wizard layout contract.
  *
- * The wizard panel is vertically scrollable on touch layouts. Its decorative
- * header must not widen that scroll container and expose a horizontal swipe
- * area on iOS-sized viewports.
+ * The compact Language step must fit its standard portrait and split-pane
+ * viewports without scrolling. Longer data-entry steps remain independently
+ * scrollable; this test also protects the progress rail from horizontal
+ * overflow on iOS-sized viewports.
  */
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
@@ -103,6 +104,11 @@ async function main() {
         serviceWorkers: 'block',
       });
       const page = await context.newPage();
+      const runtimeErrors = [];
+      page.on('pageerror', (error) => runtimeErrors.push(`pageerror: ${error.message}`));
+      page.on('console', (message) => {
+        if (message.type() === 'error') runtimeErrors.push(`console: ${message.text()}`);
+      });
       try {
         await page.goto(`${BASE_URL}/?setup-wizard-e2e=${viewport.label}-${Date.now()}`, {
           waitUntil: 'domcontentloaded',
@@ -123,16 +129,31 @@ async function main() {
             throw new Error('setup wizard language step or progress rail did not render');
           }
           panel.scrollLeft = 999;
+          panel.scrollTop = 999;
+          window.scrollTo(0, 999);
           const stepperRect = stepper.getBoundingClientRect();
+          const panelRect = panel.getBoundingClientRect();
+          const continueRect = continueButton.getBoundingClientRect();
           return {
             panelClientWidth: panel.clientWidth,
             panelScrollWidth: panel.scrollWidth,
             panelScrollLeft: panel.scrollLeft,
+            panelClientHeight: panel.clientHeight,
+            panelScrollHeight: panel.scrollHeight,
+            panelScrollTop: panel.scrollTop,
             panelOverflowX: getComputedStyle(panel).overflowX,
             cards: cards.length,
+            smallestCardHeight: Math.min(...cards.map((card) => card.getBoundingClientRect().height)),
+            widestCardScrollDelta: Math.max(...cards.map((card) => card.scrollWidth - card.clientWidth)),
+            lowestCardBottom: Math.max(...cards.map((card) => card.getBoundingClientRect().bottom)),
+            panelBottom: panelRect.bottom,
+            continueBottom: continueRect.bottom,
             continueVisible: Boolean(continueButton.offsetParent),
             documentClientWidth: document.documentElement.clientWidth,
             documentScrollWidth: document.documentElement.scrollWidth,
+            documentClientHeight: document.documentElement.clientHeight,
+            documentScrollHeight: document.documentElement.scrollHeight,
+            documentScrollTop: document.scrollingElement?.scrollTop || 0,
             progress: {
               stepCount: steps.length,
               clientWidth: stepper.clientWidth,
@@ -156,6 +177,18 @@ async function main() {
         if (viewport.width <= 980 && layout.panelScrollLeft !== 0) {
           throw new Error(`${viewport.label}: wizard panel starts with horizontal scrollLeft ${layout.panelScrollLeft}`);
         }
+        if (layout.panelScrollHeight > layout.panelClientHeight + 1 || layout.panelScrollTop !== 0) {
+          throw new Error(`${viewport.label}: language panel does not fit without vertical scrolling: ${layout.panelScrollHeight}>${layout.panelClientHeight}, scrollTop ${layout.panelScrollTop}`);
+        }
+        if (layout.documentScrollHeight > layout.documentClientHeight + 1 || layout.documentScrollTop !== 0) {
+          throw new Error(`${viewport.label}: language page does not fit without document scrolling: ${layout.documentScrollHeight}>${layout.documentClientHeight}, scrollTop ${layout.documentScrollTop}`);
+        }
+        if (layout.lowestCardBottom > layout.panelBottom + 1 || layout.continueBottom > layout.panelBottom + 1) {
+          throw new Error(`${viewport.label}: language choice or Continue button is clipped: ${JSON.stringify(layout)}`);
+        }
+        if (layout.smallestCardHeight < 44 || layout.widestCardScrollDelta > 1) {
+          throw new Error(`${viewport.label}: language cards lost touch size or overflowed: ${JSON.stringify(layout)}`);
+        }
         if (viewport.width > 980 && layout.panelOverflowX !== 'hidden') {
           throw new Error(`${viewport.label}: desktop wizard panel should clip decorative overflow`);
         }
@@ -163,6 +196,38 @@ async function main() {
           throw new Error(`${viewport.label}: language cards or Continue button regressed: ${JSON.stringify(layout)}`);
         }
         assertResponsiveProgress(viewport, layout.progress, 'language');
+
+        if (viewport.width <= 560) {
+          await page.locator('#wizLangSeg button[data-v="zh"]').click();
+          const localizedLayout = await page.evaluate(() => {
+            const panel = document.querySelector('#setupWizardView .wizard-panel');
+            const continueButton = document.querySelector('#wizNext');
+            if (!panel || !continueButton) throw new Error('localized language step did not render');
+            panel.scrollTop = 999;
+            window.scrollTo(0, 999);
+            const panelRect = panel.getBoundingClientRect();
+            const continueRect = continueButton.getBoundingClientRect();
+            return {
+              panelClientHeight: panel.clientHeight,
+              panelScrollHeight: panel.scrollHeight,
+              panelScrollTop: panel.scrollTop,
+              panelBottom: panelRect.bottom,
+              continueBottom: continueRect.bottom,
+              documentClientHeight: document.documentElement.clientHeight,
+              documentScrollHeight: document.documentElement.scrollHeight,
+              documentScrollTop: document.scrollingElement?.scrollTop || 0,
+              language: document.documentElement.lang,
+            };
+          });
+          if (localizedLayout.language !== 'zh-Hans'
+            || localizedLayout.panelScrollHeight > localizedLayout.panelClientHeight + 1
+            || localizedLayout.panelScrollTop !== 0
+            || localizedLayout.documentScrollHeight > localizedLayout.documentClientHeight + 1
+            || localizedLayout.documentScrollTop !== 0
+            || localizedLayout.continueBottom > localizedLayout.panelBottom + 1) {
+            throw new Error(`${viewport.label}: compact Chinese language step regressed: ${JSON.stringify(localizedLayout)}`);
+          }
+        }
 
         if (viewport.width <= 980) {
           await page.locator('#wizNext').click();
@@ -187,6 +252,10 @@ async function main() {
             };
           });
           assertResponsiveProgress(viewport, progressed, 'organization');
+        }
+
+        if (runtimeErrors.length) {
+          throw new Error(`${viewport.label}: setup wizard emitted runtime errors: ${runtimeErrors.join(' | ')}`);
         }
         console.log(`PASS setup wizard layout E2E: ${viewport.label}`);
       } finally {

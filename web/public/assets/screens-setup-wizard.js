@@ -431,7 +431,7 @@ function renderSetupWizard(){
     var langAttr = S.lang==='zh'?'zh-Hans':S.lang;
     host.setAttribute('lang', langAttr);
     document.documentElement.lang = langAttr;
-    host.innerHTML = '<section class="auth-panel wizard-panel">'+
+    host.innerHTML = '<section class="auth-panel wizard-panel'+(S.step===0?' wizard-language-panel':'')+'">'+
       '<div class="wizard-brandbar"><div class="auth-brand"><span class="mark brand-logo-mark">'+window.erpBrandLogo()+'</span><span><b>Aria ERP</b><small>'+esc(s('brand'))+'</small></span></div>'+languagePicker()+'</div>'+
       stepper()+
       '<div id="wizStepBody" class="wizard-step-body">'+stepBody()+'</div>'+

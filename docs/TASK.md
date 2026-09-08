@@ -2,7 +2,8 @@
 
 [TEST_COVERAGE.md](TEST_COVERAGE.md) is the module evidence map.
 TASK-216 through TASK-223 are complete through the F08 recovery-audit repair; TASK-224
-corrects the setup wizard's responsive progress rail. TASK-215 is documentation
+corrects the setup wizard's responsive progress rail and TASK-225 compacts its Language
+step to a single viewport. TASK-215 is documentation
 reconciliation, not runtime completion.
 
 Reviewed: **2026-09-08**
@@ -13,11 +14,11 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **216**
+- Done: **217**
 - In progress: **4**
 - Todo: **1**
 - Blocked: **3**
-- Total: **224**
+- Total: **225**
 
 ## Current release-quality note
 
@@ -25,7 +26,8 @@ TASK-214 completed the [ERP specialist audit](ERP_SPECIALIST_REVIEW_2026-09-07.m
 and [product quality baseline](ERP_QUALITY_BASELINE.md). It records fresh failures
 and evidence limits; prior passing suite/audit statements below are historical and
 do not supersede the new findings. TASK-216–223 now close F01–F08 locally, and TASK-224
-repairs the setup wizard's narrow progress rail; TASK-199 now also hardens
+repairs the setup wizard's narrow progress rail, while TASK-225 delivers the compact
+one-page Language step; TASK-199 now also hardens
 release-manifest publication, adds a bounded read-only release evidence verifier and
 aligns the configured `/erp/` public path across Vite, nginx and the service worker locally; production,
 CI, device and external-service gates remain separate.
