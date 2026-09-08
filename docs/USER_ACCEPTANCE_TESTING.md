@@ -30,8 +30,10 @@ contrast evidence; TASK-221 closes F06 with the focused desktop/mobile approval-
 workflow; TASK-222 closes F07 with focused five-language touch/zoom/status/modal evidence;
 TASK-223 closes F08 with Promise-aware recovery evidence and a full route audit, while full
 business E2E is incomplete. August health/reset and
-billing events are historical. Later CI executed but failed i18n; current green CI,
-target production evidence and TASK-017 physical-device acceptance remain open.
+billing events are historical. Current green CI run `34189671568` on full revision
+`ff6e0d9355c38ce06065267034c020ac55eea7e9` passed the complete verification matrix;
+Pages run `34189671604` published a matching Demo `release.json`. Production probes,
+the target deployed API revision and TASK-017 physical-device acceptance remain open.
 
 ## Baseline and environment checklist
 
@@ -336,9 +338,11 @@ rows and zero document-storage entries. Local/public health and root returned 20
 public desktop and 375px browser checks showed Create Platform Superadmin with no console
 errors or horizontal overflow. Source CI run `31570902479` passed all four Vitest shards;
 the historical docs-only push run `31573438483` was not started because GitHub Actions
-account billing blocked every job. Current-HEAD CI run `34180047841` passed all four
+account billing blocked every job. Current-HEAD CI run `34189671568` passed all four
 Vitest shards, PostgreSQL security and concurrency proofs, the five-language desktop/mobile
 matrix, browser smoke, full 129-route screen audit and both layout audits. The earlier
-PostgreSQL and i18n failures are historical repaired findings. Current public production
+PostgreSQL and i18n failures are historical repaired findings. Pages run `34189671604`
+published a matching Demo `release.json`; this static site is not production API evidence.
+Current public production
 probes remain a separate gate and the exact deployed API revision is still TASK-199/
 TASK-209 evidence.

@@ -664,7 +664,7 @@ trust as the next release boundary. The complete review and evidence matrix are 
 
 - **Release truth:** HEAD source, dated tests, deployed revision and live availability
   are separate facts. The August 502 and zero-job billing failures are historical.
-  Current-HEAD CI run `34180047841` passed all four Vitest shards and every required
+  Current-HEAD CI run `34189671568` passed all four Vitest shards and every required
   static, PostgreSQL, browser, screen and layout gate. Target health/revision proof
   remains TASK-199, with production release under TASK-209.
 - **Operational quality:** after P0 isolation/privilege fixes, SLO/RPO/RTO, worker

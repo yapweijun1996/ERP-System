@@ -10,7 +10,7 @@
 2. TASK-223 is complete: payment-voucher recovery now waits for the real route-render
    Promise and the full desktop/mobile audit passes. TASK-222's mobile/zoom/status gap is
    closed locally; physical-device acceptance remains TASK-017.
-3. TASK-203 is Done: current-HEAD CI run `34180047841` passes every required gate.
+3. TASK-203 is Done: current-HEAD CI run `34189671568` passes every required gate.
    TASK-199 remains to verify target health and deployed revision; TASK-209 release
    requires that production evidence plus its completed security chain.
 4. Finish TASK-202/204/205 production artifact, tax-owner and provider/recovery evidence;
@@ -1270,7 +1270,7 @@ more module breadth. The source-backed review is
    simulation. The owner explicitly accepted password-only access with no MFA or recent
    step-up as a high-severity residual risk.
 5. **Current release proof** (TASK-199/209): restore public availability and identify the
-   exact deployed revision. TASK-203 is complete: current-HEAD CI run `34180047841`
+   exact deployed revision. TASK-203 is complete: current-HEAD CI run `34189671568`
    passed all four Vitest shards, PostgreSQL proofs, five-language browser matrix, smoke,
    full screen audit and both layout audits. The zero-step billing incident and earlier
    PostgreSQL/i18n failures are historical repaired findings.

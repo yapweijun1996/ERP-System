@@ -799,7 +799,7 @@ set before `role_resource_scope` reconciliation and entitlement/resource gates, 
 production FORCE-RLS does not reject the system-managed bridge membership or misclassify
 an enabled module. TASK-208 is complete through isolated Playwright workspace, access
 matrix and five-language desktop/mobile evidence. TASK-203 is complete through current-
-HEAD CI run `34180047841`, while TASK-209 remains Blocked pending deployed revision and
+HEAD CI run `34189671568`, while TASK-209 remains Blocked pending deployed revision and
 production evidence.
 No migration 0099 production deployment is claimed.
 
@@ -866,7 +866,7 @@ without seed; the checkpoint status was `requiresPlatformBootstrap:true` with
 `hasTenantAdmin:false`. Health/root are 200, the retired anonymous setup endpoint is 410,
 and the browser showed Create Platform Superadmin. No account was created by the reset.
 Later HEAD source is not immutable deployment proof. TASK-194 public health/setup probes
-returned 502. Current-HEAD CI run `34180047841` passed all required shards and validation
+returned 502. Current-HEAD CI run `34189671568` passed all required shards and validation
 gates, including PostgreSQL security, five-language browser, screen and layout audits;
 the earlier PostgreSQL and i18n failures are historical repaired findings. TASK-199/209
 own the remaining production/deployed evidence gap.

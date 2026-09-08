@@ -41,7 +41,7 @@ not proof that HEAD `00e2533` is deployed or that the service is currently healt
 Public `/health` and `/api/setup/status` probes returned HTTP 502 during TASK-194. The
 historical HEAD workflow run `31603746668` started zero jobs because GitHub reported
 failed account payment or an exhausted spending limit. Current-HEAD CI run
-`34180047841` on current HEAD `ccf2210` passed all four Vitest shards and every validation gate,
+`34189671568` on current HEAD `ff6e0d9` passed all four Vitest shards and every validation gate,
 including PostgreSQL security/concurrency, five-language browser, smoke, full screen and
 both layout audits. The following older run is retained as historical failure analysis:
 `34132475891` on remote head `4a49706bdb95e060714febe32859aa9d6a0a5fbd` executed all
@@ -51,13 +51,13 @@ security lifecycle proof: the old remote assertion at
 field. Local commit `dc0f10d` includes the corrected contract and a temporary PostgreSQL
 16 rerun passes 2 files / 2 tests. The older `34017037310` i18n failure is historical;
 both source fixes are now covered by the green current-HEAD run above. GitHub Pages run
-`34180047839` published the static Demo for the same HEAD. Later source
+`34189671604` published the static Demo for the same HEAD. Its `release.json` reports the
+same full revision, `fileCount: 133` and `dataMode: demo`. Later source
 adds Platform Demo quick login, password visibility, responsive containment and safe
 existing-Company resume, but no current deployed revision/asset hash was independently
 proven. A fresh read-only probe on 2026-09-08 returned the Pages root and `/release.json`
-as HTTP 200. The latest code-bearing manifest reports revision `ccf221085dcde371fa19f85312dba706eede8b61`,
-workflow `34180047839`, `fileCount: 133`, and `dataMode: demo`; the later documentation-only
-Pages publish `34184564870` reports revision `5e546b5` with the same file count and mode.
+as HTTP 200. The latest manifest reports revision `ff6e0d9355c38ce06065267034c020ac55eea7e9`,
+workflow `34189671604`, `fileCount: 133`, and `dataMode: demo`.
 These prove static Demo availability but not production API health. Pages `/health` and `/api/setup/status` remain HTTP 404 HTML fallbacks, as
 expected for a static Demo origin, and do not prove API health. TASK-199 owns
 availability/revision proof; TASK-203 current-HEAD CI proof is complete. A separate read-only probe

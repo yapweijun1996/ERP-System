@@ -307,11 +307,11 @@ The current 2026-09-08 local Vitest run passes 176 files / 724 tests with 2 skip
 and 2 skipped tests. TASK-214 failures and TASK-215 static schema/RLS verification are
 recorded in [TEST_COVERAGE.md](TEST_COVERAGE.md). Current public `/health` and setup probes
 remain a separate production evidence boundary; the historical zero-step GitHub Actions
-run was billing-blocked. Current-HEAD CI run `34180047841` passed all four Vitest shards,
+run was billing-blocked. Current-HEAD CI run `34189671568` passed all four Vitest shards,
 PostgreSQL security/concurrency, generated/static checks, the five-language desktop/mobile
-matrix, smoke, full screen audit and both layout audits. GitHub Pages run `34180047839`
-published the static Demo for the same HEAD; neither Pages nor CI proves production API
-availability.
+matrix, smoke, full screen audit and both layout audits. GitHub Pages run `34189671604`
+published the static Demo for the same full revision; neither Pages nor CI proves production
+API availability.
 Physical-device PWA acceptance remains a
 separate human gate.
 

@@ -80,11 +80,13 @@ For the current source-backed action backlog and evidence boundaries, see
       In progress until production Vision configuration and live dead-letter alert/recovery
       evidence is recorded.
 - [x] GitHub Actions executes current HEAD with every required gate green. Run
-      `34180047841` passed all four Vitest shards, lint/docs/generated checks, root/web
+      `34189671568` passed all four Vitest shards, lint/docs/generated checks, root/web
       typechecks, PostgreSQL security and concurrency proofs, Demo build, five-language
       desktop/mobile i18n, browser smoke, full screen audit, transaction-list layout audit
-      and operational-workspace layout audit. The earlier PostgreSQL and i18n failures
-      are historical repaired findings.
+      and operational-workspace layout audit. GitHub Pages run `34189671604` published a
+      matching `release.json` in demo mode with 133 files. The earlier PostgreSQL and i18n
+      failures are historical repaired findings; production health/revision evidence remains
+      separate.
 - [x] 2026-08-12 current-worktree secret baseline: the tracked diff and `web/dist`
       contain no known provider/token/private-key signature; high-entropy diff strings
       were classified as document, route, module, DOM/i18n or deterministic-test values.

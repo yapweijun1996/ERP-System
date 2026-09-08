@@ -40,14 +40,14 @@ This was the source-validation run; TASK-203 is therefore Done, and the final
 documentation-only HEAD verification is recorded below. TASK-199/TASK-209 remain the
 production deployment boundary.
 
-2026-09-08 final HEAD verification: documentation commit `ccf221085dcde371fa19f85312dba706eede8b61`
-passed GitHub Actions run `34180047841` in 58m01s. All four Vitest shards, static/type/
+2026-09-08 latest HEAD verification: test-harness commit `ff6e0d9355c38ce06065267034c020ac55eea7e9`
+passed GitHub Actions run `34189671568` in 1h20m36s. All four Vitest shards, static/type/
 generated/schema/permission checks, PostgreSQL security and concurrency proofs, Demo build,
 the five-language desktop/mobile i18n matrix, browser smoke, full 129-route screen audit,
 transaction-list layout audit, operational-workspace layout audit and cleanup passed. Pages
-run `34180047839` published the same revision in demo mode. This confirms the documentation
-follow-up did not alter the validated source behavior; production health/revision evidence
-remains TASK-199/TASK-209.
+run `34189671604` published the same revision in demo mode with `fileCount: 133`. This
+confirms the bounded screen-audit readiness fix did not alter product behavior; production
+health/revision evidence remains TASK-199/TASK-209.
 
 2026-09-07 TASK-216 completion: the compact seed and generated showcase pack v16 now
 write governed GST/SST classification and recoverability snapshots. A deterministic
@@ -273,7 +273,7 @@ remain green; TASK-199 still needs a target-host release and health proof.
 
 - **TASK-203 — Done (P0) — restore GitHub Actions execution and prove the current HEAD**
   - Depends on: `TASK-194`.
-  - Current evidence: final CI run `34180047841` on HEAD `ccf2210` passed every required
+  - Current evidence: latest CI run `34189671568` on HEAD `ff6e0d9` passed every required
     shard and validation gate, including the five-language desktop/mobile matrix, smoke,
     full screen audit and both layout audits. Previous PostgreSQL and i18n failures are
     retained as historical failure analysis; neither is a current blocker.
