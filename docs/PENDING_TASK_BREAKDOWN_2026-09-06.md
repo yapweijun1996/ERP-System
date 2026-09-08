@@ -1,5 +1,17 @@
 # Pending Task Breakdown — 2026-09-08 addendum
 
+Detailed execution: [12 AI task packets](AI_NATIVE_EXECUTION.md#recommended-sequence)
+and [eight inherited task instructions](ai-native/INHERITED_TASKS.md).
+TASK-240 is completed documentation; pending remains 20 and execution checkpoints
+remain 0/60.
+
+## AI Native delivery addition — 2026-09-08
+
+Pending work is now **20 tasks = 8 inherited + 12 new AI Native workstreams**.
+[GOAL.md](../GOAL.md) supplies the complete TASK-228–239 checklist, dependencies
+and DoD. TASK-227 is completed planning only. Goal acceptance remains **0/12**
+workstreams and **0/48** criteria; no inherited blocker is closed by planning.
+
 ## Latest specialist follow-up
 
 TASK-215 reconciles documentation/KB only. TASK-216 through TASK-223 are complete locally,
@@ -24,12 +36,13 @@ Prioritize seed/date/KPI correctness, then presentation/recovery; preserve the P
 production evidence chain below. [TEST_COVERAGE.md](TEST_COVERAGE.md) records what
 was actually tested; earlier passing matrices below are historical checkpoints.
 
-This is the actionable view of every non-Done task currently registered in
-`tasks/tasks.jsonl`. It is intentionally separate from historical reviews: source and
+This document describes the eight inherited non-Done tasks. The twelve new AI Native
+delivery tasks TASK-228–239 are detailed in [GOAL.md](../GOAL.md); together they cover
+every non-Done task in `tasks/tasks.jsonl`. It is intentionally separate from historical reviews: source and
 tests are implementation evidence, while deployment, CI, production configuration and
 physical-device checks remain separate evidence classes.
 
-Current registry: **216 Done / 4 In Progress / 1 Todo / 3 Blocked / 224 Total**.
+Current registry: **220 Done / 4 In Progress / 13 Todo / 3 Blocked / 240 Total**.
 
 2026-09-08 CI addendum: code revision `e74bf7ead399d2078d15ec1922b5e649e47792b9`
 passed GitHub Actions run `34175591701`. All four Vitest shards and the validation job

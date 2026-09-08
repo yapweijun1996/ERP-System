@@ -1,22 +1,29 @@
 # Roadmap
 
+Use [AI_NATIVE_EXECUTION.md](AI_NATIVE_EXECUTION.md) for the dependency-valid
+step-by-step order and [AGENT_FOLLOWUP_PROMPT.md](AGENT_FOLLOWUP_PROMPT.md) for
+continuation. TASK-240 adds 60 uncompleted execution checkpoints across the existing
+12 delivery tasks; the goal remains 0/12 workstreams and 0/48 criteria.
+
 ## Immediate execution order
 
-1. TASK-216 is Done at the seed/upgrade command boundary, TASK-217 is Done at the
-   date-only presentation boundary, and TASK-218 is Done at the sales aging/period
-   presentation boundary; TASK-219 is Done at the sales-invoice i18n boundary and TASK-221
-   is Done at the procurement receiving presentation/workflow boundary. Rerun the affected
-   browser journeys so command repair is not mistaken for complete E2E.
-2. TASK-223 is complete: payment-voucher recovery now waits for the real route-render
-   Promise and the full desktop/mobile audit passes. TASK-222's mobile/zoom/status gap is
-   closed locally; physical-device acceptance remains TASK-017.
-3. TASK-203 is Done: current-HEAD CI run `34189671568` passes every required gate.
-   TASK-199 remains to verify target health and deployed revision; TASK-209 release
-   requires that production evidence plus its completed security chain.
-4. Finish TASK-202/204/205 production artifact, tax-owner and provider/recovery evidence;
-   TASK-201 first makes worker telemetry bounded/non-blocking and claim-accurate, then
-   measures scale, alerting and restore objectives after TASK-199.
-   TASK-017 and TASK-193 still require devices and SMTP respectively.
+1. Continue inherited production TASK-199 and tax-owner TASK-204. TASK-199 unlocks
+   TASK-201 and TASK-209; TASK-202/205 retain their own production evidence.
+   TASK-017 and TASK-193 require physical-device and email-recovery evidence.
+2. Start EPIC-068 foundation with TASK-228 (governed actions) and TASK-232
+   (Agent identity), followed by TASK-233 (approval-bound execution).
+3. Deliver the receipt-to-Pack pilot through TASK-230 (remote MCP), TASK-229
+   (WebMCP) and TASK-234 (server AI runtime/workspace).
+4. Expand through external connectors, semantic retrieval, durable workflows,
+   evaluations and selected ERP journey closure (TASK-231/235–238).
+5. Complete TASK-239 with the inherited release gates, production pilot, rollback,
+   recovery and operational handover.
+
+[GOAL.md](../GOAL.md) owns the detailed checklist and DoD: **0/12** AI Native
+workstreams and **0/48** criteria accepted. Registry pending work is **20 tasks**
+(8 inherited + 12 new). TASK-227 is completed documentation only.
+The registry dependency graph governs execution; no production action is authorized
+merely by adding it to this roadmap.
 
 TASK-214 audit is complete; TASK-215 and TASK-219 through TASK-223 synchronize this plan. Historic phase checkmarks
 mean the scoped milestone was delivered, not current all-module or production acceptance.

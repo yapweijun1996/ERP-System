@@ -1,5 +1,16 @@
 # Task Index
 
+Execution instructions: [AI Native execution guide](AI_NATIVE_EXECUTION.md),
+[12 task packets](AI_NATIVE_EXECUTION.md#recommended-sequence) and
+[copyable follow-up prompt](AGENT_FOLLOWUP_PROMPT.md). TASK-240 completes this
+documentation refinement. The 60 execution checkpoints remain 0/60; they are
+not additional task records or accepted AI capabilities.
+
+AI Native delivery: [GOAL.md](../GOAL.md) contains the 12-workstream checklist
+and common DoD. TASK-227 is documentation-only; TASK-228–239 are Todo under
+EPIC-068. First new implementation: TASK-228; TASK-232 is independently ready.
+TASK-199 remains the inherited production priority.
+
 [TEST_COVERAGE.md](TEST_COVERAGE.md) is the module evidence map.
 TASK-216 through TASK-223 are complete through the F08 recovery-audit repair; TASK-224
 corrects the setup wizard's responsive progress rail and TASK-225 compacts its Language
@@ -15,11 +26,12 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **218**
+- Done: **220**
 - In progress: **4**
-- Todo: **1**
+- Todo: **13**
 - Blocked: **3**
-- Total: **226**
+- Total: **240**
+- Pending: **20** (8 inherited + 12 AI Native delivery tasks)
 
 ## Current release-quality note
 
@@ -170,7 +182,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-208 | Done | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation, exact Employee integration and five-language browser proof |
 | TASK-209 | Blocked | PostgreSQL/RLS, current CI, release, documentation and KB proof; current CI is complete, but deployed/production evidence remains |
 
-The registry therefore has **218 Done / 4 In Progress / 1 Todo / 3 Blocked / 226 Total**.
+The registry therefore has **220 Done / 4 In Progress / 13 Todo / 3 Blocked / 240 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery) and TASK-209
 (release proof waiting for deployed-production evidence). TASK-203 is Done with current-HEAD
 remote evidence; TASK-209 remains blocked only by the separate production release chain.

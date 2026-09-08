@@ -2708,3 +2708,37 @@ deployed claim. TASK-195's current provisioning/access role proof is complete; m
 0099 still requires deployed/production evidence under TASK-199/TASK-209 before release.
 Password-only Platform login, no step-up,
 and sensitive-data read without break-glass are explicitly accepted high-severity risks.
+
+## EPIC-068 — AI Native ERP Goal and Governed Agent Delivery 🔶
+
+[../GOAL.md](../GOAL.md) owns the product goal, 12 workstreams, 48 DoD criteria,
+phase exits and progress rules. TASK-227 and TASK-240 complete planning/instructions only. TASK-228–239 are
+Todo; existing OCR/Vision, API and authorization foundations are not Agent delivery.
+
+| Task | Goal | Scope |
+| --- | --- | --- |
+| TASK-227 | Planning | Goal, checklist, counts, documentation and KB synchronization |
+| TASK-228 | G01 | Publish governed ERP action contracts |
+| TASK-229 | G02 | Expose the receipt pilot through WebMCP |
+| TASK-230 | G03 | Provide an authenticated ERP MCP server |
+| TASK-231 | G04 | Connect the ERP agent to approved external MCP tools |
+| TASK-232 | G05 | Establish least-privilege agent identity and delegation |
+| TASK-233 | G06 | Bind agent execution to approval and business evidence |
+| TASK-234 | G07 | Deliver the server AI runtime and contextual ERP workspace |
+| TASK-235 | G08 | Build permission-aware ERP semantics and knowledge retrieval |
+| TASK-236 | G09 | Run durable and recoverable agent workflows |
+| TASK-237 | G10 | Establish agent safety evaluations and audit observability |
+| TASK-238 | G11 | Close the selected ERP business journeys and market acceptance gaps |
+| TASK-239 | G12 | Release and operate the AI Native ERP safely |
+| TASK-240 | Execution guide | Source-backed packets, 60 checkpoints, browser/Node runbook and handoff prompt |
+
+Detailed execution: [AI_NATIVE_EXECUTION.md](AI_NATIVE_EXECUTION.md) links all
+12 packets. Each packet has five observable checkpoints, source paths, regression
+commands and a stop/defer rule. Checkpoints are not additional tasks.
+
+Exit criteria: all G01–G12 criteria and common DoD pass with linked evidence; the
+receipt-to-Pack pilot works through WebMCP, remote MCP and the internal assistant.
+AI interprets and orchestrates; shared ERP commands own authorization, calculations,
+transactions and final facts. TASK-239 consumes the eight inherited open tasks
+without duplicating them. This epic neither certifies all modules nor authorizes
+deployment, spending or bypassing human approval.

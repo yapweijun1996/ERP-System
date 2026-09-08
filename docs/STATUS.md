@@ -1,5 +1,20 @@
 # Project Status — reviewed 2026-09-08
 
+TASK-240 adds detailed execution packets, browser/Node testing guidance, inherited
+task instructions and a reusable handoff prompt. See [AI_NATIVE_EXECUTION.md](AI_NATIVE_EXECUTION.md).
+Current registry: **220 Done / 4 In Progress / 13 Todo / 3 Blocked / 240 Total**;
+20 pending, AI acceptance 0/12 and 0/48, execution checkpoints 0/60.
+No runtime implementation or deployment is included in this refinement.
+
+## AI Native goal baseline — TASK-227
+
+[GOAL.md](../GOAL.md) defines EPIC-068, the receipt-to-Pack pilot, 12 delivery
+workstreams and 48 evidence-based DoD criteria. Planning is complete; Agent
+delivery is **0/12** and criteria are **0/48**. Registry pending work is **20**:
+8 inherited tasks plus 12 new Todo tasks (TASK-228–239). Existing APIs, permissions,
+OCR/Vision and workers are reusable foundations; general ERP chat, dedicated MCP
+and WebMCP remain planned. This update changes no runtime or domain contract.
+
 One-page truth about what is **built**, what is **mock**, and what is **documented but
 not implemented**. Read this first before picking any task. Update this file whenever
 an epic-level milestone lands.
@@ -127,7 +142,7 @@ production deployment is still a separate release gate.
 
 The current worktree adds migrations 0100/0101/0102/0103: the Drizzle journal contains **104 migration
 entries**, generated canonical SQL contains **255 tables**, and the task registry contains
-**218 Done / 4 In Progress / 1 Todo / 3 Blocked / 226 Total**. TASK-200 now closes the
+**220 Done / 4 In Progress / 13 Todo / 3 Blocked / 240 Total**. TASK-200 now closes the
 Canonical/API route parity gap by including `staff-calendar` in `API_SCREEN_ROUTES`.
 TASK-212 is done: the
 active route and dynamic shell now refresh in place on locale change while preserving

@@ -1,5 +1,32 @@
 # ERP-System Project Logic
 
+TASK-240 adds [source-backed execution packets](AI_NATIVE_EXECUTION.md) and
+[receipt pilot contracts/cases](ai-native/PILOT_TEST_MATRIX.md). G01 adapter
+contract fixtures precede the real G02/G03 transports; G06 must bind the complete
+reviewed receipt selection atomically, including newly matching rows. These are
+implementation requirements, not changes to the existing Pack command or domain
+contract. Existing key replay and current-visibility checks remain authoritative.
+
+## AI Native target and implementation boundary — 2026-09-08
+
+[GOAL.md](../GOAL.md) is the target/DoD owner for EPIC-068. TASK-227 delivers
+planning; TASK-228–239 remain Todo (0/12 workstreams, 0/48 criteria).
+Web UI, future WebMCP tools, inbound MCP and internal AI must converge on the
+same authenticated action contracts and existing domain commands. Outbound MCP
+is a separate external-service trust boundary. AI does not own tenant selection,
+financial calculations, approval authority or final transaction facts.
+
+The first pilot reuses Company Receipt/Pack commands and verifies persisted Pack
+and artifact identity after confirmation. It remains Company-owned and independent
+of Expense Claims, reimbursement, GL and tax filing; upstream My Receipts upload
+retains its Employee boundary. No domain contract changes in this documentation task.
+Current source references: [API resources](../src/api/resources.ts),
+[Company Receipt commands](../src/modules/expenses/companyReceipt.ts),
+[Pack commands](../src/modules/expenses/companyReceiptPack.ts),
+[Pack governance](../src/modules/expenses/companyReceiptPackGovernance.ts),
+[receipt API](../src/api/routes/companyReceipts.ts), and
+[AI provider boundary](AI_PROVIDERS.md).
+
 TASK-216 fixture repair, TASK-217 date-only repair, TASK-218 invoice presentation repair,
 TASK-219 sales-invoice i18n repair, TASK-220 filled-action contrast repair, TASK-221
 procurement receiving workflow repair and TASK-222 mobile/status usability repair

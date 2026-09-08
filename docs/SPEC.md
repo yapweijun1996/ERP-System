@@ -1,5 +1,10 @@
 # SPEC — Contract of Record
 
+Target and acceptance planning: [GOAL.md](../GOAL.md) defines EPIC-068 and its
+Agent/WebMCP/MCP workstreams. It does not declare those interfaces implemented
+or supersede the binding tenancy, authorization, transaction and AI-secret
+invariants below.
+
 ## Current product acceptance and evidence boundary — 2026-09-08
 
 [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md) defines the requested workflow,

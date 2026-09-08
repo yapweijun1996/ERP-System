@@ -1,5 +1,15 @@
 # ERP module verification coverage
 
+TASK-240 adds a [pilot negative-case matrix](ai-native/PILOT_TEST_MATRIX.md) and
+[evidence template](ai-native/EVIDENCE_TEMPLATE.md). These are planned tests,
+not passing results. All 60 new execution checkpoints remain unchecked.
+
+AI Native target coverage is tracked in [GOAL.md](../GOAL.md): **0/12 workstreams,
+0/48 DoD criteria**. TASK-227 verifies documentation, counts and links only;
+TASK-228–239 require new protocol, identity, approval, workflow, evaluation and
+release evidence. Existing Chrome DevTools MCP browser tests do not prove that
+ERP exposes WebMCP tools or an MCP server.
+
 Reviewed: **2026-09-08**, audit baseline `243af56` with current verification follow-up
 sources `3a4b6e8`, `7a06c47`, `df91653` and `2a43c95`; TASK-214 evidence and TASK-219/220/221/222 follow-up; TASK-215
 documentation reconciliation.
@@ -84,14 +94,16 @@ F01–F08 map one-to-one to TASK-216–223 in [TASK.md](TASK.md) and the
 TASK-221 depended on restoring the seeded procurement journey in TASK-216 and is now
 complete. TASK-222 closes the focused mobile/status finding and TASK-223 closes the
 recovery audit timing finding with Promise-aware evidence.
-Existing production gates remain TASK-199/201/202/203/204/205/209, physical-device
-acceptance TASK-017, and SMTP-dependent recovery TASK-193. Documentation completion
+Existing open production gates remain TASK-199/201/202/204/205/209; TASK-203 is Done
+at its recorded CI revision. Physical-device acceptance remains TASK-017, and
+SMTP-dependent recovery remains TASK-193. Documentation completion
 TASK-215 does not close any runtime finding or production gate.
 
 ## Documentation and KB reconciliation
 
-TASK-215 through TASK-224 are complete. Current registry:
-**216 Done / 4 In Progress / 1 Todo / 3 Blocked / 224 Total**. The project KB
+TASK-215 through TASK-227 are complete. TASK-227 adds goal documentation only;
+TASK-228–239 are unimplemented AI Native delivery work. Current registry:
+**220 Done / 4 In Progress / 13 Todo / 3 Blocked / 240 Total**. The project KB
 `erp-system-project-logic` (`ef47bf4b-83e1-42b2-a412-66912d04ea24`) now includes coverage
 item `8007eaf3-0ec3-4fa4-b4ca-1bdc3d8153b3`; the architecture inventory, EPIC-066 and
 specialist audit items plus KB description were updated and read back. TASK-216 changed

@@ -1,5 +1,10 @@
 # AI and Vision Provider Boundary
 
+Target design: [GOAL.md](../GOAL.md), especially G07/TASK-234, tracks the future
+server AI runtime and contextual workspace. G03 provides the inbound ERP MCP
+server; G04 provides outbound external MCP connections. These are planned
+capabilities and do not change the implemented Vision boundary below.
+
 Reviewed: **2026-09-07**. This document separates the implemented governed document
 Vision path from the still-unimplemented general ERP assistant.
 

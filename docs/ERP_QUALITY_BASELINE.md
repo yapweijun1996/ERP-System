@@ -1,5 +1,9 @@
 # ERP Product Quality and Production Readiness Baseline
 
+Goal tracking: [GOAL.md](../GOAL.md) maps the AI Native ERP target to 12
+workstreams and 48 measurable DoD criteria. This baseline remains the shared
+acceptance framework; goal planning adds no implementation or release evidence.
+
 Confirmed product direction: 2026-09-07. This is the durable acceptance framework
 requested by the product owner, not a claim that every gate has passed.
 Current implementation evidence belongs in [STATUS.md](STATUS.md); dated findings
