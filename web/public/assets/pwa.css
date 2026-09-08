@@ -250,3 +250,36 @@ html,body{
   #setupWizardView .wizard-primary{font-size:calc(14px * var(--fs,1));}
   #setupWizardView .wizard-primary .ico{right:15px;width:18px;height:18px;}
 }
+
+/* The six setup labels cannot stay on one row once the wizard card is
+   narrowed by a tablet or split-pane viewport. A 3x2 grid keeps every label
+   readable and the current step visible without introducing horizontal
+   scrolling; wide desktop keeps the compact single-row rail above. */
+@media (max-width:980px){
+  #setupWizardView .stepper{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:10px 8px;
+    margin:28px 0 0;
+    min-width:0;
+  }
+  #setupWizardView .stepper .stepline{display:none;}
+  #setupWizardView .stepper .step{
+    display:flex;
+    align-items:center;
+    width:100%;
+    min-width:0;
+    gap:6px;
+    white-space:normal;
+    overflow-wrap:anywhere;
+    font-size:calc(10.75px * var(--fs,1));
+    line-height:1.2;
+  }
+  #setupWizardView .stepper .step .sdot{
+    width:26px;
+    height:26px;
+    font-size:calc(11px * var(--fs,1));
+  }
+  #setupWizardView .stepper .step .sdot span{font-size:11px !important;}
+  #setupWizardView .stepper .step.current .sdot{box-shadow:0 0 0 3px var(--accent-tint);}
+}
