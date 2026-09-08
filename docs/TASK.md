@@ -45,8 +45,10 @@ public probes and older suite totals are historical evidence. The current remote
 shards and every validation gate, including PostgreSQL 16 security, the five-language
 desktop/mobile matrix, smoke, full 129-route screen and both layout audits. The earlier
 PostgreSQL and i18n failures are historical and are recorded as repaired source/CI
-findings. GitHub Pages run `34180047839` also succeeded for the static Demo on the same
-HEAD; production API availability remains separate. TASK-211 is done:
+findings. GitHub Pages run `34180047839` succeeded for the static Demo on the same
+code-bearing revision; documentation-only commit `5e546b5` was subsequently published
+successfully by Pages run `34184564870`. Production API availability remains separate.
+TASK-211 is done:
 the generated business i18n allowlist is synchronized and its CI drift check is configured;
 the current workflow evidence is recorded under TASK-203. TASK-212 is done: active-route
 locale switching now refreshes the shell and route in place while preserving recoverable

@@ -55,9 +55,10 @@ both source fixes are now covered by the green current-HEAD run above. GitHub Pa
 adds Platform Demo quick login, password visibility, responsive containment and safe
 existing-Company resume, but no current deployed revision/asset hash was independently
 proven. A fresh read-only probe on 2026-09-08 returned the Pages root and `/release.json`
-as HTTP 200. The current manifest reports revision `ccf221085dcde371fa19f85312dba706eede8b61`,
-workflow `34180047839`, `fileCount: 133`, and `dataMode: demo`; this proves static Demo
-availability but not production API health. Pages `/health` and `/api/setup/status` remain HTTP 404 HTML fallbacks, as
+as HTTP 200. The latest code-bearing manifest reports revision `ccf221085dcde371fa19f85312dba706eede8b61`,
+workflow `34180047839`, `fileCount: 133`, and `dataMode: demo`; the later documentation-only
+Pages publish `34184564870` reports revision `5e546b5` with the same file count and mode.
+These prove static Demo availability but not production API health. Pages `/health` and `/api/setup/status` remain HTTP 404 HTML fallbacks, as
 expected for a static Demo origin, and do not prove API health. TASK-199 owns
 availability/revision proof; TASK-203 current-HEAD CI proof is complete. A separate read-only probe
 on the production Cloudflare origin `https://gmb01.xyz/erp` and `/erp/health` still returns

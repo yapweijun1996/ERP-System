@@ -653,11 +653,12 @@ are not more module screens:
   evidence selection is bounded, employee-independent and eligible-only. My Receipts
   remains the explicit upstream upload/capture boundary;
 - TASK-198: done — approved the narrow dual-mode exception and explicit no-MFA/no-step-up risk;
-- TASK-199/203: TASK-203 is now done: current-HEAD CI run `34180047841` is green and
-  Pages run `34180047839` publishes a manifest for the same revision `ccf2210`. A
-  read-only probe on 2026-09-08 returns the Pages root and `/release.json` as HTTP 200;
-  the manifest reports the current revision, `fileCount: 133` and `dataMode: demo`, so
-  static Demo availability is independently visible. Pages `/health` and
+- TASK-199/203: TASK-203 is now done: the latest code-bearing CI run `34180047841` is
+  green for revision `ccf2210`, and Pages run `34180047839` publishes its manifest.
+  The later documentation-only commit `5e546b5` also published successfully through
+  Pages run `34184564870`; its `release.json` reports revision `5e546b5`, `fileCount: 133`
+  and `dataMode: demo`. A read-only probe on 2026-09-08 returns the Pages root and
+  `/release.json` as HTTP 200, proving static Demo availability. Pages `/health` and
   `/api/setup/status` remain HTTP 404 HTML fallbacks, as expected for the static Demo
   origin, and do not prove API health. The
   application-only release now checks `/health` from inside the web container through the
