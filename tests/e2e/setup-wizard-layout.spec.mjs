@@ -19,6 +19,25 @@ const PORT = process.env.SETUP_WIZARD_E2E_PORT || '4321';
 const BASE_URL = `http://localhost:${PORT}`;
 const TIMEOUT = 60000;
 
+function assertResponsiveProgress(viewport, progress, stage) {
+  if (viewport.width > 980) return;
+  if (progress.stepCount !== 6) {
+    throw new Error(`${viewport.label} ${stage}: expected six setup markers, got ${progress.stepCount}`);
+  }
+  if (progress.scrollWidth > progress.clientWidth + 1) {
+    throw new Error(`${viewport.label} ${stage}: progress rail horizontal overflow ${progress.scrollWidth}>${progress.clientWidth}`);
+  }
+  if (progress.lastStepRight > progress.right + 1) {
+    throw new Error(`${viewport.label} ${stage}: sixth marker extends beyond the progress rail`);
+  }
+  if (progress.rowCount !== 1) {
+    throw new Error(`${viewport.label} ${stage}: progress markers wrapped into ${progress.rowCount} rows`);
+  }
+  if (progress.currentLabelDisplay === 'none' || progress.currentLabelWidth < 1 || !progress.currentAriaLabel) {
+    throw new Error(`${viewport.label} ${stage}: current progress label is not visibly and accessibly named`);
+  }
+}
+
 if (!existsSync(DIST_INDEX)) {
   console.error('web/dist/index.html not found. Run "npm run build:demo" first.');
   process.exit(1);
@@ -72,6 +91,7 @@ async function main() {
   const browser = await chromium.launch({ headless: true });
   const viewports = [
     { label: 'desktop', width: 1280, height: 900 },
+    { label: 'split-pane', width: 753, height: 837 },
     { label: 'iPhone', width: 390, height: 844 },
     { label: 'small-mobile', width: 375, height: 812 },
   ];
@@ -95,8 +115,15 @@ async function main() {
           const panel = document.querySelector('#setupWizardView .wizard-panel');
           const continueButton = document.querySelector('#wizNext');
           const cards = [...document.querySelectorAll('#wizLangSeg .wiz-language-card')];
-          if (!panel || !continueButton) throw new Error('setup wizard language step did not render');
+          const stepper = document.querySelector('#setupWizardView .stepper');
+          const steps = stepper ? [...stepper.querySelectorAll('.step')] : [];
+          const currentStep = stepper?.querySelector('.step.current');
+          const currentLabel = currentStep?.querySelector('.step-label');
+          if (!panel || !continueButton || !stepper || !currentStep || !currentLabel) {
+            throw new Error('setup wizard language step or progress rail did not render');
+          }
           panel.scrollLeft = 999;
+          const stepperRect = stepper.getBoundingClientRect();
           return {
             panelClientWidth: panel.clientWidth,
             panelScrollWidth: panel.scrollWidth,
@@ -106,6 +133,17 @@ async function main() {
             continueVisible: Boolean(continueButton.offsetParent),
             documentClientWidth: document.documentElement.clientWidth,
             documentScrollWidth: document.documentElement.scrollWidth,
+            progress: {
+              stepCount: steps.length,
+              clientWidth: stepper.clientWidth,
+              scrollWidth: stepper.scrollWidth,
+              right: stepperRect.right,
+              lastStepRight: steps.at(-1).getBoundingClientRect().right,
+              rowCount: new Set(steps.map((step) => Math.round(step.getBoundingClientRect().top))).size,
+              currentLabelDisplay: getComputedStyle(currentLabel).display,
+              currentLabelWidth: currentLabel.getBoundingClientRect().width,
+              currentAriaLabel: currentStep.getAttribute('aria-label'),
+            },
           };
         });
 
@@ -123,6 +161,32 @@ async function main() {
         }
         if (layout.cards !== 5 || !layout.continueVisible) {
           throw new Error(`${viewport.label}: language cards or Continue button regressed: ${JSON.stringify(layout)}`);
+        }
+        assertResponsiveProgress(viewport, layout.progress, 'language');
+
+        if (viewport.width <= 980) {
+          await page.locator('#wizNext').click();
+          await page.locator('#wizMaster').waitFor({ state: 'visible', timeout: TIMEOUT });
+          const progressed = await page.evaluate(() => {
+            const stepper = document.querySelector('#setupWizardView .stepper');
+            const steps = stepper ? [...stepper.querySelectorAll('.step')] : [];
+            const currentStep = stepper?.querySelector('.step.current');
+            const currentLabel = currentStep?.querySelector('.step-label');
+            if (!stepper || !currentStep || !currentLabel) throw new Error('setup wizard progress rail did not update');
+            const stepperRect = stepper.getBoundingClientRect();
+            return {
+              stepCount: steps.length,
+              clientWidth: stepper.clientWidth,
+              scrollWidth: stepper.scrollWidth,
+              right: stepperRect.right,
+              lastStepRight: steps.at(-1).getBoundingClientRect().right,
+              rowCount: new Set(steps.map((step) => Math.round(step.getBoundingClientRect().top))).size,
+              currentLabelDisplay: getComputedStyle(currentLabel).display,
+              currentLabelWidth: currentLabel.getBoundingClientRect().width,
+              currentAriaLabel: currentStep.getAttribute('aria-label'),
+            };
+          });
+          assertResponsiveProgress(viewport, progressed, 'organization');
         }
         console.log(`PASS setup wizard layout E2E: ${viewport.label}`);
       } finally {

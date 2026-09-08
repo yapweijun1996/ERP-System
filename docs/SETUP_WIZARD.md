@@ -73,10 +73,11 @@ same UI shell and data adapter strategy described in [FRONTEND_PLAN.md](FRONTEND
    encrypted server connector and worker → [AI_PROVIDERS.md](AI_PROVIDERS.md).
 6. **Finish** — seed optional sample data; land on the dashboard.
 
-Responsive progress contract: wide desktop keeps the six-step progress rail on one row;
-at `980px` and below it becomes a three-column, two-row grid so all localized step labels
-remain readable without horizontal scrolling. The active step keeps its accent dot and
-label treatment, while the wizard panel remains vertically scrollable for longer steps.
+Responsive progress contract: wide desktop keeps the six-step progress rail with every
+label on one row. At `980px` and below it remains a single six-marker rail: every numbered
+stage stays visible, while only the active stage shows its localized label. Each marker
+retains its accessible name, the active marker keeps its accent treatment, and the wizard
+panel remains vertically scrollable for longer steps without horizontal scrolling.
 
 For production, the former anonymous `POST /api/setup/actions/complete` tenant foundation
 flow is retired and returns `410 legacy_setup_disabled`. A truly empty database first

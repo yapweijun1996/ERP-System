@@ -53,7 +53,7 @@ function wizardStepper(steps, curStep, reached){
     const cls=i<curStep?'done':i===curStep?'current':'';
     const dot=i<curStep?ic('check'):'';
     const clickable=i<=reached;
-    return `${i?`<span class="stepline ${i<=curStep?'done':''}"></span>`:''}<div class="step ${cls}" ${clickable?`data-step="${i}" style="cursor:pointer"`:''}><span class="sdot">${dot||`<span style="font-size:10px;font-weight:700">${i+1}</span>`}</span>${esc(label)}</div>`;
+    return `${i?`<span class="stepline ${i<=curStep?'done':''}"></span>`:''}<div class="step ${cls}" aria-label="${esc(label)}" ${i===curStep?'aria-current="step"':''} ${clickable?`data-step="${i}" style="cursor:pointer"`:''}><span class="sdot">${dot||`<span style="font-size:10px;font-weight:700">${i+1}</span>`}</span><span class="step-label">${esc(label)}</span></div>`;
   }).join('')}</div>`;
 }
 function crumbs(parts){ // parts: ['Sales', {label:'Orders',route:'sales-orders'}, {cur:'SO-26-0418'}]
