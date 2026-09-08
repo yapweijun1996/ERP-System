@@ -41,7 +41,7 @@ Demo E2E, Platform layout E2E with both tenant modes, Demo autofill E2E, the
 5-language × 2-viewport audit. The current disposable PostgreSQL/FORCE-RLS proof is
 recorded in TASK-195; current-HEAD remote CI is now green and production release remains open, while
 public probes and older suite totals are historical evidence. The current remote CI run
-`34189671568` on current HEAD `ff6e0d9355c38ce06065267034c020ac55eea7e9` passed all four Vitest
+`34189671568` on the latest code-bearing revision `ff6e0d9355c38ce06065267034c020ac55eea7e9` passed all four Vitest
 shards and every validation gate, including PostgreSQL 16 security, the five-language
 desktop/mobile matrix, smoke, full 129-route screen and both layout audits. The earlier
 PostgreSQL and i18n failures are historical and are recorded as repaired source/CI

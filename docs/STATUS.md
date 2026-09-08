@@ -29,7 +29,7 @@ translation gaps, TASK-220 repairs the filled-action contrast gap and TASK-221 r
 procurement receiving workflow; TASK-222 repairs the mobile/status usability gap and
 TASK-223 repairs the recovery audit timing boundary.
 The current full local Vitest run passes 176 files / 724 tests with 2 skipped files and 2
-skipped tests (178 files / 726 tests total). Current HEAD `ff6e0d9` passes remote CI
+skipped tests (178 files / 726 tests total). The latest code-bearing revision `ff6e0d9` passes remote CI
 run `34189671568`: all four Vitest shards, static/type/build gates, PostgreSQL security
 and concurrency proofs, five-language desktop/mobile i18n, smoke, full screen and both
 layout audits. GitHub Pages run `34189671604` also succeeded and its `release.json`

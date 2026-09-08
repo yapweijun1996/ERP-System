@@ -41,7 +41,7 @@ not proof that HEAD `00e2533` is deployed or that the service is currently healt
 Public `/health` and `/api/setup/status` probes returned HTTP 502 during TASK-194. The
 historical HEAD workflow run `31603746668` started zero jobs because GitHub reported
 failed account payment or an exhausted spending limit. Current-HEAD CI run
-`34189671568` on current HEAD `ff6e0d9` passed all four Vitest shards and every validation gate,
+`34189671568` on the latest code-bearing revision `ff6e0d9` passed all four Vitest shards and every validation gate,
 including PostgreSQL security/concurrency, five-language browser, smoke, full screen and
 both layout audits. The following older run is retained as historical failure analysis:
 `34132475891` on remote head `4a49706bdb95e060714febe32859aa9d6a0a5fbd` executed all

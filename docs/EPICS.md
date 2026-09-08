@@ -4,8 +4,8 @@ Reviewed 2026-09-08: historical Done milestones retain their original scoped evi
 TASK-214 does not certify all modules. [TEST_COVERAGE.md](TEST_COVERAGE.md) records
 latest failures and untested boundaries; EPIC-066 now tracks TASK-215 documentation
 and TASK-216–223 runtime follow-up against [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md).
-TASK-216 through TASK-223 are complete locally; TASK-203 is now complete through current-
-HEAD CI run `34189671568` on `ff6e0d9`; production and external evidence gates remain separate.
+TASK-216 through TASK-223 are complete locally; TASK-203 is now complete through the latest
+code-bearing CI run `34189671568` on `ff6e0d9`; production and external evidence gates remain separate.
 
 Each epic describes a large work group. Small executable tasks live in
 `tasks/tasks.jsonl`. Status legend: ✅ done · 🔶 in progress · ⬜ not started.

@@ -40,7 +40,7 @@ This was the source-validation run; TASK-203 is therefore Done, and the final
 documentation-only HEAD verification is recorded below. TASK-199/TASK-209 remain the
 production deployment boundary.
 
-2026-09-08 latest HEAD verification: test-harness commit `ff6e0d9355c38ce06065267034c020ac55eea7e9`
+2026-09-08 latest code-bearing verification: test-harness commit `ff6e0d9355c38ce06065267034c020ac55eea7e9`
 passed GitHub Actions run `34189671568` in 1h20m36s. All four Vitest shards, static/type/
 generated/schema/permission checks, PostgreSQL security and concurrency proofs, Demo build,
 the five-language desktop/mobile i18n matrix, browser smoke, full 129-route screen audit,
@@ -273,7 +273,7 @@ remain green; TASK-199 still needs a target-host release and health proof.
 
 - **TASK-203 — Done (P0) — restore GitHub Actions execution and prove the current HEAD**
   - Depends on: `TASK-194`.
-  - Current evidence: latest CI run `34189671568` on HEAD `ff6e0d9` passed every required
+  - Current evidence: latest CI run `34189671568` against code-bearing revision `ff6e0d9` passed every required
     shard and validation gate, including the five-language desktop/mobile matrix, smoke,
     full screen audit and both layout audits. Previous PostgreSQL and i18n failures are
     retained as historical failure analysis; neither is a current blocker.
