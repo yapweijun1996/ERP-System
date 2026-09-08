@@ -61,7 +61,7 @@ proven in the demo.
 | 5 | `Makefile` / `scripts/setup.sh` aligned with the real compose assets (`make setup` works end-to-end) | ✅ done (TASK-021, 2026-07-17) — `scripts/setup.sh` run for real end-to-end plus every individual `make` target against a live, isolated stack |
 | 6 | PostgreSQL parity + concurrency proof (`POSTGRES_URL npm run demo`; FOR UPDATE over-sell test: exactly one winner) | ✅ done (TASK-013) — proven against real Postgres twice |
 | 7 | Minimal real auth: login validates against `app_user`, session scopes `master_fn`/`company_fn` server-side | ✅ done (TASK-024; later auth epics deepen the contract) |
-| 8 | CI workflow validates typecheck/build/test gates | ✅ source implemented (TASK-014); current execution is blocked by TASK-203 billing |
+| 8 | CI workflow validates typecheck/build/test gates | ✅ source and current execution verified (TASK-014/TASK-203); production release remains a separate gate |
 
 ### Explicitly OUT of MVP-2
 

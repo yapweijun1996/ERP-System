@@ -40,7 +40,7 @@ current source and TASK-219 follow-up pass the full built-Demo PGlite matrix at 
   and Demo showcase-pack verification. The current `test:e2e:setup-wizard` also passes
   desktop, iPhone-width and small-mobile layout checks. These checks do not prove live
   PostgreSQL provisioning, public deployment, or GitHub Actions execution.
-- At the 2026-09-06 review snapshot, the task registry reported **214 Done / 5 In Progress / 1 Todo / 3 Blocked / 223 Total**. TASK-216 through TASK-223 were complete locally; the current follow-up closes TASK-203 through remote CI run `34175591701`, while the actionable boundary remains concentrated in TASK-199–205 and
+- At the 2026-09-06 review snapshot, the task registry reported **214 Done / 5 In Progress / 1 Todo / 3 Blocked / 223 Total**. TASK-216 through TASK-223 were complete locally; the current follow-up closes TASK-203 through remote CI run `34180047841` on `ccf2210`, while the actionable boundary remains concentrated in TASK-199–205 and
   EPIC-067/TASK-209; the blocked items are external or operational, not silently
   treated as code failures.
 - TASK-204 source work is now in progress: migrations `0100`/`0101` add governed tax

@@ -80,7 +80,7 @@ For the current source-backed action backlog and evidence boundaries, see
       In progress until production Vision configuration and live dead-letter alert/recovery
       evidence is recorded.
 - [x] GitHub Actions executes current HEAD with every required gate green. Run
-      `34175591701` passed all four Vitest shards, lint/docs/generated checks, root/web
+      `34180047841` passed all four Vitest shards, lint/docs/generated checks, root/web
       typechecks, PostgreSQL security and concurrency proofs, Demo build, five-language
       desktop/mobile i18n, browser smoke, full screen audit, transaction-list layout audit
       and operational-workspace layout audit. The earlier PostgreSQL and i18n failures

@@ -336,7 +336,7 @@ rows and zero document-storage entries. Local/public health and root returned 20
 public desktop and 375px browser checks showed Create Platform Superadmin with no console
 errors or horizontal overflow. Source CI run `31570902479` passed all four Vitest shards;
 the historical docs-only push run `31573438483` was not started because GitHub Actions
-account billing blocked every job. Current-HEAD CI run `34175591701` passed all four
+account billing blocked every job. Current-HEAD CI run `34180047841` passed all four
 Vitest shards, PostgreSQL security and concurrency proofs, the five-language desktop/mobile
 matrix, browser smoke, full 129-route screen audit and both layout audits. The earlier
 PostgreSQL and i18n failures are historical repaired findings. Current public production

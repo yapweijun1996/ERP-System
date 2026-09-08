@@ -30,13 +30,24 @@ physical-device checks remain separate evidence classes.
 
 Current registry: **215 Done / 4 In Progress / 1 Todo / 3 Blocked / 223 Total**.
 
-2026-09-08 CI addendum: current HEAD `e74bf7ead399d2078d15ec1922b5e649e47792b9`
+2026-09-08 CI addendum: code revision `e74bf7ead399d2078d15ec1922b5e649e47792b9`
 passed GitHub Actions run `34175591701`. All four Vitest shards and the validation job
 passed, including PostgreSQL security/concurrency, five-language desktop/mobile i18n,
 browser smoke, full 129-route screen audit, transaction-list layout and operational-
 workspace layout audits. The validation timeout was raised to 120 minutes in `e74bf7e`
 after the preceding run was cancelled at the old 60-minute limit during screen audit.
-TASK-203 is therefore Done; TASK-199/TASK-209 remain the production deployment boundary.
+This was the source-validation run; TASK-203 is therefore Done, and the final
+documentation-only HEAD verification is recorded below. TASK-199/TASK-209 remain the
+production deployment boundary.
+
+2026-09-08 final HEAD verification: documentation commit `ccf221085dcde371fa19f85312dba706eede8b61`
+passed GitHub Actions run `34180047841` in 58m01s. All four Vitest shards, static/type/
+generated/schema/permission checks, PostgreSQL security and concurrency proofs, Demo build,
+the five-language desktop/mobile i18n matrix, browser smoke, full 129-route screen audit,
+transaction-list layout audit, operational-workspace layout audit and cleanup passed. Pages
+run `34180047839` published the same revision in demo mode. This confirms the documentation
+follow-up did not alter the validated source behavior; production health/revision evidence
+remains TASK-199/TASK-209.
 
 2026-09-07 TASK-216 completion: the compact seed and generated showcase pack v16 now
 write governed GST/SST classification and recoverability snapshots. A deterministic
@@ -201,7 +212,7 @@ remain green; TASK-199 still needs a target-host release and health proof.
 
 - **1. Finish TASK-204's release gate:** obtain qualified tax-owner review of the
   versioned SG/MY configuration after the source-level fix and targeted regression proof.
-- **2. Run TASK-199 and TASK-203 in parallel when external access is available:** restore
+- **2. Run TASK-199 when external access is available:** restore
   public availability/deployment evidence and run CI against the current pushed HEAD.
   The prior billing blocker is no longer observed, but the latest remote run exposed an
   old PostgreSQL assertion failure; the local source fix and temporary PG16 proof pass.
@@ -262,7 +273,7 @@ remain green; TASK-199 still needs a target-host release and health proof.
 
 - **TASK-203 — Done (P0) — restore GitHub Actions execution and prove the current HEAD**
   - Depends on: `TASK-194`.
-  - Current evidence: CI run `34175591701` on HEAD `e74bf7e` passed every required
+  - Current evidence: final CI run `34180047841` on HEAD `ccf2210` passed every required
     shard and validation gate, including the five-language desktop/mobile matrix, smoke,
     full screen audit and both layout audits. Previous PostgreSQL and i18n failures are
     retained as historical failure analysis; neither is a current blocker.

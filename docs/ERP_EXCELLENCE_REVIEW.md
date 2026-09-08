@@ -138,7 +138,7 @@ last reset is not immutable evidence, and HEAD CI was externally blocked at that
 review. `staff-calendar` is Canonical and has domain/API work but is the only Canonical
 route omitted from API screen metadata in that historical snapshot. TASK-199 restores/
 proves service state, TASK-200 closes route/evidence parity, and TASK-203 is now closed
-by current-HEAD CI run `34175591701`; production availability remains TASK-199/TASK-209.
+by current-HEAD CI run `34180047841`; production availability remains TASK-199/TASK-209.
 
 ### 4.6 Malaysia SST posting and effective-date semantics are unsafe to overclaim
 

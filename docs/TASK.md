@@ -41,11 +41,11 @@ Demo E2E, Platform layout E2E with both tenant modes, Demo autofill E2E, the
 5-language × 2-viewport audit. The current disposable PostgreSQL/FORCE-RLS proof is
 recorded in TASK-195; current-HEAD remote CI is now green and production release remains open, while
 public probes and older suite totals are historical evidence. The current remote CI run
-`34175591701` on HEAD `e74bf7ead399d2078d15ec1922b5e649e47792b9` passed all four Vitest
+`34180047841` on current HEAD `ccf221085dcde371fa19f85312dba706eede8b61` passed all four Vitest
 shards and every validation gate, including PostgreSQL 16 security, the five-language
 desktop/mobile matrix, smoke, full 129-route screen and both layout audits. The earlier
 PostgreSQL and i18n failures are historical and are recorded as repaired source/CI
-findings. GitHub Pages run `34175591694` also succeeded for the static Demo on the same
+findings. GitHub Pages run `34180047839` also succeeded for the static Demo on the same
 HEAD; production API availability remains separate. TASK-211 is done:
 the generated business i18n allowlist is synchronized and its CI drift check is configured;
 the current workflow evidence is recorded under TASK-203. TASK-212 is done: active-route
@@ -147,7 +147,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-200 | Done | Resolve 129/129 route parity and rerun current HEAD release evidence |
 | TASK-201 | Todo | Production SLO, scale and RPO/RTO proof; source telemetry is now single-flight/non-blocking and claim-aligned, while measured query-budget/plan and operational evidence remain |
 | TASK-202 | In progress | Receipt Pack repository lifecycle/timezone and disposable PostgreSQL concurrency proof are complete; production release evidence remains |
-| TASK-203 | Done | Current HEAD CI run 34175591701 passes all required shards, static checks, PostgreSQL proofs, browser matrices, smoke and layout audits |
+| TASK-203 | Done | Current HEAD CI run 34180047841 passes all required shards, static checks, PostgreSQL proofs, browser matrices, smoke and layout audits |
 | TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |
 | TASK-205 | In progress | Direct Vision failure/revoked-connector/no-fallback proof plus bounded dead-letter and same-chain manual requeue; production configuration remains |
 | TASK-213 | Done | Close production RLS coverage omission and add schema drift guard |
@@ -415,7 +415,7 @@ statuses above and keep each change independently testable:
 - **TASK-193:** administrator email recovery. Production SMTP and Platform recovery are
   not configured/proven.
 - **TASK-209:** release proof remains blocked. Current-HEAD CI is green in run
-  `34175591701`, but production public health, exact deployed revision and production
+  `34180047841`, but production public health, exact deployed revision and production
   configuration evidence remain under TASK-199/TASK-209.
 
 See [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md) for the current
