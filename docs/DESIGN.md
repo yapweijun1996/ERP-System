@@ -664,10 +664,9 @@ trust as the next release boundary. The complete review and evidence matrix are 
 
 - **Release truth:** HEAD source, dated tests, deployed revision and live availability
   are separate facts. The August 502 and zero-job billing failures are historical.
-  Latest public CI run `34132475891` passed all four Vitest shards but failed the
-  PostgreSQL security proof on the old remote `deadLettered: 0` assertion; local
-  `dc0f10d` plus a temporary PostgreSQL 16 rerun passes 2/2. Current-HEAD green CI and
-  target health/revision proof remain TASK-203/199, with release under TASK-209.
+  Current-HEAD CI run `34175591701` passed all four Vitest shards and every required
+  static, PostgreSQL, browser, screen and layout gate. Target health/revision proof
+  remains TASK-199, with production release under TASK-209.
 - **Operational quality:** after P0 isolation/privilege fixes, SLO/RPO/RTO, worker
   telemetry, scale budgets and Pack lifecycle/i18n become binding gates (TASK-201/202).
 - **Tax and AI evidence:** exclusive tax intervals and governed posting, plus direct

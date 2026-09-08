@@ -4,7 +4,8 @@ Reviewed 2026-09-08: historical Done milestones retain their original scoped evi
 TASK-214 does not certify all modules. [TEST_COVERAGE.md](TEST_COVERAGE.md) records
 latest failures and untested boundaries; EPIC-066 now tracks TASK-215 documentation
 and TASK-216–223 runtime follow-up against [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md).
-TASK-216 through TASK-223 are complete locally; production and external evidence gates remain separate.
+TASK-216 through TASK-223 are complete locally; TASK-203 is now complete through current-
+HEAD CI run `34175591701`; production and external evidence gates remain separate.
 
 Each epic describes a large work group. Small executable tasks live in
 `tasks/tasks.jsonl`. Status legend: ✅ done · 🔶 in progress · ⬜ not started.
@@ -163,11 +164,9 @@ matrix, smoke script and transaction proof are release-green. The navigation ass
 checks visible semantic badges; hidden zero-count badges remain in the DOM. The
 physical-device gate remains open separately under TASK-017. TASK-211 is done: the
 business allowlist artifact is regenerated and its drift check is configured in CI;
-the latest public CI run `34132475891` executed all four Vitest shards successfully but
-failed the PostgreSQL security proof on the old remote `deadLettered: 0` assertion at
-`src/api/postgresSecurity.integration.test.ts:278`. Local `dc0f10d` plus a temporary
-PostgreSQL 16 rerun passes 2/2; the earlier i18n failure is historical and a fresh
-current-HEAD remote run remains pending.
+current-HEAD CI run `34175591701` passed all four Vitest shards, PostgreSQL security and
+concurrency, five-language browser, smoke, full screen and both layout audits. The earlier
+PostgreSQL and i18n failures are historical repaired findings.
 
 - [x] **TASK-211 — Enforce generated i18n business allowlist in CI.** Regenerated the
       committed `web/public/assets/i18n-business.js` artifact from the source allowlist
@@ -2603,9 +2602,8 @@ the deployed release, preserves old data before the reset, validates custom dump
 isolated restore, clears only `erp-system_pgdata` and `erp-system_document_storage`,
 recreates without seed, and leaves the public site on the first Platform Superadmin
 registration page without creating a real account. TASK-193 remains blocked while SMTP is
-unset. Source CI run `31570902479` passed all four Vitest shards; latest public CI run
-`34132475891` executed all four shards but exposed the old PostgreSQL assertion failure
-described above. EPIC-066 owns the newly verified
+unset. Current-HEAD CI run `34175591701` passed all four Vitest shards and every required
+validation gate; the older PostgreSQL assertion failure is historical. EPIC-066 owns the newly verified
 RLS/runtime-role, deployment-health and privileged-access hardening requirements.
 
 ## EPIC-066 — Production Trust & ERP Excellence Hardening 🔶
@@ -2637,10 +2635,8 @@ Current truth:
   disposable PostgreSQL same-key race passes, and production UAT remains open.
 - Support Grant is not a tenant-data proxy, while exact-user Superadmin simulation does
   not require a grant/reason/ticket. Platform MFA/step-up is absent.
-- Public health/setup probes returned 502 and the exact deployed HEAD revision is not
-  proven. Current CI executes, but the latest public run failed its PostgreSQL security
-  proof on the old `deadLettered: 0` assertion; local `dc0f10d` plus a temporary
-  PostgreSQL 16 rerun passes 2/2, and a current-HEAD remote rerun remains pending. Source inventory is 129 Canonical
+- Public health/setup probes returned 502 and the exact deployed production revision is
+  not proven. Current-HEAD CI run `34175591701` is green across all required gates. Source inventory is 129 Canonical
   routes and all 129 now declare API-mode metadata; TASK-200 closed the prior
   `staff-calendar` exception with current route evidence.
 - TASK-204 source hardening now aligns `valid_to` to one exclusive interval and makes
@@ -2661,7 +2657,7 @@ Current truth:
 | TASK-200 | Done | Resolve 129/129 route parity and rerun current HEAD release evidence |
 | TASK-201 | Todo | Production SLO, scale and RPO/RTO proof; bounded/non-blocking, claim-accurate worker observability |
 | TASK-202 | In progress | Receipt Pack lifecycle/timezone and disposable PostgreSQL concurrency proof are complete; production release evidence remains |
-| TASK-203 | In Progress | Latest CI executes but the old remote PostgreSQL security assertion omitted `deadLettered: 0`; local `dc0f10d` and PG16 rerun pass, current-HEAD rerun pending |
+| TASK-203 | Done | Current-HEAD CI run `34175591701` passes all required shards, static checks, PostgreSQL proofs, browser matrices, smoke and layout audits |
 | TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |
 | TASK-205 | In progress | Direct Vision failure/revoked-connector/no-fallback proof plus bounded dead-letter and same-chain manual requeue; production configuration remains |
 | TASK-213 | Done | Close production RLS coverage omission and add schema drift guard |
@@ -2704,11 +2700,11 @@ reviving a login-capable tenant Superadmin or legacy authorization bypass:
 | TASK-206 | Done | Migration 0099, hidden actor/system role and bounded session foundation; target-context RLS and hidden actor/session lifecycle are proven under disposable PostgreSQL non-superuser |
 | TASK-207 | Done | Tenant authorization, switching, break-glass and dual-attribution/adversarial proof |
 | TASK-208 | Done | Platform/Tenant workspace UX, Employee-mode integration and five-language browser proof |
-| TASK-209 | Blocked | PostgreSQL/RLS, current-HEAD CI, release, documentation and KB proof; blocked by the pending CI rerun and deployed/production evidence |
+| TASK-209 | Blocked | PostgreSQL/RLS, current-HEAD CI, release, documentation and KB proof; current CI is complete, but deployed/production evidence remains |
 
-Source for TASK-206–208 is present; TASK-206's focused PGlite/API and disposable
+Source for TASK-206–208 is present; TASK-203's current-HEAD CI gate is complete. TASK-206's focused PGlite/API and disposable
 PostgreSQL hidden actor/session proof passes, but this is not a production-ready or
 deployed claim. TASK-195's current provisioning/access role proof is complete; migration
-0099 still requires a fresh current-HEAD CI result under TASK-203 and deployed/production evidence
-before release. Password-only Platform login, no step-up,
+0099 still requires deployed/production evidence under TASK-199/TASK-209 before release.
+Password-only Platform login, no step-up,
 and sensitive-data read without break-glass are explicitly accepted high-severity risks.

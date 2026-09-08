@@ -336,9 +336,9 @@ rows and zero document-storage entries. Local/public health and root returned 20
 public desktop and 375px browser checks showed Create Platform Superadmin with no console
 errors or horizontal overflow. Source CI run `31570902479` passed all four Vitest shards;
 the historical docs-only push run `31573438483` was not started because GitHub Actions
-account billing blocked every job. Latest public CI run `34132475891` executed all four
-Vitest shards but failed the PostgreSQL security proof on the old remote
-`deadLettered: 0` assertion at `src/api/postgresSecurity.integration.test.ts:278`.
-Local `dc0f10d` plus a temporary PostgreSQL 16 rerun passes 2/2; the earlier i18n failure
-is historical. Current public probes returned 502 and a fresh current-HEAD remote CI run
-remains pending.
+account billing blocked every job. Current-HEAD CI run `34175591701` passed all four
+Vitest shards, PostgreSQL security and concurrency proofs, the five-language desktop/mobile
+matrix, browser smoke, full 129-route screen audit and both layout audits. The earlier
+PostgreSQL and i18n failures are historical repaired findings. Current public production
+probes remain a separate gate and the exact deployed API revision is still TASK-199/
+TASK-209 evidence.

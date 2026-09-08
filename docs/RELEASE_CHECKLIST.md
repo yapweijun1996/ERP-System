@@ -75,15 +75,16 @@ For the current source-backed action backlog and evidence boundaries, see
       the primary/calendar entry points emit aggregate-only queue snapshots. This proves
       shape/redaction only: bounded non-blocking collection, claim-predicate parity,
       production metrics/alerts, ownership and recovery exercise remain TASK-201.
-- [x] `tasks/tasks.jsonl` statuses current: 214 Done / 5 In Progress / 1 Todo / 3 Blocked / 223 Total. Blockers are TASK-017, TASK-193 and TASK-209;
-      TASK-203 remains In Progress until a fresh current-HEAD remote CI result, TASK-204 remains In progress until tax-owner production review and TASK-205 remains
+- [x] `tasks/tasks.jsonl` statuses current: 215 Done / 4 In Progress / 1 Todo / 3 Blocked / 223 Total. Blockers are TASK-017, TASK-193 and TASK-209;
+      TASK-203 is Done with current-HEAD remote CI evidence, TASK-204 remains In progress until tax-owner production review and TASK-205 remains
       In progress until production Vision configuration and live dead-letter alert/recovery
       evidence is recorded.
-- [ ] GitHub Actions actually executes current HEAD with every required gate green. Latest
-      public run `34132475891` passed all four Vitest shards but failed the PostgreSQL
-      security proof on the old remote `deadLettered: 0` assertion; local `dc0f10d` plus a
-      temporary PostgreSQL 16 rerun passes 2/2. The earlier i18n failure is historical,
-      and TASK-203 still needs a fresh current-HEAD remote run.
+- [x] GitHub Actions executes current HEAD with every required gate green. Run
+      `34175591701` passed all four Vitest shards, lint/docs/generated checks, root/web
+      typechecks, PostgreSQL security and concurrency proofs, Demo build, five-language
+      desktop/mobile i18n, browser smoke, full screen audit, transaction-list layout audit
+      and operational-workspace layout audit. The earlier PostgreSQL and i18n failures
+      are historical repaired findings.
 - [x] 2026-08-12 current-worktree secret baseline: the tracked diff and `web/dist`
       contain no known provider/token/private-key signature; high-entropy diff strings
       were classified as document, route, module, DOM/i18n or deterministic-test values.

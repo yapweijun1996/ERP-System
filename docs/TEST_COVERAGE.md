@@ -52,7 +52,7 @@ colocated test entry points.
 | --- | --- | --- |
 | Demo build / PGlite domain proof | Passed | TASK-216 fresh seed and simulated v15→v16 upgrade complete the seeded PO approval → receipt → invoice chain with one balanced supplier invoice; TASK-217 date-only boundary tests and TASK-218 mixed invoice-fact tests plus built-Demo KPI/filter route checks pass; shared rejection guards remain green |
 | Desktop/mobile route rendering | 129 routes rendered, no console/page errors; full audit passes recovery and layout checks | Production and remote CI evidence remain separate; current full Vitest pass is recorded below |
-| i18n | Current built-Demo PGlite audit passes 129 routes × five languages × two viewports with zero blocking findings; 1,728 canonical English keys and 72 local packs | Current local release evidence; current-HEAD remote CI rerun remains separate |
+| i18n | Current built-Demo PGlite audit and remote CI pass 129 routes × five languages × two viewports with zero blocking findings; 1,728 canonical English keys and 72 local packs | Remote CI run `34175591701` is green; production and physical-device evidence remain separate |
 | Theme/mobile | Focused filled-action contrast E2E and TASK-222 mobile usability E2E pass; five locales, desktop/mobile touch targets, zoom metadata, modal focus and 188px reflow are covered | Physical-device acceptance TASK-017 and exhaustive palette/device certification remain separate |
 | PWA update lifecycle | Passed explicit deferral/acceptance/reload flow | Physical devices, multiple tabs, unsaved drafts, in-flight requests and interrupted upgrades remain unverified |
 | Performance | Warm route and bundle observations only | TASK-201; cold-start, interaction percentiles, realistic data and concurrent tenant workloads |
@@ -91,7 +91,7 @@ TASK-215 does not close any runtime finding or production gate.
 ## Documentation and KB reconciliation
 
 TASK-215 through TASK-223 are complete. Current registry:
-**214 Done / 5 In Progress / 1 Todo / 3 Blocked / 223 Total**. The project KB
+**215 Done / 4 In Progress / 1 Todo / 3 Blocked / 223 Total**. The project KB
 `erp-system-project-logic` (`ef47bf4b-83e1-42b2-a412-66912d04ea24`) now includes coverage
 item `8007eaf3-0ec3-4fa4-b4ca-1bdc3d8153b3`; the architecture inventory, EPIC-066 and
 specialist audit items plus KB description were updated and read back. TASK-216 changed

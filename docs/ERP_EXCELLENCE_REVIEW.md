@@ -134,10 +134,11 @@ with no MFA or sensitive-operation step-up. TASK-198 owns the ADR and controls.
 ### 4.5 Production and release evidence is not current
 
 The public endpoint returned 502 during review, the precise deployed commit after the
-last reset is not immutable evidence, and HEAD CI is externally blocked. `staff-calendar`
-is Canonical and has domain/API work but is the only Canonical route omitted from API
-screen metadata. TASK-199 restores/proves service state, TASK-200 closes route/evidence
-parity, and TASK-203 remains blocked until GitHub billing permits jobs to run.
+last reset is not immutable evidence, and HEAD CI was externally blocked at that dated
+review. `staff-calendar` is Canonical and has domain/API work but is the only Canonical
+route omitted from API screen metadata in that historical snapshot. TASK-199 restores/
+proves service state, TASK-200 closes route/evidence parity, and TASK-203 is now closed
+by current-HEAD CI run `34175591701`; production availability remains TASK-199/TASK-209.
 
 ### 4.6 Malaysia SST posting and effective-date semantics are unsafe to overclaim
 

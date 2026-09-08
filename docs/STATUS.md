@@ -29,8 +29,10 @@ translation gaps, TASK-220 repairs the filled-action contrast gap and TASK-221 r
 procurement receiving workflow; TASK-222 repairs the mobile/status usability gap and
 TASK-223 repairs the recovery audit timing boundary.
 The current full local Vitest run passes 176 files / 724 tests with 2 skipped files and 2
-skipped tests (178 files / 726 tests total). Production and current-HEAD remote CI remain
-separate evidence gates.
+skipped tests (178 files / 726 tests total). Current HEAD `e74bf7e` also passes remote CI
+run `34175591701`: all four Vitest shards, static/type/build gates, PostgreSQL security
+and concurrency proofs, five-language desktop/mobile i18n, smoke, full screen and both
+layout audits. Production and deployed API evidence remain separate gates.
 
 The 2026-09-08 local release-gate rerun also passes the PGlite `npm run demo`,
 `npm run build:demo`, generated Demo schema/pack and i18n checks, schema drift, permission
@@ -121,7 +123,7 @@ production deployment is still a separate release gate.
 
 The current worktree adds migrations 0100/0101/0102/0103: the Drizzle journal contains **104 migration
 entries**, generated canonical SQL contains **255 tables**, and the task registry contains
-**214 Done / 5 In Progress / 1 Todo / 3 Blocked / 223 Total**. TASK-200 now closes the
+**215 Done / 4 In Progress / 1 Todo / 3 Blocked / 223 Total**. TASK-200 now closes the
 Canonical/API route parity gap by including `staff-calendar` in `API_SCREEN_ROUTES`.
 TASK-212 is done: the
 active route and dynamic shell now refresh in place on locale change while preserving
@@ -149,8 +151,8 @@ E2E enters both Admin and Employee modes and verifies the locked ordinary Compan
 switcher, while Demo autofill E2E, the 59-route/13-role access matrix, 129-screen
 desktop/mobile audit and 129-route × 5-language × 2-viewport audit pass. TASK-195 now
 adds a current-path PostgreSQL/FORCE-RLS proof; TASK-206 and TASK-207 are done, while
-executable CI and the remaining Platform release chain remain TASK-203 and
-TASK-209 work. The pre-TASK-214 local full Vitest checkpoint passed 173 files /
+TASK-203 is done through current-HEAD CI run `34175591701`; the remaining Platform
+release chain remains TASK-199/TASK-209 work. The pre-TASK-214 local full Vitest checkpoint passed 173 files /
 705 tests with two intentional file/test skips; the current full local Vitest run now passes
 176 files / 724 tests with 2 skipped files and 2 skipped tests. TASK-204 source-level tax interval,
 classification and posting hardening is now in progress; targeted tax/purchasing/Expense
@@ -183,29 +185,26 @@ Canonical / 0 Preview routes, 129 API-mode metadata routes, 1,728 English keys/7
 packs, 315 permission codes, 59 access-matrix routes, Company Owner 115 and PWA v263.
 The older 170-file / 666-test collection is a dated TASK-194 checkpoint; the pre-TASK-214
 local full Vitest result was 173 files / 705 tests with two intentional file/test skips.
-TASK-017 remains
-the physical-device blocker, TASK-193 is blocked by missing production SMTP/recovery,
-and TASK-203 is In Progress: the latest public workflow exposed an old PostgreSQL
-`deadLettered: 0` assertion, which is fixed locally and still needs a fresh current-HEAD
-remote run.
+TASK-017 remains the physical-device blocker, TASK-193 is blocked by missing production
+SMTP/recovery, and TASK-203 is done with current-HEAD remote CI evidence. TASK-209 still
+requires production deployment, public health and exact deployed-revision proof.
 The current source worktree includes the Platform Bootstrap & Tenant Provisioning implementation
 and migration 0099. On 2026-08-12 the existing Compose production database was released,
 backed up and verified, then the exact `erp-system_pgdata` and
 `erp-system_document_storage` volumes were reset without seed. The new database is empty
 while schema/RLS remain intact. That is dated TASK-192 production evidence, not current
 availability or exact-HEAD deployment proof. TASK-194 public `/health` and setup probes
-returned 502. The latest public CI run `34132475891` on remote head
-`4a49706bdb95e060714febe32859aa9d6a0a5fbd` executed all four Vitest shards successfully,
-but the validation job failed at the PostgreSQL 16 security lifecycle proof because the
-old remote assertion at `src/api/postgresSecurity.integration.test.ts:278` omitted the
-returned `deadLettered: 0` field. Local commit `dc0f10d` includes the corrected assertion,
-and a temporary PostgreSQL 16 rerun passes 2 files / 2 tests. The older `34017037310`
-i18n failure is historical; a fresh current-HEAD remote run remains pending. GitHub Pages
-run `34132475902` succeeded for the static Demo only.
+returned 502. The historical CI runs `34132475891` and `34017037310` exposed,
+respectively, the old PostgreSQL assertion and a missing i18n resource; both source issues
+are repaired. Current HEAD CI run `34175591701` passed every required shard and validation
+step, including the five-language desktop/mobile matrix, smoke, full 129-route screen
+audit, transaction-list layout audit and operational-workspace layout audit. GitHub Pages
+run `34175591694` succeeded for the static Demo on the same HEAD; Pages is not the
+production API.
 TASK-211 is done: the source business i18n allowlist and generated artifact are
 synchronized, and the required CI workflow now runs the artifact drift check. TASK-203
-is In Progress until the current source fixes are run on the current pushed HEAD; no
-remote green CI result is claimed yet.
+is done with current-HEAD remote evidence; TASK-199/TASK-209 remain the production
+availability and deployed-release boundary.
 
 Authorization documentation distinguishes the implemented platform-owned module
 boundary from the historical tenant-controlled design. Tenant authorization still uses
@@ -586,7 +585,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Canonical UI i18n | ✅ Current browser verified | `node scripts/audit-i18n.mjs` verifies 1,728 English resources and 72 registered local five-language packs. The current built-Demo PGlite desktop/mobile runs passed 129 routes × 5 languages × 2 viewports with zero runtime errors, raw keys, blocking hardcoded system copy or page-level horizontal overflow. `setLang()` remains atomic and state-preserving; business-record values remain outside UI i18n. |
 | Filled-action contrast | ✅ Current browser verified | `tests/e2e/action-contrast.spec.mjs` covers primary/PWA actions across light/dark desktop/mobile. Computed normal/hover contrast is 5.567:1 / 6.947:1; focus and disabled states pass. This is focused palette evidence, not exhaustive chart/print/device certification. |
 | GitHub Pages deploy | ✅ Working | `.github/workflows/deploy-pages.yml` builds the static PGlite/IndexedDB Demo and publishes only the `web/dist/` artifact; it does not publish the Node API, PostgreSQL data, `.env` files or production secrets. The repository is public and Pages is configured for workflow deployment at `https://yapweijun1996.github.io/ERP-System/`. On 2026-09-05, run `33940353016` passed both Build and Deploy; a fresh-browser smoke check reached the setup wizard, completed local demo setup, opened the dashboard and confirmed `window.ErpSystemData.mode === 'pglite'` with no `/api` requests. Production remains the separate Docker/API/PostgreSQL track. |
-| CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ⚠️ Workflow executes; current-HEAD rerun pending | Latest run `34132475891` passed all four Vitest shards but failed the PostgreSQL security proof on the old remote `deadLettered: 0` assertion. Local `dc0f10d` plus a temporary PostgreSQL 16 rerun passes 2/2; TASK-203 remains In Progress until a fresh run for the current pushed HEAD is recorded. |
+| CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ✅ Current HEAD green | Run `34175591701` passed all four Vitest shards, lint/docs/generated checks, root/web typechecks, PostgreSQL security and concurrency proofs, Demo build, five-language i18n, smoke, full screen and both layout audits. |
 | Generated PGlite schema + drift check | ✅ Working | `scripts/generate-demo-schema.mjs` generates fresh/upgrade SQL from ordered Drizzle migrations; `npm run check:demo-schema` and `npm run check:drift` run in CI. |
 | Browser smoke test (desktop + mobile, zero console/page errors, dashboard content verified) | ✅ Green | `scripts/smoke.mjs`, `npm run smoke`, Playwright, wired into CI with browser caching, TASK-015. The 2026-09-07 current worktree run passes desktop/mobile; the assertion now considers only visible semantic navigation badges while hidden zero-count badges remain in the DOM. |
 | Route production metadata and Preview contract | ✅ 129-route parity | `SCREEN_META` covers **129 Canonical / 0 Preview** routes and all 129 declare API mode, including `staff-calendar`. The screen audit fails closed on future Canonical/API metadata gaps. Preview pages, if reintroduced, distinguish Sample Data from Canonical Data and lock write-like actions. |
@@ -653,19 +652,13 @@ are not more module screens:
   evidence selection is bounded, employee-independent and eligible-only. My Receipts
   remains the explicit upstream upload/capture boundary;
 - TASK-198: done — approved the narrow dual-mode exception and explicit no-MFA/no-step-up risk;
-- TASK-199/203: restore public availability and CI execution before any current release
-  is described as healthy. A read-only GitHub Pages root probe on 2026-09-07 returned
-  HTTP 200, but the served HTML referenced cache-busted assets tagged 2026-08-13 and
-  exposed no verifiable commit identity. This proves static Demo availability only, not
-  current HEAD or production API health/revision. Current source now adds API
-  `/health.revision` and static `release.json` SHA-256 evidence, but these are not
-  deployed proof until the public endpoints return the intended current revision. A fresh
+- TASK-199/203: TASK-203 is now done: current-HEAD CI run `34175591701` is green and
+  Pages run `34175591694` publishes a manifest for the same revision `e74bf7e`. A
   read-only probe on 2026-09-08 returns the Pages root and `/release.json` as HTTP 200;
-  the manifest reports revision `4a49706bdb95e060714febe32859aa9d6a0a5fbd`, workflow
-  `34132475902`, builtAt `2026-09-07T14:22:17.337Z`, and `dataMode: demo`, so static Demo
-  availability is now independently visible but the hosted revision is stale relative to
-  current local HEAD. Pages `/health` and `/api/setup/status` remain HTTP 404 HTML
-  fallbacks, as expected for the static Demo origin, and do not prove API health. The
+  the manifest reports the current revision, `fileCount: 133` and `dataMode: demo`, so
+  static Demo availability is independently visible. Pages `/health` and
+  `/api/setup/status` remain HTTP 404 HTML fallbacks, as expected for the static Demo
+  origin, and do not prove API health. The
   application-only release now checks `/health` from inside the web container through the
   Compose network because production keeps DB/API ports private; this is source-level
   release hardening, not live deployment proof. A separate read-only probe of the
@@ -2202,8 +2195,8 @@ release/download/Print UAT remains an explicit EPIC-066 release-evidence gap.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 214 tasks
-- In progress: TASK-199, TASK-202, TASK-203, TASK-204 and TASK-205 (5)
+- Done: 215 tasks
+- In progress: TASK-199, TASK-202, TASK-204 and TASK-205 (4)
 - Todo: TASK-201 (1)
 - Blocked: TASK-017, TASK-193 and TASK-209 (3)
 - EPIC-056, EPIC-057, EPIC-059 and EPIC-060 are complete at the current 129 Canonical /
@@ -2236,9 +2229,7 @@ release/download/Print UAT remains an explicit EPIC-066 release-evidence gap.
   missing production SMTP. EPIC-066 is in progress: TASK-194–198 are done;
   TASK-204 is in progress with source-level tax hardening and an open tax-owner review;
   TASK-205 is in progress with direct provider-failure/retry/no-fallback and bounded
-  dead-letter/same-chain requeue evidence but open production configuration; TASK-199 is In Progress for local release-manifest hardening plus the read-only release verifier, and TASK-201 remains Todo while TASK-202 and
-  TASK-203 are In Progress. TASK-203's latest remote run exposed one i18n source
-  failure, fixed locally; a current-HEAD remote rerun remains pending. EPIC-067 source is
+  dead-letter/same-chain requeue evidence but open production configuration; TASK-199 is In Progress for local release-manifest hardening plus the read-only release verifier, and TASK-201 remains Todo while TASK-202 is In Progress. TASK-203 is Done: current-HEAD CI run `34175591701` is green across all required gates. EPIC-067 source is
   present: TASK-206, TASK-207 and TASK-208 are done, and TASK-209 is blocked pending
   current CI, deployed revision and production evidence.
 - **Permanently blocked without a human**: TASK-017 (real-device verification)
@@ -2262,8 +2253,7 @@ Receipts workflow and TASK-206–208 platform administration source/evidence are
 further source task. TASK-199 public availability and TASK-204 tax posting correctness remain
 P0; TASK-198's dual-mode decision is done.
 TASK-200–202 and TASK-205 own current release/operational/provider depth. TASK-017 and
-TASK-193 remain independently truthful blockers, while TASK-203 remains In Progress
-until the current pushed HEAD gets a complete remote CI result. The hosted application was healthy and browser-verified on
+TASK-193 remain independently truthful blockers, while TASK-203 is complete. The hosted application was healthy and browser-verified on
 2026-08-13 at `a5f1a3b`; this dated UI release proof does not replace TASK-199's broader
 availability and operational evidence boundary.
 

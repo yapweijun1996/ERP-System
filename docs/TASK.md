@@ -12,8 +12,8 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **214**
-- In progress: **5**
+- Done: **215**
+- In progress: **4**
 - Todo: **1**
 - Blocked: **3**
 - Total: **223**
@@ -39,14 +39,16 @@ also passed typechecks, lint, API/Demo builds, generated schema/drift/permission
 Demo E2E, Platform layout E2E with both tenant modes, Demo autofill E2E, the
 59-route/13-role access matrix, 129-screen desktop/mobile audit and 129-route ×
 5-language × 2-viewport audit. The current disposable PostgreSQL/FORCE-RLS proof is
-recorded in TASK-195; current-HEAD remote CI and production release remain open, while
-public probes and older suite totals are historical evidence. The latest public CI run
-`34132475891` on remote head `4a49706bdb95e060714febe32859aa9d6a0a5fbd` executed all
-Vitest shards but failed the PostgreSQL security proof because the old remote assertion
-omitted `deadLettered: 0`; local `dc0f10d` and a temporary PostgreSQL 16 rerun pass 2/2.
-The earlier `34017037310` i18n failure is historical and its locale fix passes locally. TASK-211 is done:
+recorded in TASK-195; current-HEAD remote CI is now green and production release remains open, while
+public probes and older suite totals are historical evidence. The current remote CI run
+`34175591701` on HEAD `e74bf7ead399d2078d15ec1922b5e649e47792b9` passed all four Vitest
+shards and every validation gate, including PostgreSQL 16 security, the five-language
+desktop/mobile matrix, smoke, full 129-route screen and both layout audits. The earlier
+PostgreSQL and i18n failures are historical and are recorded as repaired source/CI
+findings. GitHub Pages run `34175591694` also succeeded for the static Demo on the same
+HEAD; production API availability remains separate. TASK-211 is done:
 the generated business i18n allowlist is synchronized and its CI drift check is configured;
-remote workflow execution remains subject to TASK-203. TASK-212 is done: active-route
+the current workflow evidence is recorded under TASK-203. TASK-212 is done: active-route
 locale switching now refreshes the shell and route in place while preserving recoverable
 filters, drafts, focus and scroll state; the dedicated desktop/mobile live-i18n E2E passes.
 TASK-213 is done: `sales_enquiry_line` is now covered by the production FORCE-RLS overlay,
@@ -145,7 +147,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-200 | Done | Resolve 129/129 route parity and rerun current HEAD release evidence |
 | TASK-201 | Todo | Production SLO, scale and RPO/RTO proof; source telemetry is now single-flight/non-blocking and claim-aligned, while measured query-budget/plan and operational evidence remain |
 | TASK-202 | In progress | Receipt Pack repository lifecycle/timezone and disposable PostgreSQL concurrency proof are complete; production release evidence remains |
-| TASK-203 | In progress | Remote CI now executes; local PostgreSQL assertion and i18n fixes pass, but the current pushed HEAD still needs a green rerun |
+| TASK-203 | Done | Current HEAD CI run 34175591701 passes all required shards, static checks, PostgreSQL proofs, browser matrices, smoke and layout audits |
 | TASK-204 | In progress | Source-level SG GST/MY SST validity, classification and posting hardening; tax-owner review remains |
 | TASK-205 | In progress | Direct Vision failure/revoked-connector/no-fallback proof plus bounded dead-letter and same-chain manual requeue; production configuration remains |
 | TASK-213 | Done | Close production RLS coverage omission and add schema drift guard |
@@ -157,14 +159,13 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-206 | Done | Migration 0099, hidden non-login bridge actor, immutable Platform Tenant Admin role/membership and bounded session foundation; disposable PostgreSQL proof covers target-context RLS, actor visibility and lifecycle |
 | TASK-207 | Done | Elevated tenant authorization, audited scope switching, Company-bound break-glass and adversarial workflow proof |
 | TASK-208 | Done | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation, exact Employee integration and five-language browser proof |
-| TASK-209 | Blocked | PostgreSQL/RLS, current CI, release, documentation and KB proof; blocked by current-HEAD CI and deployed/production evidence |
+| TASK-209 | Blocked | PostgreSQL/RLS, current CI, release, documentation and KB proof; current CI is complete, but deployed/production evidence remains |
 
-The registry therefore has **214 Done / 5 In Progress / 1 Todo / 3 Blocked / 223 Total**.
+The registry therefore has **215 Done / 4 In Progress / 1 Todo / 3 Blocked / 223 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery) and TASK-209
-(release proof waiting for current-HEAD CI and deployed-production evidence). TASK-203
-is In Progress because the latest remote workflow executed but exposed an old PostgreSQL
-assertion that now passes locally; a fresh current-HEAD run remains required. Dependencies and
-epic references are valid.
+(release proof waiting for deployed-production evidence). TASK-203 is Done with current-HEAD
+remote evidence; TASK-209 remains blocked only by the separate production release chain.
+Dependencies and epic references are valid.
 
 TASK-216 is Done: compact seed PO-APP-2026-0001 and showcase pack v16 carry governed
 SG/MY tax snapshots; the historical upgrade repair is idempotent and guarded against
@@ -413,11 +414,9 @@ statuses above and keep each change independently testable:
   checks do not satisfy the real-device acceptance criterion.
 - **TASK-193:** administrator email recovery. Production SMTP and Platform recovery are
   not configured/proven.
-- **TASK-203:** GitHub Actions current-HEAD verification. Run `34132475891` executed
-  all four Vitest shards but failed the PostgreSQL security proof on the old
-  `deadLettered: 0` assertion at `src/api/postgresSecurity.integration.test.ts:278`.
-  Local commit `dc0f10d` and a temporary PostgreSQL 16 rerun pass; the current pushed
-  HEAD still needs a remote green result. No green CI result is inferred yet.
+- **TASK-209:** release proof remains blocked. Current-HEAD CI is green in run
+  `34175591701`, but production public health, exact deployed revision and production
+  configuration evidence remain under TASK-199/TASK-209.
 
 See [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md) for the current
 implementation boundary and migration dependencies, and [EPICS.md](EPICS.md) for epic

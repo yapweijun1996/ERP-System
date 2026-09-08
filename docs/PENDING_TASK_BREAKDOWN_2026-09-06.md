@@ -28,7 +28,15 @@ This is the actionable view of every non-Done task currently registered in
 tests are implementation evidence, while deployment, CI, production configuration and
 physical-device checks remain separate evidence classes.
 
-Current registry: **214 Done / 5 In Progress / 1 Todo / 3 Blocked / 223 Total**.
+Current registry: **215 Done / 4 In Progress / 1 Todo / 3 Blocked / 223 Total**.
+
+2026-09-08 CI addendum: current HEAD `e74bf7ead399d2078d15ec1922b5e649e47792b9`
+passed GitHub Actions run `34175591701`. All four Vitest shards and the validation job
+passed, including PostgreSQL security/concurrency, five-language desktop/mobile i18n,
+browser smoke, full 129-route screen audit, transaction-list layout and operational-
+workspace layout audits. The validation timeout was raised to 120 minutes in `e74bf7e`
+after the preceding run was cancelled at the old 60-minute limit during screen audit.
+TASK-203 is therefore Done; TASK-199/TASK-209 remain the production deployment boundary.
 
 2026-09-07 TASK-216 completion: the compact seed and generated showcase pack v16 now
 write governed GST/SST classification and recoverability snapshots. A deterministic
@@ -252,25 +260,19 @@ remain green; TASK-199 still needs a target-host release and health proof.
   - Guardrail: do not reset tenant data or reseed as a diagnostic shortcut. Source-present
     UI changes are not live evidence until the deployed revision is identified.
 
-- **TASK-203 — In Progress (P0) — restore GitHub Actions execution and prove the current HEAD**
+- **TASK-203 — Done (P0) — restore GitHub Actions execution and prove the current HEAD**
   - Depends on: `TASK-194`.
-  - Latest evidence: CI run `34132475891` on remote head
-    `4a49706bdb95e060714febe32859aa9d6a0a5fbd` executed all four Vitest shards
-    successfully, but the validation job failed at PostgreSQL security proof. The
-    failure annotation identifies `src/api/postgresSecurity.integration.test.ts:278`,
-    where the old remote assertion omitted the returned `deadLettered: 0` field.
-  - Source action completed locally: commit `dc0f10d` includes that outbox assertion
-    update; a temporary PostgreSQL 16 rerun passes 2 files / 2 tests. The earlier
-    `34017037310` i18n failure is historical; its `route.project-pl` fix and exact
-    desktop/mobile 129-route × 5-language matrices also pass locally.
-  - Remaining action: after authorized push of the already-committed local fixes,
-    record a fresh current-HEAD CI run with every required shard/typecheck/build gate.
-    Keep zero-step failures and source failures distinct; neither is a green gate.
+  - Current evidence: CI run `34175591701` on HEAD `e74bf7e` passed every required
+    shard and validation gate, including the five-language desktop/mobile matrix, smoke,
+    full screen audit and both layout audits. Previous PostgreSQL and i18n failures are
+    retained as historical failure analysis; neither is a current blocker.
+  - The validation job timeout is 120 minutes so the complete browser gate can finish;
+    no test or product behavior was relaxed.
 
 - **TASK-209 — Blocked (P0) — release Platform tenant administration**
   - Depends on: `TASK-195`, `TASK-203`, `TASK-206`, `TASK-207`, `TASK-208`, `TASK-199`.
-  - TASK-208 is complete; it remains blocked until a fresh current-HEAD CI result,
-    deployed revision and production evidence are available.
+  - TASK-208 is complete and TASK-203 is now green; it remains blocked until a deployed
+    revision and production evidence are available.
   - Release steps: backup, apply migration/RLS without reset or seed, run non-superuser
     PostgreSQL adversarial proof, execute read-only production smoke, record exact
     revision, and synchronize STATUS, PROJECT_LOGIC, task registry and KB.

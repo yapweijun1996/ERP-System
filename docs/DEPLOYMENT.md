@@ -40,23 +40,26 @@ The 0098 reset/release paragraphs below are immutable historical checkpoints. Th
 not proof that HEAD `00e2533` is deployed or that the service is currently healthy.
 Public `/health` and `/api/setup/status` probes returned HTTP 502 during TASK-194. The
 historical HEAD workflow run `31603746668` started zero jobs because GitHub reported
-failed account payment or an exhausted spending limit. The latest public CI run
+failed account payment or an exhausted spending limit. Current-HEAD CI run
+`34175591701` on `e74bf7e` passed all four Vitest shards and every validation gate,
+including PostgreSQL security/concurrency, five-language browser, smoke, full screen and
+both layout audits. The following older run is retained as historical failure analysis:
 `34132475891` on remote head `4a49706bdb95e060714febe32859aa9d6a0a5fbd` executed all
 four Vitest shards successfully, but its validation job failed at the PostgreSQL 16
 security lifecycle proof: the old remote assertion at
 `src/api/postgresSecurity.integration.test.ts:278` omitted the returned `deadLettered: 0`
 field. Local commit `dc0f10d` includes the corrected contract and a temporary PostgreSQL
 16 rerun passes 2 files / 2 tests. The older `34017037310` i18n failure is historical;
-both local fixes pass, but a fresh current-HEAD remote run is still required. Later source
+both source fixes are now covered by the green current-HEAD run above. GitHub Pages run
+`34175591694` published the static Demo for the same HEAD. Later source
 adds Platform Demo quick login, password visibility, responsive containment and safe
 existing-Company resume, but no current deployed revision/asset hash was independently
 proven. A fresh read-only probe on 2026-09-08 returned the Pages root and `/release.json`
-as HTTP 200. The manifest reports revision `4a49706bdb95e060714febe32859aa9d6a0a5fbd`,
-workflow `34132475902`, builtAt `2026-09-07T14:22:17.337Z`, and `dataMode: demo`; this
-proves static Demo availability but identifies a hosted revision stale relative to current
-local HEAD. Pages `/health` and `/api/setup/status` remain HTTP 404 HTML fallbacks, as
+as HTTP 200. The current manifest reports revision `e74bf7ead399d2078d15ec1922b5e649e47792b9`,
+workflow `34175591694`, `fileCount: 133`, and `dataMode: demo`; this proves static Demo
+availability but not production API health. Pages `/health` and `/api/setup/status` remain HTTP 404 HTML fallbacks, as
 expected for a static Demo origin, and do not prove API health. TASK-199 owns
-availability/revision proof; TASK-203 owns current-HEAD CI proof. A separate read-only probe
+availability/revision proof; TASK-203 current-HEAD CI proof is complete. A separate read-only probe
 on the production Cloudflare origin `https://gmb01.xyz/erp` and `/erp/health` still returns
 HTTP 502 HTML responses; Cloudflare DNS resolves the proxy anycast addresses but exposes no
 origin health payload. No tenant write, reset, reseed or deployment was attempted. TASK-199

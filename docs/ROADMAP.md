@@ -10,8 +10,9 @@
 2. TASK-223 is complete: payment-voucher recovery now waits for the real route-render
    Promise and the full desktop/mobile audit passes. TASK-222's mobile/zoom/status gap is
    closed locally; physical-device acceptance remains TASK-017.
-3. TASK-203: obtain current-HEAD green CI after fixes; TASK-199: verify target health
-   and revision. TASK-209 release requires both, plus its completed security chain.
+3. TASK-203 is Done: current-HEAD CI run `34175591701` passes every required gate.
+   TASK-199 remains to verify target health and deployed revision; TASK-209 release
+   requires that production evidence plus its completed security chain.
 4. Finish TASK-202/204/205 production artifact, tax-owner and provider/recovery evidence;
    TASK-201 first makes worker telemetry bounded/non-blocking and claim-accurate, then
    measures scale, alerting and restore objectives after TASK-199.
@@ -1268,11 +1269,11 @@ more module breadth. The source-backed review is
    reason/ticket-bound Platform Admin tenant access from fixed-scope exact Employee
    simulation. The owner explicitly accepted password-only access with no MFA or recent
    step-up as a high-severity residual risk.
-5. **Current release proof** (TASK-199/203): restore public availability, identify the
-   exact deployed revision, and obtain a current-HEAD green CI run. The latest public
-   workflow executed all four Vitest shards but failed the old remote PostgreSQL
-   `deadLettered: 0` assertion; the zero-step billing incident and earlier i18n failure
-   are historical.
+5. **Current release proof** (TASK-199/209): restore public availability and identify the
+   exact deployed revision. TASK-203 is complete: current-HEAD CI run `34175591701`
+   passed all four Vitest shards, PostgreSQL proofs, five-language browser matrix, smoke,
+   full screen audit and both layout audits. The zero-step billing incident and earlier
+   PostgreSQL/i18n failures are historical repaired findings.
    TASK-200 is source-closed: all 129 Canonical routes declare API metadata and the
    earlier screen, i18n, access-matrix and Staff Calendar/API evidence was recorded.
    TASK-214 subsequently found recovery and invoice-i18n gaps; see TEST_COVERAGE.md.
@@ -1309,7 +1310,7 @@ production pass. TASK-017 and TASK-193 remain independent blockers.
 3. **Workspace UX** (TASK-208 done): desktop/mobile/accessibility/i18n proof covers
    separate `Open as Platform Admin` and exact `Login as employee` actions, persistent
    banners, audited scope switching, unlock and return.
-4. **Release** (TASK-209 blocked): after TASK-195, TASK-207–208 and executable CI in TASK-203, apply
+4. **Release** (TASK-209 blocked): after TASK-195, TASK-203 and TASK-207–208, apply
    migrations 0099–0101, reapply RLS and release the application without reset or seed. The
    production smoke is read-only and must not exercise sensitive business mutation.
 
