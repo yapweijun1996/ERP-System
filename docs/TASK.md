@@ -1,8 +1,9 @@
 # Task Index
 
 [TEST_COVERAGE.md](TEST_COVERAGE.md) is the module evidence map.
-TASK-216 through TASK-223 are complete through the F08 recovery-audit repair. TASK-215 is
-documentation reconciliation, not runtime completion.
+TASK-216 through TASK-223 are complete through the F08 recovery-audit repair; TASK-224
+corrects the setup wizard's responsive progress rail. TASK-215 is documentation
+reconciliation, not runtime completion.
 
 Reviewed: **2026-09-08**
 
@@ -12,18 +13,19 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **215**
+- Done: **216**
 - In progress: **4**
 - Todo: **1**
 - Blocked: **3**
-- Total: **223**
+- Total: **224**
 
 ## Current release-quality note
 
 TASK-214 completed the [ERP specialist audit](ERP_SPECIALIST_REVIEW_2026-09-07.md)
 and [product quality baseline](ERP_QUALITY_BASELINE.md). It records fresh failures
 and evidence limits; prior passing suite/audit statements below are historical and
-do not supersede the new findings. TASK-216–223 now close F01–F08 locally; TASK-199
+do not supersede the new findings. TASK-216–223 now close F01–F08 locally, and TASK-224
+repairs the setup wizard's narrow progress rail; TASK-199
 now also hardens release-manifest publication and provides a bounded read-only release
 evidence verifier locally; production,
 CI, device and external-service gates remain separate.
@@ -164,7 +166,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-208 | Done | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation, exact Employee integration and five-language browser proof |
 | TASK-209 | Blocked | PostgreSQL/RLS, current CI, release, documentation and KB proof; current CI is complete, but deployed/production evidence remains |
 
-The registry therefore has **215 Done / 4 In Progress / 1 Todo / 3 Blocked / 223 Total**.
+The registry therefore has **216 Done / 4 In Progress / 1 Todo / 3 Blocked / 224 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery) and TASK-209
 (release proof waiting for deployed-production evidence). TASK-203 is Done with current-HEAD
 remote evidence; TASK-209 remains blocked only by the separate production release chain.

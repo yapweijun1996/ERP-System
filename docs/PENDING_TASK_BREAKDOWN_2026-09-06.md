@@ -2,7 +2,8 @@
 
 ## Latest specialist follow-up
 
-TASK-215 reconciles documentation/KB only. TASK-216 through TASK-223 are complete locally;
+TASK-215 reconciles documentation/KB only. TASK-216 through TASK-223 are complete locally,
+and TASK-224 corrects the setup wizard's narrow progress rail;
 F08 is closed by the Promise-aware recovery audit in
 [ERP_SPECIALIST_REVIEW_2026-09-07.md](ERP_SPECIALIST_REVIEW_2026-09-07.md).
 
@@ -28,7 +29,7 @@ This is the actionable view of every non-Done task currently registered in
 tests are implementation evidence, while deployment, CI, production configuration and
 physical-device checks remain separate evidence classes.
 
-Current registry: **215 Done / 4 In Progress / 1 Todo / 3 Blocked / 223 Total**.
+Current registry: **216 Done / 4 In Progress / 1 Todo / 3 Blocked / 224 Total**.
 
 2026-09-08 CI addendum: code revision `e74bf7ead399d2078d15ec1922b5e649e47792b9`
 passed GitHub Actions run `34175591701`. All four Vitest shards and the validation job

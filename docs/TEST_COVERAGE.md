@@ -90,8 +90,8 @@ TASK-215 does not close any runtime finding or production gate.
 
 ## Documentation and KB reconciliation
 
-TASK-215 through TASK-223 are complete. Current registry:
-**215 Done / 4 In Progress / 1 Todo / 3 Blocked / 223 Total**. The project KB
+TASK-215 through TASK-224 are complete. Current registry:
+**216 Done / 4 In Progress / 1 Todo / 3 Blocked / 224 Total**. The project KB
 `erp-system-project-logic` (`ef47bf4b-83e1-42b2-a412-66912d04ea24`) now includes coverage
 item `8007eaf3-0ec3-4fa4-b4ca-1bdc3d8153b3`; the architecture inventory, EPIC-066 and
 specialist audit items plus KB description were updated and read back. TASK-216 changed
