@@ -99,8 +99,18 @@ describe('Platform Superadmin tenant provisioning', () => {
       method: 'POST', headers: platformHeaders(true, 'master-1'), body: JSON.stringify(masterBody),
     });
     expect(masterResponse.status).toBe(201);
-    const master = (await masterResponse.json()).data as { masterFn: string; companyCount: number };
+    const master = (await masterResponse.json()).data as {
+      masterFn: string;
+      companyCount: number;
+      modules: Array<{ moduleKey: string; enabled: boolean; defaultCompanyAllocated: boolean }>;
+    };
     expect(master.companyCount).toBe(0);
+    expect(master.modules.find((module) => module.moduleKey === 'hr')).toMatchObject({
+      enabled: true, defaultCompanyAllocated: true,
+    });
+    expect(master.modules.find((module) => module.moduleKey === 'sales')).toMatchObject({
+      enabled: true, defaultCompanyAllocated: false,
+    });
 
     const replay = await fetch(`${running.baseUrl}/api/platform/masters`, {
       method: 'POST', headers: platformHeaders(true, 'master-1'), body: JSON.stringify(masterBody),

@@ -32,6 +32,7 @@ describe('production setup command', () => {
       adminEmail: 'admin@example.test',
       adminPassword: 'secure-password',
       language: 'ja',
+      moduleKeys: ['hr', 'expenses_tax'],
     }, 'setup-test');
     expect(await db.select().from(master)).toHaveLength(1);
     expect(await db.select().from(company)).toHaveLength(1);
@@ -58,13 +59,13 @@ describe('production setup command', () => {
     expect(companyModules).toHaveLength(17);
     expect(masterModules.find((row) => row.moduleKey === 'sales')).toMatchObject({
       enabled: true,
-      defaultCompanyAllocated: true,
+      defaultCompanyAllocated: false,
     });
     expect(companyModules.find((row) => row.moduleKey === 'sales')).toMatchObject({
-      enabled: true,
+      enabled: false,
     });
     expect(companyModules.find((row) => row.moduleKey === 'expenses_tax')).toMatchObject({
-      enabled: false,
+      enabled: true,
     });
     expect((await db.select({ permissionKey: rolePermission.permissionKey }).from(rolePermission))
       .some((row) => row.permissionKey === 'admin.modules.manage')).toBe(false);

@@ -6,6 +6,8 @@ import { COMMERCIAL_MODULE_KEYS } from './moduleCatalog';
 import {
   applyMasterCompanyAllocationDefaultsWithin,
   initializeMasterEntitlementDefaultsWithin,
+  ModuleProvisioningError,
+  normalizeCompanyModuleSelection,
 } from './moduleProvisioning';
 
 describe('trusted platform module provisioning', () => {
@@ -29,7 +31,16 @@ describe('trusted platform module provisioning', () => {
     ));
     expect(entitlements).toHaveLength(COMMERCIAL_MODULE_KEYS.length);
     expect(allocations).toHaveLength(COMMERCIAL_MODULE_KEYS.length);
-    expect(allocations.find((row) => row.moduleKey === 'sales')?.enabled).toBe(true);
-    expect(allocations.find((row) => row.moduleKey === 'expenses_tax')?.enabled).toBe(false);
+    expect(entitlements.every((row) => row.enabled)).toBe(true);
+    expect(allocations.find((row) => row.moduleKey === 'sales')?.enabled).toBe(false);
+    expect(allocations.find((row) => row.moduleKey === 'hr')?.enabled).toBe(true);
+    expect(allocations.find((row) => row.moduleKey === 'expenses_tax')?.enabled).toBe(true);
+  });
+
+  it('accepts an explicit bootstrap selection and rejects incomplete dependencies', () => {
+    expect(normalizeCompanyModuleSelection(['hr', 'expenses_tax', 'sales', 'finance']))
+      .toEqual(['sales', 'finance', 'hr', 'expenses_tax']);
+    expect(() => normalizeCompanyModuleSelection(['sales']))
+      .toThrow(ModuleProvisioningError);
   });
 });

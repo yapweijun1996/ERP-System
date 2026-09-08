@@ -37,6 +37,7 @@ import {
 } from '../../auth/moduleCatalog';
 import {
   applyMasterCompanyAllocationDefaultsWithin,
+  defaultMasterModuleConfiguration,
   initializeMasterEntitlementDefaultsWithin,
 } from '../../auth/moduleProvisioning';
 import {
@@ -151,10 +152,7 @@ export async function createMasterWithin(
     throw new PlatformAccessError(400, 'invalid_request', 'Enter a valid Master login code.');
   }
   const overrides = validateModuleOverrides(input.modules);
-  const defaults = new Map(COMMERCIAL_MODULE_CATALOG.map((definition) => [definition.key, {
-    enabled: definition.key !== 'expenses_tax',
-    defaultCompanyAllocated: definition.key !== 'expenses_tax',
-  }]));
+  const defaults = defaultMasterModuleConfiguration();
   for (const [key, value] of overrides) {
     defaults.set(key as typeof COMMERCIAL_MODULE_CATALOG[number]['key'], value);
   }
@@ -166,8 +164,8 @@ export async function createMasterWithin(
   await exec.insert(master).values({ masterFn, loginCode, name });
   await initializeMasterEntitlementDefaultsWithin(exec, masterFn);
   for (const [moduleKey, value] of defaults) {
-    const baseline = moduleKey !== 'expenses_tax';
-    if (value.enabled !== baseline || value.defaultCompanyAllocated !== baseline) {
+    const baseline = defaultMasterModuleConfiguration().get(moduleKey)!;
+    if (value.enabled !== baseline.enabled || value.defaultCompanyAllocated !== baseline.defaultCompanyAllocated) {
       await exec.update(masterModule).set({
         enabled: value.enabled,
         defaultCompanyAllocated: value.defaultCompanyAllocated,

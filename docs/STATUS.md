@@ -2199,10 +2199,19 @@ release/download/Print UAT remains an explicit EPIC-066 release-evidence gap.
 
 ## Task backlog snapshot (tasks/tasks.jsonl)
 
-- Done: 215 tasks
+- Done: 218 tasks
 - In progress: TASK-199, TASK-202, TASK-204 and TASK-205 (4)
 - Todo: TASK-201 (1)
 - Blocked: TASK-017, TASK-193 and TASK-209 (3)
+- TASK-226 is complete locally: the trusted initial setup inserts Module Activation before
+  optional AI, derives its 17 selectable commercial cards from the canonical catalog and
+  defaults only Human Resources plus Expenses & Tax/Company Receipts. The platform
+  entitlement remains available for later Platform Superadmin allocation, while the first
+  Company receives only the selected effective allocation. Time attendance/clock in-out
+  and Face ID are visibly planned rather than selectable. Focused module/setup and
+  Platform provisioning tests, built-Demo E2E at desktop/split-pane/mobile, lint,
+  typechecks, PGlite demo, PWA update audit and documentation checks pass; no deployment
+  is implied.
 - EPIC-056, EPIC-057, EPIC-059 and EPIC-060 are complete at the current 129 Canonical /
   0 Preview boundary. EPIC-058 remediation and EPIC-061 are complete. EPIC-062 has a
   complete documentation baseline, TASK-170's platform-support foundation,

@@ -1,8 +1,8 @@
 /* ============================================================
    ARIA ERP — First-run Setup Wizard (TASK-009, TASK-010, EPIC-004)
 
-   Collects language / organization / company / admin user /
-   AI-provider (BYOK, optional — never persisted) choices, shows a
+   Collects language / organization / company / admin user / initial module
+   activation / AI-provider (BYOK, optional — never persisted) choices, shows a
    summary, then on Finish calls the active ErpSystemData-compatible
    adapter to write the organization, company, starter chart of
    accounts, tax rule, admin app_user and user<->company link in one
@@ -302,6 +302,63 @@ function renderSetupWizard(){
       "finished": "Thiết lập hoàn tất - đang tải lại."
     },};
 
+  var MODULE_STEP_COPY = {
+    en:{
+      s4:'Modules', s4h:'Activate company modules', s4p:'Choose what this company needs first. You can adjust Company allocation later from the Platform workspace.',
+      modulesRecommended:'Recommended', modulesSelected:'Selected', modulesDependencies:'Includes: {modules}',
+      moduleExpenses:'Company receipts, tax evidence packs and print/download.',
+      moduleHr:'Staff directory, employee accounts, calendar and leave applications.',
+      moduleRoles:'Roles and permissions remain available in Admin Settings.',
+      modulePlannedTitle:'Time & attendance (planned)', modulePlanned:'Clock in/out and Face ID are not available yet, so they cannot be enabled here.',
+      sumModules:'Active modules', modulesNone:'No commercial modules selected',
+    },
+    ms:{
+      s4:'Modul', s4h:'Aktifkan modul syarikat', s4p:'Pilih perkara yang diperlukan syarikat ini dahulu. Peruntukan Syarikat boleh dilaras kemudian dalam ruang kerja Platform.',
+      modulesRecommended:'Disyorkan', modulesSelected:'Dipilih', modulesDependencies:'Termasuk: {modules}',
+      moduleExpenses:'Resit syarikat, pek bukti cukai dan cetak/muat turun.',
+      moduleHr:'Direktori staf, akaun pekerja, kalendar dan permohonan cuti.',
+      moduleRoles:'Peranan dan kebenaran kekal tersedia dalam Tetapan Admin.',
+      modulePlannedTitle:'Masa & kehadiran (dirancang)', modulePlanned:'Masuk/keluar dan Face ID belum tersedia, jadi ia tidak boleh diaktifkan di sini.',
+      sumModules:'Modul aktif', modulesNone:'Tiada modul komersial dipilih',
+    },
+    zh:{
+      s4:'模块', s4h:'启用公司模块', s4p:'先选择这家公司需要的功能。以后可在平台工作区调整公司的模块分配。',
+      modulesRecommended:'推荐', modulesSelected:'已选择', modulesDependencies:'包含：{modules}',
+      moduleExpenses:'公司收据、税务证据包，以及打印/下载。',
+      moduleHr:'员工名录、员工账户、日历和请假申请。',
+      moduleRoles:'角色和权限仍可在管理员设置中管理。',
+      modulePlannedTitle:'考勤（规划中）', modulePlanned:'打卡上下班和人脸识别尚未提供，因此暂时不能在这里启用。',
+      sumModules:'已启用模块', modulesNone:'未选择商业模块',
+    },
+    ja:{
+      s4:'モジュール', s4h:'会社モジュールを有効にする', s4p:'この会社が最初に必要とする機能を選択します。会社への割り当ては後で Platform ワークスペースで変更できます。',
+      modulesRecommended:'推奨', modulesSelected:'選択済み', modulesDependencies:'含まれるもの: {modules}',
+      moduleExpenses:'会社領収書、税務証跡パック、印刷/ダウンロード。',
+      moduleHr:'従業員名簿、従業員アカウント、カレンダー、休暇申請。',
+      moduleRoles:'ロールと権限は管理設定で引き続き利用できます。',
+      modulePlannedTitle:'勤怠管理（予定）', modulePlanned:'出退勤打刻と Face ID は未提供のため、ここでは有効にできません。',
+      sumModules:'有効なモジュール', modulesNone:'商用モジュールが選択されていません',
+    },
+    vi:{
+      s4:'Mô-đun', s4h:'Kích hoạt mô-đun công ty', s4p:'Chọn những gì công ty này cần trước. Bạn có thể điều chỉnh phân bổ Công ty sau trong không gian làm việc Platform.',
+      modulesRecommended:'Đề xuất', modulesSelected:'Đã chọn', modulesDependencies:'Bao gồm: {modules}',
+      moduleExpenses:'Biên lai công ty, gói bằng chứng thuế và in/tải xuống.',
+      moduleHr:'Danh bạ nhân viên, tài khoản nhân viên, lịch và đơn xin nghỉ.',
+      moduleRoles:'Vai trò và quyền vẫn có trong Cài đặt quản trị.',
+      modulePlannedTitle:'Chấm công (đã lên kế hoạch)', modulePlanned:'Vào/ra và Face ID chưa có, nên không thể bật tại đây.',
+      sumModules:'Mô-đun đang hoạt động', modulesNone:'Không có mô-đun thương mại nào được chọn',
+    },
+  };
+
+  Object.keys(COPY).forEach(function(locale){
+    var current=COPY[locale];
+    Object.assign(current, {
+      s6:current.s5, s6h:current.s5h, s6p:current.s5p, s6pProd:current.s5pProd,
+      s5:current.s4, s5h:current.s4h, s5p:current.s4p,
+      s5provider:current.s4provider, s5key:current.s4key, s5keyph:current.s4keyph, s5note:current.s4note,
+    }, MODULE_STEP_COPY[locale]);
+  });
+
   var S = {
     step:0, reached:0,
     lang:(typeof getLang==='function'?getLang():'en'),
@@ -316,9 +373,11 @@ function renderSetupWizard(){
     adminPasswordConfirm:IS_API?'':DEMO_DEFAULTS.adminPasswordConfirm,
     aiProvider:IS_API?'':DEMO_DEFAULTS.aiProvider,
     aiKey:IS_API?'':DEMO_DEFAULTS.aiKey,
+    moduleKeys:[],
+    modulesInitialized:false,
   };
 
-  var STEP_KEYS = ['s0','s1','s2','s3','s4','s5'];
+  var STEP_KEYS = ['s0','s1','s2','s3','s4','s5','s6'];
 
   function copy(){ i18nLegacy(COPY); return COPY[S.lang]||COPY.en; }
   function s(k){ var c=copy(); return c[k]!=null?c[k]:(COPY.en[k]!=null?COPY.en[k]:k); }
@@ -366,6 +425,76 @@ function renderSetupWizard(){
       '<div class="wiz-language-note" role="note">'+ic('info')+'<span>'+esc(s('s0note'))+'</span></div>';
   }
 
+  function setupModuleCatalog(){
+    var dataAdapter=window.ErpSystemData||window.ErpSystemDemo;
+    var catalog=dataAdapter&&typeof dataAdapter.setupModuleCatalog==='function'
+      ? dataAdapter.setupModuleCatalog() : [];
+    return Array.isArray(catalog) ? catalog : [];
+  }
+
+  function initializeModuleSelection(catalog){
+    if(S.modulesInitialized || !catalog.length) return;
+    S.moduleKeys=catalog.filter(function(item){ return item.defaultCompanyAllocated===true; })
+      .map(function(item){ return item.key; });
+    S.modulesInitialized=true;
+  }
+
+  function moduleDescription(item){
+    if(item.key==='expenses_tax') return s('moduleExpenses');
+    if(item.key==='hr') return s('moduleHr');
+    if(item.dependencies.length){
+      return s('modulesDependencies').replace('{modules}',item.dependencies.join(', '));
+    }
+    return '';
+  }
+
+  function modulePicker(){
+    var catalog=setupModuleCatalog();
+    initializeModuleSelection(catalog);
+    if(!catalog.length){
+      return '<div class="auth-error" role="alert">Module catalogue is unavailable. Wait a moment and try again.</div>';
+    }
+    return '<div class="wiz-module-grid" id="wizModuleSeg">'+catalog.map(function(item){
+      var selected=S.moduleKeys.indexOf(item.key)!==-1;
+      var description=moduleDescription(item);
+      return '<label class="wiz-module-card '+(selected?'is-selected':'')+'" data-module-card="'+esc(item.key)+'">'+
+        '<input type="checkbox" data-module-key="'+esc(item.key)+'" '+(selected?'checked':'')+'>'+
+        '<span class="wiz-module-copy"><span><b>'+esc(item.name)+'</b>'+
+        (item.defaultCompanyAllocated?'<em>'+esc(s('modulesRecommended'))+'</em>':'')+'</span>'+
+        (description?'<small>'+esc(description)+'</small>':'')+'</span>'+
+        '<span class="wiz-module-state">'+esc(selected?s('modulesSelected'):'')+'</span></label>';
+    }).join('')+'</div>'+
+      '<p class="wiz-module-note">'+esc(s('moduleRoles'))+'</p>'+
+      '<section class="wiz-module-plan" aria-label="'+esc(s('modulePlannedTitle'))+'"><span aria-hidden="true">'+ic('clock')+'</span><div><b>'+esc(s('modulePlannedTitle'))+'</b><small>'+esc(s('modulePlanned'))+'</small></div></section>';
+  }
+
+  function updateModuleSelection(moduleKey, selected){
+    var catalog=setupModuleCatalog();
+    var enabled=new Set(S.moduleKeys);
+    function includeWithDependencies(key){
+      if(enabled.has(key)) return;
+      enabled.add(key);
+      var item=catalog.filter(function(candidate){ return candidate.key===key; })[0];
+      (item&&item.dependencies||[]).forEach(includeWithDependencies);
+    }
+    if(selected){
+      includeWithDependencies(moduleKey);
+    }else{
+      enabled.delete(moduleKey);
+      var changed=true;
+      while(changed){
+        changed=false;
+        catalog.forEach(function(item){
+          if(enabled.has(item.key) && item.dependencies.some(function(dependency){ return !enabled.has(dependency); })){
+            enabled.delete(item.key); changed=true;
+          }
+        });
+      }
+    }
+    S.moduleKeys=catalog.filter(function(item){ return enabled.has(item.key); }).map(function(item){ return item.key; });
+    render();
+  }
+
   function stepBody(){
     if(S.step===0){
       return '<h2 class="wiz-h">'+esc(s('s0h'))+'</h2><p class="wiz-p">'+esc(s('s0p'))+'</p>'+
@@ -396,22 +525,27 @@ function renderSetupWizard(){
         '<div class="auth-error" id="wizErr"></div>';
     }
     if(S.step===4){
-      return '<h2 class="wiz-h">'+esc(s('s4h'))+'</h2><p class="wiz-p">'+esc(s('s4p'))+'</p>'+
-        fld(s('s4provider'), '<select id="wizProvider">'+PROVIDERS.map(function(p){
+      return '<h2 class="wiz-h">'+esc(s('s4h'))+'</h2><p class="wiz-p">'+esc(s('s4p'))+'</p>'+modulePicker();
+    }
+    if(S.step===5){
+      return '<h2 class="wiz-h">'+esc(s('s5h'))+'</h2><p class="wiz-p">'+esc(s('s5p'))+'</p>'+
+        fld(s('s5provider'), '<select id="wizProvider">'+PROVIDERS.map(function(p){
           return '<option value="'+esc(p[0])+'" '+(p[0]===S.aiProvider?'selected':'')+'>'+esc(p[1])+'</option>';
         }).join('')+'</select>')+
-        fld(s('s4key'), '<input id="wizAiKey" type="password" value="'+esc(S.aiKey)+'" placeholder="'+esc(s('s4keyph'))+'" '+(S.aiProvider?'':'disabled')+'>')+
-        '<p class="wiz-p" style="margin-top:6px">'+esc(s('s4note'))+'</p>';
+        fld(s('s5key'), '<input id="wizAiKey" type="password" value="'+esc(S.aiKey)+'" placeholder="'+esc(s('s5keyph'))+'" '+(S.aiProvider?'':'disabled')+'>')+
+        '<p class="wiz-p" style="margin-top:6px">'+esc(s('s5note'))+'</p>';
     }
-    // step 5 — summary
+    // step 6 — summary
     meta = COUNTRY_META[S.country];
     var langNative = (I18N_LANGS.filter(function(l){ return l.code===S.lang; })[0]||{}).native||S.lang;
     var providerLabel = (PROVIDERS.filter(function(p){ return p[0]===S.aiProvider; })[0]||[undefined,s('none')])[1];
-    return '<h2 class="wiz-h">'+esc(s('s5h'))+'</h2><p class="wiz-p">'+esc(IS_API?s('s5pProd'):s('s5p'))+'</p>'+
+    var selectedModules=setupModuleCatalog().filter(function(item){ return S.moduleKeys.indexOf(item.key)!==-1; }).map(function(item){ return item.name; });
+    return '<h2 class="wiz-h">'+esc(s('s6h'))+'</h2><p class="wiz-p">'+esc(IS_API?s('s6pProd'):s('s6p'))+'</p>'+
       '<div class="panel" style="margin-top:8px"><div class="panel-body" style="padding:14px 16px;display:grid;gap:8px;font-size:13px">'+
       ['sumLang,'+langNative, 'sumOrg,'+(S.masterName||'—'), 'sumOrgCode,'+(S.organizationCode||'—'), 'sumCompany,'+(S.companyName||'—'),
        'sumCountry,'+S.country, 'sumCurrency,'+meta.currency, 'sumTax,'+meta.taxLabel,
        'sumAdmin,'+((S.adminName||'—')+(S.adminEmail?' · '+S.adminEmail:'')),
+       'sumModules,'+(selectedModules.join(', ')||s('modulesNone')),
        'sumAi,'+providerLabel].map(function(pair){
         var parts=pair.split(','); return '<div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--muted)">'+esc(s(parts[0]))+'</span><b>'+esc(parts.slice(1).join(','))+'</b></div>';
       }).join('')+
@@ -453,7 +587,7 @@ function renderSetupWizard(){
       var pw=document.getElementById('wizAdminPassword'); if(pw) S.adminPassword=pw.value;
       var pwc=document.getElementById('wizAdminPasswordConfirm'); if(pwc) S.adminPasswordConfirm=pwc.value;
     }
-    else if(S.step===4){
+    else if(S.step===5){
       var p=document.getElementById('wizProvider'); if(p) S.aiProvider=p.value;
       var k=document.getElementById('wizAiKey'); if(k) S.aiKey=k.value;
     }
@@ -492,6 +626,10 @@ function renderSetupWizard(){
     });
     var provSel=document.getElementById('wizProvider');
     if(provSel) provSel.addEventListener('change',function(){ readCurrentStepInputs(); render(); });
+    var moduleSeg=document.getElementById('wizModuleSeg');
+    if(moduleSeg) moduleSeg.querySelectorAll('input[data-module-key]').forEach(function(input){
+      input.addEventListener('change',function(){ updateModuleSelection(input.dataset.moduleKey,input.checked); });
+    });
 
     var back=document.getElementById('wizBack');
     if(back) back.addEventListener('click',function(){ readCurrentStepInputs(); S.step--; render(); });
@@ -514,6 +652,7 @@ function renderSetupWizard(){
         ? dataAdapter.completeSetup({
             masterName:S.masterName, organizationCode:S.organizationCode, companyName:S.companyName, country:S.country,
             adminName:S.adminName, adminUsername:S.adminUsername, adminEmail:S.adminEmail, adminPassword:S.adminPassword, language:S.lang,
+            moduleKeys:S.moduleKeys,
           })
         : Promise.reject(new Error('ERP data adapter is not ready yet — wait a moment and try again.'));
       run.then(function(){

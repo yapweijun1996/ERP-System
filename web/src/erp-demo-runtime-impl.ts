@@ -221,6 +221,7 @@ import {
   completeDemoSetupWithin,
   type CompleteDemoSetupInput,
 } from '../../src/modules/setup/completeDemoSetup';
+import { COMMERCIAL_MODULE_CATALOG } from '../../src/auth/moduleCatalog';
 import {
   createInventoryAdjustmentWithin,
   postInventoryAdjustmentWithin,
@@ -548,6 +549,10 @@ export const erpDemoRuntime = Object.freeze({
   },
   createOrm,
   sha256Hex,
+  setupModuleCatalog: Object.freeze(COMMERCIAL_MODULE_CATALOG.map((definition) => Object.freeze({
+    ...definition,
+    dependencies: Object.freeze([...definition.dependencies]),
+  }))),
   commands: Object.freeze({
     validateReceiptUpload,
     renderCompanyReceiptPackPdf(

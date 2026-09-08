@@ -51,8 +51,10 @@ experience lives.
 Once the stack is up (or the demo loads), the app detects first run. Static Demo uses its
 local PGlite wizard and completion flag. Production and the hosted API Demo use the
 independent Platform flow: claim Platform Superadmin, create Master, then create Company
-and tenant administrators. They share design language and data contracts, not one visible
-wizard or one identity plane.
+and tenant administrators. The first real account is always the independent Platform
+Superadmin; static Demo mirrors its trusted initial module-selection contract without
+exposing a production Platform credential realm. The flows share design language and data
+contracts, not one identity plane.
 
 The wizard is part of the real frontend, not a separate prototype. It must work with the
 same UI shell and data adapter strategy described in [FRONTEND_PLAN.md](FRONTEND_PLAN.md).
@@ -67,14 +69,21 @@ same UI shell and data adapter strategy described in [FRONTEND_PLAN.md](FRONTEND
    - repeatable: add the MY company after the SG one (or vice-versa).
 4. **Admin user** — create the first user, assign to the company/companies (M:N) →
    [MULTI_TENANCY.md](MULTI_TENANCY.md#4-user--company-is-many-to-many).
-5. **AI provider preview (optional)** — choose OpenAI / Gemini / DeepSeek / LM Studio.
+5. **Module activation** — choose the first Company's commercial allocation from the
+   canonical module catalog. **Human Resources** (staff directory, employee account/login,
+   Staff Calendar and leave applications) and **Expenses & Tax** (Company Receipts,
+   evidence packs and print/download) are selected by default. The latter records tax
+   evidence; it does not submit a government tax return. Other modules are off by default
+   and required dependencies are included automatically. Time attendance/clock-in-out and
+   Face ID are planned, not selectable features.
+6. **AI provider preview (optional)** — choose OpenAI / Gemini / DeepSeek / LM Studio.
    This local-wizard field configures no runtime adapter; its key stays only in form
    memory and is discarded. Governed document Vision is configured later through an
    encrypted server connector and worker → [AI_PROVIDERS.md](AI_PROVIDERS.md).
-6. **Finish** — seed optional sample data; land on the dashboard.
+7. **Finish** — seed optional sample data; land on the dashboard.
 
-Responsive progress contract: wide desktop keeps the six-step progress rail with every
-label on one row. At `980px` and below it remains a single six-marker rail: every numbered
+Responsive progress contract: wide desktop keeps the seven-step progress rail with every
+label on one row. At `980px` and below it remains a single seven-marker rail: every numbered
 stage stays visible, while only the active stage shows its localized label. Each marker
 retains its accessible name and the active marker keeps its accent treatment. The Language
 step uses compact cards and a 44px minimum action target so it fits without vertical or
@@ -89,7 +98,9 @@ creates an independent `platform_principal`, one-hour platform session and
 `__platform__` audit event, then the Platform Superadmin workspace creates the Master and
 Company in separate idempotent steps. The first Company transaction creates SG/MY
 localization/tax/control-plane/chart facts, inherited Company allocation, an immutable
-Master Admin and a separate Company Owner. Tenant onboarding cannot choose modules.
+Master Admin and a separate Company Owner. The initial Platform operator chooses the
+Master default allocation; static Demo applies its one-time trusted selection to its first
+local Company. Later tenant onboarding cannot choose modules or call a module API.
 Non-empty, partially initialized or concurrently claimed databases return `409
 already_initialized`; the public registration never creates `app_user` or `erp_session`.
 The public demo continues to write to PGlite/IndexedDB and can be reset for visitors.
@@ -126,14 +137,15 @@ separate.
 
 ## Platform-owned module provisioning (EPIC-064)
 
-TASK-186 removes module purchase/allocation from Phase B tenant setup. Company Owner
-and Company Admin cannot list or mutate entitlement through the retired tenant API.
+TASK-186 removes ongoing module purchase/allocation from tenant setup. Company Owner and
+Company Admin cannot list or mutate entitlement through the retired tenant API.
 
 Before a new Company reaches module-dependent onboarding, Platform Superadmin defines
-the Master purchased entitlement and one default Company allocation set. Company
-creation applies that set automatically. The tenant wizard offers no module selector,
-Enable/Disable action or entitlement API. Missing Master entitlement/default allocation
-fails closed rather than assuming all modules are purchased.
+the Master purchased entitlement and one default Company allocation set. The initial
+Platform setup may choose that first allocation; later Company creation applies the saved
+default automatically. No tenant role receives an Enable/Disable action or entitlement API.
+Missing Master entitlement/default allocation fails closed rather than assuming all modules
+are purchased.
 
 TASK-185 now stores the versioned entitlement/default and exposes the platform-only
 API. TASK-186 applies defaults during trusted Master/Company bootstrap and removes the

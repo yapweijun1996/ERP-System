@@ -22,14 +22,14 @@ const TIMEOUT = 60000;
 
 function assertResponsiveProgress(viewport, progress, stage) {
   if (viewport.width > 980) return;
-  if (progress.stepCount !== 6) {
-    throw new Error(`${viewport.label} ${stage}: expected six setup markers, got ${progress.stepCount}`);
+  if (progress.stepCount !== 7) {
+    throw new Error(`${viewport.label} ${stage}: expected seven setup markers, got ${progress.stepCount}`);
   }
   if (progress.scrollWidth > progress.clientWidth + 1) {
     throw new Error(`${viewport.label} ${stage}: progress rail horizontal overflow ${progress.scrollWidth}>${progress.clientWidth}`);
   }
   if (progress.lastStepRight > progress.right + 1) {
-    throw new Error(`${viewport.label} ${stage}: sixth marker extends beyond the progress rail`);
+    throw new Error(`${viewport.label} ${stage}: last marker extends beyond the progress rail`);
   }
   if (progress.rowCount !== 1) {
     throw new Error(`${viewport.label} ${stage}: progress markers wrapped into ${progress.rowCount} rows`);
@@ -252,6 +252,42 @@ async function main() {
             };
           });
           assertResponsiveProgress(viewport, progressed, 'organization');
+        }
+
+        if (viewport.label === 'desktop') {
+          await page.locator('#wizNext').click();
+          await page.locator('#wizMaster').waitFor({ state: 'visible', timeout: TIMEOUT });
+          await page.locator('#wizNext').click();
+          await page.locator('#wizCompany').waitFor({ state: 'visible', timeout: TIMEOUT });
+          await page.locator('#wizNext').click();
+          await page.locator('#wizAdminName').waitFor({ state: 'visible', timeout: TIMEOUT });
+          await page.locator('#wizNext').click();
+          await page.locator('#wizModuleSeg input[data-module-key]').first().waitFor({ state: 'visible', timeout: TIMEOUT });
+
+          const moduleState = await page.evaluate(() => {
+            const inputs = [...document.querySelectorAll('#wizModuleSeg input[data-module-key]')];
+            return {
+              count: inputs.length,
+              selected: inputs.filter((input) => input.checked).map((input) => input.dataset.moduleKey),
+              hasPlannedAttendance: document.querySelector('.wiz-module-plan')?.textContent || '',
+              horizontalOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+            };
+          });
+          if (moduleState.count !== 17
+            || JSON.stringify(moduleState.selected) !== JSON.stringify(['hr', 'expenses_tax'])
+            || !moduleState.hasPlannedAttendance.includes('Time & attendance')
+            || moduleState.horizontalOverflow > 1) {
+            throw new Error(`desktop: module activation defaults or layout regressed: ${JSON.stringify(moduleState)}`);
+          }
+
+          await page.locator('#wizModuleSeg input[data-module-key="sales"]').click();
+          if (!await page.locator('#wizModuleSeg input[data-module-key="finance"]').isChecked()) {
+            throw new Error('desktop: selecting Sales did not select required Finance dependency');
+          }
+          await page.locator('#wizNext').click();
+          await page.locator('#wizProvider').waitFor({ state: 'visible', timeout: TIMEOUT });
+          await page.locator('#wizNext').click();
+          await page.locator('#wizFinish').waitFor({ state: 'visible', timeout: TIMEOUT });
         }
 
         if (runtimeErrors.length) {

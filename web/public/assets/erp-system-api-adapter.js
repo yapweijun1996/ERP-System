@@ -977,6 +977,7 @@
         adminEmail:input.adminEmail,
         adminPassword:input.adminPassword,
         language:input.language,
+        moduleKeys:input.moduleKeys,
       },
     });
     return response.data;

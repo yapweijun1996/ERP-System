@@ -1515,12 +1515,25 @@
      Demo-adapter contract:
      completeSetup({
        masterName, organizationCode, companyName, country,
-       adminName, adminUsername, adminEmail, language
+       adminName, adminUsername, adminEmail, language, moduleKeys
      }) -> { masterFn, organizationCode, companyFn, userId, username }
      Production setup intentionally remains a different zero-user command that
      creates a new master; Demo setup adds a company to the seeded M1 master.
      Password hashing stays in Web Crypto, while all database rules execute in
      completeDemoSetupWithin. Any failure rolls the whole setup back. */
+  function setupModuleCatalog(){
+    var catalog=state.runtime&&state.runtime.setupModuleCatalog;
+    if(!Array.isArray(catalog)) return [];
+    return catalog.map(function(item){
+      return {
+        key:item.key,
+        name:item.name,
+        dependencies:Array.isArray(item.dependencies)?item.dependencies.slice():[],
+        defaultCompanyAllocated:item.defaultCompanyAllocated===true,
+      };
+    });
+  }
+
   async function completeSetup(input){
     if (!state.db) throw new Error('Demo database unavailable (offline fallback) — Setup needs PGlite.');
     input = input || {};
@@ -1557,6 +1570,7 @@
           adminEmail: adminEmail,
           adminPasswordHash: adminPasswordHash,
           language: language,
+          moduleKeys: input.moduleKeys,
         });
     });
     await refresh();
@@ -5032,6 +5046,7 @@
     postSupplierInvoice: postSupplierInvoice,
     createOpportunity: createOpportunity,
     convertOpportunityToSalesOrder: convertOpportunityToSalesOrder,
+    setupModuleCatalog: setupModuleCatalog,
     completeSetup: completeSetup,
     createStaffAccount:createStaffAccount,
     cloneRoleTemplate:cloneRoleTemplate,

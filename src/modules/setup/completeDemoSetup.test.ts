@@ -4,6 +4,7 @@ import {
   account,
   appUser,
   company,
+  companyModule,
   master,
   rolePermission,
   taxRule,
@@ -12,6 +13,7 @@ import {
 } from '../../data/schema';
 import { seedDemo } from '../../data/seed';
 import { freshDb } from '../../test/helpers';
+import { isModuleEnabled } from '../../auth/moduleAccess';
 import {
   completeDemoSetup,
   DemoSetupError,
@@ -36,6 +38,7 @@ describe('completeDemoSetup', () => {
       adminEmail: 'new.admin@example.test',
       adminPasswordHash: PASSWORD_HASH,
       language: 'vi',
+      moduleKeys: ['hr', 'expenses_tax'],
     });
 
     expect(result).toMatchObject({
@@ -73,6 +76,13 @@ describe('completeDemoSetup', () => {
       .where(eq(userCompany.companyFn, 'C-MY-NEW'))).toHaveLength(1);
     expect(await db.select().from(userCompanyRole)
       .where(eq(userCompanyRole.companyFn, 'C-MY-NEW'))).toHaveLength(1);
+    const modules = await db.select().from(companyModule)
+      .where(eq(companyModule.companyFn, 'C-MY-NEW'));
+    expect(modules.find((row) => row.moduleKey === 'hr')?.enabled).toBe(true);
+    expect(modules.find((row) => row.moduleKey === 'expenses_tax')?.enabled).toBe(true);
+    expect(modules.find((row) => row.moduleKey === 'sales')?.enabled).toBe(false);
+    await expect(isModuleEnabled(db, 'M1', 'C-MY-NEW', 'expenses_tax')).resolves.toBe(true);
+    await expect(isModuleEnabled(db, 'M1', 'C-MY-NEW', 'sales')).resolves.toBe(false);
     expect((await db.select().from(rolePermission)
       .where(eq(rolePermission.masterFn, 'M1'))).length).toBeGreaterThan(0);
   });

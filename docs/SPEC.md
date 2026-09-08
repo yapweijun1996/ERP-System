@@ -530,8 +530,10 @@ EPIC-064 requires:
   `module_not_enabled`; Master disable masks without rewriting Company allocation;
 - migration initializes Master entitlement from the union of current Company-enabled
   state and retains each Company row so no existing effective access changes;
-- each Master defines one default allocation set for new Companies. Tenant onboarding
-  does not choose modules;
+- each Master defines one default allocation set for new Companies. The one-time initial
+  Platform Superadmin setup may select the first Company allocation (and static Demo may
+  mirror that trusted input locally); later tenant onboarding does not choose modules and
+  has no module mutation API;
 - only business modules are sellable. Dashboard/Home, My Work, Admin, Settings and
   Account/Notifications are baseline services;
 - only the independent `platform_superadmin` role with

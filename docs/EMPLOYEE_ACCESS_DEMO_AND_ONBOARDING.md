@@ -203,8 +203,9 @@ EPIC-059 evidence only. TASK-186 retires `admin.modules.manage`, removes the mod
 stage and treats `company_module` as platform-owned Company allocation.
 
 The approved replacement is platform-owned. Platform Superadmin defines the Master
-entitlement and one default Company allocation set. New Companies receive that default
-automatically; Company Owner onboarding no longer selects, enables or disables modules.
+entitlement and one default Company allocation set. The first trusted Platform setup may
+choose the initial Company allocation; new Companies then receive the saved default
+automatically. Company Owner onboarding no longer selects, enables or disables modules.
 Tenant users and roles may be configured only inside effective modules, where effective
 means Master entitlement AND Company allocation.
 

@@ -171,8 +171,8 @@ export async function seedDemo(db: DB): Promise<void> {
   ]);
   await db.insert(masterModule).values(COMMERCIAL_MODULE_CATALOG.map((module) => ({
     masterFn: 'M1', moduleKey: module.key,
-    enabled: module.key !== 'expenses_tax',
-    defaultCompanyAllocated: module.key !== 'expenses_tax',
+    enabled: true,
+    defaultCompanyAllocated: module.defaultCompanyAllocated,
   })));
   await db.insert(companyModule).values(
     (['C-SG', 'C-MY'] as const).flatMap((companyFn) =>

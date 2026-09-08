@@ -67,6 +67,7 @@ export interface CompleteDemoSetupInput {
   adminEmail: string;
   adminPasswordHash: string;
   language?: string;
+  moduleKeys?: string[];
 }
 
 export class DemoSetupError extends Error {
@@ -281,7 +282,7 @@ export async function completeDemoSetupWithin(
       assignmentSource: 'onboarding',
     });
   }
-  await applyMasterCompanyAllocationDefaultsWithin(exec, masterFn, companyFn);
+  await applyMasterCompanyAllocationDefaultsWithin(exec, masterFn, companyFn, input.moduleKeys);
   await exec.insert(companyOnboarding).values({
     masterFn, companyFn, status: 'live', currentStage: 'live',
     completedSteps: ['company', 'fiscal', 'warehouse', 'roles', 'staff', 'import', 'opening_balance', 'uat'],

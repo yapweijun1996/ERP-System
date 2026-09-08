@@ -95,6 +95,7 @@ export interface CompleteSetupInput {
   adminEmail: string;
   adminPassword: string;
   language?: string;
+  moduleKeys?: string[];
 }
 
 function required(value: string | undefined, field: string, label: string): string {
@@ -261,7 +262,7 @@ export async function completeProductionSetup(
       reviewedAt: new Date(),
     });
     await createDefaultControlPlane(tx, { masterFn, companyFn }, country as 'SG' | 'MY');
-    await applyMasterCompanyAllocationDefaultsWithin(tx, masterFn, companyFn);
+    await applyMasterCompanyAllocationDefaultsWithin(tx, masterFn, companyFn, input.moduleKeys);
     await tx.insert(companyOnboarding).values({
       masterFn,
       companyFn,

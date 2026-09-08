@@ -449,12 +449,12 @@
   }
   function masterProvisioningMarkup(){
     var rows=(state.catalog||[]).map(function(item){
-      var enabled=item.key!=='expenses_tax';
+      var enabled=item.defaultCompanyAllocated===true;
       return `<label class="platform-module-option"><input type="checkbox" data-provision-module="${esc(item.key)}" ${enabled?'checked':''}><span>${esc(item.name)}</span></label>`;
     }).join('');
     return `<section class="platform-provision-panel"><div class="platform-panel-heading"><div><h2>${esc(pt('provision.masterTitle','Create Master'))}</h2><p>${esc(pt('provision.masterIntro','Define the tenant group first. Commercial modules are independent from baseline Home, My Work, Admin, Settings and Account services.'))}</p></div></div><form id="platformCreateMasterForm" class="auth-form">
       <div class="platform-form-grid platform-master-identity">${provisioningInput('provisionMasterName',pt('field.masterName','Master name'))}${provisioningInput('provisionMasterLoginCode',pt('field.masterLoginCode','Master login code'))}</div>
-      <fieldset class="platform-module-selection"><legend>${esc(pt('provision.commercialModules','Commercial modules'))}</legend><div class="platform-provision-module-grid">${rows}</div></fieldset>
+      <fieldset class="platform-module-selection"><legend>${esc(pt('provision.defaultCompanyModules','Default modules for new Companies'))}</legend><p>${esc(pt('provision.defaultCompanyModulesHint','Only Human Resources and Expenses & Tax start enabled. You can allocate other purchased modules later.'))}</p><div class="platform-provision-module-grid">${rows}</div></fieldset>
     </form></section>`;
   }
   function companyProvisioningMarkup(master,hasExistingCompany){
@@ -762,7 +762,7 @@
     if(createMaster) createMaster.addEventListener('submit',async function(event){
       event.preventDefault(); var error=view.querySelector('#platformCreateMasterError'); var button=view.querySelector('#platformCreateMasterAction')||createMaster.querySelector('button[type="submit"]'); error.textContent=''; button.disabled=true;
       try{
-        var modules=Array.from(createMaster.querySelectorAll('[data-provision-module]')).map(function(input){ return {moduleKey:input.dataset.provisionModule,enabled:input.checked,defaultCompanyAllocated:input.checked}; });
+        var modules=Array.from(createMaster.querySelectorAll('[data-provision-module]')).map(function(input){ return {moduleKey:input.dataset.provisionModule,enabled:true,defaultCompanyAllocated:input.checked}; });
         await request('masters',{method:'POST',headers:{'Idempotency-Key':stableIdempotencyKey('master','',createMaster)},body:{name:createMaster.querySelector('#provisionMasterName').value.trim(),loginCode:createMaster.querySelector('#provisionMasterLoginCode').value.trim(),modules:modules}});
         await renderWorkspace(state.session,WORKSPACE_EVENT.MASTER_CREATED);
       }catch(errorValue){ error.textContent=errorValue&&errorValue.message||pt('error.masterCreationFailed','Master creation failed.'); button.disabled=false; if(typeof error.focus==='function') error.focus({preventScroll:true}); }

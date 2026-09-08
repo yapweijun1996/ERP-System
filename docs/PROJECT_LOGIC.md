@@ -706,9 +706,11 @@ Current source truth (verified 2026-08-12):
   `platform_authority_required` after tenant authentication and disclose no entitlement
   state. `admin.modules.manage` is deprecated/non-assignable and migration 0095 removes
   stored tenant grants and revokes active overrides;
-- the tenant Module Activation route/UI and onboarding modules stage are removed. New
-  Masters receive the product default and new Companies inherit the Master default
-  allocation through trusted bootstrap code;
+- tenant Module Activation route/UI and ongoing onboarding modules stage are removed. The
+  initial Platform Superadmin setup has a trusted Module Activation choice before optional
+  AI: the canonical catalog defaults the first Company to `hr` plus `expenses_tax`, while
+  all commercial Master entitlements remain available for later Platform allocation. New
+  Companies inherit the saved Master default allocation through trusted bootstrap code;
 - `src/auth/moduleCatalog.ts`, `src/auth/platformEntitlement.ts`,
   `src/auth/platformSupport.ts`, `src/auth/platformSimulation.ts` and
   `src/api/routes/platform.ts` provide the commercial catalog, separate password/cookie
@@ -723,8 +725,9 @@ TASK-185 foundation and TASK-186 tenant-authority cutover:
 3. Only `platform_superadmin` with `platform.modules.read/manage` can use the platform
    APIs. TASK-186 removed tenant mutation authority and switched generic and mapped
    bespoke tenant paths to the dual-layer check.
-4. TASK-186 applies the stored platform-owned Master default to newly created Companies;
-   tenant onboarding can no longer select modules.
+4. TASK-186 applies the stored platform-owned Master default to newly created Companies.
+   TASK-226 adds a one-time trusted initial Platform setup selection (and its static-Demo
+   PGlite equivalent) before optional AI; tenant onboarding can no longer select modules.
 5. TASK-187/migration 0096 authenticates Platform Superadmin with independent password
    credentials, one-hour non-remembered platform cookies and `platform.simulation.manage`.
    Explicit simulation of an active assigned tenant user is default-15-minute, cannot
