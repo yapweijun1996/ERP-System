@@ -910,6 +910,33 @@ async function reconcilePack(
     accessPurpose: rendered.accessPurpose,
     replayed: true,
   };
+  const steps = await readSteps(tx, scope, run.id, true);
+  const executeStep = steps.find((step) => step.stepKey === 'execute');
+  if (executeStep) await tx.update(agentWorkflowStep).set({
+    state: 'succeeded',
+    resultRef: {
+      packId: existing.pack.id,
+      packSourceSha256: existing.pack.sourceSha256,
+      replayed: true,
+    },
+    completedAt: executeStep.completedAt ?? now,
+    lockedAt: null,
+    lockedBy: null,
+    leaseExpiresAt: null,
+    heartbeatAt: null,
+    updatedAt: now,
+  }).where(eq(agentWorkflowStep.id, executeStep.id));
+  const verifyStep = steps.find((step) => step.stepKey === 'verify');
+  if (verifyStep) await tx.update(agentWorkflowStep).set({
+    state: 'succeeded',
+    resultRef,
+    completedAt: verifyStep.completedAt ?? now,
+    lockedAt: null,
+    lockedBy: null,
+    leaseExpiresAt: null,
+    heartbeatAt: null,
+    updatedAt: now,
+  }).where(eq(agentWorkflowStep.id, verifyStep.id));
   await setTerminal(tx, run, 'succeeded', now, resultRef, null);
   await appendWorkflowAudit(tx, scope, run, run.actorUserId, request, 'reconciled', resultRef);
   return resultRef;

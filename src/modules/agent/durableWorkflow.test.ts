@@ -263,6 +263,45 @@ describe('durable Receipt Pack Agent workflow', () => {
     expect(await db.select().from(companyReceiptPack)).toHaveLength(1);
   });
 
+  it('repairs step checkpoints when a worker stops after the Pack commit', async () => {
+    const { queued } = await queueApproved('durable-trigger-key-0007');
+    const completed = await processAgentWorkflowBatch(db, { workerId: 'workflow-partial-commit', now: at });
+    expect(completed.succeeded).toBe(1);
+    await withTenantTransaction(db, scope, async (tx) => {
+      await tx.update(agentWorkflowRun).set({
+        state: 'running',
+        resultRef: null,
+        completedAt: null,
+        lockedAt: null,
+        lockedBy: null,
+        leaseExpiresAt: null,
+        heartbeatAt: null,
+        availableAt: at,
+      }).where(eq(agentWorkflowRun.id, queued.workflow.id));
+      for (const stepKey of ['execute', 'verify'] as const) {
+        await tx.update(agentWorkflowStep).set({
+          state: 'running',
+          resultRef: null,
+          completedAt: null,
+          lockedAt: null,
+          lockedBy: null,
+          leaseExpiresAt: null,
+          heartbeatAt: null,
+        }).where(and(
+          eq(agentWorkflowStep.runId, queued.workflow.id),
+          eq(agentWorkflowStep.stepKey, stepKey),
+        ));
+      }
+    });
+    const recovered = await processAgentWorkflowBatch(db, { workerId: 'workflow-partial-recovery', now: at });
+    expect(recovered.succeeded).toBe(1);
+    const final = await readReceiptPackWorkflow(db, scope, queued.workflow.id, admin.userId);
+    expect(final.state).toBe('succeeded');
+    const steps = await db.select().from(agentWorkflowStep).where(eq(agentWorkflowStep.runId, queued.workflow.id));
+    expect(steps.filter((step) => step.state === 'succeeded')).toHaveLength(3);
+    expect(await db.select().from(companyReceiptPack)).toHaveLength(1);
+  });
+
   it('reclaims an expired lease without changing the workflow identity', async () => {
     const { queued } = await queueApproved('durable-trigger-key-0005');
     await db.update(agentWorkflowRun).set({

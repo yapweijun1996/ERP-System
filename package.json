@@ -67,7 +67,7 @@
     "audit:posting-details": "POSTING_DETAIL_ONLY=1 node scripts/audit-screens.mjs",
     "audit:financial-statements": "FINANCIAL_STATEMENT_ONLY=1 node scripts/audit-screens.mjs",
     "test": "vitest run",
-    "test:postgres": "vitest run src/api/postgresSecurity.integration.test.ts src/api/platformProvisioning.postgres.integration.test.ts src/api/agentLifecycle.postgres.integration.test.ts"
+    "test:postgres": "vitest run src/api/postgresSecurity.integration.test.ts src/api/platformProvisioning.postgres.integration.test.ts src/api/agentLifecycle.postgres.integration.test.ts src/modules/agent/durableWorkflow.postgres.integration.test.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
