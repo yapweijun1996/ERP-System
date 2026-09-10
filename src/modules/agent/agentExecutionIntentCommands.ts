@@ -77,6 +77,18 @@ export interface VerifyAgentExecutionIntentInput extends AgentReceiptPackExecuti
   requireApproved?: boolean;
 }
 
+/**
+ * Worker-side execution input. The durable worker only stores the intent row
+ * id and its tenant-bound identity; it never needs to recover the one-time
+ * raw execution-intent key that the interactive API receives.
+ */
+export interface ExecuteStoredAgentExecutionIntentInput {
+  intentId: number;
+  agentPrincipalId: number;
+  actorUserId: number;
+  requestId: string;
+}
+
 interface ReviewedFacts {
   scope: Scope;
   actionName: typeof AGENT_EXECUTION_INTENT_ACTION;
@@ -931,5 +943,128 @@ export function createAgentExecutionIntentCommands(dependencies: AgentExecutionI
     };
   }
 
-  return { prepareAgentExecutionIntentWithin, readAgentExecutionIntentWithin, approveAgentExecutionIntentWithin, rejectAgentExecutionIntentWithin, cancelAgentExecutionIntentWithin, verifyAgentExecutionIntentWithin, executeAgentReceiptPackWithin };
+  /**
+   * Execute an approved intent from a durable worker checkpoint. This mirrors
+   * the interactive execution boundary while deliberately omitting the raw
+   * one-time key. The row's reviewed digests and the live locked selection are
+   * still compared before any immutable Pack insert.
+   */
+  async function executeStoredAgentReceiptPackWithin(
+    exec: DB,
+    scope: Scope,
+    input: ExecuteStoredAgentExecutionIntentInput,
+    now = new Date(),
+  ) {
+    const request = requestId(input.requestId);
+    const at = validDate(now, 'now');
+    const principalId = positiveId(input.agentPrincipalId, 'agentPrincipalId');
+    const actorUserId = positiveId(input.actorUserId, 'actorUserId');
+    const intentId = positiveId(input.intentId, 'intentId');
+    const row = await findIntent(exec, scope, intentId, true);
+    if (row.agentPrincipalId !== principalId || row.actorUserId !== actorUserId) {
+      fail(
+        'agent_execution_intent_identity_mismatch',
+        'The durable execution intent is bound to a different Agent principal or actor.',
+        403,
+      );
+    }
+    await activePrincipal(exec, scope, principalId, actorUserId);
+    const filters = normalizeCompanyReceiptPackFilters(row.filters);
+    const locale = normalizeCompanyReceiptPackLocale(row.locale);
+    const readVisibility = visibility(row.visibility);
+    // A synthetic in-memory marker satisfies the shared normalization helper;
+    // it is never persisted or returned as a credential.
+    const marker = `durable-intent-${row.id}-${row.intentKeyHash}`;
+    const replay = await readCompanyReceiptPackByKeyWithin(
+      exec,
+      scope,
+      actorUserId,
+      readVisibility,
+      { packKey: row.packKey, locale, filters },
+    );
+    if (replay) {
+      if (!['approved', 'consumed', 'cancelled'].includes(row.status)) {
+        fail(
+          'agent_execution_intent_not_approved',
+          'The execution intent is not approved for execution.',
+          428,
+        );
+      }
+      return { intent: view(row), pack: replay.pack, replayed: true, requestId: request };
+    }
+    if (row.expiresAt <= at) {
+      fail('agent_execution_intent_expired', 'The execution intent has expired and cannot execute.', 410);
+    }
+    if (row.status !== 'approved') {
+      fail('agent_execution_intent_not_approved', 'The execution intent is not approved for execution.', 428);
+    }
+    let normalized: Awaited<ReturnType<typeof normalizedPreparation>>;
+    try {
+      normalized = await normalizedPreparation(exec, scope, {
+        agentPrincipalId: principalId,
+        actorUserId,
+        intentKey: marker,
+        packKey: row.packKey,
+        search: filters.search,
+        dateFrom: filters.dateFrom,
+        dateTo: filters.dateTo,
+        locale,
+        visibility: readVisibility,
+        lockRows: true,
+      }, at);
+    } catch (error) {
+      if (isPackError(error)) {
+        fail(
+          'agent_execution_intent_stale',
+          'The reviewed Receipt Pack facts are no longer available; prepare and approve a new intent.',
+          409,
+        );
+      }
+      throw error;
+    }
+    if (
+      normalized.prepared.payloadDigest !== row.payloadDigest
+      || normalized.selection.sourceSha256 !== row.selectionDigest
+      || normalized.prepared.resourceVersionDigest !== row.resourceVersionDigest
+      || await sha256(canonicalJson(row.reviewedFacts)) !== row.payloadDigest
+    ) {
+      fail(
+        'agent_execution_intent_stale',
+        'The reviewed Receipt Pack facts changed after preparation; prepare and approve a new intent.',
+        409,
+      );
+    }
+    const created = await createCompanyReceiptPackFromSelectionWithin(
+      exec,
+      scope,
+      actorUserId,
+      readVisibility,
+      { packKey: row.packKey, locale, selection: normalized.selection },
+      at,
+    );
+    const committed = await findIntent(exec, scope, row.id, true);
+    let finalIntent = committed;
+    if (committed.status === 'approved') {
+      const [consumed] = await exec.update(agentExecutionIntent).set({
+        status: 'consumed',
+        version: sql`${agentExecutionIntent.version} + 1`,
+        updatedAt: at,
+      }).where(and(
+        eq(agentExecutionIntent.id, committed.id),
+        eq(agentExecutionIntent.masterFn, scope.masterFn),
+        eq(agentExecutionIntent.companyFn, scope.companyFn),
+        eq(agentExecutionIntent.status, 'approved'),
+        eq(agentExecutionIntent.version, committed.version),
+      )).returning();
+      if (consumed) finalIntent = consumed;
+    }
+    return {
+      intent: view(finalIntent),
+      pack: created.pack,
+      replayed: created.replayed,
+      requestId: request,
+    };
+  }
+
+  return { prepareAgentExecutionIntentWithin, readAgentExecutionIntentWithin, approveAgentExecutionIntentWithin, rejectAgentExecutionIntentWithin, cancelAgentExecutionIntentWithin, verifyAgentExecutionIntentWithin, executeAgentReceiptPackWithin, executeStoredAgentReceiptPackWithin };
 }

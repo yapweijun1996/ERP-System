@@ -430,6 +430,7 @@ export const agentExecutionIntent = pgTable('agent_execution_intent', {
   }),
   uniqueIndex('uq_agent_execution_intent_key')
     .on(t.masterFn, t.companyFn, t.agentPrincipalId, t.intentKeyHash),
+  unique('uq_agent_execution_intent_tenant_id').on(t.id, t.masterFn, t.companyFn),
   index('idx_agent_execution_intent_actor')
     .on(t.masterFn, t.companyFn, t.actorUserId, t.status, t.id),
   index('idx_agent_execution_intent_expiry')
@@ -488,4 +489,150 @@ export const agentExecutionIntent = pgTable('agent_execution_intent', {
   ),
   check('ck_agent_execution_intent_expiry', sql`${t.expiresAt} > ${t.createdAt}`),
   check('ck_agent_execution_intent_version', sql`${t.version} > 0`),
+]);
+
+/** Durable workflow state for the bounded Receipt-to-Pack Agent pilot.
+ * The run stores only reviewed facts by reference and redacted checkpoints;
+ * prompts, bearer keys and provider payloads are deliberately excluded. */
+export const AGENT_WORKFLOW_KEYS = ['receipt_pack.create'] as const;
+export type AgentWorkflowKey = typeof AGENT_WORKFLOW_KEYS[number];
+
+export const AGENT_WORKFLOW_RUN_STATES = [
+  'queued', 'waiting_approval', 'paused', 'running', 'succeeded', 'failed', 'cancelled',
+] as const;
+export type AgentWorkflowRunState = typeof AGENT_WORKFLOW_RUN_STATES[number];
+
+export const AGENT_WORKFLOW_STEP_KEYS = ['approval', 'execute', 'verify'] as const;
+export type AgentWorkflowStepKey = typeof AGENT_WORKFLOW_STEP_KEYS[number];
+
+export const AGENT_WORKFLOW_STEP_STATES = [
+  'queued', 'waiting_approval', 'paused', 'running', 'succeeded', 'failed', 'cancelled',
+] as const;
+export type AgentWorkflowStepState = typeof AGENT_WORKFLOW_STEP_STATES[number];
+
+/** One durable, tenant-scoped execution attempt. */
+export const agentWorkflowRun = pgTable('agent_workflow_run', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  workflowKey: text('workflow_key').notNull(),
+  agentPrincipalId: bigint('agent_principal_id', { mode: 'number' }).notNull(),
+  actorUserId: bigint('actor_user_id', { mode: 'number' }).notNull()
+    .references(() => appUser.userId),
+  intentId: bigint('intent_id', { mode: 'number' }).notNull(),
+  triggerKeyHash: text('trigger_key_hash').notNull(),
+  state: text('state').notNull().default('queued'),
+  version: integer('version').notNull().default(1),
+  attempts: integer('attempts').notNull().default(0),
+  maxAttempts: integer('max_attempts').notNull().default(3),
+  availableAt: timestamp('available_at', { withTimezone: true }).notNull().defaultNow(),
+  lockedAt: timestamp('locked_at', { withTimezone: true }),
+  lockedBy: text('locked_by'),
+  leaseExpiresAt: timestamp('lease_expires_at', { withTimezone: true }),
+  heartbeatAt: timestamp('heartbeat_at', { withTimezone: true }),
+  currentStepKey: text('current_step_key'),
+  checkpoint: jsonb('checkpoint').$type<Record<string, unknown>>().notNull().default({}),
+  resultRef: jsonb('result_ref').$type<Record<string, unknown> | null>(),
+  lastError: text('last_error'),
+  pauseRequestedAt: timestamp('pause_requested_at', { withTimezone: true }),
+  cancelRequestedAt: timestamp('cancel_requested_at', { withTimezone: true }),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  ...timestamps,
+}, (t) => [
+  foreignKey({
+    columns: [t.masterFn, t.companyFn],
+    foreignColumns: [company.masterFn, company.companyFn],
+    name: 'fk_agent_workflow_run_company_master',
+  }),
+  foreignKey({
+    columns: [t.agentPrincipalId, t.masterFn, t.companyFn],
+    foreignColumns: [agentPrincipal.id, agentPrincipal.masterFn, agentPrincipal.companyFn],
+    name: 'fk_agent_workflow_run_principal_tenant',
+  }),
+  foreignKey({
+    columns: [t.intentId, t.masterFn, t.companyFn],
+    foreignColumns: [agentExecutionIntent.id, agentExecutionIntent.masterFn, agentExecutionIntent.companyFn],
+    name: 'fk_agent_workflow_run_intent_tenant',
+  }),
+  foreignKey({
+    columns: [t.actorUserId, t.companyFn],
+    foreignColumns: [userCompany.userId, userCompany.companyFn],
+    name: 'fk_agent_workflow_run_actor_membership',
+  }),
+  uniqueIndex('uq_agent_workflow_run_trigger')
+    .on(t.masterFn, t.companyFn, t.agentPrincipalId, t.triggerKeyHash),
+  unique('uq_agent_workflow_run_tenant_id').on(t.id, t.masterFn, t.companyFn),
+  index('idx_agent_workflow_run_queue')
+    .on(t.state, t.availableAt, t.leaseExpiresAt, t.id),
+  index('idx_agent_workflow_run_actor')
+    .on(t.masterFn, t.companyFn, t.actorUserId, t.createdAt, t.id),
+  check('ck_agent_workflow_run_key', sql`${t.workflowKey} in ('receipt_pack.create')`),
+  check('ck_agent_workflow_run_state', sql`${t.state} in (
+    'queued','waiting_approval','paused','running','succeeded','failed','cancelled'
+  )`),
+  check('ck_agent_workflow_run_hash', sql`${t.triggerKeyHash} ~ '^[0-9a-f]{64}$'`),
+  check('ck_agent_workflow_run_version', sql`${t.version} > 0`),
+  check('ck_agent_workflow_run_attempts', sql`${t.attempts} >= 0 and ${t.attempts} <= ${t.maxAttempts}`),
+  check('ck_agent_workflow_run_max_attempts', sql`${t.maxAttempts} between 1 and 10`),
+  check('ck_agent_workflow_run_json', sql`jsonb_typeof(${t.checkpoint}) = 'object'`),
+  check('ck_agent_workflow_run_lock', sql`(
+    (${t.lockedAt} is null and ${t.lockedBy} is null and ${t.leaseExpiresAt} is null)
+    or (${t.lockedAt} is not null and ${t.lockedBy} is not null and ${t.leaseExpiresAt} is not null)
+  )`),
+  check('ck_agent_workflow_run_terminal', sql`(
+    ${t.state} in ('succeeded','failed','cancelled')
+      and ${t.completedAt} is not null
+    or ${t.state} not in ('succeeded','failed','cancelled')
+  )`),
+]);
+
+/** Ordered durable steps. Each effect key is unique per run so a retry or
+ * duplicate event can only observe/reconcile the original side effect. */
+export const agentWorkflowStep = pgTable('agent_workflow_step', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  runId: bigint('run_id', { mode: 'number' }).notNull(),
+  stepKey: text('step_key').notNull(),
+  sequenceNo: integer('sequence_no').notNull(),
+  effectKeyHash: text('effect_key_hash').notNull(),
+  state: text('state').notNull().default('queued'),
+  version: integer('version').notNull().default(1),
+  attempts: integer('attempts').notNull().default(0),
+  maxAttempts: integer('max_attempts').notNull().default(3),
+  availableAt: timestamp('available_at', { withTimezone: true }).notNull().defaultNow(),
+  lockedAt: timestamp('locked_at', { withTimezone: true }),
+  lockedBy: text('locked_by'),
+  leaseExpiresAt: timestamp('lease_expires_at', { withTimezone: true }),
+  heartbeatAt: timestamp('heartbeat_at', { withTimezone: true }),
+  checkpoint: jsonb('checkpoint').$type<Record<string, unknown>>().notNull().default({}),
+  resultRef: jsonb('result_ref').$type<Record<string, unknown> | null>(),
+  lastError: text('last_error'),
+  startedAt: timestamp('started_at', { withTimezone: true }),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  ...timestamps,
+}, (t) => [
+  foreignKey({
+    columns: [t.runId, t.masterFn, t.companyFn],
+    foreignColumns: [agentWorkflowRun.id, agentWorkflowRun.masterFn, agentWorkflowRun.companyFn],
+    name: 'fk_agent_workflow_step_run_tenant',
+  }),
+  uniqueIndex('uq_agent_workflow_step_key')
+    .on(t.masterFn, t.companyFn, t.runId, t.stepKey),
+  uniqueIndex('uq_agent_workflow_step_effect')
+    .on(t.masterFn, t.companyFn, t.runId, t.effectKeyHash),
+  index('idx_agent_workflow_step_queue')
+    .on(t.masterFn, t.companyFn, t.state, t.availableAt, t.id),
+  check('ck_agent_workflow_step_key', sql`${t.stepKey} in ('approval','execute','verify')`),
+  check('ck_agent_workflow_step_sequence', sql`${t.sequenceNo} between 1 and 3`),
+  check('ck_agent_workflow_step_state', sql`${t.state} in (
+    'queued','waiting_approval','paused','running','succeeded','failed','cancelled'
+  )`),
+  check('ck_agent_workflow_step_hash', sql`${t.effectKeyHash} ~ '^[0-9a-f]{64}$'`),
+  check('ck_agent_workflow_step_version', sql`${t.version} > 0`),
+  check('ck_agent_workflow_step_attempts', sql`${t.attempts} >= 0 and ${t.attempts} <= ${t.maxAttempts}`),
+  check('ck_agent_workflow_step_max_attempts', sql`${t.maxAttempts} between 1 and 10`),
+  check('ck_agent_workflow_step_json', sql`jsonb_typeof(${t.checkpoint}) = 'object'`),
+  check('ck_agent_workflow_step_lock', sql`(
+    (${t.lockedAt} is null and ${t.lockedBy} is null and ${t.leaseExpiresAt} is null)
+    or (${t.lockedAt} is not null and ${t.lockedBy} is not null and ${t.leaseExpiresAt} is not null)
+  )`),
 ]);

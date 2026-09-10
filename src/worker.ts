@@ -15,6 +15,7 @@ import {
 } from './modules/hr/calendarSync';
 import { processStaffAppointmentReminderBatch } from './modules/hr/appointmentReminders';
 import { processDocumentJobBatch } from './modules/documents/processing';
+import { processAgentWorkflowBatch } from './modules/agent/durableWorkflow';
 import {
   createHttpByokVisionExtractor,
   createHttpLocalOcrExtractor,
@@ -102,6 +103,19 @@ async function tick(): Promise<void> {
       + ` blocked=${documents.blocked} extractions=${documents.extractionsClaimed}`
       + ` extracted=${documents.extracted} failed=${documents.failed}`
       + ` deadLettered=${documents.deadLettered}`,
+    );
+  }
+  const agentWorkflows = await processAgentWorkflowBatch(db, {
+    workerId,
+    maxAttempts: Number(process.env.AGENT_WORKFLOW_MAX_ATTEMPTS) || undefined,
+  });
+  if (agentWorkflows.signalsClaimed > 0 || agentWorkflows.runsClaimed > 0) {
+    console.log(
+      `[erp-worker] agent-workflows signals=${agentWorkflows.signalsClaimed}`
+      + ` delivered=${agentWorkflows.signalsDelivered} failed=${agentWorkflows.signalsFailed}`
+      + ` runs=${agentWorkflows.runsClaimed} succeeded=${agentWorkflows.succeeded}`
+      + ` failedRuns=${agentWorkflows.failed} cancelled=${agentWorkflows.cancelled}`
+      + ` retried=${agentWorkflows.retried}`,
     );
   }
   const reminders = await withCalendarWorkerTransaction(db, tx => (

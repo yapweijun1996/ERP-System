@@ -108,7 +108,8 @@ DECLARE
     'api_idempotency',
     'import_job', 'import_job_row', 'import_row_error',
     'agent_principal', 'agent_grant', 'agent_credential', 'agent_execution_intent',
-    'agent_knowledge_document', 'agent_provider_config'
+    'agent_knowledge_document', 'agent_provider_config',
+    'agent_workflow_run', 'agent_workflow_step'
   ];
 BEGIN
   FOREACH table_name IN ARRAY company_tables LOOP
@@ -126,6 +127,7 @@ BEGIN
            (%L AND current_setting(''app.reporting_worker'', true) = ''on'')
            OR (%L AND current_setting(''app.document_worker'', true) = ''on'')
            OR (%L AND current_setting(''app.calendar_worker'', true) = ''on'')
+           OR (%L AND current_setting(''app.agent_worker'', true) = ''on'')
            OR (%L AND current_setting(''app.agent_issuer'', true) = ''on'')
          )
        )
@@ -138,6 +140,7 @@ BEGIN
            (%L AND current_setting(''app.reporting_worker'', true) = ''on'')
            OR (%L AND current_setting(''app.document_worker'', true) = ''on'')
            OR (%L AND current_setting(''app.calendar_worker'', true) = ''on'')
+           OR (%L AND current_setting(''app.agent_worker'', true) = ''on'')
            OR (%L AND current_setting(''app.agent_issuer'', true) = ''on'')
          )
        )',
@@ -149,6 +152,7 @@ BEGIN
         'staff_appointment_outbound_event', 'calendar_outbound_connection',
         'calendar_outbound_event', 'app_notification'
       ),
+      table_name IN ('agent_principal', 'agent_grant', 'agent_execution_intent', 'agent_workflow_run', 'agent_workflow_step'),
       table_name IN ('agent_principal', 'agent_credential', 'agent_provider_config'),
       table_name IN ('report_job', 'report_artifact', 'tax_evidence_report_job'),
       table_name IN ('document_scan_job', 'document_extraction'),
@@ -157,6 +161,7 @@ BEGIN
         'staff_appointment_outbound_event', 'calendar_outbound_connection',
         'calendar_outbound_event', 'app_notification'
       ),
+      table_name IN ('agent_principal', 'agent_grant', 'agent_execution_intent', 'agent_workflow_run', 'agent_workflow_step'),
       table_name IN ('agent_principal', 'agent_credential', 'agent_provider_config')
     );
   END LOOP;

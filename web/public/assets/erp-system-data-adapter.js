@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 45000;
-  var DEMO_SCHEMA_VERSION = 111;
+  var DEMO_SCHEMA_VERSION = 114;
   var DEMO_PACK_VERSION = '16';
   var DEMO_IMPERSONATOR_KEY = 'aria-demo-impersonator-email';
 

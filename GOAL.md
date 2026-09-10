@@ -75,7 +75,11 @@ Receipt-to-Pack path is now also evidenced for SG/MY through authenticated emplo
 sessions, persisted Receipt/Pack rows and independently hashed PDFs. Phase 2 remains open:
 TASK-234 now has a local Responses adapter, authenticated Company configuration
 resolver and default-deny server bootstrap. A repeatable SG/MY local pilot runner
-now verifies exact confirmation and reopened database/PDF persistence. Injected HTTP fixture evidence does
+now verifies exact confirmation and reopened database/PDF persistence. TASK-236 now
+has a durable Receipt Pack run/step workflow with approval waiting, lease recovery,
+pause/resume/cancel, transactional trigger deduplication and verified Pack/PDF result
+references; its local S1-S4 evidence is recorded while disposable PostgreSQL and
+remote current-branch acceptance remain open. Injected HTTP fixture evidence does
 not prove a real-model run; approved account/model/data-policy/spend and separate
 production/business-owner gates remain mandatory.
 
@@ -119,7 +123,7 @@ checkpoint, source-backed gaps and continuation rules.
 
 ## Progress count
 
-Snapshot after TASK-238/S2 decision draft and the post-S5 UI/route/i18n remediation; recompute using the command below
+Snapshot after TASK-236 local S1-S4 implementation and the post-S5 UI/route/i18n remediation; recompute using the command below
 whenever task status or a goal checkbox changes.
 
 | Measure | Done | Remaining | Total |
@@ -128,10 +132,10 @@ whenever task status or a goal checkbox changes.
 | Inherited open delivery tasks at baseline | 0 | 8 | 8 |
 | New AI Native delivery workstreams, TASK-228–239 | 6 | 6 | 12 |
 | Goal DoD criteria, G01.1–G12.4 | 28 | 20 | 48 |
-| Execution checkpoints, five per delivery packet | 36 | 24 | 60 |
+| Execution checkpoints, five per delivery packet | 41 | 19 | 60 |
 | Goal documentation tasks, TASK-227 and TASK-240 | 2 | 0 | 2 |
 
-Registry states: **226 Done / 6 In Progress / 5 Todo / 3 Blocked / 240 Total**.
+Registry states: **226 Done / 7 In Progress / 4 Todo / 3 Blocked / 240 Total**.
 Pending means every status other than Done: **8 inherited + 6 new = 14**.
 The 12 new tasks contain **5 P0 / 7 P1** work packages. The 14 pending tasks contain
 **5 P0 / 9 P1**. Priorities describe release risk; dependency order governs execution.
