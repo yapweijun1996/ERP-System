@@ -426,8 +426,14 @@ procure-to-pay, record-to-report, inventory, HR/leave/payroll and receipt/eviden
 Each row has an engineering owner role, source/test references and explicit
 unverified or excluded stages; no owner approval, settlement implementation or
 statutory integration is inferred. [TASK-238/S1 evidence](ai-native/evidence/TASK-238-2026-09-09.md#cross-module-capability-matrix).
-Current registry: **226 Done / 6 In Progress / 5 Todo / 3 Blocked / 240 Total**;
-14 pending, AI acceptance 6/12 and 28/48, execution checkpoints 36/60.
+TASK-236 is now **In Progress**. Its local implementation persists Receipt Pack
+run/step state, hash-only trigger provenance, approval waiting, leases and
+pause/resume/cancel actions; focused PGlite recovery cases pass. Disposable
+PostgreSQL two-worker proof and remote current-branch CI remain open, so no G09
+criterion is counted as accepted yet. See
+[TASK-236 dated evidence](ai-native/evidence/TASK-236-2026-09-11.md).
+Current registry: **226 Done / 7 In Progress / 4 Todo / 3 Blocked / 240 Total**;
+14 pending, AI acceptance 6/12 and 28/48, execution checkpoints 41/60.
 TASK-228 now includes a versioned contract catalogue, authenticated shared dispatch,
 read-only preparation, replay/adapter proof and a published boundary. TASK-232/S2
 adds tenant-scoped Agent/service principals and current-owner-intersected grants; S3
@@ -444,12 +450,13 @@ retained.
 
 [GOAL.md](../GOAL.md) defines EPIC-068, the receipt-to-Pack pilot, 12 delivery
 workstreams and 48 evidence-based DoD criteria. Planning, TASK-228/G01, TASK-229/G02,
-TASK-230/G03, TASK-232/G05, TASK-233/G06 and TASK-235/G08 are complete; TASK-234/G07 is in progress after
-local S1-S5. TASK-234/S4 now provides the contextual browser workspace and S5 verifies the
+TASK-230/G03, TASK-232/G05, TASK-233/G06 and TASK-235/G08 are complete; TASK-234/G07 and
+TASK-236/G09 are in progress. TASK-234/S4 now provides the contextual browser workspace and S5 verifies the
 actual Demo/PGlite Pack/artifact assertions plus local gates; no real provider account or
 approved spend is available, so that evidence remains open. G07.1-G07.4 are accepted for
-local/repository scope. Agent delivery is **6/12** and criteria are **28/48**; execution
-checkpoints are **36/60**. Registry pending work is **14**:
+local/repository scope. TASK-236 S1-S4 are locally evidenced; its PostgreSQL/remote
+acceptance remains open. Agent delivery is **6/12** and criteria are **28/48**; execution
+checkpoints are **41/60**. Registry pending work is **14**:
 8 inherited tasks plus 6 remaining AI tasks (TASK-231, TASK-234 and TASK-236–239);
 TASK-238/S1 is evidenced and S2 remains pending.
 Existing APIs, permissions, OCR/Vision and workers are reusable foundations; general

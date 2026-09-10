@@ -267,6 +267,26 @@ disposable-environment evidence; it does not certify production, remote MCP,
 WebMCP, provider or physical-device behavior. Source/test evidence:
 [TASK-233/S5](ai-native/evidence/TASK-233-2026-09-09.md#s5--verify-all-negative-paths).
 
+TASK-236 (local implementation, 2026-09-11) adds the bounded durable
+`receipt_pack.create` workflow in `src/modules/agent/durableWorkflow.ts`.
+`agent_workflow_run` and `agent_workflow_step` persist tenant scope, actor,
+approved-intent reference, checkpoints, leases, heartbeat, bounded attempts and
+result references. Queueing writes the run, three steps and the transactional
+`agent.workflow.receipt_pack.requested` outbox event together; the trigger and
+effect keys are hash-only. Worker claims use the `app.agent_worker` RLS context,
+expired leases recover the same run identity, and duplicate delivery is
+idempotent. Approval waiting, pause/resume/cancel, current module/grant/principal
+and exact-intent rechecks, stored-intent execution and Pack/PDF hash readback are
+all owned by this boundary; it reuses the governed Pack command instead of
+creating a second selection authority. A committed Pack is reconciled on late
+cancellation, while uncertain cross-system work stays on the same run for manual
+recovery. Focused PGlite tests pass for approval/resume, duplicate trigger,
+lease recovery, revocation before effect, late cancellation and bounded attempt
+exhaustion. The implementation is still in progress pending disposable
+PostgreSQL two-worker proof and remote current-branch CI; provider, production
+and business acceptance remain separate gates. Evidence:
+[TASK-236](ai-native/evidence/TASK-236-2026-09-11.md).
+
 TASK-230/S1 selects MCP `2025-11-25` Streamable HTTP at the versioned
 `/api/mcp/v1` resource and pins `@modelcontextprotocol/sdk@1.30.0` with
 `zod@4.5.4`. Production is an OAuth 2.1/OIDC protected-resource deployment:

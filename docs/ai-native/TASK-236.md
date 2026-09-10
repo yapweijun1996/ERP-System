@@ -1,8 +1,14 @@
 # TASK-236 — Run durable and recoverable agent workflows
 
-Goal: **G09** · Initial status: **Todo** · Priority: **P1**.
+Goal: **G09** · Current status: **In Progress** · Priority: **P1**.
 Live status and dependencies: [task registry](../../tasks/tasks.jsonl).
 Required tasks: **TASK-230, TASK-234**.
+
+Progress update — 2026-09-11: S1-S5 are locally/disposable evidenced by the durable
+Receipt Pack workflow implementation, focused PGlite tests and a PostgreSQL
+two-worker proof. Remote current-branch CI and final common-DoD acceptance remain
+open. See
+[dated evidence](evidence/TASK-236-2026-09-11.md).
 
 Read the [execution guide](../AI_NATIVE_EXECUTION.md) before starting.
 Use the [pilot cases](PILOT_TEST_MATRIX.md) and [evidence template](EVIDENCE_TEMPLATE.md).
@@ -33,45 +39,45 @@ Model run and step states explicitly: queued/running/waiting_approval/succeeded/
 
 ## Execute in this order
 
-- [ ] **S1 — Specify state and failure transitions.**
+- [x] **S1 — Specify state and failure transitions.**
 
   Action: Write legal transitions, ownership, retryable versus terminal errors, cancellation semantics and approved-intent references. Define what survives a browser close and what requires a fresh confirmation.
 
   Checkpoint exit: A transition table covers every terminal state and restart from each nonterminal state.
 
-  Evidence: Not run.
+  Evidence: [TASK-236 evidence — state and failure transitions](evidence/TASK-236-2026-09-11.md#state-and-failure-transitions).
 
-- [ ] **S2 — Persist runs and leases.**
+- [x] **S2 — Persist runs and leases.**
 
   Action: Add schema/migrations, unique intent/step reservation and bounded lease/heartbeat claims. Commit required state/audit/outbox together. Use encrypted/protected references instead of raw secrets/prompt copies.
 
   Checkpoint exit: Two workers cannot own the same effect; expired leases recover without losing outcome identity.
 
-  Evidence: Not run.
+  Evidence: [TASK-236 evidence — S2](evidence/TASK-236-2026-09-11.md#s2--persist-runs-and-leases).
 
-- [ ] **S3 — Implement resume and cancellation.**
+- [x] **S3 — Implement resume and cancellation.**
 
   Action: Before each resumed side effect, reload current grant, Company/module permission and exact approval. Interrupt bounded provider work; cancellation after a commit reports the actual committed result instead of pretending rollback.
 
   Checkpoint exit: Revocation while waiting, restart while running and late cancellation produce truthful states.
 
-  Evidence: Not run.
+  Evidence: [TASK-236 evidence — S3](evidence/TASK-236-2026-09-11.md#s3--implement-resume-and-cancellation).
 
-- [ ] **S4 — Connect one event trigger.**
+- [x] **S4 — Connect one event trigger.**
 
   Action: Use one explicit enabled receipt event to prepare work for review. Deduplicate event delivery; cap attempts and dead-letter terminal failures. No event may manufacture user approval.
 
   Checkpoint exit: Repeated trigger produces one intended workflow; failure/manual recovery preserves the same provenance.
 
-  Evidence: Not run.
+  Evidence: [TASK-236 evidence — S4](evidence/TASK-236-2026-09-11.md#s4--connect-one-event-trigger).
 
-- [ ] **S5 — Run recovery and concurrency proof.**
+- [x] **S5 — Run recovery and concurrency proof.**
 
   Action: Inject worker termination before/after provider response and before/after business commit. Run two workers on disposable PostgreSQL plus existing outbox/telemetry tests and common gates.
 
   Checkpoint exit: P16 and relevant P06-P12 cases prove no duplicate Pack, no lost approval boundary and no false success.
 
-  Evidence: Not run.
+  Evidence: [TASK-236 evidence — S5](evidence/TASK-236-2026-09-11.md#s5--run-recovery-and-concurrency-proof) — local/disposable proof passes; remote CI remains a release gate.
 
 ## DoD mapping: all four must pass
 
@@ -81,16 +87,16 @@ is needed. Do not mark the task Done merely because all five checkpoints are che
 
 - **G09.1:** Persist run/step state, actor scope, approved intent, leases, checkpoints and bounded retry metadata so authorized work survives browser closure and worker restart.
   - Required evidence: Persisted state/lease/checkpoint and restart tests.
-  - Current result: Not run.
+  - Current result: Local and disposable PostgreSQL persisted-state and lease-recovery evidence passes; remote CI remains pending.
 - **G09.2:** Support pause, resume, cancellation and approval waiting; recheck permissions and approval validity before every resumed side effect.
   - Required evidence: Pause/resume/cancel with current authorization.
-  - Current result: Not run.
+  - Current result: Local pause/resume/cancel and authorization-recheck evidence passes.
 - **G09.3:** Use transactional events/outbox and idempotent consumers for selected event triggers; document compensation and manual recovery for cross-system failures.
   - Required evidence: Transactional trigger/dedup and manual recovery.
-  - Current result: Not run.
+  - Current result: Local transactional outbox and duplicate-trigger evidence passes; manual recovery is documented in the dated evidence.
 - **G09.4:** Failure-injection tests cover duplicate delivery, expired leases, partial execution, restart and budget exhaustion without duplicate posting or false completion.
   - Required evidence: Two-worker crash-window and budget exhaustion evidence.
-  - Current result: Not run.
+  - Current result: Local and disposable PostgreSQL failure-injection cases pass; remote current-branch proof remains open.
 
 ## Existing regression commands
 
