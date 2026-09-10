@@ -907,11 +907,6 @@
     try {
       var session=await fetchSession();
       if(!session) return false;
-      /* A preactivated employee must see activation when signing in directly,
-         but Superadmin employee-workspace impersonation is already audited and
-         must still load the real employee shell. Returning early here leaves
-         DB populated with the static demo defaults. */
-      if(session.passwordChangeRequired && session.impersonatorUserId == null) return true;
       await loadAuthenticatedShell();
       return true;
     } catch {
@@ -949,14 +944,6 @@
       throw new Error('Sign-in succeeded, but this browser did not retain the session cookie. Enable cookies for this ERP site and try again.');
     }
     return persisted;
-  }
-
-  async function completeActivation(input){
-    var response=await apiRequest('auth/activation/actions/complete',{
-      method:'POST',body:input||{},
-    });
-    state.session=null;
-    return response.data;
   }
 
   async function logout(){
@@ -998,7 +985,6 @@
     action:action,
     session:fetchSession,
     employeeWorkspaceTargets:employeeWorkspaceTargets,
-    completeActivation:completeActivation,
     financeReports:financeReports,
     companyReceipts:function(query){
       query=query||{};
@@ -1125,9 +1111,7 @@
       isSignedIn:isSignedIn,
       login:login,
       logout:logout,
-      completeActivation:completeActivation,
     },
-    get activationRequired(){ return Boolean(state.session&&state.session.passwordChangeRequired&&!state.session.impersonatorUserId); },
     get mode(){ return state.mode; },
     get db(){ return null; },
   };

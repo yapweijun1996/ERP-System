@@ -108,6 +108,9 @@ const EMPLOYEE_ROLE_PERMISSION_KEYS = [
   PERMISSIONS.employeeLeaveWrite,
   PERMISSIONS.employeeReceiptsWrite,
   PERMISSIONS.expensesCompanyReceiptsReadOwn,
+  PERMISSIONS.expensesCompanyReceiptsCreate,
+  PERMISSIONS.expensesCompanyReceiptsEdit,
+  PERMISSIONS.expensesCompanyReceiptsVoid,
   PERMISSIONS.employeeClaimsWrite,
   PERMISSIONS.employeePayoutManage,
 ] as const;
@@ -131,10 +134,15 @@ async function assertCanonicalEmployeeRole(
     permissionKey: rolePermission.permissionKey,
     allowed: rolePermission.allowed,
   }).from(rolePermission).where(eq(rolePermission.roleId, employeeRole.roleId));
-  const permissionContractValid = permissions.length === EMPLOYEE_ROLE_PERMISSION_KEYS.length
-    && permissions.every((row) => row.allowed)
-    && EMPLOYEE_ROLE_PERMISSION_KEYS.every((permissionKey) =>
-      permissions.some((row) => row.permissionKey === permissionKey));
+  // Migration 0097 established the own-receipt mutation grants. Accept the
+  // older base role as well without silently changing an existing role.
+  const receiptMutations: readonly string[] = [PERMISSIONS.expensesCompanyReceiptsCreate,
+    PERMISSIONS.expensesCompanyReceiptsEdit, PERMISSIONS.expensesCompanyReceiptsVoid];
+  const legacyPermissions = EMPLOYEE_ROLE_PERMISSION_KEYS.filter(key => !receiptMutations.includes(key));
+  const matchesContract = (keys: readonly string[]) => permissions.length === keys.length
+    && permissions.every(row => row.allowed && keys.includes(row.permissionKey));
+  const permissionContractValid = matchesContract(EMPLOYEE_ROLE_PERMISSION_KEYS)
+    || matchesContract(legacyPermissions);
 
   const scopes = await exec.select({
     resourceKey: roleResourceScope.resourceKey,
@@ -281,9 +289,10 @@ export async function createEmployeeAccount(
       passwordHash: input.passwordHash,
       language: 'en',
       isActive: true,
-      accountState: 'preactivated',
-      passwordChangeRequired: true,
-      initialPasswordExpiresAt: input.expiresAt,
+      accountState: 'active',
+      activatedAt: new Date(),
+      passwordChangeRequired: false,
+      initialPasswordExpiresAt: null,
     }).returning({ userId: appUser.userId });
     await tx.insert(userCompany).values({
       userId: user.userId,
@@ -362,7 +371,7 @@ export async function activeEmployeeSecret(
       isNull(employeeActivationSecret.clearedAt),
       eq(employee.userId, employeeActivationSecret.userId),
     )).limit(1);
-  if (!row || !row.passwordChangeRequired || !row.credentialEnvelope) {
+  if (!row || row.accountState === 'offboarded' || !row.credentialEnvelope) {
     throw new EmployeeAccountError('temporary_credential_unavailable', 'No recoverable temporary credential exists.', 404);
   }
   if (row.expiresAt <= now) {
@@ -411,9 +420,9 @@ export async function resetEmployeeAccount(
     const generation = Math.max(0, ...allSecrets.map((row) => row.generation)) + 1;
     await tx.update(appUser).set({
       passwordHash: input.passwordHash,
-      passwordChangeRequired: true,
-      initialPasswordExpiresAt: input.expiresAt,
-      accountState: account.accountState === 'preactivated' ? 'preactivated' : 'active',
+      passwordChangeRequired: false,
+      initialPasswordExpiresAt: null,
+      accountState: 'active',
       updatedAt: now,
     }).where(eq(appUser.userId, account.userId));
     await tx.update(appSession).set({ revokedAt: now, updatedAt: now }).where(and(
@@ -442,76 +451,6 @@ export async function resetEmployeeAccount(
       });
     }
     return { employeeId: input.employeeId, userId: account.userId, generation };
-  });
-}
-
-export async function completeEmployeeActivation(
-  db: DB,
-  userId: number,
-  email: string,
-  passwordHash: string,
-  requestId?: string,
-) {
-  return db.transaction(async (tx) => {
-    const [user] = await tx.select({
-      userId: appUser.userId,
-      masterFn: appUser.masterFn,
-      passwordChangeRequired: appUser.passwordChangeRequired,
-      accountState: appUser.accountState,
-    }).from(appUser).where(and(eq(appUser.userId, userId), eq(appUser.isActive, true))).limit(1);
-    if (!user || !user.passwordChangeRequired || user.accountState === 'offboarded') {
-      throw new EmployeeAccountError('activation_not_required', 'This account does not require activation.', 409);
-    }
-    const [linked] = await tx.select({ employeeId: employee.id }).from(employee).where(and(
-      eq(employee.masterFn, user.masterFn),
-      eq(employee.userId, userId),
-      eq(employee.isActive, true),
-    )).limit(1);
-    if (!linked) throw new EmployeeAccountError('employee_link_missing', 'The employee link is unavailable.', 409);
-    const [duplicateEmail] = await tx.select({ userId: appUser.userId }).from(appUser).where(and(
-      eq(appUser.masterFn, user.masterFn),
-      eq(appUser.email, email),
-      ne(appUser.userId, userId),
-    )).limit(1);
-    if (duplicateEmail) {
-      throw new EmployeeAccountError('email_taken', 'Email is already used in this organization.', 409, {
-        email: 'Use another email address.',
-      });
-    }
-    const now = new Date();
-    await tx.update(appUser).set({
-      email,
-      passwordHash,
-      passwordChangeRequired: false,
-      initialPasswordExpiresAt: null,
-      accountState: 'active',
-      activatedAt: now,
-      updatedAt: now,
-    }).where(eq(appUser.userId, userId));
-    await tx.update(employeeActivationSecret).set({
-      credentialEnvelope: null,
-      clearedAt: now,
-      updatedAt: now,
-    }).where(and(
-      eq(employeeActivationSecret.userId, userId),
-      isNull(employeeActivationSecret.clearedAt),
-    ));
-    await tx.update(appSession).set({ revokedAt: now, updatedAt: now }).where(and(
-      eq(appSession.userId, userId),
-      isNull(appSession.revokedAt),
-    ));
-    if (requestId) {
-      await tx.insert(auditLog).values({
-        masterFn: user.masterFn,
-        actorUserId: userId,
-        requestId,
-        entity: 'app_user',
-        entityId: String(userId),
-        action: 'employee_activation_completed',
-        after: { employeeId: linked.employeeId, activatedAt: now },
-      });
-    }
-    return { userId, employeeId: linked.employeeId, activatedAt: now };
   });
 }
 

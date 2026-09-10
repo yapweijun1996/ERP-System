@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import {
-  appUser, employee, employeeActivationSecret,
+  appUser, employee,
   role, staffOnboardingDraft, userCompany, userCompanyRole,
 } from '../../data/schema';
 import { withTenantTransaction } from '../../data/tenantTransaction';
@@ -224,7 +224,6 @@ export async function activateStaffOnboardingWithin(
   )).limit(1);
   let userId: number;
   let newCredential = false;
-  const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   if (existingUser) {
     if (existingUser.email?.toLowerCase() !== draft.email.toLowerCase() || !existingUser.isActive) {
       throw new StaffOnboardingError(409, 'identity_conflict', 'Username belongs to another or inactive identity.');
@@ -252,9 +251,10 @@ export async function activateStaffOnboardingWithin(
       passwordHash,
       language: 'en',
       isActive: true,
-      accountState: 'preactivated',
-      passwordChangeRequired: true,
-      initialPasswordExpiresAt: expiresAt,
+      accountState: 'active',
+      passwordChangeRequired: false,
+      initialPasswordExpiresAt: null,
+      activatedAt: now,
     }).returning({ id: appUser.userId });
     userId = createdUser.id;
     newCredential = true;
@@ -277,19 +277,6 @@ export async function activateStaffOnboardingWithin(
     assignedByUserId: session.userId,
     assignmentSource: roleId === employeeBaseRole.roleId ? 'system' as const : 'onboarding' as const,
   })));
-  if (newCredential) {
-    await exec.insert(employeeActivationSecret).values({
-      masterFn: session.masterFn,
-      companyFn: session.activeCompanyFn,
-      employeeId: createdEmployee.id,
-      userId,
-      purpose: 'activation',
-      generation: 1,
-      credentialEnvelope: null,
-      expiresAt,
-      createdByUserId: session.userId,
-    });
-  }
 
   await exec.update(staffOnboardingDraft).set({
     status: 'activated',
@@ -311,8 +298,8 @@ export async function activateStaffOnboardingWithin(
     userId,
     username: draft.username,
     roleIds: allRoleIds,
-    passwordExpiresAt: newCredential ? expiresAt : null,
-    passwordChangeRequired: newCredential,
+    passwordExpiresAt: null,
+    passwordChangeRequired: false,
   };
 }
 

@@ -1,5 +1,21 @@
 # ERP goal execution plan
 
+Account access policy — 2026-09-10: Demo and real Company accounts are ready
+immediately on creation, including administrator and employee flows. Mandatory
+first-login activation and forced initial password changes are removed from the
+shared commands, API guard and browser adapters. Migration 0111 clears legacy
+pending state without changing passwords, role grants or disabled/offboarded access.
+Password resets still revoke sessions; encrypted password handoff expiry does not
+expire login credentials. The historical onboarding commit command is retained for
+compatibility and is not a separate user activation step. Local verification: 19
+account/onboarding/API tests, 11 session and 10 auth lifecycle/freshness tests,
+desktop/375px creation and direct
+employee login, zero browser console errors, lint, both typechecks, PGlite transaction
+proof, Demo build, generated artifacts and documentation checks pass. The normal
+employee login also clears prior Demo impersonation state. Production PostgreSQL
+rollout and the real Receipt-to-Pack operator pilot remain separate acceptance.
+See [account access evidence](ai-native/evidence/TASK-234-2026-09-09.md#immediate-account-access--2026-09-10).
+
 Current TASK-234 checkpoint — 2026-09-10: shared G06 intent and Pack persistence
 commands are now browser-compatible factories. Server facades preserve their
 existing APIs; Demo runtime binds both factories with Web Crypto and shared audit.
@@ -8,11 +24,12 @@ selection digest. Demo preparation, persisted approval and execution now use sha
 G06 commands with actor/Company ownership and transactional audit. Local integration
 and Company Receipts browser regression pass; authentication remains synthetic.
 Real operator acceptance remains open. Pages release
-`40d3cf0f4d05646a32f6ff12a5b52294cce0907f` is deployed by run 34425059328.
+`6f06a883bdddbdb86d92ca5f1fa233534246c5d4` is deployed by run 34426075225.
 All 135 served assets match the clean committed build; the remaining manifest
 entry is the unserved empty `.nojekyll` marker. The previous release has a
 hash-verified local rollback copy. Full-suite local regression passed: 895 tests,
-with 3 PostgreSQL tests skipped. Remote CI run 34425059341 is in progress. Earlier revision eaf7f6 passed
+with 3 PostgreSQL tests skipped. Remote CI run 34426075276 completed successfully for revision 6f06a883. The prior login revision passed
+all four unit-test shards before being superseded by this menu repair. Earlier revision eaf7f6 passed
 all four unit-test shards, PostgreSQL 16 non-superuser security lifecycle and
 PGlite/PostgreSQL transaction/concurrency checks; this is not whole-CI acceptance.
 Browser access resumed. The real existing-Master setup path exposed a static
@@ -32,8 +49,12 @@ blocks the next real Chrome pilot step; no human acceptance is claimed.
 A later native Chrome reload showed the new administrator correctly. Closed shell
 menus then obstructed accessibility navigation: opacity-only hiding preserved
 invisible menu controls. A shared visibility-state repair passes before/after
-browser regression at desktop/375px and common local gates; deployment and native
-Chrome verification of this supporting repair remain pending.
+browser regression at desktop/375px and common local gates. The repair is deployed;
+all 135 served assets match the committed build at 2026-09-10T01:37:26Z.
+Native Chrome now confirms correct Company/identity, closed-menu navigation and
+Company Receipts access. My Receipts correctly requires an employee; a new synthetic
+staff draft is prepared. The 2026-09-10 user decision below removes mandatory
+first-login activation for Demo and real Company accounts.
 The assistant success view now opens its existing Pack PDF after rechecking the
 completion artifact hash; opening does not execute another creation command.
 Selected rows are now progressively expandable beyond 20 with amount, currency,

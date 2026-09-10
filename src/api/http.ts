@@ -56,7 +56,6 @@ export async function requireSession(
   req: express.Request,
   res: express.Response,
   options: {
-    allowActivationPending?: boolean;
     /** The session endpoint is the recovery path for a stale browser snapshot. */
     allowStaleAuthorization?: boolean;
   } = {},
@@ -85,12 +84,6 @@ export async function requireSession(
     ctx.session = ctx.platformTenantAccess.target;
   }
   if (ctx.session) {
-    if (ctx.session.passwordChangeRequired
-      && ctx.session.impersonatorUserId == null
-      && !options.allowActivationPending) {
-      apiError(res, 403, 'activation_required', 'Complete first-login activation before using the application.');
-      return null;
-    }
     if (!checkAuthorizationFreshness(ctx.session)) return null;
     return ctx.session;
   }
@@ -102,17 +95,6 @@ export async function requireSession(
   }
   ctx.sessionId = sessionId;
   ctx.session = session;
-  if (session.passwordChangeRequired
-    && session.impersonatorUserId == null
-    && !options.allowActivationPending) {
-    apiError(
-      res,
-      403,
-      'activation_required',
-      'Complete first-login activation before using the application.',
-    );
-    return null;
-  }
   if (!checkAuthorizationFreshness(session)) return null;
   return session;
 }

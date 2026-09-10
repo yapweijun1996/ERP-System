@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 45000;
-  var DEMO_SCHEMA_VERSION = 110;
+  var DEMO_SCHEMA_VERSION = 111;
   var DEMO_PACK_VERSION = '16';
   var DEMO_IMPERSONATOR_KEY = 'aria-demo-impersonator-email';
 
@@ -138,7 +138,7 @@
   var state = {
     db: null, orm: null, runtime: null, mode: 'pending', activeUserId: null,
     setupModuleCatalog: [],
-    activationRequired: false, demoPack: null, demoPackAvailable: null,
+    demoPack: null, demoPackAvailable: null,
   };
 
   /* The sign-in shell starts before PGlite resolves. Keep the current stage in
@@ -816,7 +816,6 @@
     state.activeUserId = activeUser.user_id || null;
     var impersonatorEmail = null;
     try { impersonatorEmail = localStorage.getItem(DEMO_IMPERSONATOR_KEY); } catch {}
-    state.activationRequired = !!activeUser.password_change_required && !impersonatorEmail;
     DB.user = {
       name: userDisplayName,
       email: activeUser.email,
@@ -1706,8 +1705,7 @@
 
   /* Demo-mode auth keeps one-click switching for the twelve deterministic
      showcase personas. User-created staff identities use the same PBKDF2
-     password and first-login activation flags as production so the onboarding
-     journey cannot claim success while silently bypassing its controls. */
+     password authentication as production; accounts are usable on creation. */
   async function needsSetup(){
     return (typeof needsSetupWizard === 'function') ? needsSetupWizard() : false;
   }
@@ -1728,35 +1726,21 @@
     }else if(!await verifyPasswordBrowser(String(password),user.password_hash)){
       throw new Error('Invalid email or password.');
     }
-    if(user.password_change_required&&user.initial_password_expires_at
-      &&new Date(user.initial_password_expires_at)<=new Date()){
-      throw new Error('The temporary password has expired. Ask HR to reset it.');
-    }
     if(!(await demoWorkspaceCompanies(requireDemoDb(),trimmed)).length){
       throw new Error('This account has no active Company role.');
     }
     try {
+      localStorage.removeItem(DEMO_IMPERSONATOR_KEY);
       if (trimmed) localStorage.setItem('aria-active-user-email', trimmed);
       localStorage.setItem('aria-demo-auth', JSON.stringify({ signedIn: true, email: trimmed || 'admin@acme.co', at: new Date().toISOString() }));
     } catch {}
     return { email: trimmed, passwordChangeRequired:!!user.password_change_required };
   }
-  async function completeActivation(input){
-    input=input||{};
-    var email=String(input.email||'').trim().toLowerCase();
-    var password=String(input.password||'');
-    if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Enter a valid email address.');
-    if(password.length<8||password!==String(input.confirmPassword||'')) throw new Error('Use matching passwords of at least 8 characters.');
-    var passwordHash=await hashPasswordBrowser(password);
-    var data=await state.runtime.commands.completeEmployeeActivation(
-      state.orm,Number(state.activeUserId),email,passwordHash);
-    state.activationRequired=false;
-    try{ localStorage.removeItem('aria-demo-auth'); }catch{}
-    await refresh();
-    return data;
-  }
   async function logout(){
-    try { localStorage.removeItem('aria-demo-auth'); } catch {}
+    try {
+      localStorage.removeItem('aria-demo-auth');
+      localStorage.removeItem(DEMO_IMPERSONATOR_KEY);
+    } catch {}
   }
   async function switchUser(email){
     var trimmed = String(email || '').trim().toLowerCase();
@@ -5223,7 +5207,6 @@
     isSignedIn: isSignedIn,
     login: login,
     logout: logout,
-    completeActivation:completeActivation,
     switchUser: switchUser,
     auth: {
       needsSetup:needsSetup,
@@ -5231,7 +5214,6 @@
       login:login,
       logout:logout,
     },
-    get activationRequired(){ return !!state.activationRequired; },
     get demoOneClickAvailable(){ return DEMO_ONE_CLICK_EMAILS.has(String(DB.user&&DB.user.email||'').toLowerCase()); },
     get mode(){ return state.mode; },
     get db(){ return state.db; },

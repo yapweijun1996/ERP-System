@@ -46,7 +46,7 @@ describe('atomic staff onboarding', () => {
     const activated = await activateStaffOnboarding(
       db, session, draft.id, draft.version, hashPassword('temporary-pass'), 'activate',
     );
-    expect(activated).toMatchObject({ username: 'new.staff', passwordChangeRequired: true });
+    expect(activated).toMatchObject({ username: 'new.staff', passwordChangeRequired: false });
     const [employeeRole] = await db.select({ id: role.roleId }).from(role).where(and(
       eq(role.masterFn, 'M1'),
       eq(role.companyFn, 'C-SG'),
@@ -57,7 +57,8 @@ describe('atomic staff onboarding', () => {
     expect(await db.select().from(userCompany).where(eq(userCompany.userId, activated.userId))).toHaveLength(1);
     const [created] = await db.select().from(appUser).where(eq(appUser.userId, activated.userId));
     expect(created.passwordHash).toMatch(/^pbkdf2\$/);
-    expect(created.initialPasswordExpiresAt).not.toBeNull();
+    expect(created.initialPasswordExpiresAt).toBeNull();
+    expect(created.accountState).toBe('active');
     const [annual] = await db.select({ id: leaveType.id }).from(leaveType).where(and(
       eq(leaveType.masterFn, 'M1'),
       eq(leaveType.companyFn, 'C-SG'),

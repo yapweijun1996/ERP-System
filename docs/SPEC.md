@@ -199,8 +199,10 @@ advances, balanced posting, reimbursement payment batches and immutable tax-evid
 packages. Planned capabilities must not be represented as current Canonical behavior.
 
 - **Employee identity:** production login now uses organisation code + an
-  organisation-unique username, with nullable email before activation. HR employee
-  linking and the activation lifecycle are implemented by TASK-107.
+  organisation-unique username and optional employee email. Accounts are immediately
+  active after creation in Demo and production; no first-login activation is required.
+  Migration 0111 removes legacy pending flags without changing passwords, roles or
+  disabled/offboarded controls. HR reset still revokes existing sessions.
 - **Multiple roles:** one user may now hold multiple roles in one company. Permissions
   are the union of those roles without widening the company boundary. Employee binding
   and reporting-hierarchy row scope are implemented by TASK-107/108. TASK-110 adds

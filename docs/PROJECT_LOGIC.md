@@ -437,20 +437,26 @@ Source: `src/modules/hr/employee.ts:290-352, 454-572`.
 
 ### 2.4 Staff onboarding and account lifecycle
 
-Staff onboarding is a separate draft-to-activation path:
+Staff onboarding is a draft-to-account creation path. The historical command
+name activateStaffOnboardingWithin means committing the draft atomically, not a
+user activation step. It validates roles, creates/links identity and Company
+membership, creates the employee and leave opening, and appends audit evidence.
+New accounts are active immediately with no forced first-login password change.
+The canonical Employee role has nine grants, including the own-receipt mutations
+established by migration 0097. Provisioning also accepts the exact legacy six-grant
+role without rewriting it; any extra grant or broader resource scope is rejected.
 
-- `createStaffOnboardingDraftWithin` and
-  `updateStaffOnboardingDraftWithin` maintain the pre-activation draft.
-- `activateStaffOnboardingWithin` validates the selected roles, allocates/checks the
-  employee number, creates or links the active application user, creates the
-  employee, links the user, assigns company roles and emits audit evidence.
-- `employeeAccount.ts` models `preactivated`, `active` and `offboarded`. Activation
-  and password reset use expiring encrypted activation secrets. Offboarding
-  deactivates the employee/account and records responsibility handoff; historical
-  document attribution is not rewritten.
+employeeAccount.ts creates and resets immediately usable accounts. Reset still
+revokes old sessions. Generated-password handoff uses an expiring encrypted
+employeeActivationSecret envelope (legacy table name), with audited reveal; its
+expiry does not expire the password or block login. Offboarding disables access,
+clears recoverable secrets and retains historical evidence. Migration 0111 clears
+legacy preactivated flags with per-user audit without changing password hashes,
+role grants or isActive. The retired activation API returns 410 and never changes
+credentials. Demo and API adapters no longer show a first-login activation form.
 
-Sources: `src/modules/hr/staffOnboarding.ts:1-330`,
-`src/modules/hr/employeeAccount.ts:1-630`, and `src/data/schema/hr.ts:141-198`.
+Source: src/modules/hr/staffOnboarding.ts, src/modules/hr/employeeAccount.ts,
+src/api/routes/auth.ts, src/api/http.ts, drizzle/0111_immediate_account_access.sql.
 
 ### 2.5 Employee access boundary
 

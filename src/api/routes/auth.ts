@@ -1,12 +1,11 @@
 import { Router, type Request } from 'express';
-import { and, asc, eq, gt, isNull, or } from 'drizzle-orm';
+import { and, asc, eq, or } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import {
-  appUser, company, companyOnboarding, employee, employeeActivationSecret, master, role,
+  appUser, company, companyOnboarding, employee, master, role,
   userCompany, userCompanyRole,
 } from '../../data/schema';
 import { verifyPassword } from '../../auth/password';
-import { hashPassword } from '../../auth/password';
 import {
   isValidOrganizationCode,
   isValidUsername,
@@ -55,10 +54,6 @@ import { hashOpaqueToken } from '../../auth/tokenCrypto';
 import { appendAudit } from '../audit';
 import { apiError, context, requireSession } from '../http';
 import { withTenantTransaction } from '../../data/tenantTransaction';
-import {
-  completeEmployeeActivation,
-  EmployeeAccountError,
-} from '../../modules/hr/employeeAccount';
 
 export interface AuthRouterOptions {
   secureCookies: boolean;
@@ -224,34 +219,6 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
         return;
       }
     }
-    if (user.passwordChangeRequired) {
-      const temporaryCredential = await withTenantTransaction(db, {
-        masterFn: user.masterFn,
-        companyFn: assignment.companyFn,
-      }, async (tx) => {
-        const [row] = await tx.select({ id: employeeActivationSecret.id })
-          .from(employeeActivationSecret)
-          .where(and(
-            eq(employeeActivationSecret.masterFn, user.masterFn),
-            eq(employeeActivationSecret.companyFn, assignment.companyFn),
-            eq(employeeActivationSecret.userId, user.userId),
-            isNull(employeeActivationSecret.clearedAt),
-            gt(employeeActivationSecret.expiresAt, new Date()),
-          ))
-          .limit(1);
-        return row;
-      });
-      if (!temporaryCredential) {
-        await recordLoginFailure(db, identifier);
-        apiError(
-          res,
-          401,
-          'invalid_credentials',
-          'Incorrect organization code, username or password.',
-        );
-        return;
-      }
-    }
 
     await clearLoginFailures(db, identifier);
     const created = await createSession(db, {
@@ -318,7 +285,6 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
 
   router.get('/session', async (req, res) => {
     const session = await requireSession(db, req, res, {
-      allowActivationPending: true,
       allowStaleAuthorization: true,
     });
     if (!session) return;
@@ -423,58 +389,10 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
     res.json({ data, meta: { count: data.length } });
   });
 
+  // Retired compatibility route: stale clients must not mutate credentials.
   router.post('/activation/actions/complete', async (req, res) => {
-    const session = await requireSession(db, req, res, { allowActivationPending: true });
-    if (!session) return;
-    if (session.impersonatorUserId != null) {
-      apiError(res, 403, 'impersonation_action_not_allowed', 'Complete employee activation from the employee sign-in flow.');
-      return;
-    }
-    if (!session.passwordChangeRequired) {
-      apiError(res, 409, 'activation_not_required', 'This account does not require activation.');
-      return;
-    }
-    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
-    const password = typeof req.body?.password === 'string' ? req.body.password : '';
-    const confirmPassword = typeof req.body?.confirmPassword === 'string'
-      ? req.body.confirmPassword
-      : '';
-    const fieldErrors: Record<string, string> = {};
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fieldErrors.email = 'Enter a valid email address.';
-    if (password.length < 8) fieldErrors.password = 'Use at least 8 characters.';
-    if (password !== confirmPassword) fieldErrors.confirmPassword = 'Passwords do not match.';
-    if (Object.keys(fieldErrors).length) {
-      apiError(res, 400, 'invalid_request', 'Complete all activation fields.', fieldErrors);
-      return;
-    }
-    const [currentUser] = await db.select({ passwordHash: appUser.passwordHash })
-      .from(appUser).where(eq(appUser.userId, session.userId)).limit(1);
-    if (currentUser && verifyPassword(password, currentUser.passwordHash)) {
-      apiError(res, 400, 'password_reused', 'Choose a password different from the temporary password.', {
-        password: 'Choose a new password.',
-      });
-      return;
-    }
-    try {
-      await withTenantTransaction(db, {
-        masterFn: session.masterFn,
-        companyFn: session.activeCompanyFn,
-      }, (tx) => completeEmployeeActivation(
-        tx,
-        session.userId,
-        email,
-        hashPassword(password),
-        context(res).requestId,
-      ));
-      clearAuthCookies(res, options.secureCookies);
-      res.json({ data: { ok: true, signInAgain: true }, meta: {} });
-    } catch (error) {
-      if (error instanceof EmployeeAccountError) {
-        apiError(res, error.status, error.code, error.message, error.fieldErrors);
-        return;
-      }
-      throw error;
-    }
+    if (!await requireSession(db, req, res)) return;
+    apiError(res, 410, 'activation_removed', 'Accounts are ready immediately. Reload the application.');
   });
 
   router.post('/session/actions/switch-company', async (req, res) => {

@@ -53,15 +53,16 @@ state; new companies start with only the setup-safe Admin module enabled.
 
 The Add Staff wizard captures employee details, manager, login identity,
 active company, one or more roles, leave opening and an initial password. HR may
-save a non-secret `staff_onboarding_draft`; only activation accepts a password.
-Activation is one transaction that creates or links the organization identity,
+save a non-secret `staff_onboarding_draft`; only account creation accepts a password.
+Creation is one transaction that creates or links the organization identity,
 creates the company membership and role grants, links the employee, initializes
 leave balance and appends audit evidence. Any failure rolls back every write.
 
 Usernames are unique inside the organization. If the username already exists, the
 workflow links that identity to the active company instead of creating a duplicate.
-Initial passwords are hashed immediately, never returned or logged, expire at first
-use or after seven days, and force a password change. Reset revokes active sessions;
+Passwords are hashed immediately and never returned or logged by Add Staff.
+Accounts are immediately active, without first-login activation. Generated-password
+handoff expires separately from login validity. Reset revokes active sessions;
 offboarding disables the identity while preserving historical ownership. Setup-stage
 employees cannot establish a session before the company is live.
 

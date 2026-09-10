@@ -10,6 +10,35 @@ The five S-checkpoints are execution checkpoints, not five new task records.
 Check a checkpoint only after its listed exit is observed and recorded.
 All four G07 criteria plus common DoD remain required for task completion.
 
+## Remove mandatory account activation — user decision 2026-09-10
+
+Outcome: accounts created in Demo or a real Company are usable immediately.
+There is no employee first-login activation form or activation-only session.
+Staff onboarding still creates the employee, identity, Company membership and
+roles atomically; creating an account is not a permission bypass. Password reset
+still replaces the credential and revokes sessions, without another activation.
+
+Ownership: employeeAccount/staffOnboarding own initial account state; auth/session
+and HTTP own login and access checks; browser adapters/shell own the retired
+activation screen; migration owns existing preactivated accounts. Encrypted
+credential handoff may expire independently of the account password. Preserve
+password verification, offboarding, role/tenant checks and audit. Retain historical
+schema/audit compatibility rather than deleting governed records.
+
+1. Remove pending-activation state from creation/reset commands and migrate old
+   pending flags without changing passwords or re-enabling disabled accounts.
+2. Remove activation login/API/page gates and retire the completion endpoint.
+3. Update account/staff wording and both adapters consistently.
+4. Verify immediate authenticated API/employee access, password reset invalidation,
+   disabled/offboarded/foreign-Company denial and migration behavior. Run common
+   gates and desktop/375px browser checks before deployment and the live pilot.
+
+Browser verification also exposed a pre-existing Employee-role validation mismatch:
+0097/seed/showcase include own Company Receipt create/edit/void grants, while the
+account helper accepted only the older six grants. Accept exactly the legacy six
+or current nine, still rejecting privileged/altered permissions and scopes. New
+base roles use the existing nine-grant contract; existing roles are not rewritten.
+
 ## Remove closed menus from accessibility navigation — 2026-09-10
 
 Real Chrome reload now exposes the new administrator, but closed shell menus
@@ -522,7 +551,7 @@ is needed. Do not mark the task Done merely because all five checkpoints are che
 | Exact preview and meaningful human confirmation | Browser fixture plus simulated CLI digest approval/cancel | Actual operator reviewing sources and confirming the live selection |
 | Governed creation and persisted Pack/PDF | Shared-command tests, replay/cancel cases, disk reopen and artifact hashes | Persisted result from that same authorized live run |
 | Open and review result | Agent-rendered PDF inspection; Codex open request queued | Actual operator opens and reviews the result; browser business-user acceptance |
-| Regression safety | Full run: 880 pass / 2 fixture failures / 3 skipped; both failures repaired, 16 targeted tests pass | No second full run after fixture-only repair; PostgreSQL remains unverified |
+| Regression safety | Later local full run: 895 pass / 3 PostgreSQL skips. Revision eaf7f6 passed PostgreSQL 16 security lifecycle and cross-engine transaction/concurrency CI steps. Subsequent login/menu targeted gates pass | Latest CI run 34426075276 now passed for 6f06a883; this does not prove production or the real human pilot |
 | Production readiness | Separate inherited release evidence | Approved PostgreSQL/deployment/operations and business-owner acceptance |
 
 A CLI service-route pilot and a separate browser fixture must not be reported as

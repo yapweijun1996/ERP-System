@@ -43,8 +43,7 @@ SCREENS['new-employee'] = async function(root){
           <div class="callout info">${esc(t('staff.identityHint'))}</div>
           <div class="fldrow c2"><div class="fld"><span>${esc(t('staff.username'))} *</span><input id="neUsername" autocomplete="off"></div>
           <div class="fld"><span>${esc(t('staff.workEmail'))} *</span><input id="neAccountEmail" type="email"></div></div>
-          <div class="fldrow c2" style="margin-top:12px"><div class="fld"><span>${esc(t('staff.initialPassword'))} *</span><input id="nePassword" type="password" autocomplete="new-password"></div>
-          <div class="fld"><span>${esc(t('staff.expiry'))}</span><input value="${esc(t('staff.expiryValue'))}" disabled></div></div>
+          <div class="fld" style="margin-top:12px"><span>${esc(t('staff.initialPassword'))} *</span><input id="nePassword" type="password" autocomplete="new-password"></div>
           <p class="hint">${esc(t('staff.passwordHint'))}</p>
         </div></div>
         <div class="panel" ${step===3?'':'hidden'}><div class="panel-h">${ic('shield')}<h3>${esc(t('staff.companyRoles'))}</h3></div><div class="panel-body">

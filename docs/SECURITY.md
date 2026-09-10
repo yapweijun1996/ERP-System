@@ -19,9 +19,9 @@ It is not a substitute for deployment-specific threat modelling or operating pol
 - A linked employee with active direct reports receives a system-managed Manager
   role. The grant is removed when no longer required. A manually assigned Manager
   role is never removed by reporting-line reconciliation.
-- Temporary activation and reset credentials use an expiring AES-GCM envelope.
-  Every HR reveal is audited. First activation changes the password, records an
-  email address and permanently clears the recoverable envelope.
+- Generated account and reset passwords use an expiring AES-GCM handoff envelope.
+  Every HR reveal is audited. Accounts are immediately usable; handoff expiry
+  limits password recovery, not login. No first-login activation is required.
 - HR password reset revokes live sessions and issues a new one-time credential.
   Offboarding immediately disables the employee and user, revokes sessions, clears
   active credential envelopes, transfers current work and retains historical facts.
@@ -37,18 +37,18 @@ It is not a substitute for deployment-specific threat modelling or operating pol
 
 The product owner has accepted the following current boundary:
 
-- **Email verification is optional.** First activation requires an email address,
-  but ownership of that address is not verified. Employee forgotten-password
+- **Email verification is optional.** Employee email may be absent; ownership of
+  a supplied address is not verified. Employee forgotten-password
   recovery remains an HR-controlled reset rather than email self-service.
 - **MFA is optional.** There is no mandatory second-factor enrollment, challenge,
   recovery-code or trusted-device workflow.
-- **Sensitive-operation step-up is optional.** HR activation-secret reveal, reset
+- **Sensitive-operation step-up is optional.** HR credential reveal, reset
   and offboarding rely on the active session, CSRF, RBAC, tenant scope and audit;
   they do not require a fresh password or second factor.
 
 These are accepted risks, not security guarantees. A stolen authenticated session or
 compromised HR account therefore has greater impact than it would under mandatory MFA
-and step-up authentication, while an incorrectly entered activation email can remain
+and step-up authentication, while an incorrectly entered account email can remain
 unverified. Production deployments with stronger assurance requirements should make
 MFA, verified contact channels and step-up authentication mandatory before enabling
 employee self-service broadly.
@@ -83,7 +83,7 @@ production volumes may be removed.
 ### Automated proof
 
 The test suite covers organisation-local identifier uniqueness, cross-organisation
-login reuse, activation-secret destruction, HR reset, immediate session revocation,
+login reuse, credential handoff expiry, HR reset, immediate session revocation,
 offboarding transfer, role-permission union, reporting-line Manager reconciliation,
 cross-tenant denial, actor-id tampering and direct/tree hierarchy boundaries. Schema
 migration and PGlite replay checks prove the same data contract used by Demo and API

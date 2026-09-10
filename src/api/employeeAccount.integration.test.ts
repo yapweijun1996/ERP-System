@@ -55,7 +55,7 @@ describe('employee account API lifecycle', () => {
     });
   }
 
-  it('requires an audited reveal, restricts preactivation, and destroys the secret on completion', async () => {
+  it('requires audited reveal and permits immediate login without activation', async () => {
     const adminLogin = await login('admin', 'demo1234');
     const admin = cookies(adminLogin);
     const [subject] = await db.select().from(employee).where(and(
@@ -97,7 +97,7 @@ describe('employee account API lifecycle', () => {
     await db.update(employeeActivationSecret).set({
       expiresAt: new Date(Date.now() - 1_000),
     }).where(eq(employeeActivationSecret.userId, createdBody.data.userId));
-    expect((await login('staff.one', first.data.temporaryPassword)).status).toBe(401);
+    expect((await login('staff.one', first.data.temporaryPassword)).status).toBe(200);
     await db.update(employeeActivationSecret).set({
       expiresAt: new Date(Date.now() + 60_000),
     }).where(eq(employeeActivationSecret.userId, createdBody.data.userId));
@@ -108,12 +108,11 @@ describe('employee account API lifecycle', () => {
     const sessionBody = await (await fetch(`${baseUrl}/api/auth/session`, {
       headers: { cookie: employeeCookies.header },
     })).json() as { passwordChangeRequired: boolean };
-    expect(sessionBody.passwordChangeRequired).toBe(true);
+    expect(sessionBody.passwordChangeRequired).toBe(false);
     const blockedDashboard = await fetch(`${baseUrl}/api/dashboard`, {
       headers: { cookie: employeeCookies.header },
     });
-    expect(blockedDashboard.status).toBe(403);
-    expect((await blockedDashboard.json()).error.code).toBe('activation_required');
+    expect(blockedDashboard.status).toBe(200);
 
     const completed = await fetch(`${baseUrl}/api/auth/activation/actions/complete`, {
       method: 'POST',
@@ -128,13 +127,13 @@ describe('employee account API lifecycle', () => {
         confirmPassword: 'Changed-password-456!',
       }),
     });
-    expect(completed.status).toBe(200);
+    expect(completed.status).toBe(410);
     const [secret] = await db.select().from(employeeActivationSecret)
       .where(eq(employeeActivationSecret.userId, createdBody.data.userId));
-    expect(secret.credentialEnvelope).toBeNull();
-    expect(secret.clearedAt).toBeInstanceOf(Date);
-    expect((await login('staff.one', first.data.temporaryPassword)).status).toBe(401);
-    expect((await login('staff.one', 'Changed-password-456!')).status).toBe(200);
+    expect(secret.credentialEnvelope).not.toBeNull();
+    expect(secret.clearedAt).toBeNull();
+    expect((await login('staff.one', first.data.temporaryPassword)).status).toBe(200);
+    expect((await login('staff.one', 'Changed-password-456!')).status).toBe(401);
   });
 
   it('does not issue public email reset tokens for linked employee accounts', async () => {
