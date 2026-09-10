@@ -19,6 +19,14 @@ import {
 } from '../../modules/agent/aiRuntime';
 import { AgentActionContractError } from '../../modules/agent/actionContracts';
 import { ActionDispatchError } from '../actionDispatcher';
+import {
+  AgentWorkflowError,
+  cancelReceiptPackWorkflow,
+  pauseReceiptPackWorkflow,
+  queueReceiptPackWorkflow,
+  readReceiptPackWorkflow,
+  resumeReceiptPackWorkflow,
+} from '../../modules/agent/durableWorkflow';
 
 export interface ReceiptAssistantRouterOptions {
   /** A server-owned provider adapter. It is intentionally absent by default. */
@@ -93,6 +101,10 @@ function handleAssistantError(res: express.Response, error: unknown): boolean {
   }
   if (error instanceof AgentActionContractError) {
     apiError(res, 400, error.code, error.message);
+    return true;
+  }
+  if (error instanceof AgentWorkflowError) {
+    apiError(res, error.status, error.code, error.message);
     return true;
   }
   return false;
@@ -245,6 +257,93 @@ export function createAssistantRouter(
         decision,
       );
       res.json({ data: result, meta: { humanDecision: decision } });
+    } catch (error) {
+      if (!handleAssistantError(res, error)) throw error;
+    }
+  });
+
+  /**
+   * Durable Receipt Pack execution is an explicit trigger. The trigger only
+   * queues a reviewed intent; it can never manufacture or bypass approval.
+   */
+  router.post('/receipts/workflows', async (req, res) => {
+    const access = await requireConfiguredIdentity(req, res);
+    if (!access) return;
+    try {
+      const body = bodyRecord(req.body);
+      rejectUnknownKeys(body, ['intentId', 'triggerKey', 'maxAttempts']);
+      if (typeof body.triggerKey !== 'string') {
+        throw new AgentWorkflowError('agent_workflow_trigger_invalid', 'triggerKey is required.', 400);
+      }
+      const workflow = await queueReceiptPackWorkflow(
+        db,
+        { masterFn: access.session.masterFn, companyFn: access.session.activeCompanyFn },
+        {
+          intentId: positiveInteger(body.intentId, 'intentId'),
+          agentPrincipalId: access.identity.agentPrincipalId,
+          actorUserId: access.identity.ownerUserId,
+          triggerKey: body.triggerKey,
+          maxAttempts: body.maxAttempts == null ? undefined : positiveInteger(body.maxAttempts, 'maxAttempts'),
+          requestId: `${context(res).requestId}:workflow-queue`,
+        },
+      );
+      res.status(workflow.replayed ? 200 : 202).json({
+        data: workflow.workflow,
+        meta: {
+          durableWorkflow: true,
+          approvalBoundary: workflow.workflow.state === 'waiting_approval' ? 'waiting_approval' : 'approved_intent',
+          replayed: workflow.replayed,
+        },
+      });
+    } catch (error) {
+      if (!handleAssistantError(res, error)) throw error;
+    }
+  });
+
+  router.get('/receipts/workflows/:runId', async (req, res) => {
+    const access = await requireConfiguredIdentity(req, res);
+    if (!access) return;
+    try {
+      const workflow = await readReceiptPackWorkflow(
+        db,
+        { masterFn: access.session.masterFn, companyFn: access.session.activeCompanyFn },
+        positiveInteger(req.params.runId, 'runId'),
+        access.identity.ownerUserId,
+      );
+      res.json({ data: workflow, meta: { durableWorkflow: true } });
+    } catch (error) {
+      if (!handleAssistantError(res, error)) throw error;
+    }
+  });
+
+  router.post('/receipts/workflows/:runId/:action', async (req, res) => {
+    const action = req.params.action;
+    if (action !== 'pause' && action !== 'resume' && action !== 'cancel') {
+      apiError(res, 404, 'route_not_found', 'Receipt workflow action not found.');
+      return;
+    }
+    const access = await requireConfiguredIdentity(req, res);
+    if (!access) return;
+    try {
+      const body = bodyRecord(req.body);
+      rejectUnknownKeys(body, ['expectedVersion', 'reason']);
+      if (typeof body.reason !== 'string' || body.reason.trim().length < 3) {
+        throw new AgentWorkflowError('agent_workflow_reason_invalid', 'A reason of at least 3 characters is required.', 400);
+      }
+      const input = {
+        runId: positiveInteger(req.params.runId, 'runId'),
+        expectedVersion: positiveInteger(body.expectedVersion, 'expectedVersion'),
+        actorUserId: access.identity.ownerUserId,
+        reason: body.reason.trim(),
+        requestId: `${context(res).requestId}:workflow-${action}`,
+      };
+      const scope = { masterFn: access.session.masterFn, companyFn: access.session.activeCompanyFn };
+      const workflow = action === 'pause'
+        ? await pauseReceiptPackWorkflow(db, scope, input)
+        : action === 'resume'
+          ? await resumeReceiptPackWorkflow(db, scope, input)
+          : await cancelReceiptPackWorkflow(db, scope, input);
+      res.json({ data: workflow, meta: { durableWorkflow: true, action } });
     } catch (error) {
       if (!handleAssistantError(res, error)) throw error;
     }

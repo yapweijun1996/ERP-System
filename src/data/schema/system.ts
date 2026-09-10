@@ -430,6 +430,7 @@ export const outboxEvent = pgTable('outbox_event', {
   ).where(sql`${t.topic} in (
     'document.scan.requested',
     'document.extraction.requested',
-    'receipt.inbox.submitted'
+    'receipt.inbox.submitted',
+    'agent.workflow.receipt_pack.requested'
   )`),
 ]);

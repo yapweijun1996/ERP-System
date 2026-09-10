@@ -69,3 +69,28 @@ export function withCalendarWorkerTransaction<T>(
     return command(tx);
   });
 }
+
+/** Agent workers claim only the durable workflow/outbox tables listed in the
+ * production RLS policy. The flag never grants a tenant scope to API callers. */
+export function withAgentWorkerTransaction<T>(
+  db: DB,
+  command: (tx: DB) => Promise<T>,
+): Promise<T> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select set_config('app.agent_worker', 'on', true)`);
+    return command(tx);
+  });
+}
+
+/** Tenant-scoped Agent worker work after a cross-tenant run claim. */
+export function withAgentWorkerTenantTransaction<T>(
+  db: DB,
+  scope: Scope,
+  command: (tx: DB) => Promise<T>,
+): Promise<T> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select set_config('app.agent_worker', 'on', true)`);
+    await setTenantContext(tx, scope);
+    return command(tx);
+  });
+}

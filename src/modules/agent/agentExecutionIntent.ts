@@ -22,6 +22,7 @@ export const {
   cancelAgentExecutionIntentWithin,
   verifyAgentExecutionIntentWithin,
   executeAgentReceiptPackWithin,
+  executeStoredAgentReceiptPackWithin,
 } = createAgentExecutionIntentCommands({
   sha256: (value) => createHash('sha256').update(value).digest('hex'),
   appendAudit,
