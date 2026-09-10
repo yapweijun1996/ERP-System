@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { and, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
@@ -22,9 +23,13 @@ let at: Date;
 suite('durable Receipt Pack workflow PostgreSQL concurrency proof', () => {
   const suffix = `${process.pid}_${randomBytes(4).toString('hex')}`;
   const databaseName = `erp_workflow_${suffix}`;
+  const roleName = `erp_workflow_worker_${suffix}`;
+  const rolePassword = randomBytes(18).toString('hex');
   let clusterPool: Pool;
   let pool: Pool;
+  let workerPool: Pool;
   let db: NodePgDatabase<typeof schema>;
+  let workerDb: NodePgDatabase<typeof schema>;
   let scope: { masterFn: string; companyFn: string };
   let admin: typeof appUser.$inferSelect;
   let principalId: number;
@@ -137,21 +142,35 @@ suite('durable Receipt Pack workflow PostgreSQL concurrency proof', () => {
       requestId: `workflow-pg-queue-${suffix}`,
     }, at);
     runId = queued.workflow.id;
+
+    await pool.query(`create role "${roleName}" login password '${rolePassword}' nosuperuser nobypassrls nocreatedb nocreaterole noinherit`);
+    await pool.query(`grant connect on database "${databaseName}" to "${roleName}"`);
+    await pool.query(`grant usage on schema public to "${roleName}"`);
+    await pool.query(`grant select, insert, update, delete on all tables in schema public to "${roleName}"`);
+    await pool.query(`grant usage, select on all sequences in schema public to "${roleName}"`);
+    await pool.query(await readFile('deploy/sql/production-rls.sql', 'utf8'));
+    const workerUrl = new URL(databaseUrl);
+    workerUrl.username = roleName;
+    workerUrl.password = rolePassword;
+    workerPool = new Pool({ connectionString: workerUrl.toString(), max: 8 });
+    workerDb = drizzle(workerPool, { schema });
   }, 60_000);
 
   afterAll(async () => {
+    await workerPool?.end();
     await pool?.end();
     if (clusterPool) {
       await clusterPool.query(`select pg_terminate_backend(pid) from pg_stat_activity where datname = '${databaseName}' and pid <> pg_backend_pid()`);
       await clusterPool.query(`drop database if exists "${databaseName}"`);
+      await clusterPool.query(`drop role if exists "${roleName}"`);
       await clusterPool.end();
     }
   }, 30_000);
 
   it('lets only one of two concurrent workers commit the Pack', async () => {
     const results = await Promise.all([
-      processAgentWorkflowBatch(db, { workerId: `workflow-pg-worker-a-${suffix}`, now: at }),
-      processAgentWorkflowBatch(db, { workerId: `workflow-pg-worker-b-${suffix}`, now: at }),
+      processAgentWorkflowBatch(workerDb, { workerId: `workflow-pg-worker-a-${suffix}`, now: at }),
+      processAgentWorkflowBatch(workerDb, { workerId: `workflow-pg-worker-b-${suffix}`, now: at }),
     ]);
     expect(results.filter((result) => result.succeeded === 1)).toHaveLength(1);
     const [run] = await db.select().from(agentWorkflowRun).where(eq(agentWorkflowRun.id, runId));
