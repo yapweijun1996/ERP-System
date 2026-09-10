@@ -290,6 +290,46 @@ async function main() {
           await page.locator('#wizFinish').waitFor({ state: 'visible', timeout: TIMEOUT });
         }
 
+        if (viewport.label === 'desktop' || viewport.label === 'small-mobile') {
+          await page.evaluate(async () => {
+            const adapter = window.ErpSystemData;
+            const changed = await adapter.db.query(
+              "update master_module set enabled=false where master_fn=$1 and module_key in ('expenses_tax','inventory') returning module_key",
+              [DB.erpSystem.scope.masterFn],
+            );
+            if (changed.rows.length !== 2) throw new Error('Existing-Master fixture was not applied');
+            await adapter.refresh();
+            renderSetupWizard();
+          });
+          await page.locator('#wizNext').click();
+          await page.locator('#wizNext').click();
+          await page.locator('#wizCompany').fill('Synthetic Wizard Regression');
+          await page.locator('#wizNext').click();
+          await page.locator('#wizAdminUsername').fill('wizard.regression');
+          await page.locator('#wizAdminEmail').fill('wizard.regression@example.test');
+          await page.locator('#wizAdminPassword').fill('fixture-only-password');
+          await page.locator('#wizAdminPasswordConfirm').fill('fixture-only-password');
+          await page.locator('#wizNext').click();
+          const restricted = await page.evaluate(() => {
+            const inputs = [...document.querySelectorAll('#wizModuleSeg input[data-module-key]')];
+            return {
+              disabled: inputs.filter(input => input.disabled).map(input => input.dataset.moduleKey),
+              selected: inputs.filter(input => input.checked).map(input => input.dataset.moduleKey),
+              explanation: document.querySelector('[data-module-card="expenses_tax"]').textContent,
+              overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+            };
+          });
+          if (!['expenses_tax', 'inventory', 'warehouse', 'manufacturing', 'quality'].every(key => restricted.disabled.includes(key))
+            || restricted.selected.includes('expenses_tax') || !restricted.selected.includes('hr')
+            || !restricted.explanation.includes('Platform activation') || restricted.overflow > 1) {
+            throw new Error(`${viewport.label}: existing-Master availability regressed: ${JSON.stringify(restricted)}`);
+          }
+          await page.locator('#wizNext').click();
+          await page.locator('#wizNext').click();
+          await page.locator('#wizFinish').click();
+          await page.waitForFunction(() => localStorage.getItem('aria-setup-wizard-complete') === '1', null, { timeout: TIMEOUT });
+        }
+
         if (runtimeErrors.length) {
           throw new Error(`${viewport.label}: setup wizard emitted runtime errors: ${runtimeErrors.join(' | ')}`);
         }

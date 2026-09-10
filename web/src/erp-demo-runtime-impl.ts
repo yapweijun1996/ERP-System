@@ -1,4 +1,5 @@
 import { accessDemoDocumentWithin } from '../../src/data/demoDocumentAccess';
+import { readSetupModuleCatalogWithin } from '../../src/auth/moduleProvisioning';
 import { createDemoReceiptAssistantCommands } from '../../src/data/demoReceiptAssistant';
 import { createCompanyReceiptPackCommands, CompanyReceiptPackError } from '../../src/modules/expenses/companyReceiptPackCommands';
 import { createAgentExecutionIntentCommands } from '../../src/modules/agent/agentExecutionIntentCommands';
@@ -572,6 +573,9 @@ export const erpDemoRuntime = Object.freeze({
     dependencies: Object.freeze([...definition.dependencies]),
   }))),
   commands: Object.freeze({
+    readSetupModuleCatalogWithin(db: DemoOrm, masterFn: string) {
+      return readSetupModuleCatalogWithin(asDomainDb(db), masterFn);
+    },
     accessDemoDocument: accessDemoDocumentWithin,
     companyReceiptPackCommands: receiptPackCommands,
     agentExecutionIntentCommands: receiptIntentCommands,

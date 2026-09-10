@@ -7,9 +7,17 @@ The Demo Pack path uses shared creation/replay commands and enforces the reviewe
 selection digest. Demo preparation, persisted approval and execution now use shared
 G06 commands with actor/Company ownership and transactional audit. Local integration
 and Company Receipts browser regression pass; authentication remains synthetic.
-Real operator acceptance remains open. A refreshed local Pages candidate and a
-hash-verified copy of the current live release are available; neither was
-deployed. Full-suite release regression passed: 895 tests, with 3 PostgreSQL tests skipped. Earlier candidates are stale.
+Real operator acceptance remains open. Pages release
+`db33a6420f7ad7b7d744062ad624b5392a94d5a2` is deployed by run 34422487666.
+All 135 served assets match the clean committed build; the remaining manifest
+entry is the unserved empty `.nojekyll` marker. The previous release has a
+hash-verified local rollback copy. Full-suite local regression passed: 895 tests,
+with 3 PostgreSQL tests skipped. Remote CI run 34422487691 is still in progress.
+Browser access resumed. The real existing-Master setup path exposed a static
+catalog/entitlement mismatch. The local repair projects actual Master availability,
+disables unavailable modules/dependencies and preserves the shared write guard.
+Eight focused tests, four browser viewports and common local gates pass; this
+follow-up repair is not yet deployed.
 The assistant success view now opens its existing Pack PDF after rechecking the
 completion artifact hash; opening does not execute another creation command.
 Selected rows are now progressively expandable beyond 20 with amount, currency,

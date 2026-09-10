@@ -306,6 +306,7 @@ function renderSetupWizard(){
     en:{
       s4:'Modules', s4h:'Activate company modules', s4p:'Choose what this company needs first. You can adjust Company allocation later from the Platform workspace.',
       modulesRecommended:'Recommended', modulesSelected:'Selected', modulesDependencies:'Includes: {modules}',
+      modulesUnavailable:'Requires Platform activation for this organization or its dependencies.',
       moduleExpenses:'Company receipts, tax evidence packs and print/download.',
       moduleHr:'Staff directory, employee accounts, calendar and leave applications.',
       moduleRoles:'Roles and permissions remain available in Admin Settings.',
@@ -315,6 +316,7 @@ function renderSetupWizard(){
     ms:{
       s4:'Modul', s4h:'Aktifkan modul syarikat', s4p:'Pilih perkara yang diperlukan syarikat ini dahulu. Peruntukan Syarikat boleh dilaras kemudian dalam ruang kerja Platform.',
       modulesRecommended:'Disyorkan', modulesSelected:'Dipilih', modulesDependencies:'Termasuk: {modules}',
+      modulesUnavailable:'Memerlukan pengaktifan Platform untuk organisasi ini atau kebergantungannya.',
       moduleExpenses:'Resit syarikat, pek bukti cukai dan cetak/muat turun.',
       moduleHr:'Direktori staf, akaun pekerja, kalendar dan permohonan cuti.',
       moduleRoles:'Peranan dan kebenaran kekal tersedia dalam Tetapan Admin.',
@@ -324,6 +326,7 @@ function renderSetupWizard(){
     zh:{
       s4:'模块', s4h:'启用公司模块', s4p:'先选择这家公司需要的功能。以后可在平台工作区调整公司的模块分配。',
       modulesRecommended:'推荐', modulesSelected:'已选择', modulesDependencies:'包含：{modules}',
+      modulesUnavailable:'需要平台管理员为此组织启用该模块及其依赖模块。',
       moduleExpenses:'公司收据、税务证据包，以及打印/下载。',
       moduleHr:'员工名录、员工账户、日历和请假申请。',
       moduleRoles:'角色和权限仍可在管理员设置中管理。',
@@ -333,6 +336,7 @@ function renderSetupWizard(){
     ja:{
       s4:'モジュール', s4h:'会社モジュールを有効にする', s4p:'この会社が最初に必要とする機能を選択します。会社への割り当ては後で Platform ワークスペースで変更できます。',
       modulesRecommended:'推奨', modulesSelected:'選択済み', modulesDependencies:'含まれるもの: {modules}',
+      modulesUnavailable:'この組織のモジュールまたは依存モジュールをプラットフォームで有効にする必要があります。',
       moduleExpenses:'会社領収書、税務証跡パック、印刷/ダウンロード。',
       moduleHr:'従業員名簿、従業員アカウント、カレンダー、休暇申請。',
       moduleRoles:'ロールと権限は管理設定で引き続き利用できます。',
@@ -342,6 +346,7 @@ function renderSetupWizard(){
     vi:{
       s4:'Mô-đun', s4h:'Kích hoạt mô-đun công ty', s4p:'Chọn những gì công ty này cần trước. Bạn có thể điều chỉnh phân bổ Công ty sau trong không gian làm việc Platform.',
       modulesRecommended:'Đề xuất', modulesSelected:'Đã chọn', modulesDependencies:'Bao gồm: {modules}',
+      modulesUnavailable:'Cần kích hoạt trên nền tảng cho tổ chức này hoặc các mô-đun phụ thuộc.',
       moduleExpenses:'Biên lai công ty, gói bằng chứng thuế và in/tải xuống.',
       moduleHr:'Danh bạ nhân viên, tài khoản nhân viên, lịch và đơn xin nghỉ.',
       moduleRoles:'Vai trò và quyền vẫn có trong Cài đặt quản trị.',
@@ -434,7 +439,7 @@ function renderSetupWizard(){
 
   function initializeModuleSelection(catalog){
     if(S.modulesInitialized || !catalog.length) return;
-    S.moduleKeys=catalog.filter(function(item){ return item.defaultCompanyAllocated===true; })
+    S.moduleKeys=catalog.filter(function(item){ return item.available!==false&&item.defaultCompanyAllocated===true; })
       .map(function(item){ return item.key; });
     S.modulesInitialized=true;
   }
@@ -455,12 +460,13 @@ function renderSetupWizard(){
       return '<div class="auth-error" role="alert">Module catalogue is unavailable. Wait a moment and try again.</div>';
     }
     return '<div class="wiz-module-grid" id="wizModuleSeg">'+catalog.map(function(item){
-      var selected=S.moduleKeys.indexOf(item.key)!==-1;
-      var description=moduleDescription(item);
+      var unavailable=item.available===false;
+      var selected=!unavailable&&S.moduleKeys.indexOf(item.key)!==-1;
+      var description=unavailable?s('modulesUnavailable'):moduleDescription(item);
       return '<label class="wiz-module-card '+(selected?'is-selected':'')+'" data-module-card="'+esc(item.key)+'">'+
-        '<input type="checkbox" data-module-key="'+esc(item.key)+'" '+(selected?'checked':'')+'>'+
+        '<input type="checkbox" data-module-key="'+esc(item.key)+'" '+(selected?'checked':'')+' '+(unavailable?'disabled':'')+'>'+
         '<span class="wiz-module-copy"><span><b>'+esc(item.name)+'</b>'+
-        (item.defaultCompanyAllocated?'<em>'+esc(s('modulesRecommended'))+'</em>':'')+'</span>'+
+        (!unavailable&&item.defaultCompanyAllocated?'<em>'+esc(s('modulesRecommended'))+'</em>':'')+'</span>'+
         (description?'<small>'+esc(description)+'</small>':'')+'</span>'+
         '<span class="wiz-module-state">'+esc(selected?s('modulesSelected'):'')+'</span></label>';
     }).join('')+'</div>'+
@@ -470,6 +476,7 @@ function renderSetupWizard(){
 
   function updateModuleSelection(moduleKey, selected){
     var catalog=setupModuleCatalog();
+    if(!catalog.some(function(item){ return item.key===moduleKey&&item.available!==false; })) return;
     var enabled=new Set(S.moduleKeys);
     function includeWithDependencies(key){
       if(enabled.has(key)) return;

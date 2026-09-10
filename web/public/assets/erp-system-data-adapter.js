@@ -137,6 +137,7 @@
 
   var state = {
     db: null, orm: null, runtime: null, mode: 'pending', activeUserId: null,
+    setupModuleCatalog: [],
     activationRequired: false, demoPack: null, demoPackAvailable: null,
   };
 
@@ -624,7 +625,9 @@
       "on entitlement.master_fn=allocation.master_fn and entitlement.module_key=allocation.module_key " +
       "where " + wc('allocation') + " order by allocation.module_key");
 
-    return { master: master, companies: companies, users: users, products: products,
+    var setupModuleCatalog = await state.runtime.commands.readSetupModuleCatalogWithin(
+      state.runtime.createOrm(db), SCOPE.masterFn);
+    return { setupModuleCatalog: setupModuleCatalog, master: master, companies: companies, users: users, products: products,
              warehouses: warehouses, stockLevels: stockLevels, bins: bins, lots: lots,
              serials: serials, locationBalances: locationBalances, customers: customers,
              accounts: accounts, taxRules: taxRules, orders: orders, orderLines: orderLines,
@@ -720,6 +723,7 @@
   /* ---------------- payload → Aria DB mapping ---------------- */
 
   function applyData(d, mode){
+    state.setupModuleCatalog = Array.isArray(d.setupModuleCatalog) ? d.setupModuleCatalog : [];
     state.mode = mode;
     var activeCompany = d.companies.filter(function(c){ return c.company_fn === SCOPE.companyFn; })[0] || d.companies[0];
     /* fallback keeps applyData() safe for a freshly wizard-created company that
@@ -1522,7 +1526,7 @@
      Password hashing stays in Web Crypto, while all database rules execute in
      completeDemoSetupWithin. Any failure rolls the whole setup back. */
   function setupModuleCatalog(){
-    var catalog=state.runtime&&state.runtime.setupModuleCatalog;
+    var catalog=state.setupModuleCatalog;
     if(!Array.isArray(catalog)) return [];
     return catalog.map(function(item){
       return {
@@ -1530,6 +1534,7 @@
         name:item.name,
         dependencies:Array.isArray(item.dependencies)?item.dependencies.slice():[],
         defaultCompanyAllocated:item.defaultCompanyAllocated===true,
+        available:item.available!==false,
       };
     });
   }

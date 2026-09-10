@@ -7,10 +7,17 @@ The Demo Pack path uses shared creation/replay commands and enforces the reviewe
 selection digest. Demo preparation, persisted approval and execution now use shared
 G06 commands with actor/Company ownership and transactional audit. Local integration
 and Company Receipts browser regression pass; authentication remains synthetic.
-Real operator acceptance remains open. A refreshed local candidate includes the
-latest repairs; its 136 files and the recovered 133-file live rollback copy are
-hash-verified. Neither is a deployment. Full-suite release regression passed: 895 tests,
-with 3 PostgreSQL tests skipped because POSTGRES_URL was unset. Earlier candidates are stale.
+Real operator acceptance remains open. Pages release
+`db33a6420f7ad7b7d744062ad624b5392a94d5a2` is deployed by run 34422487666.
+All 135 served assets match the clean committed build; the remaining manifest
+entry is the unserved empty `.nojekyll` marker. The previous release has a
+hash-verified local rollback copy. Full-suite local regression passed: 895 tests,
+with 3 PostgreSQL tests skipped. Remote CI run 34422487691 is still in progress.
+Browser access resumed. The real existing-Master setup path exposed a static
+catalog/entitlement mismatch. The local repair projects actual Master availability,
+disables unavailable modules/dependencies and preserves the shared write guard.
+Eight focused tests, four browser viewports and common local gates pass; this
+follow-up repair is not yet deployed.
 The assistant success view now opens its existing Pack PDF after rechecking the
 completion artifact hash; opening does not execute another creation command.
 Selected rows are now progressively expandable beyond 20 with amount, currency,
@@ -69,12 +76,12 @@ human viewing.
 **Next:** run the current browser assistant from a registered origin, inspect its
 exact source evidence and contents, obtain human confirmation, then open its
 verified persisted Pack. Local UI availability is not actual human acceptance.
-The user selected and authorized the public GPT Demo gateway. The current local
-origin is not registered; the authenticated gateway Settings page was inspected on
-2026-09-10 and is read-only. Source registration requires gateway server access, or
-a reviewed current build must be hosted on the already registered Pages origin.
-Neither route was changed in this checkpoint. Simulated confirmation is not human
-acceptance, and the public query-proposal flow does not prove server native tools.
+The user selected and authorized the public GPT Demo gateway. The reviewed current
+build is now hosted on its registered Pages origin. No gateway registration or
+Pages environment protection was changed. Browser control reported the Mac locked;
+manual unlock is the next required input for live page interaction. Remote CI
+continues independently. Simulated confirmation is not human acceptance, and the
+public query-proposal flow does not prove server native tools.
 
 | Boundary | Current source evidence | Remaining evidence |
 | --- | --- | --- |

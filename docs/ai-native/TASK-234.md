@@ -10,6 +10,24 @@ The five S-checkpoints are execution checkpoints, not five new task records.
 Check a checkpoint only after its listed exit is observed and recorded.
 All four G07 criteria plus common DoD remain required for task completion.
 
+## Existing-Master setup obstruction — 2026-09-10
+
+The deployed real-browser pilot found an upgraded existing IndexedDB Master with
+Expenses & Tax disabled. The first-run wizard recommended that module from the
+static catalog, then the shared setup command correctly rejected the selection.
+Fix the read projection, not the entitlement guard: the Demo wizard must display
+existing Master availability/default allocation and disable unavailable modules
+or dependencies. Missing configuration uses the same trusted-bootstrap defaults;
+reading the catalog must not create or enable entitlement rows. Production's
+new-Master setup defaults remain unchanged.
+
+Source owners: moduleProvisioning.ts supplies the scoped catalog projection;
+Demo runtime/adapter transports it; screens-setup-wizard.js renders availability.
+Verify disabled existing modules/dependencies, cross-Master isolation, no read-side
+writes, unchanged fresh-Master defaults, and desktop/mobile wizard behavior. Then
+resume the registered-origin pilot using normal authorized module allocation.
+This supporting repair cannot establish human Pack acceptance.
+
 ## Freeze the reviewed Pages source — 2026-09-10
 
 Outcome: bind the registered-origin pilot to a reproducible Git revision while

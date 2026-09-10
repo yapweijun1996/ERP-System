@@ -8,9 +8,34 @@ import {
   initializeMasterEntitlementDefaultsWithin,
   ModuleProvisioningError,
   normalizeCompanyModuleSelection,
+  readSetupModuleCatalogWithin,
 } from './moduleProvisioning';
 
 describe('trusted platform module provisioning', () => {
+  it('projects existing Master restrictions without enabling modules or other Masters', async () => {
+    const db = await freshDb();
+    await db.insert(master).values([
+      { masterFn: 'M-OLD', loginCode: 'OLD', name: 'Existing Master' },
+      { masterFn: 'M-OTHER', loginCode: 'OTHER', name: 'Other Master' },
+    ]);
+    await initializeMasterEntitlementDefaultsWithin(db, 'M-OLD');
+    await db.update(masterModule).set({ enabled: false }).where(and(
+      eq(masterModule.masterFn, 'M-OLD'), eq(masterModule.moduleKey, 'expenses_tax'),
+    ));
+    await db.update(masterModule).set({ enabled: false }).where(and(
+      eq(masterModule.masterFn, 'M-OLD'), eq(masterModule.moduleKey, 'inventory'),
+    ));
+    const before = await db.select().from(masterModule);
+    const catalog = await readSetupModuleCatalogWithin(db, 'M-OLD');
+    expect(catalog.find(item => item.key === 'expenses_tax')).toMatchObject({ available: false, defaultCompanyAllocated: false });
+    expect(catalog.find(item => item.key === 'warehouse')?.available).toBe(false);
+    expect(catalog.find(item => item.key === 'manufacturing')?.available).toBe(false);
+    expect(catalog.find(item => item.key === 'hr')).toMatchObject({ available: true, defaultCompanyAllocated: true });
+    const other = await readSetupModuleCatalogWithin(db, 'M-OTHER');
+    expect(other.every(item => item.available)).toBe(true);
+    expect(other.filter(item => item.defaultCompanyAllocated).map(item => item.key)).toEqual(['hr', 'expenses_tax']);
+    expect(await db.select().from(masterModule)).toEqual(before);
+  });
   it('initializes a Master and applies its default allocation to a new Company', async () => {
     const db = await freshDb();
     await db.insert(master).values({ masterFn: 'M-NEW', loginCode: 'NEW', name: 'New Master' });
