@@ -1821,5 +1821,6 @@
   "staff.emailReady": "Mẫu email đã sẵn sàng để kiểm tra và gửi thủ công.",
   "staff.emailCopied": "Đã sao chép email",
   "staff.copyFailed": "Không thể truy cập hoặc sao chép thông tin đăng nhập. Kiểm tra quyền truy cập và bảng nhớ tạm.",
-  "staff.emailTemplate": "To: {email}\nSubject: Your {company} ERP account\n\nHello {name},\n\nYour ERP account is ready to use.\n\nSign in: {url}\nOrganization code: {organization}\nUsername: {username}\nEmail: {email}\nPassword: {password}\n\nNo activation is required. Keep your password private. Contact HR if you need help.\n\nRegards,\nHR"
+  "staff.emailTemplate": "To: {email}\nSubject: Your {company} ERP account\n\nHello {name},\n\nYour ERP account is ready to use.\n\nSign in: {url}\nOrganization code: {organization}\nUsername: {username}\nEmail: {email}\nPassword: {password}\n\nNo activation is required. Keep your password private. Contact HR if you need help.\n\nRegards,\nHR",
+  "purchasing.goodsReceipts.description": "Xem các phiếu nhận đủ hàng đã ghi sổ theo đơn mua hàng được phê duyệt. Việc ghi sổ cập nhật tồn kho và phục vụ đối chiếu ba bên."
 }
