@@ -43,7 +43,6 @@ SCREENS['new-employee'] = async function(root){
           <div class="callout info">${esc(t('staff.identityHint'))}</div>
           <div class="fldrow c2"><div class="fld"><span>${esc(t('staff.username'))} *</span><input id="neUsername" autocomplete="off"></div>
           <div class="fld"><span>${esc(t('staff.workEmail'))} *</span><input id="neAccountEmail" type="email"></div></div>
-          <div class="fld" style="margin-top:12px"><span>${esc(t('staff.initialPassword'))} *</span><input id="nePassword" type="password" autocomplete="new-password"></div>
           <p class="hint">${esc(t('staff.passwordHint'))}</p>
         </div></div>
         <div class="panel" ${step===3?'':'hidden'}><div class="panel-h">${ic('shield')}<h3>${esc(t('staff.companyRoles'))}</h3></div><div class="panel-body">
@@ -118,8 +117,8 @@ SCREENS['new-employee'] = async function(root){
       draft.neUsername=String(draft.neEmail).split('@')[0].toLowerCase().replace(/[^a-z0-9._-]/g,'');
     }else if(step===2){
       const invalid=[
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.neAccountEmail||'')&&{id:'neAccountEmail',message:t('staff.validationIdentity')},
         !/^[a-z0-9][a-z0-9._-]{2,63}$/.test(draft.neUsername||'')&&{id:'neUsername',message:t('staff.validationIdentity')},
-        String(draft.nePassword||'').length<8&&{id:'nePassword',message:t('staff.validationIdentity')},
       ].filter(Boolean);
       if(invalid.length){ showValidation(t('staff.validationIdentity'),invalid); return; }
       clearValidation();
@@ -143,17 +142,8 @@ SCREENS['new-employee'] = async function(root){
           startDate:draft.neStart,annualLeaveDays:Number(draft.neLeave||14),
           baseSalary:Number(draft.neSalary).toFixed(2)},
         username:draft.neUsername,email:draft.neAccountEmail,
-        roleIds:draft.roles.map(Number),initialPassword:draft.nePassword,
+        roleIds:draft.roles.map(Number),
       });
-      /* Standard ERP onboarding ends at the employee workspace: the
-       * administrator does not need to copy a password just to verify the
-       * new profile. Production uses an audited server-side session; Demo
-       * uses the same adapter contract. */
-      if(created&&created.userId&&typeof window.ErpSystemData.impersonateUser==='function'){
-        await window.ErpSystemData.impersonateUser(created.userId,'Initial employee workspace review');
-        location.reload();
-        return;
-      }
       toast(t('staff.ready',{name:draft.neName}),'ok');
       navigate('employee',{employeeId:Number(created&&created.employeeId)});
     }catch(error){ button.disabled=false; toast((error&&error.message)||s('createError'),'danger'); }

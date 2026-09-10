@@ -1510,7 +1510,7 @@
   "staff.initialPassword": "パスワード",
   "staff.expiry": "有効期限",
   "staff.expiryValue": "初回使用時または7日",
-  "staff.passwordHint": "パスワードは直ちにハッシュ化され、返されません。アカウントは作成後すぐに利用できます。",
+  "staff.passwordHint": "安全なパスワードが自動生成されます。権限のある HR または Superadmin はパスワードと従業員向けメールをコピーできます。",
   "staff.companyRoles": "会社ロール",
   "staff.roleHint": "ロールは {company} にのみ適用されます。複数ロールは許可操作を統合し、最も広いデータ範囲を採用します。",
   "staff.customRole": "会社カスタムロール",
@@ -1520,7 +1520,7 @@
   "staff.continue": "続行",
   "staff.activate": "アカウント作成",
   "staff.validationEmployee": "必須の従業員項目をすべて入力してください。",
-  "staff.validationIdentity": "有効なユーザー名と8文字以上の仮パスワードを入力してください。",
+  "staff.validationIdentity": "有効なユーザー名と勤務先メールを入力してください。",
   "staff.validationRole": "会社ロールを1つ以上選択してください。",
   "staff.ready": "{name} のアカウントは利用可能です。",
   "access.dataScope": "データ範囲",
@@ -1812,5 +1812,14 @@
   "recovery.invalid": "リンクが無効か期限切れです。復旧メールを再申請してください。",
   "recovery.failed": "処理を完了できませんでした。接続を確認して再試行してください。",
   "recovery.done": "パスワードを更新しました。新しいパスワードでログインしてください。",
-  "recovery.accepted": "対象のアカウントには復旧手順が送信されます。"
+  "recovery.accepted": "対象のアカウントには復旧手順が送信されます。",
+  "staff.handoffTitle": "アカウントの引き渡し",
+  "staff.handoffHint": "アカウントはすぐに利用できます。パスワードまたはメールをコピーして手動で渡してください。パスワードの取得期限は7日ですが、ログイン用パスワードは7日後に失効しません。",
+  "staff.emailPreview": "メールのプレビュー",
+  "staff.generateEmail": "メールを生成",
+  "staff.copyEmail": "メールをコピー",
+  "staff.emailReady": "内容を確認し、コピーして手動で送信してください。",
+  "staff.emailCopied": "メールをコピーしました",
+  "staff.copyFailed": "認証情報を取得またはコピーできません。アクセスとクリップボードの権限を確認してください。",
+  "staff.emailTemplate": "To: {email}\nSubject: Your {company} ERP account\n\nHello {name},\n\nYour ERP account is ready to use.\n\nSign in: {url}\nOrganization code: {organization}\nUsername: {username}\nEmail: {email}\nPassword: {password}\n\nNo activation is required. Keep your password private. Contact HR if you need help.\n\nRegards,\nHR"
 }

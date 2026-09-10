@@ -581,3 +581,25 @@ Fix acceptance-blocking defects or leave this task open. Record unrelated findin
 as linked tasks with reproduction and DoD; a documented defect remains unresolved.
 On interruption, record the next S-checkpoint, exact unverified criterion, changed
 files and last verification in the task's evidence file, then recalculate progress.
+
+## Automatic secure credential handoff — user decision 2026-09-10
+
+Outcome: Add Staff generates a secure password automatically; authorized HR or
+Superadmin can copy it and a complete employee email template for manual delivery.
+Accounts remain immediately usable. No automatic email delivery is in scope.
+
+Ownership: server credential lifecycle / browser Web Crypto generate passwords;
+shared onboarding atomically stores the login hash and expiring encrypted handoff.
+Existing-identity links preserve their password and expose no new handoff. HR-write
+permission and authenticated Company scope protect every reveal/copy request; no
+plaintext enters drafts, idempotency results, logs, audit or persistent UI storage.
+The existing seven-day encrypted handoff expires independently of login validity.
+
+1. Generate credentials at the trusted API/Demo adapter boundary and persist the
+   envelope with the account transaction; retain rollback and existing-user rules.
+2. Replace manual password entry with explanatory copy and finish at the employee
+   record so HR can copy credentials before optionally entering employee workspace.
+3. Reuse audited reveal for password/email copy, include organization, login URL,
+   username and employee name, and show clipboard failure without claiming success.
+4. Verify generated-password login, ciphertext-only persistence, repeat/expiry/reset,
+   permission/Company denial, email contents and desktop/375px UI. Run CLAUDE gates.

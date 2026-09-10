@@ -1,5 +1,35 @@
 # ERP goal execution plan
 
+Automatic credential handoff — 2026-09-10: user-directed Add Staff now generates
+secure passwords automatically. The API uses Node crypto and Demo uses Web Crypto,
+with 24 random bytes. Shared onboarding stores the login hash and seven-day encrypted
+handoff atomically; existing-identity links preserve credentials. No manual password
+entry or activation is required. Creation stays on the employee record. HR-write
+operators can copy the password and generate/copy a complete English email template
+for manual delivery. Every copy rechecks the reveal boundary; responses are no-store,
+clipboard failure is explicit, and plaintext is not persisted or automatically sent.
+This supersedes the earlier operator-password-entry handoff. Local regression passes 4 files / 20 tests plus desktop/375px browser copy, template,
+login and permission checks. Lint, both typechecks, PGlite proof, build, i18n and
+documentation checks pass; release verification follows.
+
+Native Chrome resumed — 2026-09-10: user selected A and the Mac unlocked.
+The existing Receipt Pilot Singapore workspace was preserved and refreshed to the
+new account-access release. The actual Add Staff screen now shows Password and
+account-ready-after-creation wording; the old activation/first-use expiry/forced
+change copy is absent. The synthetic staff profile was re-entered and the browser
+is at Login identity with the account password awaiting operator entry. No account
+has been created or receipt uploaded yet. Two route-label fallback warnings were
+visible in DevTools; no failure was attributed to them. CI 34464383875 shards 2/4
+and 3/4 passed; shards 1/4 and 4/4 remain running. Full CI is not yet accepted.
+
+Release verification — 2026-09-10T10:09:19Z: account-access revision
+`55a57b39302fc6bdf44a68bcd4ccfdbf9c45545f` is deployed by Pages run 34464383892.
+All 135 served files match the committed local build by size and SHA-256; the empty
+`.nojekyll` marker is separately unserved. CI run 34464383875 is still running;
+no full-CI or production PostgreSQL migration acceptance is claimed. Native Chrome
+follow-up was unavailable because the Mac was locked. The 40 local focused tests
+and desktop/375px synthetic browser results remain the verified account evidence.
+
 Account access policy — 2026-09-10: Demo and real Company accounts are ready
 immediately on creation, including administrator and employee flows. Mandatory
 first-login activation and forced initial password changes are removed from the

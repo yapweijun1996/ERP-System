@@ -124,7 +124,7 @@
     return new TextDecoder().decode(plain);
   }
   function newDemoTemporaryPassword(){
-    return 'Aria-'+demoBase64Url(crypto.getRandomValues(new Uint8Array(12)))+'!';
+    return 'Aria-'+demoBase64Url(crypto.getRandomValues(new Uint8Array(24)))+'!';
   }
   var SCOPE = { masterFn: 'M1', companyFn: 'C-SG' };
 
@@ -1612,9 +1612,11 @@
   async function createStaffAccount(input){
     if(!state.db) throw new Error('Demo database unavailable — Staff onboarding needs PGlite.');
     input=input||{};
-    var initialPassword=String(input.initialPassword||'');
-    if(initialPassword.length<8) throw new Error('Initial password must be at least 8 characters.');
-    var passwordHash=await hashPasswordBrowser(initialPassword);
+    if(!await state.runtime.commands.hasPermissionWithin(state.orm,SCOPE,Number(state.activeUserId),'hr.write')) throw new Error('HR write permission is required.');
+    var initialPassword=newDemoTemporaryPassword();
+    var credential={passwordHash:await hashPasswordBrowser(initialPassword),
+      credentialEnvelope:await encryptDemoCredential(initialPassword),
+      expiresAt:new Date(Date.now()+7*24*60*60*1000)};
     var result=await state.db.transaction(async function(tx){
       var orm=state.runtime.createOrm(tx);
       var draft=await state.runtime.commands.createStaffOnboardingDraftWithin(
@@ -1625,7 +1627,7 @@
           roleIds:(input.roleIds||[]).map(Number),
         });
       return state.runtime.commands.activateStaffOnboardingWithin(
-        orm,SCOPE,Number(state.activeUserId),Number(draft.id),Number(draft.version),passwordHash);
+        orm,SCOPE,Number(state.activeUserId),Number(draft.id),Number(draft.version),credential);
     });
     await refresh();
     return result;
@@ -2743,6 +2745,7 @@
     requireEffectiveModuleForResource(key);
     if(key==='hr/employee-accounts'){
       var employeeId=Number(id), actorUserId=Number(state.activeUserId);
+      if(!await state.runtime.commands.hasPermissionWithin(state.orm,SCOPE,actorUserId,'hr.write')) throw new Error('HR write permission is required.');
       if(name==='create'){
         var initialPassword=newDemoTemporaryPassword();
         var createdAccount=await state.runtime.commands.createEmployeeAccount(state.orm,SCOPE,{

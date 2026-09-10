@@ -1510,7 +1510,7 @@
   "staff.initialPassword": "密码",
   "staff.expiry": "有效期",
   "staff.expiryValue": "首次使用或 7 天",
-  "staff.passwordHint": "密码立即进行哈希处理且不会返回。账号创建后即可使用。",
+  "staff.passwordHint": "系统自动生成安全密码。创建后，有权限的 HR 或 Superadmin 可复制密码和员工邮件模板。",
   "staff.companyRoles": "公司角色",
   "staff.roleHint": "角色仅适用于 {company}。多个角色合并允许的动作，并采用最宽的数据范围。",
   "staff.customRole": "自定义公司角色",
@@ -1520,7 +1520,7 @@
   "staff.continue": "继续",
   "staff.activate": "创建账号",
   "staff.validationEmployee": "请填写所有必填员工资料。",
-  "staff.validationIdentity": "请输入有效用户名及至少 8 个字符的初始密码。",
+  "staff.validationIdentity": "请输入有效的用户名和工作邮箱。",
   "staff.validationRole": "请至少选择一个公司角色。",
   "staff.ready": "{name} 的员工账号已可使用。",
   "access.dataScope": "数据范围",
@@ -1812,5 +1812,14 @@
   "recovery.invalid": "链接无效或已过期，请重新申请恢复邮件。",
   "recovery.failed": "无法完成请求，请检查连接后重试。",
   "recovery.done": "密码已更新，请使用新密码重新登录。",
-  "recovery.accepted": "如果账号符合条件，将发送恢复说明。"
+  "recovery.accepted": "如果账号符合条件，将发送恢复说明。",
+  "staff.handoffTitle": "账号交接",
+  "staff.handoffHint": "账号立即可用。复制生成的密码或准备邮件，由你手动交给员工。密码可在七天内取回；登录密码不会在七天后过期。",
+  "staff.emailPreview": "邮件预览",
+  "staff.generateEmail": "生成邮件模板",
+  "staff.copyEmail": "复制邮件",
+  "staff.emailReady": "邮件模板已生成，请核对后复制并手动发送。",
+  "staff.emailCopied": "邮件已复制",
+  "staff.copyFailed": "无法读取或复制密码。请检查账号权限和剪贴板权限后重试。",
+  "staff.emailTemplate": "To: {email}\nSubject: Your {company} ERP account\n\nHello {name},\n\nYour ERP account is ready to use.\n\nSign in: {url}\nOrganization code: {organization}\nUsername: {username}\nEmail: {email}\nPassword: {password}\n\nNo activation is required. Keep your password private. Contact HR if you need help.\n\nRegards,\nHR"
 }

@@ -22,7 +22,7 @@ It is not a substitute for deployment-specific threat modelling or operating pol
 - Generated account and reset passwords use an expiring AES-GCM handoff envelope.
   Every HR reveal is audited. Accounts are immediately usable; handoff expiry
   limits password recovery, not login. No first-login activation is required.
-- HR password reset revokes live sessions and issues a new one-time credential.
+- HR password reset revokes live sessions and issues a new generated credential.
   Offboarding immediately disables the employee and user, revokes sessions, clears
   active credential envelopes, transfers current work and retains historical facts.
 - Authentication failures use a generic response and rate limiting. State-changing
@@ -95,8 +95,12 @@ Authorization now evaluates only roles assigned to the active company. Allows ar
 unioned and scopes use the widest of self/team/department/company; a restricted row
 without enforceable ownership fails closed. UI hiding is defence in depth: the API
 rechecks action permission, module state, tenant, scope and resource visibility.
-Initial Staff passwords are hash-only, force change and expire at first use or seven
- days. Setup-stage employees cannot log in. Production provides a Company-Owner-only
+Staff creation automatically generates a 192-bit random password. Authentication
+uses a password hash; an AES-GCM envelope supports HR-authorized recovery for seven
+days. The handoff expiry does not expire login credentials. Each password/email copy
+rechecks the audited reveal boundary, and reveal responses are no-store. Plaintext
+email previews are ephemeral and no email is sent automatically. Accounts need no
+first-login activation. Setup-stage employees cannot log in. Production provides a Company-Owner-only
 employee-workspace entry point limited to active, company-linked employee accounts;
 passwords and activation secrets are never exposed. Entry and return are audited,
 while Demo seed remains guarded by explicit Demo-only environment flags plus an

@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { hashPassword } from '../../auth/password';
+import { generateEmployeeCredential } from '../../auth/employeeAccountLifecycle';
 import { cloneRoleTemplate } from '../../auth/adminLifecycle';
 import {
   appUser, employee, leaveBalanceEntry, leaveType, role, userCompany,
@@ -44,7 +44,7 @@ describe('atomic staff onboarding', () => {
       roleIds: [roleId],
     }, 'draft');
     const activated = await activateStaffOnboarding(
-      db, session, draft.id, draft.version, hashPassword('temporary-pass'), 'activate',
+      db, session, draft.id, draft.version, generateEmployeeCredential(Buffer.alloc(32, 7)), 'activate',
     );
     expect(activated).toMatchObject({ username: 'new.staff', passwordChangeRequired: false });
     const [employeeRole] = await db.select({ id: role.roleId }).from(role).where(and(
@@ -87,7 +87,7 @@ describe('atomic staff onboarding', () => {
       username: 'auto.numbered', email: 'auto.numbered@example.test', roleIds: [roleId],
     }, 'auto-number-draft');
     const activated = await activateStaffOnboarding(
-      db, session, draft.id, draft.version, hashPassword('temporary-pass'), 'auto-number-activate',
+      db, session, draft.id, draft.version, generateEmployeeCredential(Buffer.alloc(32, 7)), 'auto-number-activate',
     );
     expect(activated.employeeNo).toBe(`EMP-${new Date().getUTCFullYear()}-0001`);
     expect(await db.select().from(employee).where(and(

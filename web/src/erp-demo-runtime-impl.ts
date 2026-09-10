@@ -443,6 +443,7 @@ import {
 } from '../../src/auth/adminLifecycle';
 import {
   activateStaffOnboardingWithin,
+  type StaffOnboardingCredential,
   createStaffOnboardingDraftWithin,
   type StaffOnboardingDraftInput,
 } from '../../src/modules/hr/staffOnboarding';
@@ -1280,11 +1281,11 @@ export const erpDemoRuntime = Object.freeze({
     },
     activateStaffOnboardingWithin(
       db: DemoOrm, scope: Scope, actorUserId: number, draftId: number,
-      expectedVersion: number, passwordHash: string | null,
+      expectedVersion: number, credential: StaffOnboardingCredential | null,
     ) {
       return activateStaffOnboardingWithin(
         asDomainDb(db), demoSession(scope, actorUserId), draftId,
-        expectedVersion, passwordHash, 'demo',
+        expectedVersion, credential, 'demo',
       );
     },
     createProductWithin(db: DemoOrm, scope: Scope, input: CreateProductInput) {

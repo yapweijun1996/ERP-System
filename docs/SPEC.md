@@ -41,6 +41,12 @@ Mode is selected at build time by `VITE_DATA_MODE=demo|api`. The adapter seam is
 implemented; current Canonical screens use Demo/PGlite or authenticated API resources
 without silently falling back to sample data.
 
+Employee credential delivery: Add Staff automatically generates a secure password,
+stores the login hash and encrypted expiring handoff atomically, and returns no
+plaintext credential. Authorized HR/Superadmin in the Company context can copy the
+password or generate/copy an employee email template for manual delivery. Every copy
+rechecks HR write authority; account creation requires no activation or forced change.
+
 ## 2. Hard invariants (never violate)
 
 1. **One schema.** Demo and production share the same Drizzle schema and migrations

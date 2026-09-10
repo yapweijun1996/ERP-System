@@ -7,6 +7,9 @@ import {
   auditLog,
   employee,
   employeeActivationSecret,
+  role,
+  rolePermission,
+  userCompanyRole,
 } from '../data/schema';
 import { seedDemo } from '../data/seed';
 import { freshDb } from '../test/helpers';
@@ -54,6 +57,61 @@ describe('employee account API lifecycle', () => {
       body: JSON.stringify({ organizationCode: 'ACME', username, password }),
     });
   }
+
+  it('generates staff credentials atomically with safe replay and restricted handoff', async () => {
+    const admin = cookies(await login('admin', 'demo1234'));
+    const headers = { cookie: admin.header, 'x-csrf-token': admin.csrf, 'content-type': 'application/json' };
+    const [viewerRole] = await db.insert(role).values({masterFn:'M1',companyFn:'C-SG',name:'Staff access'}).returning();
+    const draftResponse = await fetch(`${baseUrl}/api/hr/staff-onboarding-drafts`, {
+      method: 'POST', headers, body: JSON.stringify({
+        employee: { employeeNo: '', employeeNoMode: 'auto', fullName: 'Generated Staff',
+          email: 'generated.staff@example.test', department: 'Testing', jobTitle: 'Operator',
+          employmentType: 'Full-time', startDate: '2026-09-10', annualLeaveDays: 14, baseSalary: '1000.00' },
+        username: 'generated.staff', email: 'generated.staff@example.test', roleIds: [viewerRole.roleId],
+      }),
+    });
+    expect(draftResponse.status).toBe(201);
+    const { data: draft } = await draftResponse.json();
+    const create = () => fetch(`${baseUrl}/api/hr/staff-onboarding-drafts/${draft.id}/actions/activate`, {
+      method: 'POST', headers: { ...headers, 'idempotency-key': 'generated-staff-create' },
+      body: JSON.stringify({ expectedVersion: draft.version }),
+    });
+    const response = await create();
+    expect(response.status).toBe(201);
+    const { data: account } = await response.json();
+    expect(account.passwordChangeRequired).toBe(false);
+    const replay = await create();
+    expect(replay.status).toBe(201);
+    expect((await replay.json()).data).toEqual(account);
+    const revealUrl = `${baseUrl}/api/hr/employee-accounts/${account.employeeId}/actions/reveal-temporary-password`;
+    const revealedResponse = await fetch(revealUrl, { method: 'POST', headers, body: '{}' });
+    expect(revealedResponse.status).toBe(200);
+    expect(revealedResponse.headers.get('cache-control')).toBe('no-store');
+    const { data: revealed } = await revealedResponse.json();
+    expect(/^Aria-[A-Za-z0-9_-]{32}!$/.test(revealed.temporaryPassword)).toBe(true);
+    expect(JSON.stringify(account).includes(revealed.temporaryPassword)).toBe(false);
+    const secrets = await db.select().from(employeeActivationSecret).where(eq(employeeActivationSecret.userId, account.userId));
+    expect(secrets).toHaveLength(1);
+    expect(JSON.stringify(secrets).includes(revealed.temporaryPassword)).toBe(false);
+    const employeeLogin = await login('generated.staff', revealed.temporaryPassword);
+    expect(employeeLogin.status).toBe(200);
+    const staff = cookies(employeeLogin);
+    const denied = await fetch(revealUrl, { method: 'POST', headers: {
+      cookie: staff.header, 'x-csrf-token': staff.csrf, 'content-type': 'application/json',
+    }, body: '{}' });
+    expect(denied.status).toBe(403);
+    const [hrRole] = await db.insert(role).values({masterFn:'M1',companyFn:'C-SG',name:'Credential HR'}).returning();
+    await db.insert(rolePermission).values(['hr.read','hr.write'].map(permissionKey=>({masterFn:'M1',roleId:hrRole.roleId,permissionKey})));
+    const [hrUser] = await db.select().from(appUser).where(eq(appUser.username,'viewer')).limit(1);
+    await db.insert(userCompanyRole).values({companyFn:'C-SG',userId:hrUser.userId,roleId:hrRole.roleId});
+    const hr = cookies(await login('viewer','viewer1234'));
+    const hrReveal = await fetch(revealUrl, {method:'POST',headers:{cookie:hr.header,'x-csrf-token':hr.csrf,'content-type':'application/json'},body:'{}'});
+    expect(hrReveal.status).toBe(200);
+    expect((await hrReveal.json()).data.temporaryPassword === revealed.temporaryPassword).toBe(true);
+
+    const evidence = await db.select().from(auditLog);
+    expect(JSON.stringify(evidence).includes(revealed.temporaryPassword)).toBe(false);
+  });
 
   it('requires audited reveal and permits immediate login without activation', async () => {
     const adminLogin = await login('admin', 'demo1234');

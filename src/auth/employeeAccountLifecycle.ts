@@ -16,7 +16,16 @@ import {
 const TEMPORARY_CREDENTIAL_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 function temporaryPassword(): string {
-  return `Aria-${randomBytes(12).toString('base64url')}!`;
+  return `Aria-${randomBytes(24).toString('base64url')}!`;
+}
+
+export function generateEmployeeCredential(encryptionKey: Buffer) {
+  const password = temporaryPassword();
+  return {
+    passwordHash: hashPassword(password),
+    credentialEnvelope: encryptToken(password, encryptionKey),
+    expiresAt: new Date(Date.now() + TEMPORARY_CREDENTIAL_TTL_MS),
+  };
 }
 
 export async function provisionEmployeeAccount(
@@ -25,13 +34,9 @@ export async function provisionEmployeeAccount(
   input: { employeeId: number; username: string; actorUserId: number; requestId?: string },
   encryptionKey: Buffer,
 ) {
-  const password = temporaryPassword();
-  const expiresAt = new Date(Date.now() + TEMPORARY_CREDENTIAL_TTL_MS);
   return createEmployeeAccount(db, scope, {
     ...input,
-    passwordHash: hashPassword(password),
-    credentialEnvelope: encryptToken(password, encryptionKey),
-    expiresAt,
+    ...generateEmployeeCredential(encryptionKey),
   });
 }
 
@@ -41,13 +46,9 @@ export async function resetEmployeeTemporaryPassword(
   input: { employeeId: number; actorUserId: number; requestId?: string },
   encryptionKey: Buffer,
 ) {
-  const password = temporaryPassword();
-  const expiresAt = new Date(Date.now() + TEMPORARY_CREDENTIAL_TTL_MS);
   return resetEmployeeAccount(db, scope, {
     ...input,
-    passwordHash: hashPassword(password),
-    credentialEnvelope: encryptToken(password, encryptionKey),
-    expiresAt,
+    ...generateEmployeeCredential(encryptionKey),
   });
 }
 

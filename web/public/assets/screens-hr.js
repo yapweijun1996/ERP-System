@@ -966,6 +966,53 @@ function hrCopy(){
   return key=>pack[key]||packs.en[key]||key;
 }
 
+/* Credentials remain in this modal only; every copy rechecks the live reveal boundary. */
+async function openEmployeeCredentialHandoff(employeeId){
+  const ac=employeeAccountCopy();
+  const read=async()=>{
+    const account=(await window.ErpSystemData.get('hr/employee-accounts',employeeId)).data;
+    const secret=(await window.ErpSystemData.action('hr/employee-accounts',employeeId,'reveal-temporary-password',{})).data;
+    return {account,secret};
+  };
+  const emailText=({account,secret})=>{
+    const url=new URL(location.href); url.hash=''; url.search='';
+    const values={email:account.email||'',name:account.employeeName,
+      company:DB.company.name,url:url.href,organization:account.organizationCode,
+      username:account.username,password:secret.temporaryPassword};
+    return t('staff.emailTemplate').replace(/\{([A-Za-z]+)\}/g,(match,key)=>Object.prototype.hasOwnProperty.call(values,key)?String(values[key]??''):match);
+  };
+  try{
+    await read();
+    appModal({icon:'lock',title:t('staff.handoffTitle'),body:`
+      <p>${esc(t('staff.handoffHint'))}</p>
+      <label class="fld"><span>${esc(t('staff.emailPreview'))}</span><textarea id="employeeAccountEmailTemplate" rows="12" readonly hidden></textarea></label>
+      <p id="employeeAccountCopyStatus" role="status" aria-live="polite"></p>`,
+      actions:`${btn(ac('copy'),{icon:'copy',cls:'primary',attrs:'data-account-copy'})}${btn(t('staff.generateEmail'),{cls:'soft',attrs:'data-account-email-generate'})}${btn(t('staff.copyEmail'),{cls:'soft',attrs:'data-account-email-copy'})}`});
+    const perform=async(kind)=>{
+      const status=document.querySelector('#employeeAccountCopyStatus');
+      const buttons=Array.from(document.querySelectorAll('[data-account-copy],[data-account-email-generate],[data-account-email-copy]'));
+      buttons.forEach(button=>{button.disabled=true;});
+      try{
+        const result=await read();
+        if(!status?.isConnected) return;
+        if(kind==='preview'){
+          const field=document.querySelector('#employeeAccountEmailTemplate');
+          field.value=emailText(result); field.hidden=false;
+          status.textContent=t('staff.emailReady');
+        }else{
+          await navigator.clipboard.writeText(kind==='password'?result.secret.temporaryPassword:emailText(result));
+          if(status.isConnected) status.textContent=kind==='password'?ac('copied'):t('staff.emailCopied');
+        }
+      }catch{
+        if(status?.isConnected) status.textContent=t('staff.copyFailed');
+      }finally{buttons.forEach(button=>{button.disabled=false;});}
+    };
+    document.querySelector('[data-account-copy]')?.addEventListener('click',()=>void perform('password'));
+    document.querySelector('[data-account-email-generate]')?.addEventListener('click',()=>void perform('preview'));
+    document.querySelector('[data-account-email-copy]')?.addEventListener('click',()=>void perform('email'));
+  }catch(error){toast(error?.message||ac('error'),'bad');}
+}
+
 function employeeAccountCopy(){
 
   const packs={
@@ -3890,7 +3937,7 @@ SCREENS['employee'] = async function(root, params){
   const accountControls=!canEdit?'':!account||!account.userId
     ? btn(ac('create'),{icon:'plus',cls:'soft',sm:true,attrs:'data-employee-account-create'})
     : account.accountState!=='offboarded'
-      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">${btn(ac('enterWorkspace'),{icon:'arrowR',cls:'primary',sm:true,attrs:'data-employee-account-enter'})}${account.temporaryCredential?btn(ac('reveal'),{icon:'eye',cls:'soft',sm:true,attrs:'data-employee-account-reveal'}):''}${btn(ac('reset'),{icon:'refresh',cls:'soft',sm:true,attrs:'data-employee-account-reset'})}${btn(ac('offboard'),{icon:'x',cls:'soft',sm:true,attrs:'data-employee-account-offboard'})}</div>`
+      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">${btn(ac('enterWorkspace'),{icon:'arrowR',cls:'primary',sm:true,attrs:'data-employee-account-enter'})}${account.temporaryCredential?btn(t('staff.handoffTitle'),{icon:'eye',cls:'soft',sm:true,attrs:'data-employee-account-reveal'}):''}${btn(ac('reset'),{icon:'refresh',cls:'soft',sm:true,attrs:'data-employee-account-reset'})}${btn(ac('offboard'),{icon:'x',cls:'soft',sm:true,attrs:'data-employee-account-offboard'})}</div>`
       : '';
   const leaveStatusTone={pending:'warn',approved:'ok',rejected:'danger'};
   const leaveRows=myLeave.map(lv=>`<tr data-employee-leave-row>
@@ -4074,18 +4121,8 @@ SCREENS['employee'] = async function(root, params){
           }catch(error){ document.querySelector('#employeeAccountError').textContent=(error&&error.message)||ac('error'); button.removeAttribute('disabled'); }
         });
       });
-      root.querySelector('[data-employee-account-reveal]')?.addEventListener('click',async()=>{
-        try{
-          const revealed=(await window.ErpSystemData.action('hr/employee-accounts',e.id,'reveal-temporary-password',{})).data;
-          appModal({icon:'eye',title:ac('temporary'),body:`
-            <div class="fld"><span>${esc(ac('temporary'))}</span><code id="employeeTemporaryPassword" style="display:block;padding:10px;border:1px solid var(--line);border-radius:8px;overflow-wrap:anywhere">${esc(revealed.temporaryPassword)}</code></div>
-            <small>${esc(ac('expires'))}: ${esc(String(revealed.expiresAt||''))}</small>`,
-            actions:`${btn(ac('copy'),{icon:'copy',cls:'primary',attrs:'data-account-copy'})}`});
-          document.querySelector('[data-account-copy]')?.addEventListener('click',async()=>{
-            await navigator.clipboard.writeText(document.querySelector('#employeeTemporaryPassword').textContent);
-            toast(ac('copied'),'ok');
-          });
-        }catch(error){ toast((error&&error.message)||ac('error'),'bad'); }
+      root.querySelector('[data-employee-account-reveal]')?.addEventListener('click',()=>{
+        void openEmployeeCredentialHandoff(e.id);
       });
       root.querySelector('[data-employee-account-reset]')?.addEventListener('click',()=>{
         confirmModal({icon:'warn',title:ac('reset'),message:ac('resetConfirm'),confirmLabel:ac('reset'),onConfirm:`async function(){try{await window.ErpSystemData.action('hr/employee-accounts',${Number(e.id)},'reset-password',{},crypto.randomUUID());toast(${JSON.stringify(ac('resetDone'))},'ok');navigate('employee',{employeeId:${Number(e.id)}})}catch(error){toast((error&&error.message)||${JSON.stringify(ac('error'))},'bad')}}`});

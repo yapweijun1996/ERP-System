@@ -1485,7 +1485,7 @@ window.__ERP_I18N_EN__=Object.freeze({
   "staff.initialPassword": "Password",
   "staff.expiry": "Expiry",
   "staff.expiryValue": "First use or 7 days",
-  "staff.passwordHint": "The password is hashed immediately and never returned. The account is ready to use after creation.",
+  "staff.passwordHint": "A secure password is generated automatically. After creation, authorized HR or Superadmin can copy it and an employee email template.",
   "staff.companyRoles": "Company roles",
   "staff.roleHint": "Roles apply only to {company}. Multiple roles combine their allowed actions and widest data scope.",
   "staff.customRole": "Custom company role",
@@ -1495,7 +1495,7 @@ window.__ERP_I18N_EN__=Object.freeze({
   "staff.continue": "Continue",
   "staff.activate": "Create account",
   "staff.validationEmployee": "Complete every required employee field.",
-  "staff.validationIdentity": "Enter a valid username and an initial password of at least 8 characters.",
+  "staff.validationIdentity": "Enter a valid username and work email.",
   "staff.validationRole": "Select at least one company role.",
   "staff.ready": "Staff account for {name} is ready to use.",
   "access.dataScope": "Data scope",
@@ -1787,5 +1787,14 @@ window.__ERP_I18N_EN__=Object.freeze({
   "recovery.invalid": "This link is invalid or expired. Request a new recovery email.",
   "recovery.failed": "Unable to complete the request. Check your connection and try again.",
   "recovery.done": "Password updated. Sign in again with your new password.",
-  "recovery.accepted": "If the account is eligible, recovery instructions will be sent."
+  "recovery.accepted": "If the account is eligible, recovery instructions will be sent.",
+  "staff.handoffTitle": "Account handoff",
+  "staff.handoffHint": "The account is ready now. Copy the generated password or prepare an email for manual delivery. Password recovery is available for seven days; the login password does not expire after seven days.",
+  "staff.emailPreview": "Email preview",
+  "staff.generateEmail": "Generate email template",
+  "staff.copyEmail": "Copy email",
+  "staff.emailReady": "Email template ready. Review it and copy it for manual delivery.",
+  "staff.emailCopied": "Email copied",
+  "staff.copyFailed": "Unable to access or copy the credential. Check your access and clipboard permission, then try again.",
+  "staff.emailTemplate": "To: {email}\nSubject: Your {company} ERP account\n\nHello {name},\n\nYour ERP account is ready to use.\n\nSign in: {url}\nOrganization code: {organization}\nUsername: {username}\nEmail: {email}\nPassword: {password}\n\nNo activation is required. Keep your password private. Contact HR if you need help.\n\nRegards,\nHR"
 });

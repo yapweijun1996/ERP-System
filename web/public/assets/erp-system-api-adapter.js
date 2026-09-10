@@ -850,7 +850,7 @@
     var activated=await apiRequest('hr/staff-onboarding-drafts/'+draft.id+'/actions/activate',{
       method:'POST',
       headers:{'Idempotency-Key':'staff-onboarding-'+draft.id+'-'+draft.version},
-      body:{expectedVersion:draft.version,initialPassword:input.initialPassword},
+      body:{expectedVersion:draft.version},
     });
     return activated.data;
   }

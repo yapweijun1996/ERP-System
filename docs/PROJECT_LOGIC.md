@@ -442,6 +442,13 @@ name activateStaffOnboardingWithin means committing the draft atomically, not a
 user activation step. It validates roles, creates/links identity and Company
 membership, creates the employee and leave opening, and appends audit evidence.
 New accounts are active immediately with no forced first-login password change.
+API/Demo adapters now generate a 192-bit random credential automatically. The shared
+transaction stores its hash and encrypted seven-day handoff together. Existing
+identity links preserve credentials. The employee record exposes an HR-write-guarded
+password/email handoff dialog; each copy rechecks the reveal boundary and plaintext
+is never stored in drafts, ordinary responses, audit or browser persistent state.
+Templates include the organization login code from the scoped Master. No email is
+sent automatically; the operator reviews, copies and delivers it manually.
 The canonical Employee role has nine grants, including the own-receipt mutations
 established by migration 0097. Provisioning also accepts the exact legacy six-grant
 role without rewriting it; any extra grant or broader resource scope is rejected.

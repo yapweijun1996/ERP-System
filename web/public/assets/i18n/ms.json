@@ -1510,7 +1510,7 @@
   "staff.initialPassword": "Kata laluan",
   "staff.expiry": "Tamat tempoh",
   "staff.expiryValue": "Penggunaan pertama atau 7 hari",
-  "staff.passwordHint": "Kata laluan dicincang serta-merta dan tidak dipulangkan. Akaun boleh digunakan selepas dicipta.",
+  "staff.passwordHint": "Kata laluan selamat dijana secara automatik. HR atau Superadmin yang dibenarkan boleh menyalinnya dan templat e-mel pekerja.",
   "staff.companyRoles": "Peranan syarikat",
   "staff.roleHint": "Peranan hanya terpakai kepada {company}. Pelbagai peranan menggabungkan tindakan dibenarkan dan skop data terluas.",
   "staff.customRole": "Peranan syarikat tersuai",
@@ -1520,7 +1520,7 @@
   "staff.continue": "Teruskan",
   "staff.activate": "Cipta akaun",
   "staff.validationEmployee": "Lengkapkan semua medan pekerja yang wajib.",
-  "staff.validationIdentity": "Masukkan nama pengguna sah dan kata laluan awal sekurang-kurangnya 8 aksara.",
+  "staff.validationIdentity": "Masukkan nama pengguna dan e-mel kerja yang sah.",
   "staff.validationRole": "Pilih sekurang-kurangnya satu peranan syarikat.",
   "staff.ready": "Akaun staf {name} sedia digunakan.",
   "access.dataScope": "Skop data",
@@ -1812,5 +1812,14 @@
   "recovery.invalid": "Pautan tidak sah atau tamat tempoh. Minta e-mel pemulihan baharu.",
   "recovery.failed": "Permintaan tidak dapat diselesaikan. Semak sambungan dan cuba lagi.",
   "recovery.done": "Kata laluan dikemas kini. Log masuk dengan kata laluan baharu.",
-  "recovery.accepted": "Jika akaun layak, arahan pemulihan akan dihantar."
+  "recovery.accepted": "Jika akaun layak, arahan pemulihan akan dihantar.",
+  "staff.handoffTitle": "Penyerahan akaun",
+  "staff.handoffHint": "Akaun sedia digunakan. Salin kata laluan atau sediakan e-mel untuk penghantaran manual. Pemulihan tersedia selama tujuh hari; kata laluan log masuk tidak tamat selepas tujuh hari.",
+  "staff.emailPreview": "Pratonton e-mel",
+  "staff.generateEmail": "Jana templat e-mel",
+  "staff.copyEmail": "Salin e-mel",
+  "staff.emailReady": "Templat sedia untuk disemak dan dihantar secara manual.",
+  "staff.emailCopied": "E-mel disalin",
+  "staff.copyFailed": "Tidak dapat mengakses atau menyalin kelayakan. Semak kebenaran akses dan papan klip.",
+  "staff.emailTemplate": "To: {email}\nSubject: Your {company} ERP account\n\nHello {name},\n\nYour ERP account is ready to use.\n\nSign in: {url}\nOrganization code: {organization}\nUsername: {username}\nEmail: {email}\nPassword: {password}\n\nNo activation is required. Keep your password private. Contact HR if you need help.\n\nRegards,\nHR"
 }

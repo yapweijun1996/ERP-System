@@ -12,6 +12,7 @@ import {
   employeeAccountHandoff,
   employeeActivationSecret,
   opportunity,
+  master,
   role,
   rolePermission,
   roleResourceScope,
@@ -49,6 +50,7 @@ export async function readEmployeeAccount(
   employeeId: number,
 ) {
   const [row] = await db.select({
+    organizationCode: master.loginCode,
     employeeId: employee.id,
     employeeNo: employee.employeeNo,
     employeeName: employee.fullName,
@@ -62,6 +64,7 @@ export async function readEmployeeAccount(
     activatedAt: appUser.activatedAt,
     offboardedAt: appUser.offboardedAt,
   }).from(employee)
+    .innerJoin(master, eq(master.masterFn, employee.masterFn))
     .leftJoin(appUser, eq(appUser.userId, employee.userId))
     .where(and(
       eq(employee.masterFn, scope.masterFn),

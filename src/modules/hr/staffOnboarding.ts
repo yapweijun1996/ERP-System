@@ -1,15 +1,22 @@
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import {
-  appUser, employee,
+  appUser, employee, employeeActivationSecret,
   role, staffOnboardingDraft, userCompany, userCompanyRole,
 } from '../../data/schema';
 import { withTenantTransaction } from '../../data/tenantTransaction';
 import { appendAudit } from '../../api/audit';
+import type { EncryptedToken } from '../../auth/tokenCrypto';
 import type { SessionData } from '../../auth/session';
 import { isValidUsername, normalizeUsername } from '../../auth/identifiers';
 import { createEmployeeWithin, type CreateEmployeeInput } from './employee';
 import { ensureEmployeeRoleWithin } from './employeeAccount';
+
+export interface StaffOnboardingCredential {
+  passwordHash: string;
+  credentialEnvelope: EncryptedToken;
+  expiresAt: Date;
+}
 
 export interface StaffOnboardingDraftInput {
   employee: CreateEmployeeInput;
@@ -183,7 +190,7 @@ export async function activateStaffOnboardingWithin(
   session: SessionData,
   draftId: number,
   expectedVersion: number,
-  passwordHash: string | null,
+  credential: StaffOnboardingCredential | null,
   requestId: string,
   now = new Date(),
 ) {
@@ -235,7 +242,7 @@ export async function activateStaffOnboardingWithin(
     if (membership) throw new StaffOnboardingError(409, 'company_membership_exists', 'This user already belongs to the company.');
     userId = existingUser.userId;
   } else {
-    if (!passwordHash?.startsWith('pbkdf2$')) {
+    if (!credential?.passwordHash.startsWith('pbkdf2$')) {
       throw new StaffOnboardingError(
         400,
         'initial_password_required',
@@ -248,7 +255,7 @@ export async function activateStaffOnboardingWithin(
       username: draft.username,
       email: draft.email,
       fullName: employeeInput.fullName.trim(),
-      passwordHash,
+      passwordHash: credential.passwordHash,
       language: 'en',
       isActive: true,
       accountState: 'active',
@@ -277,6 +284,15 @@ export async function activateStaffOnboardingWithin(
     assignedByUserId: session.userId,
     assignmentSource: roleId === employeeBaseRole.roleId ? 'system' as const : 'onboarding' as const,
   })));
+
+  if (newCredential && credential) {
+    await exec.insert(employeeActivationSecret).values({
+      masterFn: session.masterFn, companyFn: session.activeCompanyFn,
+      employeeId: createdEmployee.id, userId, purpose: 'activation', generation: 1,
+      credentialEnvelope: credential.credentialEnvelope, expiresAt: credential.expiresAt,
+      createdByUserId: session.userId,
+    });
+  }
 
   await exec.update(staffOnboardingDraft).set({
     status: 'activated',
@@ -308,12 +324,12 @@ export function activateStaffOnboarding(
   session: SessionData,
   draftId: number,
   expectedVersion: number,
-  passwordHash: string | null,
+  credential: StaffOnboardingCredential | null,
   requestId: string,
 ) {
   return withTenantTransaction(db, {
     masterFn: session.masterFn, companyFn: session.activeCompanyFn,
   }, (tx) => activateStaffOnboardingWithin(
-    tx, session, draftId, expectedVersion, passwordHash, requestId,
+    tx, session, draftId, expectedVersion, credential, requestId,
   ));
 }

@@ -1510,7 +1510,7 @@
   "staff.initialPassword": "Mật khẩu",
   "staff.expiry": "Hết hạn",
   "staff.expiryValue": "Lần dùng đầu hoặc 7 ngày",
-  "staff.passwordHint": "Mật khẩu được băm ngay và không được trả lại. Tài khoản dùng được ngay sau khi tạo.",
+  "staff.passwordHint": "Mật khẩu an toàn được tạo tự động. HR hoặc Superadmin có quyền có thể sao chép mật khẩu và mẫu email nhân viên.",
   "staff.companyRoles": "Vai trò công ty",
   "staff.roleHint": "Vai trò chỉ áp dụng cho {company}. Nhiều vai trò hợp nhất thao tác được phép và dùng phạm vi dữ liệu rộng nhất.",
   "staff.customRole": "Vai trò công ty tùy chỉnh",
@@ -1520,7 +1520,7 @@
   "staff.continue": "Tiếp tục",
   "staff.activate": "Tạo tài khoản",
   "staff.validationEmployee": "Hoàn tất mọi trường nhân viên bắt buộc.",
-  "staff.validationIdentity": "Nhập tên người dùng hợp lệ và mật khẩu ban đầu ít nhất 8 ký tự.",
+  "staff.validationIdentity": "Nhập tên người dùng và email công việc hợp lệ.",
   "staff.validationRole": "Chọn ít nhất một vai trò công ty.",
   "staff.ready": "Tài khoản của {name} đã sẵn sàng sử dụng.",
   "access.dataScope": "Phạm vi dữ liệu",
@@ -1812,5 +1812,14 @@
   "recovery.invalid": "Liên kết không hợp lệ hoặc đã hết hạn. Hãy yêu cầu email khôi phục mới.",
   "recovery.failed": "Không thể hoàn tất yêu cầu. Kiểm tra kết nối và thử lại.",
   "recovery.done": "Đã cập nhật mật khẩu. Hãy đăng nhập bằng mật khẩu mới.",
-  "recovery.accepted": "Nếu tài khoản đủ điều kiện, hướng dẫn khôi phục sẽ được gửi."
+  "recovery.accepted": "Nếu tài khoản đủ điều kiện, hướng dẫn khôi phục sẽ được gửi.",
+  "staff.handoffTitle": "Bàn giao tài khoản",
+  "staff.handoffHint": "Tài khoản dùng được ngay. Sao chép mật khẩu hoặc chuẩn bị email để gửi thủ công. Có thể lấy lại mật khẩu trong bảy ngày; mật khẩu đăng nhập không hết hạn sau bảy ngày.",
+  "staff.emailPreview": "Xem trước email",
+  "staff.generateEmail": "Tạo mẫu email",
+  "staff.copyEmail": "Sao chép email",
+  "staff.emailReady": "Mẫu email đã sẵn sàng để kiểm tra và gửi thủ công.",
+  "staff.emailCopied": "Đã sao chép email",
+  "staff.copyFailed": "Không thể truy cập hoặc sao chép thông tin đăng nhập. Kiểm tra quyền truy cập và bảng nhớ tạm.",
+  "staff.emailTemplate": "To: {email}\nSubject: Your {company} ERP account\n\nHello {name},\n\nYour ERP account is ready to use.\n\nSign in: {url}\nOrganization code: {organization}\nUsername: {username}\nEmail: {email}\nPassword: {password}\n\nNo activation is required. Keep your password private. Contact HR if you need help.\n\nRegards,\nHR"
 }
