@@ -1,5 +1,21 @@
 # Project Status — reviewed 2026-09-11
 
+Public Pages deployment and hosted Demo E2E — 2026-09-11: release commit
+`ae7a3cfabde0e03a704d943dc1d99cc3bb672e2a` is deployed by workflow
+[34516594532](https://github.com/yapweijun1996/ERP-System/actions/runs/34516594532).
+Public `release.json` reports that revision, `dataMode=demo` and 136 manifest
+files; all 135 served assets match their manifest hashes. The served HR bundle
+contains `Legacy account` and no longer contains `Awaiting activation`. A fresh
+public-origin browser context completed Setup Wizard with `expenses_tax`, used
+one labelled synthetic clean-evidence fixture, confirmed one Company Receipt,
+made real Demo gateway calls (201 session, 200 Responses), required visible
+human confirmation, persisted one Pack and reopened its 14,183,204-byte PDF
+artifact with hash
+`e8e6dab66480dbeba35543426e9d9a5b496bc32b4af8fba217eb47dd18046770`.
+This is hosted Demo protocol/UI and persistence evidence only; the synthetic
+scanner fixture, production OCR/provider, public Tunnel and human business
+acceptance remain open.
+
 Current workspace full regression recheck — 2026-09-11: `npm test -- --run`
 completed with 204 test files passed and 3 skipped; 901 tests passed and 3
 skipped. The run exited 0 after 1186.52 seconds. This is the latest local
