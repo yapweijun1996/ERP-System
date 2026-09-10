@@ -1,7 +1,7 @@
 # Release Checklist
 
 AI Native release is a separate future gate in [GOAL.md](../GOAL.md), EPIC-068.
-The current local/repository baseline accepts 28/48 goal criteria; 20 criteria and
+The current local/repository baseline accepts 32/48 goal criteria; 16 criteria and
 the production release gate remain open. Historical checked items below retain their
 recorded evidence scope; they do not certify a production release for TASK-228–239.
 
@@ -80,18 +80,16 @@ For the current source-backed action backlog and evidence boundaries, see
       the primary/calendar entry points emit aggregate-only queue snapshots. This proves
       shape/redaction only: bounded non-blocking collection, claim-predicate parity,
       production metrics/alerts, ownership and recovery exercise remain TASK-201.
-- [x] `tasks/tasks.jsonl` statuses current: 226 Done / 6 In Progress / 5 Todo / 3 Blocked / 240 Total. Blockers are TASK-017, TASK-193 and TASK-209;
+- [x] `tasks/tasks.jsonl` statuses current: 227 Done / 6 In Progress / 4 Todo / 3 Blocked / 240 Total. Blockers are TASK-017, TASK-193 and TASK-209;
       TASK-203 is Done with current-HEAD remote CI evidence, TASK-204 remains In progress until tax-owner production review and TASK-205 remains
       In progress until production Vision configuration and live dead-letter alert/recovery
       evidence is recorded.
 - [x] GitHub Actions executes current HEAD with every required gate green. Run
-      `34189671568` passed all four Vitest shards, lint/docs/generated checks, root/web
+      `34530777179` passed all four Vitest shards, lint/docs/generated checks, root/web
       typechecks, PostgreSQL security and concurrency proofs, Demo build, five-language
-      desktop/mobile i18n, browser smoke, full screen audit, transaction-list layout audit
-      and operational-workspace layout audit. GitHub Pages run `34189671604` published a
-      matching `release.json` in demo mode with 133 files. The earlier PostgreSQL and i18n
-      failures are historical repaired findings; production health/revision evidence remains
-      separate.
+      desktop/mobile i18n, browser smoke, full screen audit, transaction-list layout audit,
+      operational-workspace layout audit and the production public-subpath contract.
+      Production health/revision evidence remains separate.
 - [x] 2026-08-12 current-worktree secret baseline: the tracked diff and `web/dist`
       contain no known provider/token/private-key signature; high-entropy diff strings
       were classified as document, route, module, DOM/i18n or deterministic-test values.
