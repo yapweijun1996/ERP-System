@@ -501,8 +501,8 @@
       "select company_fn, master_fn, name, country, currency, tax_regime, locale, time_zone " +
       "from company where " + w('company') + " order by company_fn");
     /* Password hashes stay inside the login query and are never copied into the
-       screen payload. Account lifecycle flags are safe session metadata needed
-       to enforce first-login activation in Demo exactly as API mode does. */
+       screen payload. Account lifecycle flags remain session metadata for
+       compatibility and credential-handoff policy; new accounts are active immediately. */
     var users = await rows(
       "select u.user_id, u.username, u.email, u.full_name, u.language, " +
       "u.password_change_required, u.initial_password_expires_at, u.account_state, " +

@@ -1,4 +1,180 @@
-# Project Status — reviewed 2026-09-09
+# Project Status — reviewed 2026-09-11
+
+Current workspace full regression recheck — 2026-09-11: `npm test -- --run`
+completed with 204 test files passed and 3 skipped; 901 tests passed and 3
+skipped. The run exited 0 after 1186.52 seconds. This is the latest local
+repository evidence for the current dirty workspace; PostgreSQL target,
+production deployment, public Tunnel, OCR and human visual-review gates remain
+separate.
+
+Fresh disk-backed pilot runner recheck — 2026-09-11: the fixture-only
+`scripts/receipt-assistant-pilot.ts --fixture` flow completed for both C-SG and
+C-MY against new private PGlite databases. Each run detail-read and hash-checked
+two receipts, required the exact selection digest before one Pack write, reopened
+the database and verified the persisted Pack/PDF hashes. Both runs used five local
+OpenAI-shaped fixture calls and simulated confirmation; no network provider/spend
+or human visual acceptance is claimed.
+
+Pages freeze candidate — 2026-09-11: the current source was captured in detached
+commit `35739bc0e14a0b021020234c33cd79666f78ef03` on top of remote `main`
+`b9326f87732d904dc640d78d8b783418f5e9eb90`, preserving the original worktree and
+index. Clean root/web installs, lint, both typechecks, docs, Demo proof and a
+136-file Pages manifest/hash verification passed. The emitted assets match the
+private candidate; no push or deployment has occurred, so the public Pages site
+still serves the older Demo revision.
+
+Production Receipt-to-Pack pilot checkpoint — 2026-09-10: the fresh local production
+environment exercised the coherent API/Web revision
+`9ec8c0e5c1361dfe77c8a3e8cdca4730e0b56e05` with one new Master and SG/MY Companies.
+Real employee sessions completed clean-evidence inspection, human metadata
+confirmation, Receipt creation, exact selection preview, immutable Pack
+persistence/readback and two-page PDF export for both countries. The persisted
+evidence and artifact hashes are recorded in
+[TASK-234 production evidence](ai-native/evidence/TASK-234-2026-09-09.md#production-receipt-to-pack-pilot--2026-09-10).
+The source versions are ClamAV-clean; no production OCR endpoint is configured,
+so extraction is currently dead-lettered after scanning while the governed manual
+confirmation path remains available for clean/current unbound evidence.
+The prepared Tunnel candidate passes `cloudflared tunnel --config
+~/Documents/ERP-Production/cloudflared-config.proposed.yml ingress validate`; the
+active system configuration remains unchanged pending administrator authentication.
+
+CI checkpoint — 2026-09-10: GitHub Actions run
+[34475283757](https://github.com/yapweijun1996/ERP-System/actions/runs/34475283757)
+completed successfully for production/Demo revision
+`b9326f87732d904dc640d78d8b783418f5e9eb90`; all four Vitest shards and the
+aggregate typecheck, transaction/security proof and Demo build job passed.
+Pages run [34475283620](https://github.com/yapweijun1996/ERP-System/actions/runs/34475283620)
+also completed successfully. The later production release `9ec8c0e` contains the
+HR tenant-context/idempotency fix and has targeted local tests, lint, typechecks and
+image verification; a full CI run for that delta was not rerun. Public Tunnel
+activation, OCR worker setup and human visual PDF review remain open.
+
+Current workspace verification — 2026-09-10: `npm test` completed with 204 test
+files passed, 3 skipped; 900 tests passed, 3 skipped. This is additional local
+regression evidence for the current dirty workspace and does not replace the
+separate production image, public Tunnel, OCR or human visual-review gates.
+Schema drift, permission registry, Demo schema/pack, both i18n generators and
+production-RLS coverage checks also passed; the local release verifier matched
+all 126 production asset hashes and the 9ec8c0e revision.
+
+Browser smoke — 2026-09-10: `npm run smoke` passed the Demo dashboard at 1280×800
+and 375×812. Both runs verified the expected title and dashboard content with zero
+console or page errors. This is local browser evidence; it does not prove public
+Tunnel, production OCR or human PDF review.
+
+TASK-234 focused recheck — 2026-09-11: `npm run test:e2e:receipt-assistant`
+passed the Demo workspace matrix, and `npm run test:e2e:company-receipts-api`
+passed the isolated authenticated API Receipt/Pack journey after a successful
+API-mode build. The working tree was restored with `npm run build:demo`, followed
+by a passing desktop/mobile smoke run with zero console/page errors. These checks
+do not establish a real provider call or public Tunnel.
+
+WebMCP native recheck — 2026-09-11: `npm run test:e2e:webmcp-native` passed in
+Chrome 152.0.7977.83 with the official `WebMCPTesting` flag. The six governed
+Receipt/Pack tools, visible cancellation/confirmation, one-Pack persistence/PDF
+export, permission/Company/navigation retirement and 375px bounds all passed in
+an isolated Demo fixture. This remains local WebMCP evidence.
+
+Overnight production recheck — 2026-09-11: loopback API/Web/DB/calendar-worker
+remain healthy on revision `03487b13ce838407d97cd00697bd2b54b4a7c918`; public
+`/erp/health` remains HTTP 502 because the active system Tunnel still has no
+`/erp` rule. The prepared candidate continues to pass cloudflared ingress
+validation, and no system configuration mutation occurred.
+
+Pack result handoff — 2026-09-11: both persisted SG/MY PDF artifacts were queued
+again to this thread's Codex panel (`open_in_codex` returned `queued` for each).
+Queueing makes the files available for operator review; it does not claim that a
+business user has visually accepted them.
+
+Production Pack source-image audit — 2026-09-11: a full-page audit and a read-only
+production DB check found that both source versions are 68-byte `image/png` blobs
+with `page_count=1` and PNG dimensions `1x1`. Their Pack PDFs are structurally valid
+two-page A4 files with embedded Noto font; the register page is readable, while page
+2 contains only the 1×1 source pixel and no text. This is the synthetic pilot
+fixture's source-material limitation, not a storage-integrity failure. Human
+business acceptance is still open; readable receipt image/PDF sources are required
+before treating the artifacts as usable receipt evidence.
+
+Tunnel activation safety checks — 2026-09-11: the guarded script passes `bash -n`,
+ShellCheck and its non-root refusal path. The candidate SHA-256 matches the pinned
+reviewed value; its file mode is 0600 and the executable script is 0700. No
+privileged install or rollback was run.
+
+Tunnel root-cause evidence — 2026-09-11: the active cloudflared error log records
+`gmb01.xyz/erp/health` matching `ingressRule=5` and attempting `localhost:6859`,
+where the connection is refused. The prepared candidate changes only the `/erp`
+path to the healthy production proxy at `127.0.0.1:18791`.
+
+Current production renderer release — 2026-09-11: release `03487b13ce838407d97cd00697bd2b54b4a7c918`
+recreated the API, Web and calendar-worker containers with the database preserved.
+All four Compose services are healthy and the API health revision equals the Web
+`release.json` revision. The Receipt Pack renderer now treats PNG/JPEG sources below
+2×2 pixels as non-renderable: it keeps the governed source bytes and writes a readable
+identity page with the file name, MIME type and SHA-256 instead of placing a nearly
+blank pixel page in the Pack. Final SG/MY PDFs are two-page A4 files with embedded
+Noto OpenType fonts; page 2 has no image XObject and its identity text is readable.
+This repairs the renderer presentation only; the production source remains a synthetic
+68-byte 1×1 PNG, so human business acceptance and replacement with a real receipt
+image/PDF remain open. The release script now uses `--force-recreate` so API/Web cannot
+silently remain on different revisions after an application rebuild. The local release
+verifier also passed root, health, setup status, manifest, all 126 asset hashes, revision
+matching and final URL checks for the loopback `/erp` origin.
+
+
+
+Production local acceptance — 2026-09-10: API/Web revision
+03487b13ce838407d97cd00697bd2b54b4a7c918 is running privately on 127.0.0.1:18791.
+Actual nginx /erp returns Location: /erp/;
+the release verifier passes root, health, initialized setup, revision and all 126
+asset hashes. The real browser displays the production Platform Superadmin login.
+The original development index is preserved. The Web image was rebuilt from the
+same release worktree after the HR idempotency fix. Four public-base-path tests,
+the HR idempotency fix, lint, both typechecks and image builds pass. CI 34475283757
+and Pages 34475283620 completed successfully for the preceding b932 revision;
+the 9ec8c0e delta has targeted local verification. Public cutover still requires
+the prepared system Tunnel activation and subsequent HTTPS health/revision
+verification.
+
+Release verification — 2026-09-10T11:57:17Z: translation repair
+539f4f008308a07b4023fb49e31028905bdce1e3 is deployed by Pages 34473757892.
+All 135 served assets match the committed build; the empty .nojekyll marker is
+separately unserved. All 859 build inputs match the snapshot and the original
+index is unchanged. Desktop/mobile smoke, 50-route transaction layout and the
+operational workspace layout audits pass with zero console/page errors.
+CI 34473757884 remains running; full-screen local audit is running. Production
+root and health still return HTTP 502; no production migration/deployment claimed.
+
+
+Current verification checkpoint — 2026-09-10: CI 34469731319 finished with one
+blocking hardcoded Goods Receipts description in the desktop i18n matrix. All four
+Vitest shards and preceding lint/type/schema/PostgreSQL/transaction/build gates
+passed; subsequent browser gates were skipped. The description now has all five
+locale resources; the targeted desktop/mobile matrix (10 combinations), local
+lint/typechecks, build and PGlite proof pass. Full CI rerun remains pending.
+Screen-saver automatic start was disabled at the user request (idleTime=0).
+CUA now reads Chrome successfully; previous lock reports must not be treated as
+proof that the user manually locked the Mac. The existing Receipt Pilot Singapore
+Incognito workspace was located; the live account/receipt/Pack pilot remains open.
+
+
+CI checkpoint — 2026-09-10: run 34469731319 for 0e204ff passed all four Vitest
+shards, lint, both typechecks, generated-schema/drift/permission checks, PostgreSQL
+16 non-superuser security lifecycle and the PGlite/PostgreSQL transaction/concurrency
+proof. The build passed; the five-language desktop/mobile browser matrix is running.
+Remaining smoke/screen/layout/subpath checks are pending, so full CI is not accepted.
+Native Chrome again reports Mac locked; unlock request pending. No real receipt
+upload, human selection confirmation or persisted live Pack outcome is claimed.
+
+Automatic credential release verified — 2026-09-10T11:17:30Z: revision
+`0e204ff60ba308a75ca2c7f31b9b3e73d2975864`, Pages run 34469731345 succeeded.
+All 135 served files match the exact committed local build by size and SHA-256;
+the empty .nojekyll marker is separately unserved. Original worktree/index retained.
+Latest CI 34469731319 remains running; previous CI 34464383875 passed all four unit
+shards before its aggregate job was superseded/cancelled. No full-CI acceptance is
+claimed. Native Chrome follow-up was unavailable because the Mac locked again.
+The old manual-password request is obsolete. Refresh and resume ordinary Add Staff:
+password generation is automatic, followed by employee-record Account handoff.
+No email was sent; production deployment and real Receipt-to-Pack acceptance remain open.
 
 Automatic credential handoff — 2026-09-10: user-directed Add Staff now generates
 secure passwords automatically. The API uses Node crypto and Demo uses Web Crypto,
@@ -46,7 +222,8 @@ employee login also clears prior Demo impersonation state. Production PostgreSQL
 rollout and the real Receipt-to-Pack operator pilot remain separate acceptance.
 See [account access evidence](ai-native/evidence/TASK-234-2026-09-09.md#immediate-account-access--2026-09-10).
 
-Current TASK-234 checkpoint — 2026-09-10: shared G06 intent and Pack persistence
+Earlier TASK-234 checkpoint — 2026-09-10, superseded by the production pilot:
+shared G06 intent and Pack persistence
 commands are now browser-compatible factories. Server facades preserve their
 existing APIs; Demo runtime binds both factories with Web Crypto and shared audit.
 The Demo Pack path uses shared creation/replay commands and enforces the reviewed
@@ -90,7 +267,8 @@ completion artifact hash; opening does not execute another creation command.
 Selected rows are now progressively expandable beyond 20 with amount, currency,
 purpose, version and evidence facts. Original evidence can now be opened through
 the governed document-content boundary after exact-version and byte-hash checks.
-Actual human inspection and the same-run real gateway pilot remain open.
+Actual human PDF inspection, public Tunnel/OCR readiness and the same-run live
+server-assistant pilot remain open.
 
 The default browser gateway is `https://gpt.yapweijun1996.com/demo` / `demo-auto`.
 One synthetic query on the registered GitHub Pages origin succeeded (117 reported
@@ -98,11 +276,11 @@ tokens); tested localhost origins were rejected. This is protocol evidence only,
 not full Receipt-to-Pack/operator acceptance. Requests send user query text, not
 receipt files, and do not occur at startup. See [AI_PROVIDERS.md](AI_PROVIDERS.md).
 
-Latest integrated regression: 204 test files and 895 tests passed, with 3
+Latest integrated regression: 204 test files and 901 tests passed, with 3
 PostgreSQL files/tests skipped because POSTGRES_URL was unset. The process exited
-0 after 1324.40 seconds. This supersedes the earlier MCP fixture-clock failures;
+0 after 1186.52 seconds. This supersedes the previous 900-test count and MCP fixture-clock failures;
 it does not establish PostgreSQL or real-provider/operator acceptance. See
-[regression evidence](ai-native/evidence/TASK-234-2026-09-09.md#final-full-suite-release-regression--2026-09-10).
+[regression evidence](ai-native/evidence/TASK-234-2026-09-09.md#full-workspace-regression-recheck--2026-09-11).
 
 Receipt Pack PDF readability repair: complete wrapped register fields, correct
 OpenType font declarations and ordinary extractable digits are locally verified.
@@ -293,8 +471,8 @@ TASK-218 repairs invoice aging/period presentation facts, TASK-219 repairs the s
 translation gaps, TASK-220 repairs the filled-action contrast gap and TASK-221 repairs the
 procurement receiving workflow; TASK-222 repairs the mobile/status usability gap and
 TASK-223 repairs the recovery audit timing boundary.
-The current full local Vitest run passes 198 files / 814 tests with 3 skipped files and 3
-skipped tests (201 files / 817 tests total). The latest code-bearing revision `ff6e0d9` passes remote CI
+The current full local Vitest run passes 204 files / 900 tests with 3 skipped files and 3
+skipped tests (207 files / 903 tests total). The latest code-bearing revision `ff6e0d9` passes remote CI
 run `34189671568`: all four Vitest shards, static/type/build gates, PostgreSQL security
 and concurrency proofs, five-language desktop/mobile i18n, smoke, full screen and both
 layout audits. GitHub Pages run `34189671604` also succeeded and its `release.json`
@@ -423,7 +601,7 @@ adds a current-path PostgreSQL/FORCE-RLS proof; TASK-206 and TASK-207 are done, 
 TASK-203 is done through current-HEAD CI run `34189671568`; the remaining Platform
 release chain remains TASK-199/TASK-209 work. The pre-TASK-214 local full Vitest checkpoint passed 173 files /
 705 tests with two intentional file/test skips; the current full local Vitest run now passes
-194 files / 794 tests with 3 skipped files and 3 skipped tests. TASK-204 source-level tax interval,
+204 files / 900 tests with 3 skipped files and 3 skipped tests. TASK-204 source-level tax interval,
 classification and posting hardening is now in progress; targeted tax/purchasing/Expense
 tests pass, while production tax-owner review remains open. TASK-205 source hardening is
 also in progress: gateway status/malformed/timeout, paused-connector, retry-lease and
@@ -884,7 +1062,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Project Finance Depth: Bank Receipt, Payment Voucher & project-scoped AP | ✅ Canonical Demo/API data and writes | Closes Project's third and final deferred sub-phase — every originally-scoped Phase 7 module is now real. `bank_receipt` (settles a posted progress claim's AR in full, Dr `1000` Cash / Cr `1100` AR) and `payment_voucher`+`payment_voucher_line` (settles one or more of a supplier's unpaid invoices, Dr `2100` AP / Cr `1000` Cash, and is the first code in this repo to ever flip a `supplier_invoice` to `paid`) added to `src/data/schema/finance.ts` — the first new Treasury documents here, in a new `src/modules/finance/` module (GL had been read-only until now, hence a new `finance.write` permission). `purchase_order`/`supplier_invoice` gained a nullable `project_id`: settable from the `new-purchase-order` wizard, auto-propagated onto the resulting invoice with no new user input. Seeded a new `1000` Cash & Bank chart-of-accounts row, which also fixed a long-dead `screens-fin2.js` GL tile that already summed codes `1000`+`1010` against accounts that never existed. `payment-voucher`/`new-payment-voucher` replaced 100%-fabricated screens (the old wizard's "open invoices" list was a hash of the supplier code, and "Post payment" never touched the adapter) with a real per-voucher detail and a real 2-step wizard reading genuine unpaid invoices; `project-detail` gained a real "Record receipt" action and a real "Project costs" panel. Verified live with a mathematically balanced result: one Payment Voucher (S$1,220.80 across two real unpaid invoices) and one Bank Receipt (S$54,500) left the General Ledger's Cash & Bank account at exactly S$53,279, with AP and AR each moving by the settled amounts — confirmed by resetting the demo database and re-deriving every balance from scratch. |
 | Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. Smoke now passes with visible-only semantic badge assertions; actionable counts remain in canonical module KPIs and approval queues. |
 | Full screen audit — TASK-214 / TASK-223 | ✅ Local audit passes | All 130 routes rendered desktop/mobile without console/page errors, identity leaks or layout failures. Payment Voucher Retry measured about 1333ms desktop / 949ms mobile against a bounded 10-second Promise-aware budget. Production and remote CI evidence remain separate; the full local Vitest result is recorded in the current verification baseline. |
-| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Current HEAD full suite passes | `npm test -- --run` passes 198 files / 814 tests with 3 skipped files and 3 skipped tests (201 files / 817 tests total). PostgreSQL target and production remain separate gates. |
+| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Current workspace full suite passes | `npm test -- --reporter=dot` passes 204 files / 900 tests with 3 skipped files and 3 skipped tests (207 files / 903 tests total). PostgreSQL target and production remain separate gates. |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemData.completeSetup()` → shared `completeDemoSetupWithin`, gated in `app.js` boot(). Production setup remains a separate empty-database/zero-user command and does not require a deployment setup token. |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemData.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |

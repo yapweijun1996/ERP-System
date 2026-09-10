@@ -181,11 +181,18 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
       apiError(res, 400, 'idempotency_key_required', 'A valid Idempotency-Key is required.');
       return;
     }
-    const begun = await beginIdempotentRequest(db, {
+    const scope = {
       masterFn: session.masterFn,
       companyFn: session.activeCompanyFn,
-      actorUserId: session.userId,
-    }, key, operation, payload);
+    };
+    // api_idempotency is FORCE RLS in PostgreSQL. Establish the tenant
+    // settings before claiming the key so Platform tenant actors follow the
+    // same governed path as human sessions.
+    const begun = await withTenantTransaction(db, scope, (tx) =>
+      beginIdempotentRequest(tx, {
+        ...scope,
+        actorUserId: session.userId,
+      }, key, operation, payload));
     if (begun.kind === 'replay') {
       res.setHeader('Idempotency-Replayed', 'true');
       res.status(begun.status).json(begun.body);
@@ -204,7 +211,8 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
     }
     const result = await execute();
     const body = { data: result.data, meta: {} };
-    await completeIdempotentRequest(db, begun.recordId, result.status, body);
+    await withTenantTransaction(db, scope, (tx) =>
+      completeIdempotentRequest(tx, begun.recordId, result.status, body));
     res.status(result.status).json(body);
   }
 

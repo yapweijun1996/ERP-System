@@ -91,6 +91,11 @@ try {
     await page.locator('#employeeAccountEmailTemplate').waitFor({ state: 'detached' });
     await page.evaluate(() => signOutDemo());
     await page.locator('#loginEmail').waitFor({ state: 'visible', timeout: 60000 });
+    const authFoot = await page.locator('.auth-foot').innerText();
+    if (/activation/i.test(authFoot)) throw new Error('Obsolete activation copy shown on the login page');
+    if (!/Account access is ready immediately|One-click access is limited to showcase personas/.test(authFoot)) {
+      throw new Error('Supported account access copy is missing from the login page');
+    }
     await page.locator('#loginEmail').fill('immediate.staff@example.test');
     await page.locator('#loginPassword').fill(generatedPassword);
     await page.locator('#loginForm button[type="submit"]').click();

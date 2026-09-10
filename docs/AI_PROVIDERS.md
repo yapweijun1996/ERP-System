@@ -5,7 +5,7 @@ server AI contract/workspace and the remaining real-provider integration. G03 pr
 server; G04 provides outbound external MCP connections. Inbound MCP is locally evidenced; outbound MCP remains planned. These boundaries
 do not replace the governed Vision pipeline below.
 
-Reviewed: **2026-09-09**. This document separates the implemented governed document
+Reviewed: **2026-09-10**. This document separates the implemented governed document
 Vision path from the local Receipt assistant and its locally connected provider runtime and open live-account gate.
 
 ## Default browser Demo gateway — 2026-09-10
@@ -26,6 +26,13 @@ runs its existing preview/confirmation/creation commands. No receipt files or
 Company records are sent. Transport and invalid output fail visibly without a
 silent fallback. The response is bounded to 64 KiB and the run to 60 seconds;
 cancellation aborts HTTP. Monetary cost is unavailable, not zero.
+
+Live protocol recheck — 2026-09-10: the registered Pages origin received HTTP 201
+for the `github-pages` session and HTTP 200 for a bounded `demo-auto` response whose
+sanitized proposal was `{"search":"Cafe"}`. The unregistered local preview origin
+still receives HTTP 403. No session token, credential, receipt file or Company data
+was saved or logged. This verifies the browser Demo gateway protocol only; it does
+not activate the production server assistant or document OCR.
 
 This browser path does not reconfigure API-mode Company providers or document
 OCR, and does not establish the original server six-tool live pilot as complete.

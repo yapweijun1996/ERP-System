@@ -9,8 +9,11 @@ deployment and Docker is the production deployment:
    Use `docker-compose.production.yml` on a client server so only `web` is exposed.
 
 Current code schema boundary: migration
-`0103_grey_charles_xavier` (104 journal entries, schema version 103, 255 generated
-tables). Migrations 0084–0085 add the separate platform support control plane and exact
+`0111_immediate_account_access` (112 journal entries, schema version 111, 261 public
+tables). The fresh local production instance matches this boundary. Migration 0111
+removes mandatory account activation; it does not re-enable disabled accounts or
+change passwords. Migrations 0104–0110 add the governed Agent, MCP, knowledge and
+provider configuration foundations. Migrations 0084–0085 add the separate platform support control plane and exact
 master/company boundary; migration 0086 adds assignment validity/provenance and
 assignment-owned scope rows with a compatibility backfill; migration 0087 adds
 tenant-scoped reasoned user permission overrides and explicit deny precedence;
@@ -34,7 +37,80 @@ reset; this is not proof that 0103 or the current HEAD is deployed. Production R
 the override/company tables; the application central evaluator remains authoritative for
 decision semantics.
 
-### Current evidence warning (TASK-194, 2026-08-12)
+### Current deployment checkpoint — 2026-09-11
+
+The current application-only release is
+`03487b13ce838407d97cd00697bd2b54b4a7c918`. API, Web, calendar-worker and
+PostgreSQL are healthy in the local `erp-system-production` Compose project; API
+health and Web `release.json` report the same revision. The release uses
+`--force-recreate` for every application container and preserves the PostgreSQL
+volume without running migrations. The Receipt Pack renderer now emits a readable
+identity page for PNG/JPEG sources below 2×2 pixels while retaining the governed
+source bytes. Final SG/MY PDFs are private mode-0600 two-page A4 artifacts with
+embedded Noto OpenType fonts, no page-2 image XObject, and hashes recorded in the
+[TASK-234 production evidence](ai-native/evidence/TASK-234-2026-09-09.md#tiny-image-evidence-page-repair--2026-09-11).
+The source material is still a synthetic 68-byte 1×1 PNG, so human visual/business
+acceptance remains open. The local `scripts/verify-release.mjs` run passed root,
+health, setup status, release manifest, all 126 asset hashes, revision matching and
+final URL checks against the loopback `/erp` origin.
+
+The user approved a fresh production database on this Mac, without importing old
+data. The active local API/Web release is
+`03487b13ce838407d97cd00697bd2b54b4a7c918` in the `erp-system-production` Compose
+project, built from the guarded `erp-hr-idempotency-fix-20260910` release worktree.
+Only the web proxy is published, on `127.0.0.1:18791`; API and PostgreSQL stay private.
+The API, web and database are healthy, and the calendar worker runs with no outbound
+endpoint. The optional email worker, Receipt Assistant activation and OCR endpoint
+remain disabled.
+
+Local verification passes actual nginx `/erp` relative redirect, API health,
+initialized setup state, revision and all 126 public asset hashes. The independent
+Platform Superadmin exists together with the fresh Master `M-47F82ACB0A19` and SG/MY
+Companies `C-SG-136B3C173074` and `C-MY-B2796BF9D340`; no old business data was
+imported. Runtime
+API/worker roles have no superuser, RLS-bypass, database-creation or role-creation
+rights. There are 231 forced-RLS tables. A mode-0600 initial backup was restored in
+an isolated PostgreSQL 16 container and its schema counts and principal data matched.
+The local Receipt-to-Pack persistence and PDF evidence is recorded in
+[TASK-234 production evidence](ai-native/evidence/TASK-234-2026-09-09.md#production-receipt-to-pack-pilot--2026-09-10).
+This does not establish off-machine recovery, production scale, public HTTPS health,
+OCR worker readiness or human visual PDF review.
+
+Public `https://gmb01.xyz/erp` still returns 502. The active system Tunnel reads
+`/etc/cloudflared/config.yml`, which currently lacks the `/erp` route. The home
+Tunnel config is not active; the old Node service at 8791 is only a placeholder.
+A checksum-guarded activation script under `~/Documents/ERP-Production` is prepared
+with backup and restart-failure rollback. System administrator authentication and
+subsequent public HTTPS verification remain required. Do not mark public recovery
+from the local health endpoint alone.
+The candidate file passes `cloudflared tunnel --config
+~/Documents/ERP-Production/cloudflared-config.proposed.yml ingress validate`; this
+checks syntax and rule ordering only, and does not activate the system Tunnel.
+
+Overnight recheck — 2026-09-11: the loopback production revision and Compose
+services remain healthy; public `/erp/health` is still HTTP 502 and the active
+system configuration remains unchanged.
+The activation script's syntax, ShellCheck result, non-root guard, pinned candidate
+hash and 0700/0600 file modes pass; privileged install and rollback remain unrun.
+The active cloudflared log confirms the 502 path: `/erp/health` reaches ingress rule
+5 at `localhost:6859`, which refuses the connection; the candidate routes `/erp` to
+the healthy `127.0.0.1:18791` production proxy.
+
+Production Pack source-image audit — 2026-09-11: both fresh-production source
+versions are database-backed 68-byte PNG blobs whose headers declare `1x1` pixels.
+The exported two-page A4 PDFs pass structural/hash checks and the register page is
+readable, but the source page is only a single pixel. Treat this as synthetic pilot
+material, not readable business evidence; a human review and replacement with a
+readable receipt image/PDF remain required before production sign-off.
+
+Pages run [34475283620](https://github.com/yapweijun1996/ERP-System/actions/runs/34475283620)
+published the same revision; 135 served assets match the reviewed Demo build. CI
+[34475283757](https://github.com/yapweijun1996/ERP-System/actions/runs/34475283757)
+completed successfully with all four unit shards and its aggregate typecheck,
+transaction/security proof and Demo build job. The later 9ec8c0e production delta
+has targeted local verification. See the [current production evidence](ai-native/evidence/TASK-199-2026-09-09.md).
+
+### Historical availability evidence (TASK-194, 2026-08-12)
 
 The 0098 reset/release paragraphs below are immutable historical checkpoints. They are
 not proof that HEAD `00e2533` is deployed or that the service is currently healthy.

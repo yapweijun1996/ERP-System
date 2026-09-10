@@ -1,8 +1,29 @@
 # AI Native ERP System Goal
 
-Reviewed: **2026-09-09**. Planning baseline: `d4c9dc9`.
+Reviewed: **2026-09-11**. Planning baseline: `d4c9dc9`.
 Owner: product owner; engineering owns implementation and evidence.
 Delivery programme: **EPIC-068 / TASK-227–240**.
+
+Latest production renderer checkpoint — **2026-09-11**: application release
+`03487b13ce838407d97cd00697bd2b54b4a7c918` is healthy across API, Web,
+calendar-worker and PostgreSQL, with API health matching Web `release.json`. The
+application-only release recreated all application containers and preserved the
+database without migration or reset. The Receipt Pack renderer now preserves
+governed source bytes and writes a readable identity page for PNG/JPEG sources below
+2×2 pixels. Final SG/MY artifacts are structurally verified two-page A4 PDFs; their
+source rows remain synthetic 68-byte 1×1 PNGs, so readable-source replacement and
+human visual/business acceptance remain open. Public `/erp/health` is still HTTP 502
+until the prepared system Tunnel route is activated.
+
+Production Receipt-to-Pack pilot baseline — **2026-09-10**: a fresh local production PostgreSQL
+environment now runs coherent API/Web revision
+`9ec8c0e5c1361dfe77c8a3e8cdca4730e0b56e05` with new SG/MY Companies and no imported
+old data. Real employee sessions completed clean-evidence inspection, manual
+metadata confirmation, Receipt creation, exact selection preview, immutable Pack
+persistence/readback and PDF export for both countries. ClamAV marked both source
+versions clean. Public Tunnel activation, production OCR readiness, human visual
+PDF review and a live assistant-provider run remain open; see the
+[dated evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#production-receipt-to-pack-pilot--2026-09-10).
 
 Start execution with [AI_NATIVE_EXECUTION.md](docs/AI_NATIVE_EXECUTION.md) and the
 selected [task packet](docs/AI_NATIVE_EXECUTION.md#recommended-sequence). The
@@ -40,16 +61,18 @@ the built-in assistant as well as the already locally evidenced MCP/WebMCP paths
 The pilot is the first complete delivery slice, not the whole ERP product scope.
 
 **Where we are:** the shared commands, Agent identity, confirmation, MCP/WebMCP,
-semantic reads and local assistant fixtures are evidenced. Phase 2 remains open:
+semantic reads and local assistant fixtures are evidenced. The local production
+Receipt-to-Pack path is now also evidenced for SG/MY through authenticated employee
+sessions, persisted Receipt/Pack rows and independently hashed PDFs. Phase 2 remains open:
 TASK-234 now has a local Responses adapter, authenticated Company configuration
 resolver and default-deny server bootstrap. A repeatable SG/MY local pilot runner
 now verifies exact confirmation and reopened database/PDF persistence. Injected HTTP fixture evidence does
 not prove a real-model run; approved account/model/data-policy/spend and separate
 production/business-owner gates remain mandatory.
 
-**Primary execution focus:** TASK-234, verify the connected runtime and complete
-the approved real-provider journey when account, data policy and cost authority
-are available. A saved credential alone cannot activate the assistant. Preserve
+**Primary execution focus:** TASK-234, close the public Tunnel/OCR/visual-review
+gates and verify the connected assistant runtime when account, data policy and cost
+authority are available. A saved credential alone cannot activate the assistant. Preserve
 cancellation and unknown-cost custody. Keep live AI acceptance open until its own
 persisted Pack/PDF and sanitized provider usage evidence exists.
 

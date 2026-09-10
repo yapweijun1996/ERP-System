@@ -1,5 +1,17 @@
 # ERP-System Project Logic
 
+Production Receipt-to-Pack checkpoint — 2026-09-10: the fresh local production
+API/Web revision `9ec8c0e5c1361dfe77c8a3e8cdca4730e0b56e05` now has the new Master
+`M-47F82ACB0A19`, SG Company `C-SG-136B3C173074` and MY Company
+`C-MY-B2796BF9D340`. Real employee sessions completed clean-evidence inspection,
+human metadata confirmation, Receipt creation, exact preview, immutable Pack
+persistence/readback and PDF export for both countries. ClamAV marked both source
+versions clean; OCR is not configured in this production Compose stack, so the
+extraction jobs are currently dead-lettered after scanning and the manual clean
+evidence path remains the supported fallback. Public Tunnel cutover, OCR worker
+readiness and human visual PDF review remain open. See the
+[production evidence](ai-native/evidence/TASK-234-2026-09-09.md#production-receipt-to-pack-pilot--2026-09-10).
+
 Current TASK-234 checkpoint — 2026-09-10: shared G06 intent and Pack persistence
 commands are now browser-compatible factories. Server facades preserve their
 existing APIs; Demo runtime binds both factories with Web Crypto and shared audit.
@@ -897,8 +909,10 @@ hold changes use optimistic versions and append-only events; purge requires a di
 reviewer, rechecks retention/hold/frozen hashes, leaves an immutable tombstone and blocks
 Pack-key reuse. Company IANA timezone defaults are returned through API/Demo company
 context and drive local calendar presets. Local unit/API/Demo/browser proof passes;
-disposable PostgreSQL same-key concurrency passes on a fresh PostgreSQL 16 database;
-production release/download/Print evidence remains open.
+disposable PostgreSQL same-key concurrency passes on a fresh PostgreSQL 16 database.
+The local production release/download/Print path now has dated SG/MY Receipt-to-Pack
+evidence; public HTTPS, OCR worker readiness and human visual PDF review remain
+separate release gates.
 The source/UI paths for Pack permission downgrade and Company Receipt correction/edit/void/date
 correction exist, and local unit/API/Demo/browser evidence covers them. Their authenticated
 browser/production UAT remains a P0 release-evidence follow-up until the dated ERP excellence
@@ -913,7 +927,9 @@ Existing imported evidence font streams are untouched. The full font remains emb
 (about 14 MB for a small Pack); subsetting was rejected after reader validation failed.
 PDF artifact hashes can change with renderer revisions; stored selection/source
 digests and source documents do not. Then `documents/evidencePdf.ts` copies all PDF pages, embeds JPEG/PNG or emits
-an explicit unsupported/corrupt evidence placeholder. Preview, download and Print use
+an explicit identity placeholder for sub-2×2 PNG/JPEG sources or unsupported/corrupt
+evidence. The governed source bytes remain unchanged and the identity page records the
+original file name, MIME type and SHA-256. Preview, download and Print use
 the same private no-store artifact and are audited without changing receipt state.
 The shared PDF primitive is technical reuse only: Tax Evidence still joins
 `expensePosting`, `expenseClaimLine` and `receiptInboxItem` and is not this business query.

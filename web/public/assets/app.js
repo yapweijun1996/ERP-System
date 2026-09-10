@@ -255,7 +255,7 @@ function renderLogin(){
     <div class="auth-foot">
       ${apiMode
         ? `<span class="cap ok"><span class="dot"></span>Production</span><span>Real session — see docs/STATUS.md for current auth scope</span>`
-        : `<span class="cap ok"><span class="dot"></span>Demo only</span><span>${demoOneClickAvailable?'One-click access is limited to showcase personas':'Staff credentials and first-login activation are enforced'}</span>`}
+        : `<span class="cap ok"><span class="dot"></span>Demo only</span><span>${demoOneClickAvailable?'One-click access is limited to showcase personas':'Account access is ready immediately; sign in with your account credentials.'}</span>`}
     </div>
   </section>`;
   const doLogin=(email)=>{

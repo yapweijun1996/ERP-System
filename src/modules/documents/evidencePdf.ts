@@ -17,6 +17,11 @@ export interface EvidencePdfOptions {
   fontBytes?: Uint8Array;
 }
 
+// A source with a one-pixel edge cannot contain readable receipt evidence. Keep
+// the original bytes governed by document storage, but make the generated Pack
+// explain why the source image is not rendered as a nearly blank page.
+const MIN_RENDERABLE_IMAGE_DIMENSION = 2;
+
 function printable(value: string, unicode = false): string {
   if (unicode) {
     return [...value].filter((character) => {
@@ -49,8 +54,12 @@ async function placeholderEvidencePage(
   unicode = false,
 ) {
   const page = pdf.addPage([595, 842]);
-  page.drawText(printable(message, unicode), { x: 45, y: 785, size: 14, font });
-  let y = 750;
+  let y = 785;
+  for (const line of wrapText(message, 60, unicode)) {
+    page.drawText(line, { x: 45, y, size: 14, font });
+    y -= 20;
+  }
+  y -= 5;
   for (const line of wrapText(`File: ${document.fileName}`, 75, unicode)) {
     page.drawText(line, { x: 45, y, size: 10, font });
     y -= 15;
@@ -104,6 +113,17 @@ export async function renderEvidencePdf(
         pages.forEach((page) => pdf.addPage(page));
       } else if (document.mimeType === 'image/png') {
         const image = await pdf.embedPng(document.content);
+        if (image.width < MIN_RENDERABLE_IMAGE_DIMENSION
+          || image.height < MIN_RENDERABLE_IMAGE_DIMENSION) {
+          await placeholderEvidencePage(
+            pdf,
+            await getFont(),
+            document,
+            'Source image is too small; identity is preserved below.',
+            unicode,
+          );
+          continue;
+        }
         const size = image.scale(Math.min(1, 520 / image.width, 750 / image.height));
         const page = pdf.addPage([595, 842]);
         page.drawImage(image, {
@@ -114,6 +134,17 @@ export async function renderEvidencePdf(
         });
       } else if (document.mimeType === 'image/jpeg') {
         const image = await pdf.embedJpg(document.content);
+        if (image.width < MIN_RENDERABLE_IMAGE_DIMENSION
+          || image.height < MIN_RENDERABLE_IMAGE_DIMENSION) {
+          await placeholderEvidencePage(
+            pdf,
+            await getFont(),
+            document,
+            'Source image is too small; identity is preserved below.',
+            unicode,
+          );
+          continue;
+        }
         const size = image.scale(Math.min(1, 520 / image.width, 750 / image.height));
         const page = pdf.addPage([595, 842]);
         page.drawImage(image, {

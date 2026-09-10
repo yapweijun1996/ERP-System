@@ -47,7 +47,10 @@ export ERP_RELEASE_COMMIT="$release_commit"
 "${compose[@]}" config --quiet
 
 echo "==> Releasing application containers only (database is preserved)"
-"${compose[@]}" up -d --build --no-deps api web calendar-worker
+# Recreate every application container after the build. Compose can otherwise keep
+# a service running when only the build context changed, leaving API and web on
+# different revisions even though both images were rebuilt.
+"${compose[@]}" up -d --build --force-recreate --no-deps api web calendar-worker
 
 ready=false
 attempt=1

@@ -1,5 +1,147 @@
 # ERP goal execution plan
 
+Latest full workspace regression — 2026-09-11: `npm test -- --run` exited 0 with
+204 test files passed, 3 skipped, 901 tests passed and 3 skipped in 1186.52
+seconds. This supersedes the previous 900-test local count while remaining
+repository-only evidence; PostgreSQL target, production, public Tunnel, OCR,
+provider and human acceptance remain separate gates.
+
+The fixture-only `scripts/receipt-assistant-pilot.ts --fixture` runner also
+completed for both C-SG and C-MY against fresh private PGlite databases. It
+detail-read and hash-checked every selected receipt, required the exact digest
+before one Pack write, reopened the database and verified the persisted Pack/PDF.
+The confirmation was simulated and the provider was a local OpenAI-shaped
+fixture, so this remains technical evidence rather than real-provider or
+business-user acceptance.
+
+Latest production renderer checkpoint — 2026-09-11: release
+`03487b13ce838407d97cd00697bd2b54b4a7c918` is healthy across API, Web,
+calendar-worker and PostgreSQL, with matching API health and Web `release.json`
+revisions. The application-only release recreated all application containers and
+did not migrate or reset the database. The tiny-image PDF repair keeps the governed
+source bytes and emits a readable identity page for sub-2×2 PNG/JPEG sources; final
+SG/MY PDFs are two-page A4 artifacts with embedded Noto OpenType fonts and no page-2
+image XObject. Final private artifact hashes are SG
+`3bcba83bc29d60f407c6a6ec9194702b3a9d9c8734270e0904c2235ebfc18b69` (28,263,373
+bytes) and MY `4a377d1ef83945709109c3b07e7e9f0d435ddca89c09a81713651c04810d210a`
+(28,263,378 bytes). The source rows are still synthetic 68-byte 1×1 PNGs, so
+human business acceptance and replacement with a readable receipt source remain open.
+Public `/erp/health` remains HTTP 502 until the prepared system Tunnel route is
+activated.
+
+Production Receipt-to-Pack pilot baseline — 2026-09-10: the fresh local production PostgreSQL
+environment exercised the coherent API/Web revision
+`9ec8c0e5c1361dfe77c8a3e8cdca4730e0b56e05`. Authenticated SG/MY employee sessions
+completed clean-evidence inspection, manual metadata confirmation, Receipt creation,
+exact selection preview, immutable Pack persistence/readback and two-page PDF export.
+The source versions are ClamAV-clean. No old data was imported. The system Tunnel
+still lacks the `/erp` route and public HTTPS returns 502; production OCR is not
+configured, so extraction is dead-lettered after scanning. The artifact hashes and
+remaining visual-review/public gates are recorded in
+[TASK-234 production evidence](ai-native/evidence/TASK-234-2026-09-09.md#production-receipt-to-pack-pilot--2026-09-10).
+The prepared Tunnel candidate passes cloudflared ingress validation; the active
+system configuration remains unchanged until administrator authentication.
+
+CI checkpoint — 2026-09-10: GitHub Actions run
+[34475283757](https://github.com/yapweijun1996/ERP-System/actions/runs/34475283757)
+completed successfully for production/Demo revision
+`b9326f87732d904dc640d78d8b783418f5e9eb90`; all four Vitest shards and the
+aggregate typecheck, transaction/security proof and Demo build job passed. Pages
+run [34475283620](https://github.com/yapweijun1996/ERP-System/actions/runs/34475283620)
+also completed successfully. The later production release `9ec8c0e` contains the
+HR tenant-context/idempotency fix and has targeted local tests, lint, typechecks and
+image verification; a full CI run for that delta was not rerun. Public Tunnel
+activation, production OCR readiness and human visual PDF review remain open.
+
+Current workspace verification — 2026-09-10: `npm test` completed with 204 test
+files passed, 3 skipped; 900 tests passed, 3 skipped. This is additional local
+regression evidence for the current dirty workspace and does not replace the
+separate production image, public Tunnel, OCR or human visual-review gates.
+Schema drift, permission registry, Demo schema/pack, both i18n generators and
+production-RLS coverage checks also passed; the local release verifier matched
+all 126 production asset hashes and the 9ec8c0e revision.
+
+Browser smoke — 2026-09-10: `npm run smoke` passed the Demo dashboard at 1280×800
+and 375×812 with the expected title/content and zero console or page errors. This
+is local browser evidence; public Tunnel, production OCR and human PDF review are
+still separate gates.
+
+TASK-234 focused recheck — 2026-09-10: 16 runtime/API/provider/assistant test files
+and 115 tests passed. The Demo Receipt Assistant workspace E2E and isolated
+authenticated Company Receipts API E2E both passed, including Pack/PDF assertions;
+the real-provider and public Tunnel gates remain separate.
+
+WebMCP native recheck — 2026-09-11: Chrome 152.0.7977.83 with the official
+`WebMCPTesting` flag passed the six governed Receipt/Pack tools, visible
+cancellation/confirmation, one-Pack/PDF persistence, permission/Company/navigation
+retirement and 375px bounds in an isolated Demo fixture.
+
+Overnight production recheck — 2026-09-11: loopback revision
+`03487b13ce838407d97cd00697bd2b54b4a7c918` and all four Compose services remain healthy;
+public `/erp/health` remains 502 because the active system
+Tunnel lacks `/erp`. The guarded candidate still passes cloudflared ingress
+validation, with no system configuration change.
+
+Pack result handoff — 2026-09-11: SG and MY persisted PDF artifacts were queued to
+the current Codex panel for operator review; the queue result does not establish
+human visual acceptance.
+
+Production Pack source-image audit — 2026-09-11: both fresh-production source
+versions are 68-byte PNGs with `1x1` dimensions. The two-page A4 Pack PDFs retain
+valid hashes and a readable register page, but page 2 contains only the source
+pixel. This is a synthetic pilot-material limitation; replace the source with a
+readable receipt image/PDF before business sign-off.
+
+
+
+Earlier local deployment checkpoint — 2026-09-10: revision b9326f87732d904dc640d78d8b783418f5e9eb90
+was the pre-pilot API/Web image. It established the `/erp` redirect, health,
+initialized setup and 126 asset hashes before the HR idempotency release. The
+current coherent production revision is recorded at the top of this plan; public
+cutover still requires the prepared system Tunnel activation and subsequent HTTPS
+health/revision verification.
+
+Release verification — 2026-09-10T11:57:17Z: translation repair
+539f4f008308a07b4023fb49e31028905bdce1e3 is deployed by Pages 34473757892.
+All 135 served assets match the committed build; the empty .nojekyll marker is
+separately unserved. All 859 build inputs match the snapshot and the original
+index is unchanged. Desktop/mobile smoke, 50-route transaction layout and the
+operational workspace layout audits pass with zero console/page errors.
+CI 34473757884 remains running; full-screen local audit is running. Production
+root and health still return HTTP 502; no production migration/deployment claimed.
+
+
+Current verification checkpoint — 2026-09-10: CI 34469731319 finished with one
+blocking hardcoded Goods Receipts description in the desktop i18n matrix. All four
+Vitest shards and preceding lint/type/schema/PostgreSQL/transaction/build gates
+passed; subsequent browser gates were skipped. The description now has all five
+locale resources; the targeted desktop/mobile matrix (10 combinations), local
+lint/typechecks, build and PGlite proof pass. Full CI rerun remains pending.
+Screen-saver automatic start was disabled at the user request (idleTime=0).
+CUA now reads Chrome successfully; previous lock reports must not be treated as
+proof that the user manually locked the Mac. The existing Receipt Pilot Singapore
+Incognito workspace was located; the live account/receipt/Pack pilot remains open.
+
+
+CI checkpoint — 2026-09-10: run 34469731319 for 0e204ff passed all four Vitest
+shards, lint, both typechecks, generated-schema/drift/permission checks, PostgreSQL
+16 non-superuser security lifecycle and the PGlite/PostgreSQL transaction/concurrency
+proof. The build passed; the five-language desktop/mobile browser matrix is running.
+Remaining smoke/screen/layout/subpath checks are pending, so full CI is not accepted.
+Native Chrome again reports Mac locked; unlock request pending. No real receipt
+upload, human selection confirmation or persisted live Pack outcome is claimed.
+
+Automatic credential release verified — 2026-09-10T11:17:30Z: revision
+`0e204ff60ba308a75ca2c7f31b9b3e73d2975864`, Pages run 34469731345 succeeded.
+All 135 served files match the exact committed local build by size and SHA-256;
+the empty .nojekyll marker is separately unserved. Original worktree/index retained.
+Latest CI 34469731319 remains running; previous CI 34464383875 passed all four unit
+shards before its aggregate job was superseded/cancelled. No full-CI acceptance is
+claimed. Native Chrome follow-up was unavailable because the Mac locked again.
+The old manual-password request is obsolete. Refresh and resume ordinary Add Staff:
+password generation is automatic, followed by employee-record Account handoff.
+No email was sent; production deployment and real Receipt-to-Pack acceptance remain open.
+
 Automatic credential handoff — 2026-09-10: user-directed Add Staff now generates
 secure passwords automatically. The API uses Node crypto and Demo uses Web Crypto,
 with 24 random bytes. Shared onboarding stores the login hash and seven-day encrypted
@@ -46,7 +188,8 @@ employee login also clears prior Demo impersonation state. Production PostgreSQL
 rollout and the real Receipt-to-Pack operator pilot remain separate acceptance.
 See [account access evidence](ai-native/evidence/TASK-234-2026-09-09.md#immediate-account-access--2026-09-10).
 
-Current TASK-234 checkpoint — 2026-09-10: shared G06 intent and Pack persistence
+Earlier TASK-234 checkpoint — 2026-09-10, superseded by the production pilot:
+shared G06 intent and Pack persistence
 commands are now browser-compatible factories. Server facades preserve their
 existing APIs; Demo runtime binds both factories with Web Crypto and shared audit.
 The Demo Pack path uses shared creation/replay commands and enforces the reviewed
@@ -90,7 +233,8 @@ completion artifact hash; opening does not execute another creation command.
 Selected rows are now progressively expandable beyond 20 with amount, currency,
 purpose, version and evidence facts. Original evidence can now be opened through
 the governed document-content boundary after exact-version and byte-hash checks.
-Actual human inspection and the same-run real gateway pilot remain open.
+Actual human PDF inspection, public Tunnel/OCR readiness and the same-run live
+server-assistant pilot remain open.
 
 The default browser gateway is `https://gpt.yapweijun1996.com/demo` / `demo-auto`.
 One synthetic query on the registered GitHub Pages origin succeeded (117 reported
@@ -98,7 +242,7 @@ tokens); tested localhost origins were rejected. This is protocol evidence only,
 not full Receipt-to-Pack/operator acceptance. Requests send user query text, not
 receipt files, and do not occur at startup. See [AI_PROVIDERS.md](AI_PROVIDERS.md).
 
-Reviewed: **2026-09-09**. Goal owner: product owner. Execution/evidence owner:
+Reviewed: **2026-09-10**. Goal owner: product owner. Execution/evidence owner:
 engineering. This page owns the active focus and continuation decision;
 [GOAL.md](../GOAL.md) owns the goal/acceptance criteria, and
 [tasks/tasks.jsonl](../tasks/tasks.jsonl) owns statuses and dependencies.
@@ -129,10 +273,11 @@ server/Compose opt-in wiring now exist and have injected-HTTP/PGlite evidence.
 **Verification:** 5 focused files / 60 tests, final 19-test adapter hardening,
 G06 regression, common local gates and desktop/375px fixture pass. See
 [TASK-234 evidence](ai-native/evidence/TASK-234-2026-09-09.md#company-resolver-and-bootstrap--local-integration-verified).
-**Integrated regression:** the final full run exited 0 with 204 files / 895 tests
+**Integrated regression:** the latest full run exited 0 with 204 files / 901 tests
 passed and 3 PostgreSQL files/tests skipped because POSTGRES_URL was unset.
-This supersedes the historical MCP fixture-clock failures. PostgreSQL and real
-operator acceptance remain open. See [regression evidence](ai-native/evidence/TASK-234-2026-09-09.md#final-full-suite-release-regression--2026-09-10).
+This supersedes the previous 900-test count and historical MCP fixture-clock
+failures. PostgreSQL and real operator acceptance remain open. See [regression
+evidence](ai-native/evidence/TASK-234-2026-09-09.md#full-workspace-regression-recheck--2026-09-11).
 **Pilot runner:** `scripts/receipt-assistant-pilot.ts` now rehearses fresh disk-backed
 SG/MY fixtures through authenticated APIs and verifies persisted Pack/PDF after
 database reopen. It now requires individual receipt detail reads and saves exact
@@ -140,15 +285,12 @@ source versions with matching hashes before confirmation. Exact-confirmation
 rejection creates no Pack. Register font declarations/digit mapping and complete
 wrapped fields now have local PDF rendering evidence. File access does not prove
 human viewing.
-**Next:** run the current browser assistant from a registered origin, inspect its
-exact source evidence and contents, obtain human confirmation, then open its
-verified persisted Pack. Local UI availability is not actual human acceptance.
-The user selected and authorized the public GPT Demo gateway. The reviewed current
-build is now hosted on its registered Pages origin. No gateway registration or
-Pages environment protection was changed. Browser control reported the Mac locked;
-manual unlock is the next required input for live page interaction. Remote CI
-continues independently. Simulated confirmation is not human acceptance, and the
-public query-proposal flow does not prove server native tools.
+**Next:** open the persisted SG/MY Pack PDFs from the local production pilot and
+record business-user visual confirmation. Public Tunnel activation, production OCR
+readiness and the live server-assistant provider remain separate gates. The user
+selected and authorized the public GPT Demo gateway; its registered Pages-origin
+protocol is live and sends query text only. Native Chrome DevTools evidence remains
+unavailable, and the public query-proposal flow does not prove server native tools.
 
 | Boundary | Current source evidence | Remaining evidence |
 | --- | --- | --- |

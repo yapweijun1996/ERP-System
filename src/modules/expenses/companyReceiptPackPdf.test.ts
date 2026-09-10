@@ -43,6 +43,22 @@ describe('Receipt Pack PDF fidelity', () => {
     }
   });
 
+  it('uses an identity page for a one-pixel image instead of a blank evidence page', async () => {
+    const png = Uint8Array.from(Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zsx8AAAAASUVORK5CYII=',
+      'base64',
+    ));
+    const content = await renderCompanyReceiptPackPdf(facts, [{
+      fileName: 'tiny-receipt.png',
+      mimeType: 'image/png',
+      sha256: 'c'.repeat(64),
+      content: png,
+    }]);
+    const pdf = await PDFDocument.load(content);
+    expect(pdf.getPageCount()).toBe(2);
+    expect(pdf.getPage(1).node.normalizedEntries().XObject.entries()).toHaveLength(0);
+  });
+
   it('continues a very long row across pages and renders the same frozen facts deterministically', async () => {
     const pack = { ...facts, rowCount: 1, rows: [{
       receiptId: 1, receiptVersion: 1, transactionDate: '2026-09-01', merchant: 'Synthetic', receiptNumber: 'R-1',
