@@ -336,6 +336,15 @@ async function main() {
             && DB.user?.email === 'wizard.regression@example.test'
             && DB.company?.name === 'Synthetic Wizard Regression', null, { timeout: 15000 });
           const ownCompany = await page.evaluate(() => DB.erpSystem.scope.companyFn);
+          if (await page.getByRole('menu').count() !== 0) {
+            throw new Error(`${viewport.label}: closed shell menus remain accessible`);
+          }
+          await page.locator('#avatarBtn').click();
+          await page.getByRole('menu', { name: 'Account', exact: true }).waitFor({ state: 'visible' });
+          await page.keyboard.press('Escape');
+          if (await page.getByRole('menu').count() !== 0) {
+            throw new Error(`${viewport.label}: dismissed shell menu remains accessible`);
+          }
           await page.reload({ waitUntil: 'domcontentloaded' });
           await page.waitForFunction(() => typeof DB !== 'undefined'
             && DB.user?.email === 'wizard.regression@example.test'

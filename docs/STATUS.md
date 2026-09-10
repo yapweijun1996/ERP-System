@@ -8,12 +8,13 @@ selection digest. Demo preparation, persisted approval and execution now use sha
 G06 commands with actor/Company ownership and transactional audit. Local integration
 and Company Receipts browser regression pass; authentication remains synthetic.
 Real operator acceptance remains open. Pages release
-`eaf7f6ebe9527fb895080201b71bfec9494751ce` is deployed by run 34423634266.
+`40d3cf0f4d05646a32f6ff12a5b52294cce0907f` is deployed by run 34425059328.
 All 135 served assets match the clean committed build; the remaining manifest
 entry is the unserved empty `.nojekyll` marker. The previous release has a
 hash-verified local rollback copy. Full-suite local regression passed: 895 tests,
-with 3 PostgreSQL tests skipped. Remote CI run 34423634351 is in progress; the prior run was superseded
-after all four unit-test shards passed.
+with 3 PostgreSQL tests skipped. Remote CI run 34425059341 is in progress. Earlier revision eaf7f6 passed
+all four unit-test shards, PostgreSQL 16 non-superuser security lifecycle and
+PGlite/PostgreSQL transaction/concurrency checks; this is not whole-CI acceptance.
 Browser access resumed. The real existing-Master setup path exposed a static
 catalog/entitlement mismatch. The local repair projects actual Master availability,
 disables unavailable modules/dependencies and preserves the shared write guard.
@@ -22,10 +23,17 @@ repair is deployed; full human pilot acceptance remains open. Chrome control
 again requires Mac unlock. Continue in an isolated fresh Demo session or an
 already authorized workspace; do not overwrite the old Master's disabled modules.
 The isolated live setup completed, but login exposed a Company-scope restoration
-bug that substituted the seeded owner for the new administrator. A local Demo
+bug that substituted the seeded owner for the new administrator. The deployed Demo
 adapter repair restores actual role membership before payload loading and retires
 invalid sessions without identity fallback. New login/reload/revocation assertions
-and the receipt browser regressions pass; this follow-up is not yet deployed.
+and the receipt browser regressions pass. All 135 served release assets were
+verified against the committed build at 2026-09-10T01:25:31Z. Mac unlock still
+blocks the next real Chrome pilot step; no human acceptance is claimed.
+A later native Chrome reload showed the new administrator correctly. Closed shell
+menus then obstructed accessibility navigation: opacity-only hiding preserved
+invisible menu controls. A shared visibility-state repair passes before/after
+browser regression at desktop/375px and common local gates; deployment and native
+Chrome verification of this supporting repair remain pending.
 The assistant success view now opens its existing Pack PDF after rechecking the
 completion artifact hash; opening does not execute another creation command.
 Selected rows are now progressively expandable beyond 20 with amount, currency,

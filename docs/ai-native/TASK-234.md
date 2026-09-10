@@ -10,6 +10,20 @@ The five S-checkpoints are execution checkpoints, not five new task records.
 Check a checkpoint only after its listed exit is observed and recorded.
 All four G07 criteria plus common DoD remain required for task completion.
 
+## Remove closed menus from accessibility navigation — 2026-09-10
+
+Real Chrome reload now exposes the new administrator, but closed shell menus
+remain in the native accessibility tree. The shared .pop CSS uses opacity and
+pointer-events only, leaving invisible menu controls discoverable and focusable.
+The shell stylesheet owns visibility; no Company, authorization or receipt
+command changes are required. Hide closed menus from accessibility and keyboard
+navigation while preserving normal open/close behavior and animation.
+
+Verify the existing desktop/375px setup-login regression: no closed menus in
+role navigation, account menu available when opened and absent after Escape.
+Run common gates and then verify native Chrome after release. This supporting
+repair does not replace the pending real gateway/evidence/human/Pack outcome.
+
 ## Restore the actual Demo login identity — 2026-09-10
 
 The isolated live pilot completed setup, but signing in with the new Company's
