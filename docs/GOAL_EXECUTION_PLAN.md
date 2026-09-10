@@ -6,16 +6,15 @@ seconds. This supersedes the previous 900-test local count while remaining
 repository-only evidence; PostgreSQL target, production, public Tunnel, OCR,
 provider and human acceptance remain separate gates.
 
-TASK-236 durable workflow checkpoint — 2026-09-11: the isolated
-`task-236-durable-workflow` branch now persists `receipt_pack.create` run/step
+TASK-236 durable workflow checkpoint — 2026-09-11: the merged revision
+`fc64f342c95a74702967cf339d86e1c63e4caf6c` persists `receipt_pack.create` run/step
 state, hash-only trigger provenance, leases, checkpoints and bounded attempts.
 Approval waiting, pause/resume/cancel, current grant/module/intent rechecks,
-transactional outbox deduplication and Pack/PDF result reconciliation are covered
-by six focused PGlite tests plus the existing outbox/telemetry and Agent
-integration suites. S1-S4 are locally evidenced; a disposable PostgreSQL
-two-worker proof and remote current-branch CI remain before TASK-236 can be
-accepted or G09 counted. See
-[TASK-236 evidence](ai-native/evidence/TASK-236-2026-09-11.md).
+transactional outbox deduplication, PostgreSQL two-worker proof and Pack/PDF result
+reconciliation are covered by focused PGlite/PostgreSQL tests plus the existing
+outbox/telemetry and Agent integration suites. S1-S5 and repository common-DoD
+acceptance are complete; provider, production and business-owner gates remain
+separate. See [TASK-236 evidence](ai-native/evidence/TASK-236-2026-09-11.md).
 
 The fixture-only `scripts/receipt-assistant-pilot.ts --fixture` runner also
 completed for both C-SG and C-MY against fresh private PGlite databases. It
@@ -353,7 +352,7 @@ secrets in chat. No deployment is authorized by this plan.
 ## Delivery lanes and dependencies
 
 - **Primary pilot lane:** TASK-234 -> TASK-236 -> TASK-231 -> TASK-237. TASK-236 is
-  implemented locally and remains in progress for PostgreSQL/remote acceptance;
+  complete for repository scope after PostgreSQL and remote acceptance;
   both 236 and 231 depend on 234, and the ordering follows the execution guide.
 - **Production lane:** TASK-199 -> TASK-201 and TASK-209. An unchanged public 502
   with no authorized origin access is not solved by repeating the same probe.

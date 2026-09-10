@@ -1,13 +1,13 @@
 # TASK-236 — Run durable and recoverable agent workflows
 
-Goal: **G09** · Current status: **In Progress** · Priority: **P1**.
+Goal: **G09** · Current status: **Done** · Priority: **P1**.
 Live status and dependencies: [task registry](../../tasks/tasks.jsonl).
 Required tasks: **TASK-230, TASK-234**.
 
-Progress update — 2026-09-11: S1-S5 are locally/disposable evidenced by the durable
-Receipt Pack workflow implementation, focused PGlite tests and a PostgreSQL
-two-worker proof. Remote current-branch CI and final common-DoD acceptance remain
-open. See
+Progress update — 2026-09-11: S1-S5 and the repository common DoD are evidenced by the durable Receipt Pack
+workflow implementation, focused PGlite tests, a PostgreSQL two-worker proof and
+green current-branch CI run `34530777179`. Production/provider/business-owner gates
+remain separate. See
 [dated evidence](evidence/TASK-236-2026-09-11.md).
 
 Read the [execution guide](../AI_NATIVE_EXECUTION.md) before starting.
@@ -77,7 +77,7 @@ Model run and step states explicitly: queued/running/waiting_approval/succeeded/
 
   Checkpoint exit: P16 and relevant P06-P12 cases prove no duplicate Pack, no lost approval boundary and no false success.
 
-  Evidence: [TASK-236 evidence — S5](evidence/TASK-236-2026-09-11.md#s5--run-recovery-and-concurrency-proof) — local/disposable proof passes; remote CI remains a release gate.
+  Evidence: [TASK-236 evidence — S5](evidence/TASK-236-2026-09-11.md#s5--run-recovery-and-concurrency-proof) — local/disposable proof passes and current-branch CI run `34530777179` is green.
 
 ## DoD mapping: all four must pass
 
@@ -87,16 +87,16 @@ is needed. Do not mark the task Done merely because all five checkpoints are che
 
 - **G09.1:** Persist run/step state, actor scope, approved intent, leases, checkpoints and bounded retry metadata so authorized work survives browser closure and worker restart.
   - Required evidence: Persisted state/lease/checkpoint and restart tests.
-  - Current result: Local and disposable PostgreSQL persisted-state and lease-recovery evidence passes; remote CI remains pending.
+  - Current result: Local and disposable PostgreSQL persisted-state and lease-recovery evidence passes; current-branch CI run `34530777179` is green.
 - **G09.2:** Support pause, resume, cancellation and approval waiting; recheck permissions and approval validity before every resumed side effect.
   - Required evidence: Pause/resume/cancel with current authorization.
   - Current result: Local pause/resume/cancel and authorization-recheck evidence passes.
 - **G09.3:** Use transactional events/outbox and idempotent consumers for selected event triggers; document compensation and manual recovery for cross-system failures.
   - Required evidence: Transactional trigger/dedup and manual recovery.
-  - Current result: Local transactional outbox and duplicate-trigger evidence passes; manual recovery is documented in the dated evidence.
+  - Current result: Local transactional outbox and duplicate-trigger evidence passes; manual recovery is documented in the dated evidence and the current-branch CI run `34530777179` is green.
 - **G09.4:** Failure-injection tests cover duplicate delivery, expired leases, partial execution, restart and budget exhaustion without duplicate posting or false completion.
   - Required evidence: Two-worker crash-window and budget exhaustion evidence.
-  - Current result: Local and disposable PostgreSQL failure-injection cases pass; remote current-branch proof remains open.
+  - Current result: Local and disposable PostgreSQL failure-injection cases pass; current-branch CI run `34530777179` is green.
 
 ## Existing regression commands
 

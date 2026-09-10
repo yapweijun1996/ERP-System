@@ -282,9 +282,9 @@ creating a second selection authority. A committed Pack is reconciled on late
 cancellation, while uncertain cross-system work stays on the same run for manual
 recovery. Focused PGlite tests pass for approval/resume, duplicate trigger,
 lease recovery, revocation before effect, late cancellation and bounded attempt
-exhaustion. The implementation is still in progress pending disposable
-PostgreSQL two-worker proof and remote current-branch CI; provider, production
-and business acceptance remain separate gates. Evidence:
+exhaustion. Repository implementation and common DoD are complete after disposable
+PostgreSQL two-worker proof and green current-branch CI run `34530777179`; provider,
+production and business acceptance remain separate gates. Evidence:
 [TASK-236](ai-native/evidence/TASK-236-2026-09-11.md).
 
 TASK-230/S1 selects MCP `2025-11-25` Streamable HTTP at the versioned

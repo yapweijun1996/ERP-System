@@ -3,13 +3,13 @@
 Execution instructions: [AI Native execution guide](AI_NATIVE_EXECUTION.md),
 [12 task packets](AI_NATIVE_EXECUTION.md#recommended-sequence) and
 [copyable follow-up prompt](AGENT_FOLLOWUP_PROMPT.md). TASK-240 completes this
-documentation refinement. The 60 execution checkpoints are currently 36/60; they are
+documentation refinement. The 60 execution checkpoints are currently 41/60; they are
 not additional task records or accepted AI capabilities.
 
 AI Native delivery: [GOAL.md](../GOAL.md) contains the 12-workstream checklist
 and common DoD. TASK-227 is documentation-only; TASK-228, TASK-229, TASK-230,
 TASK-232, TASK-233 and TASK-235 are Done for local/repository scope, while
-TASK-234 and TASK-238 remain In Progress and TASK-231/TASK-236–239 remain Todo.
+TASK-234 and TASK-238 remain In Progress; TASK-231, TASK-237 and TASK-239 remain Todo.
 Production/provider, owner-decision and physical-device boundaries remain open.
 
 [TEST_COVERAGE.md](TEST_COVERAGE.md) is the module evidence map.
@@ -27,12 +27,12 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **226**
+- Done: **227**
 - In progress: **6**
-- Todo: **5**
+- Todo: **4**
 - Blocked: **3**
 - Total: **240**
-- Pending: **14** (8 inherited + 6 AI Native delivery tasks)
+- Pending: **13** (8 inherited + 5 AI Native delivery tasks)
 
 ## Current release-quality note
 

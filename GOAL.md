@@ -78,8 +78,8 @@ resolver and default-deny server bootstrap. A repeatable SG/MY local pilot runne
 now verifies exact confirmation and reopened database/PDF persistence. TASK-236 now
 has a durable Receipt Pack run/step workflow with approval waiting, lease recovery,
 pause/resume/cancel, transactional trigger deduplication and verified Pack/PDF result
-references; its local S1-S4 evidence is recorded while disposable PostgreSQL and
-remote current-branch acceptance remain open. Injected HTTP fixture evidence does
+references; S1-S5, disposable PostgreSQL and remote current-branch repository
+acceptance are recorded. Injected HTTP fixture evidence does
 not prove a real-model run; approved account/model/data-policy/spend and separate
 production/business-owner gates remain mandatory.
 
@@ -123,25 +123,25 @@ checkpoint, source-backed gaps and continuation rules.
 
 ## Progress count
 
-Snapshot after TASK-236 local S1-S4 implementation and the post-S5 UI/route/i18n remediation; recompute using the command below
+Snapshot after TASK-236 repository acceptance and the post-S5 UI/route/i18n remediation; recompute using the command below
 whenever task status or a goal checkbox changes.
 
 | Measure | Done | Remaining | Total |
 | --- | ---: | ---: | ---: |
-| All registered tasks | 226 | 14 | 240 |
+| All registered tasks | 227 | 13 | 240 |
 | Inherited open delivery tasks at baseline | 0 | 8 | 8 |
-| New AI Native delivery workstreams, TASK-228–239 | 6 | 6 | 12 |
-| Goal DoD criteria, G01.1–G12.4 | 28 | 20 | 48 |
+| New AI Native delivery workstreams, TASK-228–239 | 7 | 5 | 12 |
+| Goal DoD criteria, G01.1–G12.4 | 32 | 16 | 48 |
 | Execution checkpoints, five per delivery packet | 41 | 19 | 60 |
 | Goal documentation tasks, TASK-227 and TASK-240 | 2 | 0 | 2 |
 
-Registry states: **226 Done / 7 In Progress / 4 Todo / 3 Blocked / 240 Total**.
-Pending means every status other than Done: **8 inherited + 6 new = 14**.
-The 12 new tasks contain **5 P0 / 7 P1** work packages. The 14 pending tasks contain
+Registry states: **227 Done / 6 In Progress / 4 Todo / 3 Blocked / 240 Total**.
+Pending means every status other than Done: **8 inherited + 5 new = 13**.
+The 12 new tasks contain **5 P0 / 7 P1** work packages. The 13 pending tasks contain
 **5 P0 / 9 P1**. Priorities describe release risk; dependency order governs execution.
 
-Historical registry completion is **94.2% (226/240)**. AI Native workstream acceptance
-is **50.0% (6/12)** and criterion acceptance is **58.3% (28/48)**. These are unweighted
+Historical registry completion is **94.6% (227/240)**. AI Native workstream acceptance
+is **58.3% (7/12)** and criterion acceptance is **66.7% (32/48)**. These are unweighted
 counts, not estimates of engineering effort, time remaining or overall product quality.
 Existing ERP foundations receive no automatic credit for new Agent acceptance criteria.
 Documentation tasks and execution checkpoints are excluded from AI capability
@@ -453,12 +453,16 @@ foundations are listed for reuse; they do not satisfy the complete new DoD.
 
 **Task:** [TASK-236](docs/ai-native/TASK-236.md) · **Priority:** P1 · **Phase:** Expansion
 **Dependencies:** TASK-230, TASK-234.
-**Current evidence:** Workers/outbox exist; durable multi-step Agent runs are not established.
+**Current evidence:** TASK-236 implements the bounded durable Receipt Pack workflow with persisted run/step state, approval waiting, lease recovery, pause/resume/cancel, transactional trigger deduplication, PostgreSQL two-worker proof and green current-branch CI. Production/provider/business-owner acceptance remains separate.
 
-- [ ] **G09.1** Persist run/step state, actor scope, approved intent, leases, checkpoints and bounded retry metadata so authorized work survives browser closure and worker restart.
-- [ ] **G09.2** Support pause, resume, cancellation and approval waiting; recheck permissions and approval validity before every resumed side effect.
-- [ ] **G09.3** Use transactional events/outbox and idempotent consumers for selected event triggers; document compensation and manual recovery for cross-system failures.
-- [ ] **G09.4** Failure-injection tests cover duplicate delivery, expired leases, partial execution, restart and budget exhaustion without duplicate posting or false completion.
+- [x] **G09.1** Persist run/step state, actor scope, approved intent, leases, checkpoints and bounded retry metadata so authorized work survives browser closure and worker restart.
+  - Evidence: [TASK-236 repository evidence](docs/ai-native/evidence/TASK-236-2026-09-11.md#s2--persist-runs-and-leases) and green [CI run 34530777179](https://github.com/yapweijun1996/ERP-System/actions/runs/34530777179).
+- [x] **G09.2** Support pause, resume, cancellation and approval waiting; recheck permissions and approval validity before every resumed side effect.
+  - Evidence: [TASK-236 repository evidence](docs/ai-native/evidence/TASK-236-2026-09-11.md#s3--implement-resume-and-cancellation).
+- [x] **G09.3** Use transactional events/outbox and idempotent consumers for selected event triggers; document compensation and manual recovery for cross-system failures.
+  - Evidence: [TASK-236 repository evidence](docs/ai-native/evidence/TASK-236-2026-09-11.md#s4--connect-one-event-trigger).
+- [x] **G09.4** Failure-injection tests cover duplicate delivery, expired leases, partial execution, restart and budget exhaustion without duplicate posting or false completion.
+  - Evidence: [TASK-236 repository evidence](docs/ai-native/evidence/TASK-236-2026-09-11.md#s5--run-recovery-and-concurrency-proof).
 
 ### G10 — Establish agent safety evaluations and audit observability
 

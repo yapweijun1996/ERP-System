@@ -58,8 +58,10 @@ visible sources, exact preview/confirmation, progress/cancellation/recovery,
 Company-scope isolation, five locales, both themes and desktop/375px focus/touch
 evidence. S5 passes the fixture, actual Demo/PGlite Pack/artifact checks and local
 gates; no provider account or approved spend is available, so real-provider evidence
-remains an explicit gate. G07.1-G07.4 are accepted for local/repository scope; the goal
-is 6/12 workstreams and 28/48 criteria, with 36/60 checkpoints complete. TASK-238/S1
+remains an explicit gate. G07.1-G07.4 are accepted for local/repository scope. TASK-236/S1-S5
+and the repository common DoD are now accepted after disposable PostgreSQL and green
+remote CI evidence; the goal is 7/12 workstreams and 32/48 criteria, with 41/60
+checkpoints complete. TASK-238/S1
 then publishes a source-backed six-journey capability matrix with engineering owner
 roles, test/source references and explicit exclusions; product/tax owner review and
 settlement/statutory implementation remain open. [TASK-238/S1 evidence](ai-native/evidence/TASK-238-2026-09-09.md#cross-module-capability-matrix).
@@ -74,8 +76,8 @@ The current milestone and active checkpoint are maintained in
    pilot. Injected HTTP fixtures are not a live model or deployed server.
 2. Complete its authorized real-model Receipt-to-Pack evidence. Keep TASK-234 open
    while either source wiring or real-provider evidence is missing.
-3. After TASK-234 passes, implement TASK-236, then TASK-231. TASK-231 cannot be
-   started as independent implementation while its TASK-234 dependency is open.
+3. TASK-236 is complete for repository scope. After TASK-234 real-provider acceptance,
+   implement TASK-231; it remains gated by the open TASK-234 dependency.
 4. Run TASK-237 after its dependencies pass. TASK-238 business/finance/tax decisions
    can be prepared independently; implementation follows the approved scope.
 5. TASK-199 remains the P0 production lane when access is available; it unlocks
@@ -83,11 +85,11 @@ The current milestone and active checkpoint are maintained in
    administrator-recovery TASK-193 with their own evidence, then complete TASK-239.
 
 
-[GOAL.md](../GOAL.md) owns the detailed checklist and DoD: **6/12** AI Native
-workstreams and **28/48** criteria accepted. Registry pending work is **14 tasks**
- (8 inherited + 6 remaining AI tasks). TASK-227 is completed documentation only;
-TASK-228/G01, TASK-229/G02, TASK-230/G03, TASK-232/G05 and TASK-233/G06 are now accepted; TASK-234/G07.1-G07.4
-are accepted for local/repository scope while its real-provider gate remains in progress after S5;
+[GOAL.md](../GOAL.md) owns the detailed checklist and DoD: **7/12** AI Native
+workstreams and **32/48** criteria accepted. Registry pending work is **13 tasks**
+ (8 inherited + 5 remaining AI tasks). TASK-227 is completed documentation only;
+TASK-228/G01, TASK-229/G02, TASK-230/G03, TASK-232/G05, TASK-233/G06 and TASK-236/G09 are now accepted for repository scope; TASK-234/G07.1-G07.4
+are accepted locally while its real-provider gate remains in progress after S5;
 TASK-238/S1 is evidenced and remains in progress for owner decisions and selected journey closure.
 The registry dependency graph governs execution; no production action is authorized
 merely by adding it to this roadmap.

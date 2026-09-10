@@ -11,15 +11,15 @@ TASK-240 adds a [pilot negative-case matrix](ai-native/PILOT_TEST_MATRIX.md) and
 [evidence template](ai-native/EVIDENCE_TEMPLATE.md). These are planned tests,
 not passing results. TASK-228/S1-S5 and TASK-232/S1-S5 now have dated passing
 evidence; TASK-233/S1-S5 has source-backed action-class, approval-policy, exact-intent binding, guarded exact execution, replay, governed-correction and final negative-path evidence; TASK-229/S1-S5 has dated prerequisite, adapter-lifecycle, visible-confirmation, fallback, negative-path and local-gate evidence; TASK-235/S1-S5 has dated semantic-contract, bounded-read, authorization, deterministic-reconciliation, scoped-SOP, citation, uncertainty, cache-invalidation and final accuracy/isolation evidence;
-the remaining packets remain open.
+TASK-236/S1-S5 now has durable run/step, recovery, concurrency and green remote CI evidence; TASK-234 and TASK-238 remain open while the remaining packets require their own evidence.
 
-AI Native target coverage is tracked in [GOAL.md](../GOAL.md): **6/12 workstreams,
-28/48 DoD criteria** and **36/60 execution checkpoints**. TASK-227 verifies documentation, counts and links only;
+AI Native target coverage is tracked in [GOAL.md](../GOAL.md): **7/12 workstreams,
+32/48 DoD criteria** and **41/60 execution checkpoints**. TASK-227 verifies documentation, counts and links only;
 TASK-228 is verified through its contract, dispatch, preparation, replay and adapter
 evidence; TASK-232/S1-S5 plus its post-S5 locale/route remediation has source-backed identity/grant/transport/audit/lifecycle/PostgreSQL and full i18n-browser evidence; TASK-233/S1-S5 has source-backed action-class, approval-policy, exact-intent binding, authenticated exact Pack execution, concurrency, replay, correction, negative-path and artifact evidence; TASK-230/S1-S5 has source-backed local MCP/auth/client/operations evidence; TASK-229/G02
 now has source-backed local native WebMCP evidence in isolated Chrome 152, while
-TASK-231 and TASK-234–239 require further connector, workflow, evaluation and
-release evidence. Bundled Chromium 149 and the in-app browser remain ordinary-UI
+TASK-231, TASK-234 and TASK-237–239 require further connector, provider, evaluation and
+release evidence; TASK-236 is complete for repository scope. Bundled Chromium 149 and the in-app browser remain ordinary-UI
 fallback environments; local native WebMCP evidence does not certify a production
 browser rollout.
 
@@ -142,8 +142,8 @@ TASK-215 through TASK-230, TASK-232, TASK-233 and TASK-235 are complete; TASK-22
 evidenced for local/repository scope. TASK-227 adds goal documentation only; TASK-234/S1-S5 is
 evidenced for local/repository scope and remains in progress for its
 real-provider gate; TASK-238/S1 is evidenced and remains in progress for owner decisions;
-TASK-231 and TASK-236–239 remain AI Native delivery work. Current registry:
-**226 Done / 6 In Progress / 5 Todo / 3 Blocked / 240 Total** with 14 pending tasks. The project KB
+TASK-231, TASK-234 and TASK-237–239 remain AI Native delivery work; TASK-236 is complete for repository scope. Current registry:
+**227 Done / 6 In Progress / 4 Todo / 3 Blocked / 240 Total** with 13 pending tasks. The project KB
 `erp-system-project-logic` (`ef47bf4b-83e1-42b2-a412-66912d04ea24`) now includes coverage
 item `8007eaf3-0ec3-4fa4-b4ca-1bdc3d8153b3`; the architecture inventory, EPIC-066 and
 specialist audit items plus KB description were updated and read back. TASK-216 changed
