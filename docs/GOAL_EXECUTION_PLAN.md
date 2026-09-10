@@ -14,9 +14,8 @@ The confirmation was simulated and the provider was a local OpenAI-shaped
 fixture, so this remains technical evidence rather than real-provider or
 business-user acceptance.
 
-Hosted Demo checkpoint — 2026-09-11: current Pages manifest
-`e2e24f4f61259f58cd412eebb85e2fac75c5db6a` is deployed by workflow
-34519668605; its application assets come from code release
+Hosted Demo checkpoint — 2026-09-11: the latest successful Pages workflow
+serves the current branch; its application assets come from code release
 `ae7a3cfabde0e03a704d943dc1d99cc3bb672e2a`. A fresh public-origin browser
 context completed Setup Wizard with `expenses_tax`, confirmed one explicitly
 labelled synthetic Company Receipt, called the live Demo gateway
