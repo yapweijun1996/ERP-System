@@ -1,16 +1,19 @@
 # Project Status — reviewed 2026-09-11
 
-Public Pages deployment and hosted Demo E2E — 2026-09-11: release commit
-`ae7a3cfabde0e03a704d943dc1d99cc3bb672e2a` is deployed by workflow
-[34516594532](https://github.com/yapweijun1996/ERP-System/actions/runs/34516594532).
-Public `release.json` reports that revision, `dataMode=demo` and 136 manifest
-files; all 135 served assets match their manifest hashes. The served HR bundle
-contains `Legacy account` and no longer contains `Awaiting activation`. A fresh
-public-origin browser context completed Setup Wizard with `expenses_tax`, used
-one labelled synthetic clean-evidence fixture, confirmed one Company Receipt,
-made real Demo gateway calls (201 session, 200 Responses), required visible
-human confirmation, persisted one Pack and reopened its 14,183,204-byte PDF
-artifact with hash
+Public Pages deployment and hosted Demo E2E — 2026-09-11: application release
+`ae7a3cfabde0e03a704d943dc1d99cc3bb672e2a` was deployed by workflow
+[34516594532](https://github.com/yapweijun1996/ERP-System/actions/runs/34516594532),
+followed by the docs-only manifest release
+`e2e24f4f61259f58cd412eebb85e2fac75c5db6a` via workflow
+[34519668605](https://github.com/yapweijun1996/ERP-System/actions/runs/34519668605).
+Public `release.json` now reports `e2e24f4f61259f58cd412eebb85e2fac75c5db6a`,
+`dataMode=demo` and 136 manifest files; all 135 served assets match their
+manifest hashes. The served HR bundle contains `Legacy account` and no longer
+contains `Awaiting activation`. A fresh public-origin browser context completed
+Setup Wizard with `expenses_tax`, used one labelled synthetic clean-evidence
+fixture, confirmed one Company Receipt, made real Demo gateway calls (201
+session, 200 Responses), required visible human confirmation, persisted one Pack
+and reopened its 14,183,204-byte PDF artifact with hash
 `e8e6dab66480dbeba35543426e9d9a5b496bc32b4af8fba217eb47dd18046770`.
 This is hosted Demo protocol/UI and persistence evidence only; the synthetic
 scanner fixture, production OCR/provider, public Tunnel and human business

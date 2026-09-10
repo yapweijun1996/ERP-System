@@ -25,13 +25,15 @@ versions clean. Public Tunnel activation, production OCR readiness, human visual
 PDF review and a live assistant-provider run remain open; see the
 [dated evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#production-receipt-to-pack-pilot--2026-09-10).
 
-Hosted Demo checkpoint — **2026-09-11**: Pages release
-`ae7a3cfabde0e03a704d943dc1d99cc3bb672e2a` is live. A fresh public-origin
-browser context completed Setup Wizard with `expenses_tax`, confirmed a
-synthetic Company Receipt, called the real Demo gateway, required visible
-confirmation and read back one persisted Pack/PDF. This closes the deployed
-Demo UI/gateway protocol slice only; production OCR/provider, public Tunnel and
-human acceptance of a real receipt remain open.
+Hosted Demo checkpoint — **2026-09-11**: Pages manifest
+`e2e24f4f61259f58cd412eebb85e2fac75c5db6a` is live from workflow
+`34519668605`; its application assets come from code release
+`ae7a3cfabde0e03a704d943dc1d99cc3bb672e2a`. A fresh public-origin browser
+context completed Setup Wizard with `expenses_tax`, confirmed a synthetic
+Company Receipt, called the real Demo gateway, required visible confirmation
+and read back one persisted Pack/PDF. This closes the deployed Demo UI/gateway
+protocol slice only; production OCR/provider, public Tunnel and human acceptance
+of a real receipt remain open.
 
 Start execution with [AI_NATIVE_EXECUTION.md](docs/AI_NATIVE_EXECUTION.md) and the
 selected [task packet](docs/AI_NATIVE_EXECUTION.md#recommended-sequence). The

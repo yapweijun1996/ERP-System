@@ -14,14 +14,16 @@ The confirmation was simulated and the provider was a local OpenAI-shaped
 fixture, so this remains technical evidence rather than real-provider or
 business-user acceptance.
 
-Hosted Demo checkpoint — 2026-09-11: Pages revision
-`ae7a3cfabde0e03a704d943dc1d99cc3bb672e2a` is deployed by workflow
-34516594532. A fresh public-origin browser context completed Setup Wizard with
-`expenses_tax`, confirmed one explicitly labelled synthetic Company Receipt,
-called the live Demo gateway (`/demo/session` 201 and `/demo/v1/responses` 200),
-required visible confirmation and read back one persisted Pack and PDF. This
-proves the deployed Demo UI/gateway/command boundary; it does not establish
-production OCR, a real provider account, public Tunnel health or human business
+Hosted Demo checkpoint — 2026-09-11: current Pages manifest
+`e2e24f4f61259f58cd412eebb85e2fac75c5db6a` is deployed by workflow
+34519668605; its application assets come from code release
+`ae7a3cfabde0e03a704d943dc1d99cc3bb672e2a`. A fresh public-origin browser
+context completed Setup Wizard with `expenses_tax`, confirmed one explicitly
+labelled synthetic Company Receipt, called the live Demo gateway
+(`/demo/session` 201 and `/demo/v1/responses` 200), required visible
+confirmation and read back one persisted Pack and PDF. This proves the
+deployed Demo UI/gateway/command boundary; it does not establish production
+OCR, a real provider account, public Tunnel health or human business
 acceptance. Full evidence is in
 [TASK-234 hosted E2E evidence](ai-native/evidence/TASK-234-2026-09-09.md#public-pages-deployment-and-hosted-demo-receipt-to-pack-e2e--2026-09-11).
 
