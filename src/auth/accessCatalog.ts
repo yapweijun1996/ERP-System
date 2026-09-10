@@ -107,7 +107,7 @@ export const ROLE_TEMPLATES: readonly RoleTemplate[] = [
       PERMISSIONS.usersManage, PERMISSIONS.rolesRead, PERMISSIONS.rolesWrite,
       PERMISSIONS.auditRead, PERMISSIONS.settingsRead,
       PERMISSIONS.settingsManage, PERMISSIONS.companySwitch,
-      PERMISSIONS.hrRead, PERMISSIONS.hrWrite,
+      PERMISSIONS.hrRead, PERMISSIONS.hrWrite, PERMISSIONS.documentsKnowledgeRead,
     ],
     scopes: companyScopes('admin/*', 'hr/*'),
   },
@@ -116,6 +116,7 @@ export const ROLE_TEMPLATES: readonly RoleTemplate[] = [
     permissions: [
       PERMISSIONS.dashboardRead, PERMISSIONS.employeeSelfRead, PERMISSIONS.employeeTeamRead,
       PERMISSIONS.employeeLeaveWrite, PERMISSIONS.employeeReceiptsWrite,
+      PERMISSIONS.documentsKnowledgeRead,
       PERMISSIONS.expensesCompanyReceiptsReadOwn,
       PERMISSIONS.expensesCompanyReceiptsCreate, PERMISSIONS.expensesCompanyReceiptsEdit,
       PERMISSIONS.expensesCompanyReceiptsVoid,

@@ -3,13 +3,14 @@
 Execution instructions: [AI Native execution guide](AI_NATIVE_EXECUTION.md),
 [12 task packets](AI_NATIVE_EXECUTION.md#recommended-sequence) and
 [copyable follow-up prompt](AGENT_FOLLOWUP_PROMPT.md). TASK-240 completes this
-documentation refinement. The 60 execution checkpoints remain 0/60; they are
+documentation refinement. The 60 execution checkpoints are currently 36/60; they are
 not additional task records or accepted AI capabilities.
 
 AI Native delivery: [GOAL.md](../GOAL.md) contains the 12-workstream checklist
-and common DoD. TASK-227 is documentation-only; TASK-228–239 are Todo under
-EPIC-068. First new implementation: TASK-228; TASK-232 is independently ready.
-TASK-199 remains the inherited production priority.
+and common DoD. TASK-227 is documentation-only; TASK-228, TASK-229, TASK-230,
+TASK-232, TASK-233 and TASK-235 are Done for local/repository scope, while
+TASK-234 and TASK-238 remain In Progress and TASK-231/TASK-236–239 remain Todo.
+Production/provider, owner-decision and physical-device boundaries remain open.
 
 [TEST_COVERAGE.md](TEST_COVERAGE.md) is the module evidence map.
 TASK-216 through TASK-223 are complete through the F08 recovery-audit repair; TASK-224
@@ -18,7 +19,7 @@ step to a single viewport. TASK-226 adds the trusted Module Activation choice be
 TASK-215 is documentation
 reconciliation, not runtime completion.
 
-Reviewed: **2026-09-08**
+Reviewed: **2026-09-09**
 
 The machine-readable task source of truth is
 [`../tasks/tasks.jsonl`](../tasks/tasks.jsonl). This file is a human-readable index,
@@ -26,12 +27,12 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **220**
-- In progress: **4**
-- Todo: **13**
+- Done: **226**
+- In progress: **6**
+- Todo: **5**
 - Blocked: **3**
 - Total: **240**
-- Pending: **20** (8 inherited + 12 AI Native delivery tasks)
+- Pending: **14** (8 inherited + 6 AI Native delivery tasks)
 
 ## Current release-quality note
 
@@ -182,7 +183,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-208 | Done | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation, exact Employee integration and five-language browser proof |
 | TASK-209 | Blocked | PostgreSQL/RLS, current CI, release, documentation and KB proof; current CI is complete, but deployed/production evidence remains |
 
-The registry therefore has **220 Done / 4 In Progress / 13 Todo / 3 Blocked / 240 Total**.
+The registry therefore has **226 Done / 6 In Progress / 5 Todo / 3 Blocked / 240 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery) and TASK-209
 (release proof waiting for deployed-production evidence). TASK-203 is Done with current-HEAD
 remote evidence; TASK-209 remains blocked only by the separate production release chain.

@@ -34,45 +34,50 @@ Decide explicit principal-to-existing-user/audit compatibility before schema cha
 
 ## Execute in this order
 
-- [ ] **S1 — Map principal and audit contracts.**
+- [x] **S1 — Map principal and audit contracts.**
 
   Action: Trace authorizeWithin, session resolution, receipt actor userId and audit foreign keys. Specify human, delegated-Agent and service-automation ownership; write the migration/backward-compatibility decision and example allow/deny matrix.
 
   Checkpoint exit: Every new actor can be attributed without forging a human session or changing old role meaning.
 
-  Evidence: Not run.
+  Evidence: [TASK-232-2026-09-08 evidence](evidence/TASK-232-2026-09-08.md#s1-principal-and-audit-contract-map).
 
-- [ ] **S2 — Implement grants and validation.**
+- [x] **S2 — Implement grants and validation.**
 
   Action: Persist agent identity/owner, grant scope, permitted actions, expiry/revocation/version and applicable amount limits. Deny unknown actors/actions. Resolve current permissions by intersecting the grant with tenant/module/resource/field authority.
 
   Checkpoint exit: Tests cover owner deactivation, expired grant, amount boundary and read-own versus read-company.
 
-  Evidence: Not run.
+  Evidence: [TASK-232-2026-09-09 evidence](evidence/TASK-232-2026-09-09.md#s2-grants-and-validation).
 
-- [ ] **S3 — Integrate authorization and audit.**
+- [x] **S3 — Integrate authorization and audit.**
 
   Action: Add an authenticated Agent principal resolver at the API boundary. Keep issuer authentication separate from ERP business authorization. Record true agent and delegating human/service owner while committing required business/audit evidence atomically.
 
   Checkpoint exit: Forged request-body identities cannot select actor or tenant; existing human/Platform tests still pass.
 
-  Evidence: Not run.
+  Evidence: [TASK-232-2026-09-09 evidence](evidence/TASK-232-2026-09-09.md#s3-authenticated-authorization-and-audit).
 
-- [ ] **S4 — Add lifecycle controls.**
+- [x] **S4 — Add lifecycle controls.**
 
   Action: Provide authorized review, grant/revoke, rotation and emergency disable APIs/UI. Prove a paused task cannot resume with revoked authority using a controlled two-call test; G09 later owns actual durable worker integration.
 
   Checkpoint exit: One actor/company can be disabled without widening others; active and resumed calls fail after revocation.
 
-  Evidence: Not run.
+  Evidence: [TASK-232-2026-09-09 evidence](evidence/TASK-232-2026-09-09.md#s4-lifecycle-controls).
 
-- [ ] **S5 — Prove database isolation and close.**
+- [x] **S5 — Prove database isolation and close.**
 
   Action: Generate/check schema/RLS artifacts if changed. Run focused auth/API regressions and new non-superuser PostgreSQL tests. Verify migration replay, Company isolation, actor visibility and audit attribution.
 
   Checkpoint exit: G05 has both source tests and PostgreSQL/RLS proof; unavailable PostgreSQL leaves the relevant criterion open.
 
-  Evidence: Not run.
+Evidence: [TASK-232-2026-09-09 evidence](evidence/TASK-232-2026-09-09.md#s5-database-isolation-and-close).
+
+Post-S5 local follow-up (2026-09-09): the Agent Governance module-local locale
+packs, Admin route label resolution and purchase-wizard `Review`/`Currency` labels
+were repaired. The static and full 130-route × five-language × desktop/mobile i18n
+audits now pass with zero blocking findings. [Follow-up evidence](evidence/TASK-232-2026-09-09.md#post-s5-agent-governance-locale-remediation).
 
 ## DoD mapping: all four must pass
 
@@ -82,16 +87,16 @@ is needed. Do not mark the task Done merely because all five checkpoints are che
 
 - **G05.1:** Model distinct human, delegated Agent and service automation principals with an accountable owner and attributable audit identity.
   - Required evidence: Principal model, migration and accountable ownership.
-  - Current result: Not run.
+  - Current result: Pass. Principal kinds, non-login bridges, accountable owners and audit actor/delegator columns are covered by the schema, migration and local API/PostgreSQL evidence.
 - **G05.2:** Intersect delegation grants with current tenant/module/resource/field permissions and explicit time, action and amount limits; never inherit shared administrator authority.
   - Required evidence: Grant/permission/action/time/amount intersection cases.
-  - Current result: Not run.
+  - Current result: Pass. Grant resolution intersects current owner authority with action/resource/field/scope/time/amount limits and fails closed on later permission changes.
 - **G05.3:** Prove expiry, revocation, Company isolation and permission downgrade during a running task under non-superuser PostgreSQL/FORCE RLS.
   - Required evidence: Non-superuser PostgreSQL denial and two-call revocation test.
-  - Current result: Not run.
+  - Current result: Pass. Disposable non-superuser PostgreSQL 16 with FORCE RLS proves expiry, revocation, Company isolation and permission downgrade during authenticated calls.
 - **G05.4:** Provide administrator review, credential rotation and emergency disable controls; preserve existing Platform/Master/Company ownership boundaries.
   - Required evidence: Review/rotation/emergency-disable controls and preserved Platform boundaries.
-  - Current result: Not run.
+  - Current result: Pass. Human-session/CSRF admin review, one-time hash-only credential rotation and pause/resume/disable/revoke controls are covered; Platform/Master/Company boundaries remain separate.
 
 ## Existing regression commands
 

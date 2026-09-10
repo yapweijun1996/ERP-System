@@ -17,6 +17,7 @@ import {
   masterModule,
   role,
   rolePermission,
+  userPermissionOverride,
   userCompanyRole,
 } from '../data/schema';
 import { withTenantTransaction } from '../data/tenantTransaction';
@@ -309,6 +310,31 @@ describe('Company Receipts API', () => {
     });
     expect(invalidPack.status).toBe(422);
     expect((await invalidPack.json()).error.code).toBe('company_receipt_pack_range_invalid');
+    expect(await db.select().from(companyReceiptPack)).toHaveLength(0);
+    const preparedPack = await fetch(`${baseUrl}/api/company-receipts/packs/prepare`, {
+      method: 'POST',
+      headers: {
+        cookie: adminAuth.cookie,
+        'x-csrf-token': adminAuth.csrf,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        dateFrom: '2026-08-10',
+        dateTo: '2026-08-10',
+        locale: 'en',
+      }),
+    });
+    expect(preparedPack.status).toBe(200);
+    expect(await preparedPack.json()).toMatchObject({
+      data: {
+        selectionDigest: expect.stringMatching(/^[0-9a-f]{64}$/),
+        visibility: 'company',
+        rowCount: 1,
+        documentCount: 1,
+        totals: [{ currency: 'SGD', amount: '42.5000', receiptCount: 1 }],
+      },
+      meta: { preparationOnly: true, authorizationRequired: true, completeResult: true },
+    });
     expect(await db.select().from(companyReceiptPack)).toHaveLength(0);
     const packResponse = await fetch(`${baseUrl}/api/company-receipts/packs`, {
       method: 'POST',
@@ -763,5 +789,195 @@ describe('Company Receipts API', () => {
       data: [expect.objectContaining({ id: created.id, uploaderUserId: adminId })],
       meta: { scope: 'company', limit: 25, nextCursor: null },
     });
+  });
+
+  it('replays the same Pack key and rejects changed selection intent without a duplicate', async () => {
+    const scope = { masterFn: 'M1', companyFn: 'C-SG' };
+    const uploaded = await evidence(scope, adminId, 'receipt_api_replay_0001');
+    const receipt = await withTenantTransaction(db, scope, (tx) =>
+      createCompanyReceiptWithin(tx, scope, adminId, payload(
+        uploaded.document.id,
+        uploaded.version.id,
+      )));
+    const auth = await login('admin', 'demo1234');
+    const headers = {
+      cookie: auth.cookie,
+      'x-csrf-token': auth.csrf,
+      'content-type': 'application/json',
+    };
+    const body = {
+      packKey: 'company-receipt-pack:api-replay-0001',
+      dateFrom: '2026-08-10',
+      dateTo: '2026-08-10',
+      locale: 'en',
+    };
+    const first = await fetch(`${baseUrl}/api/company-receipts/packs`, {
+      method: 'POST',
+      headers: { ...headers, 'x-request-id': 'company-receipt-pack-replay-first' },
+      body: JSON.stringify(body),
+    });
+    expect(first.status).toBe(201);
+    const firstBody = await first.json() as {
+      data: { pack: { id: number; rowCount: number; sourceSha256: string }; replayed: boolean };
+    };
+    expect(firstBody.data).toMatchObject({
+      replayed: false,
+      pack: { rowCount: 1, sourceSha256: expect.stringMatching(/^[0-9a-f]{64}$/) },
+    });
+    expect(await db.select().from(companyReceiptPack)).toHaveLength(1);
+
+    const replay = await fetch(`${baseUrl}/api/company-receipts/packs`, {
+      method: 'POST',
+      headers: { ...headers, 'x-request-id': 'company-receipt-pack-replay-second' },
+      body: JSON.stringify(body),
+    });
+    expect(replay.status).toBe(200);
+    const replayBody = await replay.json() as {
+      data: { pack: { id: number; sourceSha256: string }; replayed: boolean };
+    };
+    expect(replayBody).toMatchObject({
+      data: {
+        replayed: true,
+        pack: { id: firstBody.data.pack.id, sourceSha256: firstBody.data.pack.sourceSha256 },
+      },
+    });
+    expect(await db.select().from(companyReceiptPack)).toHaveLength(1);
+
+    const changed = await fetch(`${baseUrl}/api/company-receipts/packs`, {
+      method: 'POST',
+      headers: { ...headers, 'x-request-id': 'company-receipt-pack-replay-conflict' },
+      body: JSON.stringify({ ...body, dateFrom: '2026-08-09' }),
+    });
+    expect(changed.status).toBe(409);
+    expect((await changed.json()).error.code).toBe('company_receipt_pack_key_conflict');
+    const [stored] = await db.select().from(companyReceiptPack);
+    expect(stored).toMatchObject({
+      id: firstBody.data.pack.id,
+      sourceSha256: firstBody.data.pack.sourceSha256,
+      rowCount: 1,
+    });
+    expect(receipt.id).toBeGreaterThan(0);
+    const packAudits = await db.select({ action: auditLog.action }).from(auditLog).where(and(
+      eq(auditLog.masterFn, scope.masterFn),
+      eq(auditLog.companyFn, scope.companyFn),
+      eq(auditLog.entity, 'company_receipt_pack'),
+      eq(auditLog.entityId, String(firstBody.data.pack.id)),
+    ));
+    expect(packAudits).toEqual(expect.arrayContaining([
+      { action: 'created' },
+      { action: 'create_replay' },
+    ]));
+  });
+
+  it('serves bounded semantic totals through the authenticated receipt boundary', async () => {
+    const scope = { masterFn: 'M1', companyFn: 'C-SG' };
+    const viewerEvidence = await evidence(scope, viewerId, 'receipt_semantic_viewer_0001');
+    await withTenantTransaction(db, scope, (tx) => createCompanyReceiptWithin(
+      tx,
+      scope,
+      viewerId,
+      {
+        ...payload(viewerEvidence.document.id, viewerEvidence.version.id),
+        transactionDate: '2026-08-10',
+        amount: '10.5000',
+      },
+    ));
+    const adminEvidence = await evidence(scope, adminId, 'receipt_semantic_admin_0001');
+    await withTenantTransaction(db, scope, (tx) => createCompanyReceiptWithin(
+      tx,
+      scope,
+      adminId,
+      {
+        ...payload(adminEvidence.document.id, adminEvidence.version.id),
+        transactionDate: '2026-08-11',
+        amount: '5.2500',
+      },
+    ));
+    const myrEvidence = await evidence(scope, adminId, 'receipt_semantic_admin_0002');
+    await withTenantTransaction(db, scope, (tx) => createCompanyReceiptWithin(
+      tx,
+      scope,
+      adminId,
+      {
+        ...payload(myrEvidence.document.id, myrEvidence.version.id),
+        transactionDate: '2026-08-11',
+        amount: '7.7500',
+        currency: 'MYR',
+      },
+    ));
+
+    const auth = await login('admin', 'demo1234');
+    const summary = await fetch(
+      `${baseUrl}/api/company-receipts/semantic-summary?dateFrom=2026-08-10&dateTo=2026-08-11`,
+      { headers: { cookie: auth.cookie } },
+    );
+    expect(summary.status).toBe(200);
+    expect(await summary.json()).toMatchObject({
+      data: {
+        contractVersion: 1,
+        scope: { masterFn: 'M1', companyFn: 'C-SG', visibility: 'company' },
+        period: { dateFrom: '2026-08-10', dateTo: '2026-08-11', inclusive: true },
+        receiptCount: 3,
+        totalsByCurrency: [
+          { currency: 'MYR', amount: '7.7500', receiptCount: 1 },
+          { currency: 'SGD', amount: '15.7500', receiptCount: 2 },
+        ],
+        sources: expect.arrayContaining([
+          expect.objectContaining({ receiptId: expect.any(Number), documentVersionId: expect.any(Number) }),
+        ]),
+      },
+      meta: { sourceAction: 'receipt.search', pageSize: 100, maxRows: 5000, scope: 'company' },
+    });
+
+    const tampered = await fetch(
+      `${baseUrl}/api/company-receipts/semantic-summary?masterFn=M1&dateFrom=2026-08-10&dateTo=2026-08-11`,
+      { headers: { cookie: auth.cookie } },
+    );
+    expect(tampered.status).toBe(400);
+    expect((await tampered.json()).error.code).toBe('tenant_scope_is_session_derived');
+
+    const invalidRange = await fetch(
+      `${baseUrl}/api/company-receipts/semantic-summary?dateFrom=2026-08-12&dateTo=2026-08-10`,
+      { headers: { cookie: auth.cookie } },
+    );
+    expect(invalidRange.status).toBe(400);
+    expect((await invalidRange.json()).error.code).toBe('semantic_query_invalid');
+
+    await db.insert(userPermissionOverride).values([
+      {
+        masterFn: scope.masterFn,
+        companyFn: scope.companyFn,
+        userId: adminId,
+        permissionKey: 'expenses.company_receipts.read_company',
+        resourceKey: null,
+        effect: 'deny',
+        scope: 'company',
+        targetType: 'none',
+        targetId: '',
+        reason: 'Semantic retrieval permission downgrade test',
+        validFrom: new Date('2026-01-01T00:00:00.000Z'),
+        assignedByUserId: adminId,
+      },
+      {
+        masterFn: scope.masterFn,
+        companyFn: scope.companyFn,
+        userId: adminId,
+        permissionKey: 'expenses.company_receipts.read_own',
+        resourceKey: null,
+        effect: 'deny',
+        scope: 'company',
+        targetType: 'none',
+        targetId: '',
+        reason: 'Semantic retrieval permission downgrade test',
+        validFrom: new Date('2026-01-01T00:00:00.000Z'),
+        assignedByUserId: adminId,
+      },
+    ]);
+    const denied = await fetch(
+      `${baseUrl}/api/company-receipts/semantic-summary?dateFrom=2026-08-10&dateTo=2026-08-11`,
+      { headers: { cookie: auth.cookie } },
+    );
+    expect(denied.status).toBe(403);
+    expect((await denied.json()).error.code).toBe('permission_denied');
   });
 });

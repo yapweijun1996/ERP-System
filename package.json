@@ -34,18 +34,20 @@
     "write:release-manifest": "node scripts/write-release-manifest.mjs",
     "verify:release": "node scripts/verify-release.mjs",
     "smoke": "node scripts/smoke.mjs",
-  "test:e2e:master-data": "npm run build:demo && node tests/e2e/master-data-editor.spec.mjs",
-  "test:e2e:leave": "npm run build:demo && node tests/e2e/my-leave-validation.spec.mjs",
+    "test:e2e:master-data": "npm run build:demo && node tests/e2e/master-data-editor.spec.mjs",
+    "test:e2e:leave": "npm run build:demo && node tests/e2e/my-leave-validation.spec.mjs",
     "test:e2e:hr-kpi": "npm run build:demo && node tests/e2e/hr-directory-kpi.spec.mjs",
-  "test:e2e:leave-approval": "npm run build:demo && node tests/e2e/leave-approval-action.spec.mjs",
-  "test:e2e:staff-calendar": "npm run build:demo && node tests/e2e/staff-calendar.spec.mjs",
+    "test:e2e:leave-approval": "npm run build:demo && node tests/e2e/leave-approval-action.spec.mjs",
+    "test:e2e:staff-calendar": "npm run build:demo && node tests/e2e/staff-calendar.spec.mjs",
     "test:e2e:i18n-live": "npm run build:demo && node tests/e2e/i18n-live-switch.spec.mjs",
-  "test:e2e:action-contrast": "npm run build:demo && node tests/e2e/action-contrast.spec.mjs",
-  "test:e2e:purchasing-receiving": "npm run build:demo && node tests/e2e/purchasing-receiving.spec.mjs",
-  "test:e2e:mobile-usability": "npm run build:demo && node tests/e2e/mobile-usability.spec.mjs",
-  "test:e2e:setup-wizard": "npm run build:demo && node tests/e2e/setup-wizard-layout.spec.mjs",
-  "test:e2e:production-subpath": "ERP_PUBLIC_URL=https://erp.example.test/erp npm run build && node tests/e2e/production-subpath.spec.mjs",
-    "test:e2e:company-receipts-api": "npm run build && tsx tests/e2e/company-receipts-api.spec.ts",
+    "test:e2e:action-contrast": "npm run build:demo && node tests/e2e/action-contrast.spec.mjs",
+    "test:e2e:purchasing-receiving": "npm run build:demo && node tests/e2e/purchasing-receiving.spec.mjs",
+    "test:e2e:mobile-usability": "npm run build:demo && node tests/e2e/mobile-usability.spec.mjs",
+    "test:e2e:setup-wizard": "npm run build:demo && node tests/e2e/setup-wizard-layout.spec.mjs",
+    "test:e2e:production-subpath": "ERP_PUBLIC_URL=https://erp.example.test/erp npm run build && node tests/e2e/production-subpath.spec.mjs",
+  "test:e2e:company-receipts-api": "npm run build && tsx tests/e2e/company-receipts-api.spec.ts",
+  "test:e2e:webmcp-native": "npm run build:demo && node tests/e2e/webmcp-native.spec.mjs",
+  "test:e2e:receipt-assistant": "npm run build:demo && node tests/e2e/receipt-assistant-workspace.spec.mjs",
     "test:e2e:company-receipts-postgres": "npm run build && test -n \"$TASK183_POSTGRES_URL\" && tsx tests/e2e/company-receipts-api.spec.ts",
     "test:e2e:platform-workspace-layout": "npm run build && tsx tests/e2e/platform-workspace-layout.spec.ts",
     "test:e2e:platform-workspace-demo-autofill": "VITE_PLATFORM_DEMO_AUTOFILL=true npm run build && tsx tests/e2e/platform-workspace-demo-autofill.spec.ts",
@@ -65,7 +67,7 @@
     "audit:posting-details": "POSTING_DETAIL_ONLY=1 node scripts/audit-screens.mjs",
     "audit:financial-statements": "FINANCIAL_STATEMENT_ONLY=1 node scripts/audit-screens.mjs",
     "test": "vitest run",
-    "test:postgres": "vitest run src/api/postgresSecurity.integration.test.ts src/api/platformProvisioning.postgres.integration.test.ts"
+    "test:postgres": "vitest run src/api/postgresSecurity.integration.test.ts src/api/platformProvisioning.postgres.integration.test.ts src/api/agentLifecycle.postgres.integration.test.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -84,6 +86,7 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",
+    "@modelcontextprotocol/sdk": "1.30.0",
     "@pdf-lib/fontkit": "^1.1.1",
     "decimal.js": "^10.6.0",
     "drizzle-orm": "^0.45.2",
@@ -91,7 +94,8 @@
     "express": "^5.2.1",
     "nodemailer": "^9.0.3",
     "pdf-lib": "^1.17.1",
-    "pg": "^8.21.0"
+    "pg": "^8.21.0",
+    "zod": "4.5.4"
   },
   "overrides": {
     "brace-expansion": "5.0.8",

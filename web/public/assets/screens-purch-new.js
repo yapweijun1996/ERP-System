@@ -59,7 +59,7 @@ SCREENS['new-purchase-order'] = async function(root, params){
         <div class="panel-body">
           <div class="fldrow c3">
             <div class="fld"><span>Order date</span><input type="date" id="wDate" value="${S.orderDate}"></div>
-            <div class="fld"><span>Currency</span><input value="${esc(DB.company.currency)}" readonly></div>
+            <div class="fld"><span>${esc(t('common.currency'))}</span><input value="${esc(DB.company.currency)}" readonly></div>
             <div class="fld"><span>PO number</span><input value="${esc(poDocNo)}" readonly></div>
           </div>
           <div class="fld" style="margin-top:12px"><span>Project (optional)</span>
@@ -166,7 +166,7 @@ SCREENS['new-purchase-order'] = async function(root, params){
     return `<div class="docmeta" style="margin-bottom:16px">
       <div class="dm"><small>Supplier</small><div class="partner">${profileAvatar({name:s.name,src:s.imageUrl||s.photoUrl||s.avatarUrl,cls:'pav',size:26})}<b>${esc(s.name)}</b></div></div>
         <div class="dm"><small>Order date</small><b>${esc(S.orderDate)}</b></div>
-        <div class="dm"><small>Currency</small><b>${esc(DB.company.currency)}</b></div>
+        <div class="dm"><small>${esc(t('common.currency'))}</small><b>${esc(DB.company.currency)}</b></div>
         <div class="dm"><small>PO number</small><b>${esc(poDocNo)}</b></div>
       </div>
       <div class="doclayout"><div class="docmain">
@@ -182,7 +182,7 @@ SCREENS['new-purchase-order'] = async function(root, params){
   }
 
   /* ---------------- shell / render ---------------- */
-  const steps=[['Supplier','truck'],['Order lines','box'],['Review','checkc']];
+  const steps=[['Supplier','truck'],['Order lines','box'],[t('common.review'),'checkc']];
   function stepper(){ return wizardStepper(steps, S.step, S.reached); }
   function canAdvance(){ if(S.step===0) return !!S.supplier; if(S.step===1) return S.lines.length>0; return true; }
   function footer(){

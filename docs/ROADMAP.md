@@ -2,26 +2,93 @@
 
 Use [AI_NATIVE_EXECUTION.md](AI_NATIVE_EXECUTION.md) for the dependency-valid
 step-by-step order and [AGENT_FOLLOWUP_PROMPT.md](AGENT_FOLLOWUP_PROMPT.md) for
-continuation. TASK-240 adds 60 uncompleted execution checkpoints across the existing
-12 delivery tasks; the goal remains 0/12 workstreams and 0/48 criteria.
+continuation. TASK-240 adds 60 execution checkpoints across the existing 12 delivery
+tasks; TASK-228/S1-S5 and G01.1-G01.4 are complete with dated evidence. TASK-232/S1-S5
+now maps, implements and proves the authenticated principal/grant, lifecycle and
+database-isolation boundary. TASK-233/S1 defines the server-owned action classes and
+confirmation/approval policy; S2 persists exact reviewed intent, human-only decisions
+and expiry; S3 now executes only the approved exact selection with source locking,
+serializable isolation, replay and concurrent edit/insert evidence; S4 now proves
+approval-change replay, cancel/reject, grant expiry, changed-payload conflict and
+governed correction; S5 verifies P06-P12, persisted artifacts, disposable
+PostgreSQL isolation, authenticated desktop/mobile browser behavior and the full
+local suite. TASK-230/S1 now selects and pins the MCP transport/auth topology and
+adds an executable local authorization fixture; S2 exposes the versioned SDK
+Streamable HTTP endpoint, RFC 9728 discovery and six governed G01 tools; S3 adds
+per-call issuer/audience/scope revalidation and no-write negative cases; S4 proves
+official TypeScript/Python client interoperability, approved Pack replay and
+artifact/source hash separation; S5 verifies operations and the local common
+gates. TASK-229/S1 verifies the current WebMCP browser/API surface and the normal
+Company Receipts fallback. S2 implements the feature-detected six-tool adapter,
+live actor/Company/permission retirement and shared API/Demo read-only preparation;
+S3 adds visible evidence, exact totals, cancellation/no-write protection, digest
+recheck and confirmation for Pack creation. S4 exercises invalid input, denied
+Company switching, permission revocation/recovery, changed-selection retry and
+desktop/375px fallback behavior. Playwright Chromium 149 and the later unlocked
+in-app browser remain unsupported fallback environments. A post-S5 isolated Chrome
+152 `WebMCPTesting` run now passes native six-tool registration/invocation, visible
+Pack confirmation/cancellation, persisted PDF export, live scope retirement and
+375px bounds through `npm run test:e2e:webmcp-native`. S5 passes the current full Vitest, Demo/build, theme, locale, mobile
+and repository gates with temporary screenshot inspection. The post-S5 local route
+recheck repaired `route.gl` i18n and `agent-mgmt` ownership/shell mapping; the built-Demo
+audit now passes all 130 API-capable routes at desktop/mobile. The follow-up Agent
+Governance locale remediation also makes the full 130-route × five-language × two-viewport
+i18n browser matrix pass at 1,773 canonical keys / 74 local packs. TASK-235/S1 defines the
+versioned Company Receipt semantic contract and passes five deterministic golden
+fixtures for date boundaries, own/company scope and mixed currencies. S2 reuses the
+authenticated G01 `receipt.search` boundary with fixed projection, server Company
+timezone, keyset bounds and API/PGlite reconciliation. S3 adds a Company-scoped
+governed SOP corpus and authenticated bounded retrieval with live permission,
+effective-date, retention, scan, extraction and field-allowlist checks. S4 adds
+resolvable governed citations with version/hash/as-of metadata, grounded policy versus
+unknown/conflict evidence, grounded transaction-fact labels and actor/Company/
+authorization-version scoped cache invalidation. S5 verifies cache warm/cold,
+cross-Company, live permission-downgrade and stale/revoked citation isolation, the
+full local suite, Demo/build and repository gates. TASK-234/S1 defines the server-owned
+AI provider request/response/tool-call contract, explicit draft/waiting/running/
+succeeded/failed/cancelled states, whole-run deadline/cancellation and input/output/
+call/retry/cost limits with actionable fail-closed errors; S2 adds Company-scoped
+AES-GCM provider credentials, explicit rotation/provider-change decisions, bounded
+configuration, allowlisted models/exact HTTPS egress and secret-free API/audit views.
+Its deterministic zero-spend provider remains local test evidence only. S3 adds the
+bounded server Receipt conversation loop, six governed tool calls, cited facts, exact
+Pack preview, G06 confirmation wait/resume, governed Pack execution, persisted read-back
+and artifact/source hash verification. S4 adds the contextual vanilla-JS workspace,
+visible sources, exact preview/confirmation, progress/cancellation/recovery,
+Company-scope isolation, five locales, both themes and desktop/375px focus/touch
+evidence. S5 passes the fixture, actual Demo/PGlite Pack/artifact checks and local
+gates; no provider account or approved spend is available, so real-provider evidence
+remains an explicit gate. G07.1-G07.4 are accepted for local/repository scope; the goal
+is 6/12 workstreams and 28/48 criteria, with 36/60 checkpoints complete. TASK-238/S1
+then publishes a source-backed six-journey capability matrix with engineering owner
+roles, test/source references and explicit exclusions; product/tax owner review and
+settlement/statutory implementation remain open. [TASK-238/S1 evidence](ai-native/evidence/TASK-238-2026-09-09.md#cross-module-capability-matrix).
 
 ## Immediate execution order
 
-1. Continue inherited production TASK-199 and tax-owner TASK-204. TASK-199 unlocks
-   TASK-201 and TASK-209; TASK-202/205 retain their own production evidence.
-   TASK-017 and TASK-193 require physical-device and email-recovery evidence.
-2. Start EPIC-068 foundation with TASK-228 (governed actions) and TASK-232
-   (Agent identity), followed by TASK-233 (approval-bound execution).
-3. Deliver the receipt-to-Pack pilot through TASK-230 (remote MCP), TASK-229
-   (WebMCP) and TASK-234 (server AI runtime/workspace).
-4. Expand through external connectors, semantic retrieval, durable workflows,
-   evaluations and selected ERP journey closure (TASK-231/235–238).
-5. Complete TASK-239 with the inherited release gates, production pilot, rollback,
-   recovery and operational handover.
+The current milestone and active checkpoint are maintained in
+[GOAL_EXECUTION_PLAN.md](GOAL_EXECUTION_PLAN.md); [GOAL.md](../GOAL.md) owns the goal.
 
-[GOAL.md](../GOAL.md) owns the detailed checklist and DoD: **0/12** AI Native
-workstreams and **0/48** criteria accepted. Registry pending work is **20 tasks**
-(8 inherited + 12 new). TASK-227 is completed documentation only.
+1. Resume TASK-234: verify the now-connected OpenAI adapter, Company resolver
+   and default-deny bootstrap evidence, then complete the approved real-provider
+   pilot. Injected HTTP fixtures are not a live model or deployed server.
+2. Complete its authorized real-model Receipt-to-Pack evidence. Keep TASK-234 open
+   while either source wiring or real-provider evidence is missing.
+3. After TASK-234 passes, implement TASK-236, then TASK-231. TASK-231 cannot be
+   started as independent implementation while its TASK-234 dependency is open.
+4. Run TASK-237 after its dependencies pass. TASK-238 business/finance/tax decisions
+   can be prepared independently; implementation follows the approved scope.
+5. TASK-199 remains the P0 production lane when access is available; it unlocks
+   TASK-201 and TASK-209. Close TASK-202/204/205, physical-device TASK-017 and
+   administrator-recovery TASK-193 with their own evidence, then complete TASK-239.
+
+
+[GOAL.md](../GOAL.md) owns the detailed checklist and DoD: **6/12** AI Native
+workstreams and **28/48** criteria accepted. Registry pending work is **14 tasks**
+ (8 inherited + 6 remaining AI tasks). TASK-227 is completed documentation only;
+TASK-228/G01, TASK-229/G02, TASK-230/G03, TASK-232/G05 and TASK-233/G06 are now accepted; TASK-234/G07.1-G07.4
+are accepted for local/repository scope while its real-provider gate remains in progress after S5;
+TASK-238/S1 is evidenced and remains in progress for owner decisions and selected journey closure.
 The registry dependency graph governs execution; no production action is authorized
 merely by adding it to this roadmap.
 
@@ -32,7 +99,7 @@ Use [TEST_COVERAGE.md](TEST_COVERAGE.md) for latest results and
 
 This roadmap keeps the ERP build focused on a working demo first, then production
 readiness. The order matters: prove the product shape in the browser, then harden the
-server and Docker path. Status reviewed **2026-09-08** (see [STATUS.md](STATUS.md)).
+server and Docker path. Status reviewed **2026-09-09** (see [STATUS.md](STATUS.md)).
 
 Status legend: ✅ complete · 🔶 in progress · ⬜ not started.
 
@@ -226,7 +293,7 @@ Order of attack:
    the demo's own audit trail — see docs/STATUS.md) are both done. At this historical
    phase boundary, `master-control`, `sys-settings` and `module-activation-control`
    still remained Preview; later epics promoted every route. Current HEAD registers
-   129 Canonical / 0 Preview routes, with all 129 entries in API-screen metadata.
+   130 Canonical / 0 Preview routes, with all 130 entries in API-screen metadata.
    TASK-200 closes the `staff-calendar` parity decision.
 6. **HR-lite: Employee Master & Leave Management** (EPIC-020 ✅, TASK-049/050,
    2026-07-19) — the original slice deliberately scoped itself to employee master +
@@ -441,7 +508,7 @@ only through registered commands, and passes domain/API/browser/audit verificati
    moving that phase's route boundary from 70/44 to **72/42**. At this historical
    boundary, `pur-txn-view` remained Preview because it was shared by still-sample
    purchasing document types; later work promoted that checkpoint's route set to 128/0,
-   and current HEAD is 129/0 with 129 API-screen metadata entries.
+   and current HEAD is 130/0 with 130 API-screen metadata entries.
 
 Exit criteria: met when the domain/API/browser and 114-route gates below pass.
 
@@ -1261,7 +1328,7 @@ more module breadth. The source-backed review is
 
 1. **Truth sync** (TASK-194/TASK-200 done; EPIC-067 source newer): current inventory is 104
    migrations/schema v103/255
-   tables, 129 Canonical routes with 129 API metadata routes, 1,728 i18n keys/72 packs,
+   tables, 130 Canonical routes with 130 API metadata routes, 1,773 i18n keys/74 packs,
    315 permission codes and PWA v264. Historical test/deploy checkpoints remain dated.
 2. **Isolation first** (TASK-195 done 2026-09-06): deploy configuration now separates
    migration/bootstrap, API and worker roles; Platform provisioning establishes the

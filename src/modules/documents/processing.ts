@@ -1,3 +1,5 @@
+import { assertDocumentScanClean, DocumentQuarantineError } from './scanAccess';
+export { assertDocumentScanClean, DocumentQuarantineError, type GovernedDocumentAction } from './scanAccess';
 import { createHash, randomUUID } from 'node:crypto';
 import Decimal from 'decimal.js';
 import {
@@ -101,19 +103,6 @@ export interface DocumentProcessingOptions {
   /** Maximum automatic attempts before a job requires an explicit retry. */
   maxAttempts?: number;
   now?: Date;
-}
-
-export type GovernedDocumentAction = 'preview' | 'ocr' | 'submission' | 'export';
-
-export class DocumentQuarantineError extends Error {
-  readonly code = 'document_quarantined';
-
-  constructor(
-    public readonly action: GovernedDocumentAction,
-    public readonly scanStatus: string,
-  ) {
-    super(`Document ${action} is blocked while scan status is ${scanStatus}.`);
-  }
 }
 
 const CRITICAL_RECEIPT_FIELDS = [
@@ -275,23 +264,6 @@ async function policyFor(db: DB, scope: Scope) {
   };
 }
 
-export async function assertDocumentScanClean(
-  exec: DB,
-  scope: Scope,
-  versionId: number,
-  action: GovernedDocumentAction,
-) {
-  const [scan] = await exec.select({ status: documentScanJob.status })
-    .from(documentScanJob).where(and(
-      eq(documentScanJob.masterFn, scope.masterFn),
-      eq(documentScanJob.companyFn, scope.companyFn),
-      eq(documentScanJob.versionId, versionId),
-    )).limit(1);
-  if (scan?.status !== 'clean') {
-    throw new DocumentQuarantineError(action, scan?.status ?? 'missing');
-  }
-  return scan;
-}
 
 /**
  * Requeue one terminal document job without creating a new extraction or

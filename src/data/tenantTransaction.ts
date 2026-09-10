@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm';
+import type { PgTransactionConfig } from 'drizzle-orm/pg-core';
 import type { DB } from './db';
 import type { Scope } from './repo';
 
@@ -22,11 +23,12 @@ export function withTenantTransaction<T>(
   db: DB,
   scope: Scope,
   command: (tx: DB) => Promise<T>,
+  config?: PgTransactionConfig,
 ): Promise<T> {
   return db.transaction(async (tx) => {
     await setTenantContext(tx, scope);
     return command(tx);
-  });
+  }, config);
 }
 
 /**

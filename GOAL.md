@@ -1,6 +1,6 @@
 # AI Native ERP System Goal
 
-Reviewed: **2026-09-08**. Planning baseline: `d4c9dc9`.
+Reviewed: **2026-09-09**. Planning baseline: `d4c9dc9`.
 Owner: product owner; engineering owns implementation and evidence.
 Delivery programme: **EPIC-068 / TASK-227–240**.
 
@@ -27,6 +27,46 @@ authorized external assistants and background automation. Keep Platform administ
 separate from tenant business authority. Preserve a usable static Demo and a secure,
 operable PostgreSQL production system.
 
+## Current delivery goal in one page
+
+**Overall outcome:** a usable SG/MY ERP where people and authorized AI complete
+real business workflows through the same permission, approval, transaction and
+audit rules. A user must be able to verify the resulting record and evidence.
+
+**Current milestone:** finish Phase 2, the Company Receipt-to-Pack pilot. A user
+asks for receipts, reviews cited evidence and exact Pack contents, explicitly
+confirms creation, and opens the verified persisted Pack/PDF. Prove this through
+the built-in assistant as well as the already locally evidenced MCP/WebMCP paths.
+The pilot is the first complete delivery slice, not the whole ERP product scope.
+
+**Where we are:** the shared commands, Agent identity, confirmation, MCP/WebMCP,
+semantic reads and local assistant fixtures are evidenced. Phase 2 remains open:
+TASK-234 now has a local Responses adapter, authenticated Company configuration
+resolver and default-deny server bootstrap. A repeatable SG/MY local pilot runner
+now verifies exact confirmation and reopened database/PDF persistence. Injected HTTP fixture evidence does
+not prove a real-model run; approved account/model/data-policy/spend and separate
+production/business-owner gates remain mandatory.
+
+**Primary execution focus:** TASK-234, verify the connected runtime and complete
+the approved real-provider journey when account, data policy and cost authority
+are available. A saved credential alone cannot activate the assistant. Preserve
+cancellation and unknown-cost custody. Keep live AI acceptance open until its own
+persisted Pack/PDF and sanitized provider usage evidence exists.
+
+**After that:** TASK-236 (durable runs), TASK-231 (approved outbound connector),
+TASK-237 (evaluations), selected TASK-238 business acceptance and TASK-239 release,
+in registry dependency order. TASK-199 may take production priority when origin
+access makes it actionable. Tax, SMTP, physical-device and other inherited gates
+are supporting delivery work; they must not silently replace the pilot milestone.
+
+**Progress rule:** report the milestone outcome, newly verified evidence, exact
+remaining gap and next action. Use the counts below as separate indicators; 94.2%
+historical task closure is not 94.2% product or production readiness. New plans,
+reworded documentation and repeated tests do not increase capability completion.
+
+See [the active execution plan](docs/GOAL_EXECUTION_PLAN.md) for the current
+checkpoint, source-backed gaps and continuation rules.
+
 ## Scope and evidence ownership
 
 - This file owns the target, milestone checklist, common Definition of Done (DoD),
@@ -47,25 +87,25 @@ operable PostgreSQL production system.
 
 ## Progress count
 
-Snapshot after TASK-240 execution-guide acceptance; recompute using the command below
+Snapshot after TASK-238/S2 decision draft and the post-S5 UI/route/i18n remediation; recompute using the command below
 whenever task status or a goal checkbox changes.
 
 | Measure | Done | Remaining | Total |
 | --- | ---: | ---: | ---: |
-| All registered tasks | 220 | 20 | 240 |
+| All registered tasks | 226 | 14 | 240 |
 | Inherited open delivery tasks at baseline | 0 | 8 | 8 |
-| New AI Native delivery workstreams, TASK-228–239 | 0 | 12 | 12 |
-| Goal DoD criteria, G01.1–G12.4 | 0 | 48 | 48 |
-| Execution checkpoints, five per delivery packet | 0 | 60 | 60 |
+| New AI Native delivery workstreams, TASK-228–239 | 6 | 6 | 12 |
+| Goal DoD criteria, G01.1–G12.4 | 28 | 20 | 48 |
+| Execution checkpoints, five per delivery packet | 36 | 24 | 60 |
 | Goal documentation tasks, TASK-227 and TASK-240 | 2 | 0 | 2 |
 
-Registry states: **220 Done / 4 In Progress / 13 Todo / 3 Blocked / 240 Total**.
-Pending means every status other than Done: **8 inherited + 12 new = 20**.
-The 12 new tasks contain **5 P0 / 7 P1** work packages. The 20 pending tasks contain
-**8 P0 / 12 P1**. Priorities describe release risk; dependency order governs execution.
+Registry states: **226 Done / 6 In Progress / 5 Todo / 3 Blocked / 240 Total**.
+Pending means every status other than Done: **8 inherited + 6 new = 14**.
+The 12 new tasks contain **5 P0 / 7 P1** work packages. The 14 pending tasks contain
+**5 P0 / 9 P1**. Priorities describe release risk; dependency order governs execution.
 
-Historical registry completion is **91.7% (220/240)**. AI Native workstream acceptance
-is **0% (0/12)** and criterion acceptance is **0% (0/48)**. These are unweighted
+Historical registry completion is **94.2% (226/240)**. AI Native workstream acceptance
+is **50.0% (6/12)** and criterion acceptance is **58.3% (28/48)**. These are unweighted
 counts, not estimates of engineering effort, time remaining or overall product quality.
 Existing ERP foundations receive no automatic credit for new Agent acceptance criteria.
 Documentation tasks and execution checkpoints are excluded from AI capability
@@ -214,7 +254,8 @@ Built-in assistant -> approved external MCP client -> external service
 
 Independent foundation work may proceed while production access is unavailable.
 TASK-199 remains the existing production priority and TASK-204 the tax-owner gate.
-First new implementation task: TASK-228. TASK-232 is independently ready after TASK-227.
+The original foundation entry tasks TASK-228 and TASK-232 are complete locally.
+Current Phase 2 continuation is TASK-234; follow the active execution plan.
 Dependencies in the registry govern execution even when a lower-numbered task waits.
 
 ## Common Definition of Done
@@ -251,7 +292,8 @@ rather than deleting difficult criteria to improve completion percentage.
 
 ## Goal checklist
 
-All boxes below are open at the 2026-09-08 planning baseline. Each task now has
+All boxes below were open at the 2026-09-08 planning baseline. G01, G02, G05 and G06 are
+now accepted; the remaining tasks stay open. Each task now has
 a detailed packet under docs/ai-native/ with S1–S5 execution checkpoints. Existing source
 foundations are listed for reuse; they do not satisfy the complete new DoD.
 
@@ -259,34 +301,46 @@ foundations are listed for reuse; they do not satisfy the complete new DoD.
 
 **Task:** [TASK-228](docs/ai-native/TASK-228.md) · **Priority:** P0 · **Phase:** Foundation
 **Dependencies:** TASK-227.
-**Current evidence:** Existing resource and permission registries are foundations; a dedicated Agent action catalogue is absent.
+**Current evidence:** TASK-228 publishes the version-1 six-action catalogue, authenticated dispatcher, read-only Pack preparation and replay/adapter evidence; Agent identity/approval and the real MCP/WebMCP transports are verified under TASK-232/233/230/229, with production/provider boundaries kept downstream.
 
-- [ ] **G01.1** Publish versioned machine-readable action input/output schemas, permissions, prerequisites, side effects, bounded pagination and recoverable error codes from one maintained contract.
-- [ ] **G01.2** Map pilot receipt reads and Pack preparation/execution to existing authenticated APIs and shared commands; do not expose raw SQL or client-selected tenant authority.
-- [ ] **G01.3** Return authoritative resource IDs, versions and postconditions; prove idempotent replay and changed-payload conflict for applicable writes.
-- [ ] **G01.4** Shared dispatcher tests and thin adapter contract fixtures prove one business-rule boundary; document supported and unsupported pilot actions. Real WebMCP and MCP interoperability is verified under TASK-229 and TASK-230.
+- [x] **G01.1** Publish versioned machine-readable action input/output schemas, permissions, prerequisites, side effects, bounded pagination and recoverable error codes from one maintained contract.
+  - Evidence: [TASK-228 dated S5 evidence](docs/ai-native/evidence/TASK-228-2026-09-08.md#s5-boundary-publication-and-final-verification).
+- [x] **G01.2** Map pilot receipt reads and Pack preparation/execution to existing authenticated APIs and shared commands; do not expose raw SQL or client-selected tenant authority.
+  - Evidence: [TASK-228 dated S5 evidence](docs/ai-native/evidence/TASK-228-2026-09-08.md#s5-boundary-publication-and-final-verification).
+- [x] **G01.3** Return authoritative resource IDs, versions and postconditions; prove idempotent replay and changed-payload conflict for applicable writes.
+  - Evidence: [TASK-228 dated S4 evidence](docs/ai-native/evidence/TASK-228-2026-09-08.md#s4-replay-and-adapter-compatibility).
+- [x] **G01.4** Shared dispatcher tests and thin adapter contract fixtures prove one business-rule boundary; document supported and unsupported pilot actions. Real WebMCP and MCP interoperability is verified under TASK-229 and TASK-230.
+  - Evidence: [TASK-228 dated S5 evidence](docs/ai-native/evidence/TASK-228-2026-09-08.md#s5-boundary-publication-and-final-verification).
 
 ### G02 — Expose the receipt pilot through WebMCP
 
 **Task:** [TASK-229](docs/ai-native/TASK-229.md) · **Priority:** P1 · **Phase:** Pilot
 **Dependencies:** TASK-228, TASK-232, TASK-233.
-**Current evidence:** No WebMCP registration is established in current source.
+**Current evidence:** TASK-229/S1 verifies the three completed prerequisites and the current W3C/Chrome WebMCP surface. S2 implements a feature-detected six-tool page adapter with live actor/Company/permission fingerprints, lifecycle retirement and shared API/Demo receipt detail and Pack-preparation boundaries. S3 adds a visible review with selected evidence, exact totals, filters and pending action; cancellation is no-write and confirmation rechecks the selection digest before the existing session-authorized Pack writer. S4 exercises the fallback's invalid input, denied Company switch, live permission revocation/recovery, changed-selection retry and desktop/375px flow. S5 passes the current full Vitest, Demo/build, theme, locale, mobile and repository gates with temporary screenshot inspection. Post-S5 Chrome 152 with the official local WebMCPTesting flag now registers and invokes all six tools, proves visible cancellation/confirmation, persisted Pack/PDF read-back, live permission/Company/navigation retirement and 375px bounds; bundled Chromium 149 and the in-app browser remain explicit fallback environments. [TASK-229 native evidence](docs/ai-native/evidence/TASK-229-2026-09-09.md#post-s5-native-webmcp-acceptance--2026-09-09).
 
-- [ ] **G02.1** Register structured receipt search, authorized detail and Pack preparation/execution tools with feature detection and the ordinary UI retained when unsupported.
-- [ ] **G02.2** Bind tools to live actor, Company and page state; revoke stale registrations/context on navigation, Company switch, logout and permission change.
-- [ ] **G02.3** Keep draft edits, confirmation and execution state visible; prevent a tool from silently discarding unsaved work or bypassing server authorization.
-- [ ] **G02.4** Browser tests exercise the real receipt journey, invalid input, cancellation and stale scope in supported WebMCP browsers plus the unsupported-browser fallback.
+- [x] **G02.1** Register structured receipt search, authorized detail and Pack preparation/execution tools with feature detection and the ordinary UI retained when unsupported.
+  - Evidence: [TASK-229 native WebMCP evidence](docs/ai-native/evidence/TASK-229-2026-09-09.md#post-s5-native-webmcp-acceptance--2026-09-09).
+- [x] **G02.2** Bind tools to live actor, Company and page state; revoke stale registrations/context on navigation, Company switch, logout and permission change.
+  - Evidence: [TASK-229 native WebMCP evidence](docs/ai-native/evidence/TASK-229-2026-09-09.md#post-s5-native-webmcp-acceptance--2026-09-09).
+- [x] **G02.3** Keep draft edits, confirmation and execution state visible; prevent a tool from silently discarding unsaved work or bypassing server authorization.
+  - Evidence: [TASK-229 native WebMCP evidence](docs/ai-native/evidence/TASK-229-2026-09-09.md#post-s5-native-webmcp-acceptance--2026-09-09).
+- [x] **G02.4** Browser tests exercise the real receipt journey, invalid input, cancellation and stale scope in supported WebMCP browsers plus the unsupported-browser fallback.
+  - Evidence: [TASK-229 native WebMCP evidence](docs/ai-native/evidence/TASK-229-2026-09-09.md#post-s5-native-webmcp-acceptance--2026-09-09).
 
 ### G03 — Provide an authenticated ERP MCP server
 
 **Task:** [TASK-230](docs/ai-native/TASK-230.md) · **Priority:** P1 · **Phase:** Pilot
 **Dependencies:** TASK-228, TASK-232, TASK-233.
-**Current evidence:** ERP APIs exist; a dedicated remote ERP MCP server is not established.
+**Current evidence:** TASK-230/S1 selects MCP `2025-11-25` Streamable HTTP at `/api/mcp/v1`, pins the official TypeScript SDK `@modelcontextprotocol/sdk@1.30.0`, defines external OAuth/OIDC protected-resource discovery and least-privilege scopes, and provides an executable local issuer/audience/expiry/revocation fixture. S2 adds the SDK transport, RFC 9728 discovery, six governed G01 tools, structured results and bounded request/result/time limits; S3 revalidates issuer/audience/scopes per call and proves wrong-audience, expired/revoked, guessed-Company and changed-approval no-write paths; S4 proves the same receipt-to-Pack intent through official TypeScript `1.30.0` and Python `mcp==1.27.2` clients, including dropped-response replay, changed-key conflict and artifact/source hash separation; S5 verifies local rate/error/version operations, full tests and repository gates. Production OAuth/JWKS, multi-instance rate capacity and deployment evidence remain G12/TASK-199.
 
-- [ ] **G03.1** Provide a versioned remote MCP endpoint with capability discovery and pilot tools backed by the governed action catalogue.
-- [ ] **G03.2** Implement the selected MCP HTTP authorization profile, protected-resource discovery, audience validation, least-privilege scopes, expiry and revocation.
-- [ ] **G03.3** Enforce tenant derivation and resource/field permissions on every call; bound result size, rate and execution time and preserve structured errors.
-- [ ] **G03.4** Interoperability tests with two selected MCP clients prove receipt read/Pack execution, rejected cross-Company access, revoked tokens and safe timeout replay.
+- [x] **G03.1** Provide a versioned remote MCP endpoint with capability discovery and pilot tools backed by the governed action catalogue.
+  - Evidence: [TASK-230 S5 evidence](docs/ai-native/evidence/TASK-230-2026-09-09.md#goal-dod-status-after-s5).
+- [x] **G03.2** Implement the selected MCP HTTP authorization profile, protected-resource discovery, audience validation, least-privilege scopes, expiry and revocation.
+  - Evidence: [TASK-230 S5 evidence](docs/ai-native/evidence/TASK-230-2026-09-09.md#goal-dod-status-after-s5).
+- [x] **G03.3** Enforce tenant derivation and resource/field permissions on every call; bound result size, rate and execution time and preserve structured errors.
+  - Evidence: [TASK-230 S5 evidence](docs/ai-native/evidence/TASK-230-2026-09-09.md#goal-dod-status-after-s5).
+- [x] **G03.4** Interoperability tests with two selected MCP clients prove receipt read/Pack execution, rejected cross-Company access, revoked tokens and safe timeout replay.
+  - Evidence: [TASK-230 S5 evidence](docs/ai-native/evidence/TASK-230-2026-09-09.md#goal-dod-status-after-s5).
 
 ### G04 — Connect the ERP agent to approved external MCP tools
 
@@ -303,45 +357,61 @@ foundations are listed for reuse; they do not satisfy the complete new DoD.
 
 **Task:** [TASK-232](docs/ai-native/TASK-232.md) · **Priority:** P0 · **Phase:** Foundation
 **Dependencies:** TASK-227.
-**Current evidence:** Human/session and Platform authorization exist; Agent-specific delegation is not established.
+**Current evidence:** TASK-232/S1-S5 now map, implement and verify tenant-scoped Agent/service principals, current-owner-intersected grants, an issuer-separated `/api/agent/actions` boundary, hash-only credential rotation, administrator lifecycle controls and non-superuser PostgreSQL/FORCE RLS proof. Local API-mode desktop/375px checks show the Agent Governance screen without the earlier false Demo write-disabled banner; production and physical-device evidence remain separate release gates.
 
-- [ ] **G05.1** Model distinct human, delegated Agent and service automation principals with an accountable owner and attributable audit identity.
-- [ ] **G05.2** Intersect delegation grants with current tenant/module/resource/field permissions and explicit time, action and amount limits; never inherit shared administrator authority.
-- [ ] **G05.3** Prove expiry, revocation, Company isolation and permission downgrade during a running task under non-superuser PostgreSQL/FORCE RLS.
-- [ ] **G05.4** Provide administrator review, credential rotation and emergency disable controls; preserve existing Platform/Master/Company ownership boundaries.
+- [x] **G05.1** Model distinct human, delegated Agent and service automation principals with an accountable owner and attributable audit identity.
+  - Evidence: [TASK-232 S1–S5 evidence](docs/ai-native/evidence/TASK-232-2026-09-09.md#s5-database-isolation-and-close).
+- [x] **G05.2** Intersect delegation grants with current tenant/module/resource/field permissions and explicit time, action and amount limits; never inherit shared administrator authority.
+  - Evidence: [TASK-232 grant and lifecycle evidence](docs/ai-native/evidence/TASK-232-2026-09-09.md#s2-grants-and-validation).
+- [x] **G05.3** Prove expiry, revocation, Company isolation and permission downgrade during a running task under non-superuser PostgreSQL/FORCE RLS.
+  - Evidence: [TASK-232 PostgreSQL evidence](docs/ai-native/evidence/TASK-232-2026-09-09.md#s5-database-isolation-and-close).
+- [x] **G05.4** Provide administrator review, credential rotation and emergency disable controls; preserve existing Platform/Master/Company ownership boundaries.
+  - Evidence: [TASK-232 lifecycle evidence](docs/ai-native/evidence/TASK-232-2026-09-09.md#s4-lifecycle-controls).
 
 ### G06 — Bind agent execution to approval and business evidence
 
 **Task:** [TASK-233](docs/ai-native/TASK-233.md) · **Priority:** P0 · **Phase:** Foundation
 **Dependencies:** TASK-228, TASK-232.
-**Current evidence:** Domain approvals, version checks and idempotency exist; Agent-wide policy binding is not established.
+**Current evidence:** TASK-233/S1 defines server-owned read, draft, confirmed-execution and approval-required action classes. S2 persists actor/Company-bound reviewed facts, resource-version/selection/payload digests, hash-only execution keys and server expiry with human-only approve/reject/cancel. S3 rechecks the authenticated grant and approved intent, locks source rows, inserts the exact reviewed selection, serializes concurrent edit/insert outcomes and replays one immutable Pack. S4 proves pre-commit cancel/reject, post-commit approval-change replay, expired-grant denial, changed-payload conflict and governed source correction. S5 verifies P06-P12, persisted Pack/artifact postconditions, disposable PostgreSQL isolation, authenticated desktop/mobile browser behavior, generated/static gates and the full suite.
 
-- [ ] **G06.1** Define server-enforced action classes for read, draft, confirmed execution and approval-required execution; reuse existing business approval authority.
-- [ ] **G06.2** Bind confirmation/approval to actor, Company, exact payload digest, resource version and expiry; changed facts invalidate approval.
-- [ ] **G06.3** Prove cancel, reject, stale version, concurrent execution and timeout replay cause no unauthorized or duplicate side effect; preserve segregation of duties.
-- [ ] **G06.4** Show the resulting document/version and before/after business impact; route corrections of governed records through existing reversal or append-only mechanisms.
+- [x] **G06.1** Define server-enforced action classes for read, draft, confirmed execution and approval-required execution; reuse existing business approval authority.
+  - Evidence: [TASK-233 S5 evidence](docs/ai-native/evidence/TASK-233-2026-09-09.md#s5--verify-all-negative-paths).
+- [x] **G06.2** Bind confirmation/approval to actor, Company, exact payload digest, resource version and expiry; changed facts invalidate approval.
+  - Evidence: [TASK-233 S5 evidence](docs/ai-native/evidence/TASK-233-2026-09-09.md#s5--verify-all-negative-paths).
+- [x] **G06.3** Prove cancel, reject, stale version, concurrent execution and timeout replay cause no unauthorized or duplicate side effect; preserve segregation of duties.
+  - Evidence: [TASK-233 S5 evidence](docs/ai-native/evidence/TASK-233-2026-09-09.md#s5--verify-all-negative-paths).
+- [x] **G06.4** Show the resulting document/version and before/after business impact; route corrections of governed records through existing reversal or append-only mechanisms.
+  - Evidence: [TASK-233 S5 evidence](docs/ai-native/evidence/TASK-233-2026-09-09.md#s5--verify-all-negative-paths).
 
 ### G07 — Deliver the server AI runtime and contextual ERP workspace
 
 **Task:** [TASK-234](docs/ai-native/TASK-234.md) · **Priority:** P1 · **Phase:** Pilot
 **Dependencies:** TASK-230.
-**Current evidence:** Governed document OCR/Vision exists; wizard AI selection is preview-only and no general ERP assistant exists.
+**Current evidence:** Governed document OCR/Vision exists; wizard AI selection is preview-only and no broad reporting/NL-query assistant exists. TASK-234/S1 defines the server-owned provider request/response/tool-call contract, explicit draft/waiting/running/succeeded/failed/cancelled states, whole-run deadline/cancellation, input/output/call/retry/cost limits, pre-call cost reservation and actionable fail-closed errors. TASK-234/S2 adds Company-scoped provider/model/data-policy configuration, AES-GCM credentials, explicit rotation/provider-change decisions, bounded limits, model/egress validation, permission/idempotency boundaries and secret-free views/audits. TASK-234/S3 adds the server-owned bounded Receipt conversation loop, cited facts, exact Pack preview, G06 confirmation wait/resume, governed Pack execution, persisted Pack read-back and artifact/source hash verification. TASK-234/S4 adds the contextual vanilla-JS workspace with visible sources, exact preview/confirmation, progress, cancellation, recovery, Company-scope isolation, five locale resources, both themes and desktop/375px focus/touch evidence; S5 passes the fixture, actual Demo/PGlite Pack/artifact assertions and local gates. No real provider account or approved spend is available, so the real-provider gate remains explicit and TASK-234 stays in progress. [TASK-234/S1 evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s1--define-runtime-states-and-limits) · [S2 evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s2--implement-secret-safe-server-configuration) · [S3 evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s3--implement-the-receipt-conversation-loop) · [S4 evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s4--build-the-contextual-workspace) · [S5 evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s5--validate-fixture-and-real-model-journeys).
 
-- [ ] **G07.1** Implement a server-owned provider interface and Company configuration with encrypted secrets, allowed models, data policy, bounded timeout and per-run cost/call budgets.
-- [ ] **G07.2** Provide contextual chat, cited receipt results, Pack preview and confirmation, with distinct draft, waiting, running, succeeded, failed and cancelled states.
-- [ ] **G07.3** Complete the real receipt-to-Pack journey using governed tools and verified database/artifact postconditions; the assistant cannot announce success from model prose alone.
-- [ ] **G07.4** Prove provider failure/cancellation and zero credential leakage; test en/ms/zh/ja/vi, light/dark, desktop/mobile and accessible focus/keyboard behavior.
+- [x] **G07.1** Implement a server-owned provider interface and Company configuration with encrypted secrets, allowed models, data policy, bounded timeout and per-run cost/call budgets.
+  - Evidence: [TASK-234/S1-S2 evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s2--implement-secret-safe-server-configuration).
+- [x] **G07.2** Provide contextual chat, cited receipt results, Pack preview and confirmation, with distinct draft, waiting, running, succeeded, failed and cancelled states.
+  - Evidence: [TASK-234/S3-S4 evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s4--build-the-contextual-workspace).
+- [x] **G07.3** Complete the real receipt-to-Pack journey using governed tools and verified database/artifact postconditions; the assistant cannot announce success from model prose alone.
+  - Evidence: [TASK-234/S3-S4 governed execution evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s4--build-the-contextual-workspace).
+- [x] **G07.4** Prove provider failure/cancellation and zero credential leakage; test en/ms/zh/ja/vi, light/dark, desktop/mobile and accessible focus/keyboard behavior.
+  - Evidence: [TASK-234/S4-S5 failure, locale, theme and accessibility evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s5--validate-fixture-and-real-model-journeys). The later [TASK-232 locale remediation](docs/ai-native/evidence/TASK-232-2026-09-09.md#post-s5-agent-governance-locale-remediation) closes the separate global i18n follow-up; provider, production and physical-device evidence remain separate.
 
 ### G08 — Build permission-aware ERP semantics and knowledge retrieval
 
 **Task:** [TASK-235](docs/ai-native/TASK-235.md) · **Priority:** P1 · **Phase:** Expansion
 **Dependencies:** TASK-228, TASK-232.
-**Current evidence:** ERP facts and a developer project KB exist; a tenant-facing semantic retrieval layer is not established.
+**Current evidence:** TASK-235/S1 defines the versioned Company Receipt semantic contract, server-derived scope/visibility, inclusive date and Company-timezone semantics, ready-only status policy, currency-separated deterministic totals, as-of timestamp and receipt/document/version source IDs. S2 reuses the authenticated G01 `receipt.search` selection boundary with a fixed projection, server-resolved Company timezone, keyset pages and a 5,000-row fail-closed bound; authenticated API/PGlite fixtures reconcile own/company/mixed-currency totals and source IDs while rejecting tenant tampering, invalid ranges and revoked access. S3 registers only approved current managed-document versions with clean scans, successful extraction, Company-scoped effective dates and server-owned field allowlists; authenticated `/api/knowledge/sop` checks live permission before returning bounded content and excludes expired/revoked/field-denied/cross-Company sources while labeling embedded instructions as untrusted data. S4 adds resolvable governed citations with document/version/source-hash identity, effective policy dates and as-of times; grounded policy, explicit unknown/conflict evidence and grounded transaction-fact labels are returned, while actor/Company/authorization-version scoped cache entries are invalidated by source fingerprints. S5 closes accuracy/isolation with full regression and repository gates, including cache warm/cold, cross-Company, live permission downgrade and stale/revoked citation non-disclosure tests. PostgreSQL, provider and production-runtime evidence remain separate release gates. [S1 evidence](docs/ai-native/evidence/TASK-235-2026-09-09.md#s1-define-the-semantic-contract) · [S2 evidence](docs/ai-native/evidence/TASK-235-2026-09-09.md#s2-implement-bounded-factual-reads) · [S3 evidence](docs/ai-native/evidence/TASK-235-2026-09-09.md#s3--implement-scoped-sop-retrieval) · [S4 evidence](docs/ai-native/evidence/TASK-235-2026-09-09.md#s4--add-citations-and-freshness-rules) · [S5 evidence](docs/ai-native/evidence/TASK-235-2026-09-09.md#s5--verify-accuracy-and-isolation).
 
-- [ ] **G08.1** Define owned metric/entity contracts including Company, time period, timezone, currency, status and source IDs; compute financial facts through deterministic ERP reads.
-- [ ] **G08.2** Retrieve selected SOP/policy documents with tenant, record and field permissions checked before content reaches the model.
-- [ ] **G08.3** Return source links, record versions/as-of times and explicit unknown or conflicting evidence; distinguish transaction facts, policy and AI inference.
-- [ ] **G08.4** Prove inaccessible/expired documents, contradictory policies, Company switching and revoked access cannot leak data through retrieval, caches or Agent memory.
+- [x] **G08.1** Define owned metric/entity contracts including Company, time period, timezone, currency, status and source IDs; compute financial facts through deterministic ERP reads.
+  - Evidence: [TASK-235/S1 contract](docs/ai-native/evidence/TASK-235-2026-09-09.md#s1-define-the-semantic-contract) · [TASK-235/S2 bounded read](docs/ai-native/evidence/TASK-235-2026-09-09.md#s2-implement-bounded-factual-reads).
+- [x] **G08.2** Retrieve selected SOP/policy documents with tenant, record and field permissions checked before content reaches the model.
+  - Evidence: [TASK-235/S3 scoped SOP retrieval](docs/ai-native/evidence/TASK-235-2026-09-09.md#s3--implement-scoped-sop-retrieval).
+- [x] **G08.3** Return source links, record versions/as-of times and explicit unknown or conflicting evidence; distinguish transaction facts, policy and AI inference.
+  - Evidence: [TASK-235/S4 citations and freshness](docs/ai-native/evidence/TASK-235-2026-09-09.md#s4--add-citations-and-freshness-rules).
+- [x] **G08.4** Prove inaccessible/expired documents, contradictory policies, Company switching and revoked access cannot leak data through retrieval, caches or Agent memory.
+  - Evidence: [TASK-235/S5 accuracy and isolation](docs/ai-native/evidence/TASK-235-2026-09-09.md#s5--verify-accuracy-and-isolation).
 
 ### G09 — Run durable and recoverable agent workflows
 
@@ -369,9 +439,10 @@ foundations are listed for reuse; they do not satisfy the complete new DoD.
 
 **Task:** [TASK-238](docs/ai-native/TASK-238.md) · **Priority:** P1 · **Phase:** Expansion
 **Dependencies:** TASK-227.
-**Current evidence:** Canonical routes and partial workflows exist; all-module E2E and complete SG/MY statutory support are not proven.
+**Current evidence:** Canonical routes and partial workflows exist. TASK-238/S1 publishes a source-backed matrix for six selected journey areas with owner roles, tests and explicit exclusions; S2 records a proposed same-customer/same-currency settlement policy and SG/MY applicability worksheet, but product/finance and qualified tax-owner decisions are not approved. Settlement closure, all-module E2E and complete SG/MY statutory support are not proven. [S1 evidence](docs/ai-native/evidence/TASK-238-2026-09-09.md#cross-module-capability-matrix) · [S2 proposal](docs/ai-native/evidence/TASK-238-2026-09-09.md#s2--proposed-settlement-and-market-applicability-decisions-not-approved)
 
 - [ ] **G11.1** Publish an owner-reviewed capability matrix for order-to-cash, procure-to-pay, record-to-report, inventory, HR/leave/payroll and receipt/evidence flows with explicit exclusions.
+  - Evidence: [TASK-238/S1 source-backed matrix](docs/ai-native/evidence/TASK-238-2026-09-09.md#cross-module-capability-matrix); owner review remains pending.
 - [ ] **G11.2** Define and implement the approved v1 settlement scope, including ordinary sales receipt allocation and partial-payment behavior, with stock/AR/AP/GL reconciliation and reversal tests.
 - [ ] **G11.3** Record per-client SG/MY applicability and required statutory/e-invoice outputs; any claimed integration must pass sandbox submission, rejection/correction/cancellation and status reconciliation plus owner approval.
 - [ ] **G11.4** Demonstrate each included release journey through real UI and authenticated APIs with permission, duplicate, stale-version and failure rollback coverage; register excluded later scope explicitly.

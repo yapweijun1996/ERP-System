@@ -1,3 +1,8 @@
+import { DocumentStorageRegistry } from './storageRegistry';
+export { DocumentStorageRegistry } from './storageRegistry';
+import { assertOwnerAccess, versionContract, readManagedDocumentWithRegistry } from './storageRead';
+import { DocumentStorageError } from './storageError';
+export { DocumentStorageError } from './storageError';
 import { createHash, randomUUID } from 'node:crypto';
 import {
   mkdir,
@@ -19,7 +24,6 @@ import {
   documentTombstone,
   documentVersion,
   managedDocument,
-  userCompany,
 } from '../../data/schema';
 
 export type DocumentStorageBackend = 'database' | 'filesystem';
@@ -70,16 +74,6 @@ export interface DocumentStorageProvider {
   ): Promise<StorageRemoveReceipt>;
 }
 
-export class DocumentStorageError extends Error {
-  constructor(
-    public readonly code: string,
-    message: string,
-    public readonly status = 400,
-  ) {
-    super(message);
-    this.name = 'DocumentStorageError';
-  }
-}
 
 function asBytes(value: unknown): Uint8Array {
   if (value instanceof Uint8Array) return new Uint8Array(value);
@@ -300,33 +294,6 @@ export class FilesystemDocumentStorageProvider implements DocumentStorageProvide
   }
 }
 
-export class DocumentStorageRegistry {
-  private readonly providers = new Map<DocumentStorageBackend, DocumentStorageProvider>();
-
-  constructor(providers: DocumentStorageProvider[]) {
-    for (const provider of providers) this.providers.set(provider.backend, provider);
-    if (!this.providers.has('database')) {
-      throw new DocumentStorageError(
-        'document_database_provider_required',
-        'The database document provider must always be configured.',
-        500,
-      );
-    }
-  }
-
-  get(backend: DocumentStorageBackend): DocumentStorageProvider {
-    const provider = this.providers.get(backend);
-    if (!provider) {
-      throw new DocumentStorageError(
-        'document_storage_backend_unavailable',
-        `Document storage backend '${backend}' is not configured on this server.`,
-        503,
-      );
-    }
-    return provider;
-  }
-}
-
 export function createDocumentStorageRegistry(
   environment: Record<string, string | undefined> = process.env,
 ): DocumentStorageRegistry {
@@ -414,48 +381,6 @@ function validateInput(input: CreateManagedDocumentInput): {
     mimeType,
     content,
     contentHash: sha256(content),
-  };
-}
-
-async function assertOwnerAccess(
-  exec: DB,
-  scope: Scope,
-  actor: DocumentActor,
-  ownerUserId: number,
-): Promise<void> {
-  if (actor.userId !== ownerUserId && !actor.canManage) {
-    throw new DocumentStorageError(
-      'document_access_denied',
-      'This document belongs to another user.',
-      403,
-    );
-  }
-  const [membership] = await exec.select({ userId: userCompany.userId })
-    .from(userCompany)
-    .where(and(
-      eq(userCompany.userId, ownerUserId),
-      eq(userCompany.companyFn, scope.companyFn),
-    ))
-    .limit(1);
-  if (!membership) {
-    throw new DocumentStorageError(
-      'document_owner_invalid',
-      'Document owner is not a member of the active company.',
-      422,
-    );
-  }
-}
-
-function versionContract(row: typeof documentVersion.$inferSelect): StoredDocumentVersion {
-  return {
-    id: row.id,
-    documentId: row.documentId,
-    versionNo: row.versionNo,
-    sha256: row.sha256,
-    mimeType: row.mimeType,
-    sizeBytes: row.sizeBytes,
-    pageCount: row.pageCount,
-    storageBackend: row.storageBackend as DocumentStorageBackend,
   };
 }
 
@@ -756,45 +681,9 @@ export async function appendManagedDocumentVersion(
   }
 }
 
-export async function readManagedDocumentWithin(
-  exec: DB,
-  scope: Scope,
-  actor: DocumentActor,
-  documentId: number,
-  registry = createDocumentStorageRegistry(),
-  versionNo?: number,
-) {
-  const [document] = await exec.select().from(managedDocument).where(and(
-      eq(managedDocument.masterFn, scope.masterFn),
-      eq(managedDocument.companyFn, scope.companyFn),
-      eq(managedDocument.id, documentId),
-  )).limit(1);
-  if (!document) {
-    throw new DocumentStorageError(
-      'document_missing',
-      'Managed document is unavailable in the active company.',
-      404,
-    );
-  }
-  await assertOwnerAccess(exec, scope, actor, document.ownerUserId);
-  const selectedVersion = versionNo ?? document.currentVersionNo;
-  const [versionRow] = await exec.select().from(documentVersion).where(and(
-    eq(documentVersion.masterFn, scope.masterFn),
-    eq(documentVersion.companyFn, scope.companyFn),
-    eq(documentVersion.documentId, document.id),
-    eq(documentVersion.versionNo, selectedVersion),
-  )).limit(1);
-  if (!versionRow) {
-    throw new DocumentStorageError(
-      'document_version_missing',
-      'Managed document version is unavailable.',
-      404,
-    );
-  }
-  const version = versionContract(versionRow);
-  const content = await registry.get(version.storageBackend)
-    .readWithin(exec, scope, version);
-  return { document, version, content };
+export async function readManagedDocumentWithin(exec: DB, scope: Scope, actor: DocumentActor,
+  documentId: number, registry = createDocumentStorageRegistry(), versionNo?: number) {
+  return readManagedDocumentWithRegistry(exec, scope, actor, documentId, registry, versionNo);
 }
 
 export async function readManagedDocument(

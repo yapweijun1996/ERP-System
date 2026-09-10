@@ -88,6 +88,22 @@ exists; TASK-236 must later verify the actual resumed-worker path.
 - New test filenames in a packet are proposals until implemented. Existing
   regression commands cannot prove the new feature by themselves.
 
+### Time boundaries in HTTP integration tests
+
+Short-lived approval intents, tokens and grants must share the executor's clock.
+When an HTTP/MCP route uses real time, initialize fixture preparation time inside
+each test setup and assert the intent is still current before testing cancellation,
+replay or execution. A fixed historical preparation time can expire and mask the
+behavior the test intended to exercise. Keep business transaction dates separate.
+
+Use fixed clocks for unit tests only when the same clock is explicitly injected
+through every relevant lifecycle operation. Preserve deliberate expired-token and
+expired-intent cases. Never extend production TTLs, disable expiry or add a
+client-controlled clock to repair a fixture. Search nearby approval integration
+fixtures for the same pattern when one fails; do not repair only the first file.
+This rule follows the source-verified G06/MCP recurrence recorded in
+[TASK-234 evidence](ai-native/evidence/TASK-234-2026-09-09.md#integrated-regression-and-mcp-fixture-clock-repair).
+
 ### Normal code-change gates
 
 Run the selected packet's focused regressions and the new targeted tests first.

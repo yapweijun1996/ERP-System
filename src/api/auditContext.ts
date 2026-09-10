@@ -3,6 +3,8 @@
  * the real platform principal while preserving the target app_user as actor. */
 export interface AuditAttribution {
   platformPrincipalId?: number;
+  agentPrincipalId?: number;
+  delegatorUserId?: number;
 }
 
 interface AuditAttributionStorage {

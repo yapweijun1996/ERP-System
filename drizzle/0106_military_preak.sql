@@ -1,0 +1,2 @@
+ALTER TABLE "audit_log" ADD CONSTRAINT "ck_audit_agent_attribution" CHECK (("audit_log"."agent_principal_id" is null and "audit_log"."delegator_user_id" is null)
+      or ("audit_log"."agent_principal_id" is not null and "audit_log"."actor_user_id" is not null and "audit_log"."delegator_user_id" is not null));

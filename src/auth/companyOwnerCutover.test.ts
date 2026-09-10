@@ -51,7 +51,7 @@ describe('Company Owner cutover', () => {
     expect(ownerRoles).toHaveLength(2);
     // The current seed also carries TASK-182's three canonical Company Receipt
     // mutation grants; 0089 remains a historical, idempotent cutover.
-    expect(ownerPermissions.length).toBe(116);
+    expect(ownerPermissions.length).toBe(117);
     expect(sg.authorizationVersion).toBe(2);
     expect(legacyAssignments).toHaveLength(0);
   });

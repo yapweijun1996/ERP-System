@@ -5,6 +5,9 @@ import type { DB } from '../data/db';
 import { seedDemo } from '../data/seed';
 import {
   appUser,
+  auditLog,
+  passwordResetToken,
+  platformPrincipal,
   company,
   master,
   outboxEvent,
@@ -15,6 +18,7 @@ import {
 import { freshDb } from '../test/helpers';
 import { decryptToken, type EncryptedToken } from '../auth/tokenCrypto';
 import { hashPassword } from '../auth/password';
+import { processOutboxBatch, type MailMessage } from '../worker/outbox';
 import { createApp, type AppOptions } from './app';
 
 async function startApi(db: DB, options: AppOptions = {}) {
@@ -158,6 +162,87 @@ describe('auth lifecycle API', () => {
     expect(known.status).toBe(202);
     expect(unknown.status).toBe(202);
     expect(await known.json()).toEqual(await unknown.json());
+  });
+
+  it('recovers Company Owner and Master Admin through an isolated mail sink without crossing the platform realm', async () => {
+    const db = await freshDb();
+    await seedDemo(db);
+    const key = Buffer.alloc(32, 19);
+    const [masterRole] = await db.insert(role).values({
+      masterFn: 'M1', companyFn: 'C-SG', name: 'Master Admin', sourceTemplateKey: 'master_admin',
+    }).returning();
+    const [masterAdmin] = await db.insert(appUser).values({
+      masterFn: 'M1', username: 'masteradmin', email: 'masteradmin@acme.co',
+      passwordHash: hashPassword('demo1234'),
+    }).returning();
+    await db.insert(userCompany).values({ userId: masterAdmin.userId, companyFn: 'C-SG', roleId: masterRole.roleId });
+    await db.insert(userCompanyRole).values({ userId: masterAdmin.userId, companyFn: 'C-SG', roleId: masterRole.roleId });
+    const [platform] = await db.insert(platformPrincipal).values({
+      principalKey: 'recovery-platform', displayName: 'Platform', email: 'platform@example.test',
+      passwordHash: hashPassword('platform-original-password'),
+    }).returning();
+    const running = await startApi(db, {
+      tokenEncryptionKey: key.toString('base64'), publicUrl: 'https://erp.example.test/erp',
+    });
+    server = running.server;
+    const post = (action: string, body: object) => fetch(
+      `${running.baseUrl}/api/auth/password-reset/actions/${action}`,
+      { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) },
+    );
+    const sent: MailMessage[] = [];
+    for (const email of ['admin@acme.co', 'masteradmin@acme.co']) {
+      const cookies = await login(running.baseUrl, email);
+      const requested = await post('request', { email });
+      expect(requested.status).toBe(202);
+      expect((await requested.json()).data.accepted).toBe(true);
+      const result = await processOutboxBatch(db, { async send(message) { sent.push(message); } }, {
+        tokenEncryptionKey: key, workerId: 'recovery-mail-sink',
+      });
+      expect(result.delivered).toBe(1);
+      const message = sent[sent.length - 1];
+      expect(message.to).toBe(email);
+      const link = new URL(message.text.match(/https:\/\/[^\s]+/)![0]);
+      expect(link.pathname).toBe('/erp/reset-password');
+      expect(link.search).toBe('');
+      const token = new URLSearchParams(link.hash.slice(1)).get('token')!;
+      expect((await post('confirm', { token, password: 'recovered-password' })).status).toBe(200);
+      expect((await post('confirm', { token, password: 'replayed-password' })).status).toBe(400);
+      const oldSession = await fetch(`${running.baseUrl}/api/auth/session`, { headers: { cookie: cookies.header } });
+      expect(oldSession.status).toBe(401);
+      await login(running.baseUrl, email, 'recovered-password');
+      const audit = await db.select().from(auditLog).where(eq(auditLog.action, 'password_reset'));
+      const [target] = await db.select().from(appUser).where(eq(appUser.email, email));
+      expect(audit.filter((row) => row.actorUserId === target.userId && row.masterFn === target.masterFn)).toHaveLength(1);
+      expect(JSON.stringify(audit)).not.toContain(token);
+      expect(JSON.stringify(audit)).not.toContain('recovered-password');
+      const events = await db.select().from(outboxEvent);
+      expect(JSON.stringify(events)).not.toContain(token);
+      expect(events.every((event) => (event.payload as { redacted?: boolean }).redacted)).toBe(true);
+    }
+    const platformRequest = await post('request', { email: platform.email });
+    const unknownRequest = await post('request', { email: 'unknown@example.test' });
+    expect(await platformRequest.json()).toEqual(await unknownRequest.json());
+    expect(await db.select().from(passwordResetToken)).toHaveLength(2);
+    const [unchanged] = await db.select().from(platformPrincipal);
+    expect(unchanged.passwordHash).toBe(platform.passwordHash);
+  });
+
+  it('bounds repeated reset emails while retaining the non-enumerating response', async () => {
+    const db = await freshDb();
+    await seedDemo(db);
+    const running = await startApi(db, {
+      tokenEncryptionKey: Buffer.alloc(32, 20).toString('base64'), publicUrl: 'https://erp.example.test',
+    });
+    server = running.server;
+    for (let attempt = 0; attempt < 7; attempt += 1) {
+      const response = await fetch(`${running.baseUrl}/api/auth/password-reset/actions/request`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: `${' '.repeat(attempt)}ADMIN@ACME.CO ` }),
+      });
+      expect(response.status).toBe(202);
+      expect((await response.json()).data.accepted).toBe(true);
+    }
+    expect(await db.select().from(passwordResetToken)).toHaveLength(5);
   });
 
   it('authenticates the same username independently in two organizations', async () => {

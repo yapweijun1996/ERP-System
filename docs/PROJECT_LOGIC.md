@@ -1,5 +1,63 @@
 # ERP-System Project Logic
 
+Current TASK-234 checkpoint — 2026-09-10: shared G06 intent and Pack persistence
+commands are now browser-compatible factories. Server facades preserve their
+existing APIs; Demo runtime binds both factories with Web Crypto and shared audit.
+The Demo Pack path uses shared creation/replay commands and enforces the reviewed
+selection digest. Demo preparation, persisted approval and execution now use shared
+G06 commands with actor/Company ownership and transactional audit. Local integration
+and Company Receipts browser regression pass; authentication remains synthetic.
+Real operator acceptance remains open. A refreshed local Pages candidate and a
+hash-verified copy of the current live release are available; neither was
+deployed. Full-suite release regression passed: 895 tests, with 3 PostgreSQL tests skipped. Earlier candidates are stale.
+The assistant success view now opens its existing Pack PDF after rechecking the
+completion artifact hash; opening does not execute another creation command.
+Selected rows are now progressively expandable beyond 20 with amount, currency,
+purpose, version and evidence facts. Original evidence can now be opened through
+the governed document-content boundary after exact-version and byte-hash checks.
+Actual human inspection and the same-run real gateway pilot remain open.
+
+The default browser gateway is `https://gpt.yapweijun1996.com/demo` / `demo-auto`.
+One synthetic query on the registered GitHub Pages origin succeeded (117 reported
+tokens); tested localhost origins were rejected. This is protocol evidence only,
+not full Receipt-to-Pack/operator acceptance. Requests send user query text, not
+receipt files, and do not occur at startup. See [AI_PROVIDERS.md](AI_PROVIDERS.md).
+
+The reproducible Receipt pilot runner now passes SG/MY local fixture journeys,
+exact-confirmation cancellation and persisted Pack/PDF verification after database
+reopen. Each preview row must match a successful receipt detail read, and exact
+source files are retrieved through document permissions and hash-verified before
+confirmation. File retrieval does not establish human viewing. Fixture usage is explicitly synthetic; interactive live mode remains gated
+by account/data-policy/spend authorization. See [pilot execution evidence](ai-native/evidence/TASK-234-2026-09-09.md#reproducible-pilot-runner--local-fixture-evidence).
+
+The active milestone is Phase 2 of [GOAL.md](../GOAL.md), the real Receipt-to-Pack
+pilot. [GOAL_EXECUTION_PLAN.md](GOAL_EXECUTION_PLAN.md) owns the current continuation.
+TASK-234 now connects `openAiProvider.ts` through `receiptAssistantProvider.ts`
+and `receiptAssistantBootstrap.ts` to `src/server.ts` with explicit activation.
+The session-derived Company supplies encrypted credentials and limits; only the
+pinned OpenAI GPT-4.1 mini global/no-training pilot is supported. Every egress
+rechecks configuration and resolved grants against the run snapshot. Changes
+require a fresh run; only granted tools are advertised and no transaction spans
+network IO. Tool-call metadata and result IDs survive the whole transcript.
+Fixed HTTPS, redirect denial, byte/token/output bounds and sanitized errors apply.
+A saved credential alone does not enable calls. HTTP disconnect still propagates
+through provider setup/runtime to fetch and body reads; cancellation is cooperative,
+not rollback of committed work. Local injected responses prove protocol wiring,
+not real-model or production acceptance. See [AI_PROVIDERS.md](AI_PROVIDERS.md)
+for explicit activation, pricing and external data-policy constraints.
+
+
+Provider budget custody (`aiRuntime.ts`, `receiptAssistant.ts`): once `complete`
+is dispatched, failure is not evidence of zero charge. `reservedCostMicros` is
+known reported spend plus retained maximum reservations for calls with unknown
+cost; `spentCostMicros` includes only valid provider reports. A valid response
+reconciles its own reservation even when output is too large; a report exceeding
+the adapter's per-call maximum fails closed. The conversation carries charged
+exposure and consumed retries across tool turns. Runtime pre-dispatch budget/input rejections consume
+no call or retry; failures after dispatch to the adapter retain reservations. This is conservative local accounting, not a provider invoice
+or proof of live pricing; the adapter must supply a defensible maximum.
+
+
 TASK-240 adds [source-backed execution packets](AI_NATIVE_EXECUTION.md) and
 [receipt pilot contracts/cases](ai-native/PILOT_TEST_MATRIX.md). G01 adapter
 contract fixtures precede the real G02/G03 transports; G06 must bind the complete
@@ -7,11 +65,96 @@ reviewed receipt selection atomically, including newly matching rows. These are
 implementation requirements, not changes to the existing Pack command or domain
 contract. Existing key replay and current-visibility checks remain authoritative.
 
-## AI Native target and implementation boundary — 2026-09-08
+## AI Native target and implementation boundary — 2026-09-09
 
 [GOAL.md](../GOAL.md) is the target/DoD owner for EPIC-068. TASK-227 delivers
-planning; TASK-228–239 remain Todo (0/12 workstreams, 0/48 criteria).
-Web UI, future WebMCP tools, inbound MCP and internal AI must converge on the
+planning; TASK-228 and TASK-232 are now Done with G01.1-G01.4 and G05.1-G05.4
+accepted; TASK-232/S1-S5 implements and verifies the least-privilege Agent identity,
+authenticated transport, lifecycle and database-isolation boundary. TASK-233/S1
+defines the server-owned read/draft/confirmed/approval-required policy classes, S2
+persists exact reviewed intent with human-only decisions and server expiry, and S3
+executes only the approved exact Pack selection with source locking and replay
+evidence; S4 proves approval-change replay, current-grant expiry denial,
+changed-payload conflict and governed correction; S5 verifies P06-P12, persisted
+Pack/artifact postconditions, disposable PostgreSQL isolation, authenticated
+desktop/mobile browser behavior and the full local suite. TASK-230/S1 now selects
+and pins the MCP transport/auth topology and adds an executable local authorization
+fixture; TASK-230/S2 adds the versioned SDK Streamable HTTP endpoint, RFC 9728
+discovery, six governed G01 tools and bounded structured results; TASK-230/S3 adds
+per-call issuer/audience/scope revalidation and no-write authorization/approval
+negative paths; S4 proves the same reviewed Receipt Pack intent through official
+TypeScript `@modelcontextprotocol/sdk@1.30.0` and Python `mcp==1.27.2` clients,
+including dropped-response replay and export artifact/source hash separation.
+TASK-229/S1 verifies the completed prerequisites, the current W3C/Chrome WebMCP
+surface and the ordinary Company Receipts browser journey. S2 adds a feature-detected
+six-tool page adapter with live actor/Company/permission fingerprints, AbortSignal and
+generation retirement, lifecycle hooks, shared API/Demo detail and read-only Pack
+preparation. S3 adds the visible evidence, exact totals, cancellation/no-write path,
+selection-digest recheck and confirmation bridge for Pack creation. S4 exercises the
+fallback invalid-input, denied Company-switch, permission-revocation/recovery and
+changed-selection retry paths at desktop/375px. Playwright Chromium
+149 has no native `document.modelContext`. A later unlocked in-app browser recheck
+completed local Demo setup, loaded `erp-webmcp-adapter.js` and returned
+`document.modelContext === undefined`, `registerTool === undefined`,
+`crossOriginIsolated === false` and no Permissions Policy API. S5 passes the current
+full Vitest, Demo/build, theme, locale, mobile and repository gates with temporary
+screenshot inspection. The post-S5 isolated Chrome 152 run with the official local
+`WebMCPTesting` flag registers and invokes all six tools and proves visible
+cancellation/confirmation, persisted Pack/PDF read-back, permission/Company/navigation
+retirement and 375px bounds; G02.1-G02.4 are accepted for local/repository scope.
+Bundled Chromium 149 and the in-app browser remain ordinary-UI fallbacks, while
+production browser rollout/release evidence remains separate. See the
+[post-S5 native acceptance evidence](ai-native/evidence/TASK-229-2026-09-09.md#post-s5-native-webmcp-acceptance--2026-09-09).
+TASK-234/S1 defines the server-owned AI provider request/
+response/tool-call contract, explicit draft/waiting/running/succeeded/failed/cancelled
+states, whole-run deadline/cancellation and input/output/call/retry/cost limits with
+actionable fail-closed errors; S2 adds Company-scoped provider/model/data-policy
+configuration, AES-GCM credential storage, explicit rotation/provider-change decisions,
+bounded model/egress/runtime limits and secret-free API/audit views. S3 adds the
+server-owned bounded Receipt conversation loop, six allowlisted tools, cited facts,
+exact Pack preview, G06 confirmation wait/resume, governed execution, persisted
+Pack read-back and artifact/source hash verification. S4 adds the contextual vanilla-JS
+workspace with visible cited sources, exact preview/confirmation, progress,
+cancellation/recovery, Company/draft isolation, five locales, both themes and
+desktop/375px focus/touch evidence. S5 passes the actual Demo/PGlite Pack/artifact
+assertions and local gates. G07.1-G07.4 are accepted for local/repository scope;
+the deterministic zero-spend provider is local test evidence only and no approved
+real-provider account/spend is available. TASK-238/S1 now publishes a source-backed
+matrix for order-to-cash, procure-to-pay, record-to-report, inventory, HR/leave/payroll
+and receipt/evidence. It assigns engineering owner roles, links source/test evidence
+and marks production-unproven and excluded stages explicitly; owner approval and
+settlement/statutory implementation remain open. Evidence is in
+[TASK-238/S1](ai-native/evidence/TASK-238-2026-09-09.md#cross-module-capability-matrix).
+TASK-235/S1 now defines the versioned Company Receipt semantic
+contract: server-derived Master/Company scope, own/company visibility, inclusive
+date-only range, Company timezone, ready-only status, currency-separated Decimal
+totals, as-of timestamp and receipt/document/version source IDs. Its five golden
+fixtures pass. S2 reuses the authenticated G01 `receipt.search` selection boundary
+with fixed field projection, server Company timezone, keyset pages and a 5,000-row
+fail-closed bound; API/PGlite fixtures reconcile own/company/mixed-currency totals
+and source IDs while rejecting tenant tampering, invalid ranges and revoked access.
+S3 registers approved current managed-document versions in a Company-scoped governed
+SOP corpus and exposes authenticated bounded retrieval after live permission, effective
+date, retention, scan, extraction and field-allowlist checks; embedded instructions
+remain untrusted data. S4 adds resolvable citations with source version/hash/effective
+date/as-of metadata, grounded policy versus explicit unknown/conflict evidence,
+transaction-fact labels and actor/Company/authorization-version scoped cache
+invalidation. S5 verifies cache warm/cold, cross-Company and live permission-downgrade
+isolation, stale/revoked citation rejection, the full local suite, Demo/build and
+repository gates; PostgreSQL/provider/production work remains a separate release gate.
+Source/test evidence:
+[TASK-229/S5](ai-native/evidence/TASK-229-2026-09-09.md#s5--run-browser-regressions-and-close-the-local-checkpoint),
+[TASK-234/S1](ai-native/evidence/TASK-234-2026-09-09.md#s1--define-runtime-states-and-limits),
+[TASK-234/S2](ai-native/evidence/TASK-234-2026-09-09.md#s2--implement-secret-safe-server-configuration),
+[TASK-234/S3](ai-native/evidence/TASK-234-2026-09-09.md#s3--implement-the-receipt-conversation-loop),
+[TASK-234/S4](ai-native/evidence/TASK-234-2026-09-09.md#s4--build-the-contextual-workspace),
+[TASK-234/S5](ai-native/evidence/TASK-234-2026-09-09.md#s5--validate-fixture-and-real-model-journeys),
+[TASK-235/S1](ai-native/evidence/TASK-235-2026-09-09.md#s1-define-the-semantic-contract) and
+[TASK-235/S2](ai-native/evidence/TASK-235-2026-09-09.md#s2-implement-bounded-factual-reads) and
+[TASK-235/S3](ai-native/evidence/TASK-235-2026-09-09.md#s3--implement-scoped-sop-retrieval) and
+[TASK-235/S4](ai-native/evidence/TASK-235-2026-09-09.md#s4--add-citations-and-freshness-rules) and
+[TASK-235/S5](ai-native/evidence/TASK-235-2026-09-09.md#s5--verify-accuracy-and-isolation).
+Web UI, future WebMCP tools, the inbound MCP adapter and internal AI must converge on the
 same authenticated action contracts and existing domain commands. Outbound MCP
 is a separate external-service trust boundary. AI does not own tenant selection,
 financial calculations, approval authority or final transaction facts.
@@ -19,13 +162,107 @@ financial calculations, approval authority or final transaction facts.
 The first pilot reuses Company Receipt/Pack commands and verifies persisted Pack
 and artifact identity after confirmation. It remains Company-owned and independent
 of Expense Claims, reimbursement, GL and tax filing; upstream My Receipts upload
-retains its Employee boundary. No domain contract changes in this documentation task.
+retains its Employee boundary. No receipt/Pack domain contract was replaced. TASK-228
+adds the versioned contract catalogue in `src/modules/agent/actionContracts.ts`, the
+session-bound dispatcher in `src/api/agentActions.ts` and shared Pack selection in
+`src/modules/expenses/companyReceiptPack.ts`; `receipt_pack.prepare` is read-only and
+`receipt_pack.create` remains confirmation-gated under TASK-233: the authenticated
+Agent route requires an approved exact intent, while the human route remains the
+original governed command. The dated contract,
+negative-case, replay and adapter evidence is in
+`docs/ai-native/evidence/TASK-228-2026-09-08.md`.
 Current source references: [API resources](../src/api/resources.ts),
 [Company Receipt commands](../src/modules/expenses/companyReceipt.ts),
 [Pack commands](../src/modules/expenses/companyReceiptPack.ts),
 [Pack governance](../src/modules/expenses/companyReceiptPackGovernance.ts),
 [receipt API](../src/api/routes/companyReceipts.ts), and
 [AI provider boundary](AI_PROVIDERS.md).
+
+TASK-232/S2 adds [agentPrincipal and agentGrant](../src/data/schema/agent.ts) and the
+admin-gated [Agent identity resolver](../src/modules/agent/agentIdentity.ts). A
+delegated Agent or service automation gets a distinct non-login `app_user` bridge,
+accountable human owner, tenant-scoped grant, action/resource/field allowlist, scope,
+time window, version and optional Decimal amount ceiling. Resolution rechecks bridge
+status, owner activity/membership and the central owner's current `authorizeWithin`
+decision; a grant is not a role and does not inherit Platform or administrator
+authority. S3 adds the issuer-separated `/api/agent/actions` boundary in
+`src/api/routes/agent.ts` and `dispatchAuthenticatedAgentAction`; body actor/tenant
+overrides are rejected, Agent results are field-projected and Pack export requires a
+complete Pack field grant. `audit_log.agent_principal_id` and
+`audit_log.delegator_user_id` preserve true Agent/service bridge plus accountable-owner
+attribution under an append-only consistency check. S4 adds the hash-only
+`agentCredential` table, one-time rotation, review, grant revoke and principal
+pause/resume/disable/revoke APIs/UI. S5 keeps issuer lookup inside an explicit
+`app.agent_issuer` RLS transaction and proves migration replay, expiry, revocation,
+Company isolation, permission downgrade and audit attribution with a non-superuser
+PostgreSQL FORCE-RLS role. Migrations 0104–0108 and generated RLS/schema checks cover
+the boundary. Evidence:
+[TASK-232/S2-S5](ai-native/evidence/TASK-232-2026-09-09.md#s5-database-isolation-and-close).
+
+TASK-233/S2 adds `agent_execution_intent` and
+`src/modules/agent/agentExecutionIntent.ts`. Preparation reuses the exact governed
+Receipt Pack selection, persists actor/Company/action identity, complete receipt and
+document version facts, selection/resource/payload digests and a server-owned 15-minute
+expiry. The separately supplied execution intent key is stored only as a SHA-256 hash;
+the module rejects key reuse with changed facts and rejects request identifiers that
+would log the raw key. Approve/reject/cancel require the expected intent version, an
+active human Company member and current Receipt Pack read authority; the non-login
+Agent actor cannot decide. Verification re-runs the governed selection and rejects a
+changed filter, record/version, newly eligible row, digest or expiry. This is a
+confirmation record, not an approval workflow or financial authority; S3 supplies
+the guarded Agent execution boundary. Source/test evidence:
+[TASK-233/S2](ai-native/evidence/TASK-233-2026-09-09.md#s2-exact-intent-persistence-and-expiry-binding).
+
+TASK-233/S3 adds `executeAgentReceiptPackWithin` to the authenticated Agent
+dispatcher. It rechecks the active principal/grant and approved intent inside a
+serializable tenant transaction, locks the matching Company Receipt rows, compares
+the live selection and resource-version/payload digests, and inserts the Pack from
+that locked selection without a second unconstrained query. A committed Pack is
+checked before live-source revalidation for same-intent replay after source
+correction; changed payloads still conflict. Concurrent edit/insert tests prove an
+exact approved Pack or no Pack, and duplicate execution retains one Pack. Pack and
+intent audit events retain Agent/owner attribution and only digest facts. Source/test
+evidence: [TASK-233/S3](ai-native/evidence/TASK-233-2026-09-09.md#s3--execute-once-with-consistent-facts).
+
+TASK-233/S4 keeps replay inside the current Agent authorization boundary. Supplied
+selection/payload digests are checked before replay; a cancelled intent may replay
+only when its own append-only intent audit already proves a committed Agent result,
+while a pre-commit cancel/reject remains blocked. Grant expiry is rechecked before
+the action transaction, and a governed source correction uses the existing
+optimistic-version Company Receipt command plus append-only audit; the immutable
+Pack retains its reviewed version-1 rows. Source/test evidence:
+[TASK-233/S4](ai-native/evidence/TASK-233-2026-09-09.md#s4--handle-replay-and-human-corrections).
+
+TASK-233/S5 closes the receipt-pilot negative-path matrix P06-P12. Focused
+authenticated PGlite/API tests and disposable PostgreSQL tests verify no
+unauthorized or duplicate business write across first execution, same-intent
+replay, changed payload, grant expiry/revocation, Company isolation, concurrent
+edit/insert, reject/cancel and scan/quarantine cases. The existing authenticated
+browser flow verifies confirmation, refresh/search/range and immutable Pack
+Preview/PDF/Print artifacts at desktop and 375px mobile sizes. This is local and
+disposable-environment evidence; it does not certify production, remote MCP,
+WebMCP, provider or physical-device behavior. Source/test evidence:
+[TASK-233/S5](ai-native/evidence/TASK-233-2026-09-09.md#s5--verify-all-negative-paths).
+
+TASK-230/S1 selects MCP `2025-11-25` Streamable HTTP at the versioned
+`/api/mcp/v1` resource and pins `@modelcontextprotocol/sdk@1.30.0` with
+`zod@4.5.4`. Production is an OAuth 2.1/OIDC protected-resource deployment:
+the configured issuer must advertise RFC 9728 metadata and the resource server
+must validate issuer, resource/audience, expiry, revocation and least-privilege
+receipt scopes before mapping the subject to the existing tenant-scoped Agent
+principal/grant. The local `mcpAuthorization` fixture exercises that contract
+without claiming an issuer or accepting client-supplied tenant identity. TASK-230/S2
+mounts the official stateless Streamable HTTP SDK lifecycle before the human module
+gate, exposes only the six G01 tools through `dispatchAuthenticatedAgentAction`,
+serves path-specific RFC 9728 metadata and returns structured action envelopes with
+bounded input/result/time budgets (1 MB input, 50 MB default result and 100 MB hard
+cap). TASK-230/S3 rechecks configured issuer/audience
+and delegated scopes on every request, handles JSON-RPC batch scope unions, and
+preserves the shared dispatcher for guessed-Company and changed-approval denials.
+Evidence:
+[TASK-230/S3](ai-native/evidence/TASK-230-2026-09-09.md#s3--enforce-authorization-on-every-call) and
+[TASK-230/S4](ai-native/evidence/TASK-230-2026-09-09.md#s4--prove-two-client-interoperability) and
+[TASK-230/S5](ai-native/evidence/TASK-230-2026-09-09.md#s5--verify-and-document-operations).
 
 TASK-216 fixture repair, TASK-217 date-only repair, TASK-218 invoice presentation repair,
 TASK-219 sales-invoice i18n repair, TASK-220 filled-action contrast repair, TASK-221
@@ -37,8 +274,10 @@ posting status. Shared posting rejection remains authoritative.
 [TEST_COVERAGE.md](TEST_COVERAGE.md) records every current module and evidence gaps;
 TASK-216–223 own the eight specialist findings; TASK-216 through TASK-223 are complete
 locally. Fresh schema/RLS checks prove
-104 migrations, 255 tables, 225 generic policy tables and 10 explicit exemptions,
-not production isolation. Domain fixes must update this mirror and the KB together.
+109 migrations, 259 tables, 229 generic policy tables and 10 explicit exemptions,
+including the narrow transaction-local `app.agent_issuer` lookup boundary; the
+disposable PostgreSQL proof used a non-superuser/NOBYPASSRLS API role and does not
+claim production isolation. Domain fixes must update this mirror and the KB together.
 
 > Main project knowledge base: `KBID: erp-system-project-logic`
 > KB UUID: `ef47bf4b-83e1-42b2-a412-66912d04ea24`
@@ -61,6 +300,12 @@ command proof completes exactly one balanced supplier invoice; production rows t
 still unclassified or regime-incompatible remain rejected. No posting contract was
 weakened. Production/scale/physical-device evidence remains separate from local PGlite
 and screen checks.
+
+The 2026-09-09 TASK-232 follow-up closes the remaining local UI-resource gap:
+Agent Governance module-local packs, Admin route labels and purchase-wizard labels
+now pass the static 1,773-key / 74-pack audit and the full built-Demo matrix of 130
+routes × five languages × desktop/mobile. This is presentation evidence only; it does
+not change tenant authorization, business commands or persisted domain facts.
 
 TASK-217 establishes the browser date-only contract: `screens-common.js` owns
 `addCalendarDays`, which parses an ISO calendar date at a fixed UTC calendar origin,
@@ -100,7 +345,7 @@ TASK-223 establishes the screen-audit recovery contract: payment-voucher Retry i
 recovered only after the actual route `navigate()` Promise completes with no visible posting
 error. The audit uses a bounded 10-second timeout, records the measured recovery milestone,
 and retains rejected-navigation, visible-error and timeout failures. The current full
-129-route desktop/mobile built-Demo audit measured approximately 1333ms/949ms and passed;
+130-route desktop/mobile built-Demo audit measured approximately 1333ms/949ms and passed;
 this is local browser evidence, not production or remote CI evidence.
 
 ## 1. System boundary and execution contract
@@ -341,6 +586,27 @@ calendar events. `calendarSync.ts` uses tenant-scoped outbox rows, event keys,
 worker leases, retryable `pending/failed` states, `delivered` and `superseded` states,
 and provider drivers (generic/Google/Microsoft). A failed external delivery must not
 change the internal Leave or appointment fact.
+
+Tenant email recovery is implemented by `src/auth/lifecycle.ts`, the public
+request/confirm routes in `src/api/routes/auth.ts`, and
+`web/public/assets/auth-recovery.js` at `/reset-password` beneath the configured
+public mount. Company Owner and Master Admin reuse human `app_user` identity;
+non-human and Employee-linked identities remain excluded, and an ambiguous email
+across Masters fails closed. Confirmation locks the token/user and rechecks active,
+login-enabled human status before changing the password and revoking sessions.
+Request throttling normalizes email before hashing and counts attempts before
+issuance, including issuance failures. Tokens remain hashed in the token table,
+encrypted in the pending outbox, and in a URL fragment during email navigation.
+The recovery page immediately removes the fragment and retains the token only in
+memory; both document navigation and fragment-only navigation are supported.
+Platform Superadmin is a separate `platform_principal` authority and has no email
+recovery implementation in this release; the tenant endpoint cannot recover it.
+See [TASK-193 local evidence](ai-native/evidence/TASK-193-2026-09-09.md).
+
+Authentication mail failure records store application-owned phase codes only
+(`auth_mail_payload_invalid`, `auth_mail_token_unavailable`,
+`auth_mail_delivery_failed`, `auth_mail_delivery_record_failed`). Raw provider
+exceptions, which can contain credentials or bearer links, are never persisted.
 
 Authentication invitation and password-reset messages use the leased `outbox_event`
 worker boundary as well. Automatic delivery is capped at five attempts by default;
@@ -615,7 +881,14 @@ browser/production UAT remains a P0 release-evidence follow-up until the dated E
 review is reconciled; source completion must not be mistaken for live release proof.
 Rendering otherwise rechecks document-version/hash identity, scan-clean state, content
 integrity and the 250 MB source limit. `companyReceiptPackPdf.ts` builds an A4 landscape
-register, then `documents/evidencePdf.ts` copies all PDF pages, embeds JPEG/PNG or emits
+register with measured-width cell wrapping and repeated headers; it no longer
+silently truncates merchant/purpose/uploader text. `documents/pdfFont.ts` corrects
+only renderer-owned OpenType font stream declarations after flush, and disables
+unmapped localized alternate digits/ligatures so dates/amounts remain extractable.
+Existing imported evidence font streams are untouched. The full font remains embedded
+(about 14 MB for a small Pack); subsetting was rejected after reader validation failed.
+PDF artifact hashes can change with renderer revisions; stored selection/source
+digests and source documents do not. Then `documents/evidencePdf.ts` copies all PDF pages, embeds JPEG/PNG or emits
 an explicit unsupported/corrupt evidence placeholder. Preview, download and Print use
 the same private no-store artifact and are audited without changing receipt state.
 The shared PDF primitive is technical reuse only: Tax Evidence still joins

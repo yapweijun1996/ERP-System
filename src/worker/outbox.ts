@@ -144,6 +144,7 @@ export async function processOutboxBatch(
   let failed = 0;
   let deadLettered = 0;
   for (const row of rows) {
+    let failureCode = 'auth_mail_payload_invalid';
     try {
       if (
         !AUTH_MAIL_TOPICS.includes(row.topic as typeof AUTH_MAIL_TOPICS[number])
@@ -151,8 +152,11 @@ export async function processOutboxBatch(
       ) {
         throw new Error(`Unsupported outbox topic or payload: ${row.topic}`);
       }
+      failureCode = 'auth_mail_token_unavailable';
       const rawToken = decryptToken(row.payload.token, options.tokenEncryptionKey);
+      failureCode = 'auth_mail_delivery_failed';
       await transport.send(renderAuthMail(row.payload, rawToken));
+      failureCode = 'auth_mail_delivery_record_failed';
       await db.update(outboxEvent).set({
         deliveredAt: now,
         deadLetteredAt: null,
@@ -171,8 +175,9 @@ export async function processOutboxBatch(
         isNull(outboxEvent.deliveredAt),
       ));
       delivered += 1;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+    } catch {
+      // Transport errors can echo credentials, recipients or the bearer link.
+      // Persist only the application-owned failure phase, never provider text.
       const attempt = row.attempts + 1;
       const terminal = attempt >= maxAttempts;
       const delayMs = Math.min(60 * 60 * 1000, 2 ** Math.min(attempt, 10) * 1000);
@@ -181,7 +186,7 @@ export async function processOutboxBatch(
         lockedBy: null,
         availableAt: terminal ? now : new Date(now.getTime() + delayMs),
         deadLetteredAt: terminal ? now : null,
-        lastError: message.slice(0, 1000),
+        lastError: failureCode,
       }).where(and(
         eq(outboxEvent.id, row.id),
         eq(outboxEvent.lockedBy, workerId),

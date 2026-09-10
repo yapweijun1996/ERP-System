@@ -1,19 +1,194 @@
-# Project Status — reviewed 2026-09-08
+# Project Status — reviewed 2026-09-09
+
+Current TASK-234 checkpoint — 2026-09-10: shared G06 intent and Pack persistence
+commands are now browser-compatible factories. Server facades preserve their
+existing APIs; Demo runtime binds both factories with Web Crypto and shared audit.
+The Demo Pack path uses shared creation/replay commands and enforces the reviewed
+selection digest. Demo preparation, persisted approval and execution now use shared
+G06 commands with actor/Company ownership and transactional audit. Local integration
+and Company Receipts browser regression pass; authentication remains synthetic.
+Real operator acceptance remains open. A refreshed local Pages candidate and a
+hash-verified copy of the current live release are available; neither was
+deployed. Full-suite release regression passed: 895 tests, with 3 PostgreSQL tests skipped. Earlier candidates are stale.
+The assistant success view now opens its existing Pack PDF after rechecking the
+completion artifact hash; opening does not execute another creation command.
+Selected rows are now progressively expandable beyond 20 with amount, currency,
+purpose, version and evidence facts. Original evidence can now be opened through
+the governed document-content boundary after exact-version and byte-hash checks.
+Actual human inspection and the same-run real gateway pilot remain open.
+
+The default browser gateway is `https://gpt.yapweijun1996.com/demo` / `demo-auto`.
+One synthetic query on the registered GitHub Pages origin succeeded (117 reported
+tokens); tested localhost origins were rejected. This is protocol evidence only,
+not full Receipt-to-Pack/operator acceptance. Requests send user query text, not
+receipt files, and do not occur at startup. See [AI_PROVIDERS.md](AI_PROVIDERS.md).
+
+Latest integrated regression: 204 test files and 895 tests passed, with 3
+PostgreSQL files/tests skipped because POSTGRES_URL was unset. The process exited
+0 after 1324.40 seconds. This supersedes the earlier MCP fixture-clock failures;
+it does not establish PostgreSQL or real-provider/operator acceptance. See
+[regression evidence](ai-native/evidence/TASK-234-2026-09-09.md#final-full-suite-release-regression--2026-09-10).
+
+Receipt Pack PDF readability repair: complete wrapped register fields, correct
+OpenType font declarations and ordinary extractable digits are locally verified.
+SG pilot and multilingual multi-page rendering show no font warnings; full-font
+size remains about 14 MB. This is artifact evidence, not real-model or production
+acceptance. See [TASK-234 evidence](ai-native/evidence/TASK-234-2026-09-09.md#readable-pack-artifact--font-and-layout-repair).
+
+The reproducible Receipt pilot runner now passes SG/MY local fixture journeys,
+exact-confirmation cancellation and persisted Pack/PDF verification after database
+reopen. Each preview row must match a successful receipt detail read, and exact
+source files are retrieved through document permissions and hash-verified before
+confirmation. File retrieval does not establish human viewing. Fixture usage is explicitly synthetic; interactive live mode remains gated
+by account/data-policy/spend authorization. See [pilot execution evidence](ai-native/evidence/TASK-234-2026-09-09.md#reproducible-pilot-runner--local-fixture-evidence).
+
+TASK-234 now has an OpenAI Responses adapter, authenticated Company provider/limit
+resolver and default-deny server/Compose bootstrap. Local injected HTTP evidence
+covers the governed Pack confirmation/persistence path; no real model or production
+call is claimed. Credential storage alone still cannot enable AI. Unknown-cost
+custody, HTTP cancellation, pre-egress configuration/grant checks, fixed egress and
+sanitized failures remain enforced. Current evidence and remaining gates:
+[TASK-234](ai-native/evidence/TASK-234-2026-09-09.md#concrete-responses-adapter--local-checkpoint).
+
+TASK-193 local tenant recovery now has a five-language browser entry/page plus
+isolated mail-sink API/browser proof for Company Owner and Master Admin. Reset
+confirmation rechecks live login eligibility, email normalization closes a
+whitespace throttle bypass, issuance failures consume request attempts, and auth
+mail failure records omit raw provider text. Platform Superadmin email recovery
+remains outside the implemented release scope; production SMTP/delivery and
+production PostgreSQL/RLS recovery evidence remain open. TASK-193 stays Blocked;
+no task/goal counter changes. See [TASK-193 evidence](ai-native/evidence/TASK-193-2026-09-09.md).
+
 
 TASK-240 adds detailed execution packets, browser/Node testing guidance, inherited
-task instructions and a reusable handoff prompt. See [AI_NATIVE_EXECUTION.md](AI_NATIVE_EXECUTION.md).
-Current registry: **220 Done / 4 In Progress / 13 Todo / 3 Blocked / 240 Total**;
-20 pending, AI acceptance 0/12 and 0/48, execution checkpoints 0/60.
-No runtime implementation or deployment is included in this refinement.
+task instructions and a reusable handoff prompt. TASK-228/S1-S5, G01.1-G01.4 and
+TASK-232/S1-S5 with G05.1-G05.4 are evidenced; TASK-232 now maps, implements and
+verifies the least-privilege identity/grant/lifecycle boundary. TASK-233/S1 defines
+the server-owned read/draft/confirmed/approval-required action policy; S2 persists
+exact actor/Company-bound reviewed facts, hash-only execution keys, human decisions
+and server expiry; S3 executes only an approved exact selection with source locks,
+serializable isolation, replay and concurrent edit/insert race evidence; S4 proves
+approval-change replay, cancel/reject, grant expiry, changed-payload conflict and
+governed correction; S5 verifies P06-P12, persisted Pack/artifact postconditions,
+disposable PostgreSQL isolation, authenticated desktop/mobile browser behavior,
+generated/static gates and the full local suite;
+see [AI_NATIVE_EXECUTION.md](AI_NATIVE_EXECUTION.md), the
+[TASK-228 evidence](ai-native/evidence/TASK-228-2026-09-08.md) and
+[TASK-233 S5 evidence](ai-native/evidence/TASK-233-2026-09-09.md#s5--verify-all-negative-paths).
+TASK-230/S1 now selects MCP `2025-11-25` Streamable HTTP at `/api/mcp/v1`, pins
+`@modelcontextprotocol/sdk@1.30.0`, and records the external OAuth/OIDC resource-
+server topology plus an executable local authorization fixture. S2 adds the SDK
+transport, RFC 9728 discovery, six governed G01 tools, structured results and
+bounds; S3 adds per-call issuer/audience/scope revalidation and no-write negative
+paths; S4 proves official TypeScript/Python client interoperability, approved
+Pack creation, dropped-response replay, deterministic conflict and export hash
+verification; S5 verifies rate/error/version operations, the full local suite and
+repository gates. Production OAuth issuer, multi-instance rate capacity and
+deployment evidence remain separate release gates.
+TASK-229/S1 verifies TASK-228/232/233, the current W3C/Chrome WebMCP surface and
+the ordinary Company Receipts browser journey. S2 adds a feature-detected six-tool
+page adapter with live actor/Company/permission fingerprints, lifecycle retirement,
+shared API/Demo detail and read-only Pack preparation. S3 adds the visible evidence,
+exact totals, cancellation/no-write path, digest recheck and confirmation bridge for
+Pack creation. S4 exercises invalid input, denied Company switching, permission
+revocation/recovery, changed-selection retry and desktop/375px fallback behavior.
+S5 passes the current full Vitest, Demo/build, theme, locale, mobile and repository
+gates with temporary screenshot inspection.
+Playwright Chromium 149 and the later unlocked Codex in-app browser remain explicit
+fallback environments without native `document.modelContext`. A separate isolated
+Chrome 152.0.7977.83 run with the official local `WebMCPTesting` feature flag now
+passes TASK-229 native registration, receipt reads, visible cancellation/confirmation,
+Pack/PDF persistence, permission/Company/navigation retirement and 375px bounds;
+`npm run test:e2e:webmcp-native` is the reproducible local gate. Native production
+deployment and browser-flag rollout remain separate release boundaries.
+The post-S5 local UI recheck also repaired the missing `route.gl` locale key and the
+`agent-mgmt` route ownership/shell mapping. `npm run build:demo` followed by
+`npm run audit:screens` now covers 130 API-capable routes at desktop and mobile with
+zero console/page errors, identity markers, maturity failures, layout failures or
+shared-shell failures. The follow-up Agent Governance locale remediation also makes
+the static i18n audit and full built-Demo browser matrix green at 1,773 English keys /
+74 local packs across 130 routes × five languages × two viewports. This remains local
+Demo/browser evidence only.
+TASK-235/S1 defines the versioned Company Receipt semantic contract with server-derived
+scope/visibility, inclusive date and Company-timezone semantics, ready-only status,
+currency-separated Decimal totals, as-of timestamp and receipt/document/version source
+IDs. TASK-235/S2 now reuses the authenticated G01 `receipt.search` boundary with a
+fixed field projection, server-resolved Company timezone, keyset pages and a
+5,000-row fail-closed bound; API/PGlite fixtures reconcile own/company/mixed-currency
+totals and source IDs while rejecting tenant tampering, invalid ranges and revoked
+access. TASK-235/S3 adds a Company-scoped governed SOP corpus and authenticated
+`/api/knowledge/sop` retrieval: approved current document versions require clean scan,
+successful extraction, effective-date/retention/status checks and server-owned field
+allowlists; live `documents.knowledge.read` is checked before bounded text is returned,
+and embedded instructions are labeled as untrusted data. TASK-235/S4 adds resolvable
+governed citations with document/version/source-hash identity, policy dates and as-of
+time, grounded policy versus explicit unknown/conflict evidence, grounded transaction
+fact labels and actor/Company/authorization-version scoped cache invalidation. S5 verifies
+cache warm/cold behavior, cross-Company and permission-downgrade isolation, stale/revoked
+citation rejection, the full local regression suite, Demo/build and repository gates.
+PostgreSQL, provider and production-runtime evidence remain separate release gates. Evidence:
+[TASK-235/S1](ai-native/evidence/TASK-235-2026-09-09.md#s1-define-the-semantic-contract) ·
+[TASK-235/S2](ai-native/evidence/TASK-235-2026-09-09.md#s2-implement-bounded-factual-reads) ·
+[TASK-235/S3](ai-native/evidence/TASK-235-2026-09-09.md#s3--implement-scoped-sop-retrieval) ·
+[TASK-235/S4](ai-native/evidence/TASK-235-2026-09-09.md#s4--add-citations-and-freshness-rules) ·
+[TASK-235/S5](ai-native/evidence/TASK-235-2026-09-09.md#s5--verify-accuracy-and-isolation).
+TASK-234/S1 defines the server-owned AI provider request/response/tool-call contract,
+draft/waiting/running/succeeded/failed/cancelled states, whole-run timeout/cancellation,
+input/output/call/retry/cost limits and actionable fail-closed errors; the deterministic
+zero-spend provider is local test evidence only. TASK-234/S2 adds Company-scoped
+provider/model/data-policy configuration, AES-GCM credentials, explicit rotation and
+provider-change decisions, bounded limits, exact HTTPS egress/model validation, shared
+permission/idempotency boundaries and secret-free public/audit views. TASK-234/S3 adds
+the server-owned bounded Receipt conversation loop, six allowlisted tool calls, cited
+facts, exact Pack preview, G06 confirmation wait/resume, governed execution, persisted
+Pack read-back and artifact/source hash verification. TASK-234/S4 adds the contextual
+vanilla-JS workspace with visible sources, exact preview/confirmation, progress,
+cancellation/recovery, Company-scope isolation, five locales, both themes and
+desktop/375px focus/touch evidence. S5 passes the actual Demo/PGlite Pack/artifact
+assertions, focused browser flows, full Vitest and repository gates. No provider account
+or approved spend is available, so real-provider evidence remains an explicit gate.
+Evidence:
+[TASK-234/S1](ai-native/evidence/TASK-234-2026-09-09.md#s1--define-runtime-states-and-limits) ·
+[TASK-234/S2](ai-native/evidence/TASK-234-2026-09-09.md#s2--implement-secret-safe-server-configuration) ·
+[TASK-234/S3](ai-native/evidence/TASK-234-2026-09-09.md#s3--implement-the-receipt-conversation-loop) ·
+[TASK-234/S4](ai-native/evidence/TASK-234-2026-09-09.md#s4--build-the-contextual-workspace) ·
+[TASK-234/S5](ai-native/evidence/TASK-234-2026-09-09.md#s5--validate-fixture-and-real-model-journeys).
+TASK-238/S1 publishes a source-backed capability matrix for order-to-cash,
+procure-to-pay, record-to-report, inventory, HR/leave/payroll and receipt/evidence.
+Each row has an engineering owner role, source/test references and explicit
+unverified or excluded stages; no owner approval, settlement implementation or
+statutory integration is inferred. [TASK-238/S1 evidence](ai-native/evidence/TASK-238-2026-09-09.md#cross-module-capability-matrix).
+Current registry: **226 Done / 6 In Progress / 5 Todo / 3 Blocked / 240 Total**;
+14 pending, AI acceptance 6/12 and 28/48, execution checkpoints 36/60.
+TASK-228 now includes a versioned contract catalogue, authenticated shared dispatch,
+read-only preparation, replay/adapter proof and a published boundary. TASK-232/S2
+adds tenant-scoped Agent/service principals and current-owner-intersected grants; S3
+adds an issuer-separated Agent API boundary, fail-closed body identity handling,
+field projection and true Agent/owner audit attribution. TASK-232/S4 adds review,
+grant/lifecycle controls and hash-only credential rotation; S5 proves migration replay,
+tenant isolation, expiry/revocation/downgrade and audit attribution with a disposable
+non-superuser PostgreSQL FORCE-RLS role. TASK-229 WebMCP and TASK-230 MCP
+workstream acceptance are complete for local/repository scope; provider, production
+and deployment evidence remain incomplete with those release boundaries explicitly
+retained.
 
 ## AI Native goal baseline — TASK-227
 
 [GOAL.md](../GOAL.md) defines EPIC-068, the receipt-to-Pack pilot, 12 delivery
-workstreams and 48 evidence-based DoD criteria. Planning is complete; Agent
-delivery is **0/12** and criteria are **0/48**. Registry pending work is **20**:
-8 inherited tasks plus 12 new Todo tasks (TASK-228–239). Existing APIs, permissions,
-OCR/Vision and workers are reusable foundations; general ERP chat, dedicated MCP
-and WebMCP remain planned. This update changes no runtime or domain contract.
+workstreams and 48 evidence-based DoD criteria. Planning, TASK-228/G01, TASK-229/G02,
+TASK-230/G03, TASK-232/G05, TASK-233/G06 and TASK-235/G08 are complete; TASK-234/G07 is in progress after
+local S1-S5. TASK-234/S4 now provides the contextual browser workspace and S5 verifies the
+actual Demo/PGlite Pack/artifact assertions plus local gates; no real provider account or
+approved spend is available, so that evidence remains open. G07.1-G07.4 are accepted for
+local/repository scope. Agent delivery is **6/12** and criteria are **28/48**; execution
+checkpoints are **36/60**. Registry pending work is **14**:
+8 inherited tasks plus 6 remaining AI tasks (TASK-231, TASK-234 and TASK-236–239);
+TASK-238/S1 is evidenced and S2 remains pending.
+Existing APIs, permissions, OCR/Vision and workers are reusable foundations; general
+ERP chat remains planned, while TASK-229 and TASK-230 provide locally verified
+WebMCP/MCP receipt-pilot transport boundaries.
+TASK-228 adds no public transport or domain-rule change;
+its Agent mutation path remains approval-gated.
 
 One-page truth about what is **built**, what is **mock**, and what is **documented but
 not implemented**. Read this first before picking any task. Update this file whenever
@@ -30,10 +205,10 @@ baseline rather than current release evidence.
 See [ERP_SPECIALIST_REVIEW_2026-09-07.md](ERP_SPECIALIST_REVIEW_2026-09-07.md) for
 fresh local evidence on source `243af56`, and [ERP_QUALITY_BASELINE.md](ERP_QUALITY_BASELINE.md)
 for the product-owner acceptance criteria. The Demo build and PGlite domain proof
-pass, and all 129 routes render at desktop/mobile without console/page errors.
+pass, and all 130 routes render at desktop/mobile without console/page errors.
 The prior full screen audit failed one payment-voucher recovery assertion; TASK-223
 now synchronizes the retry check with the real navigation Promise and the full
-129-route desktop/mobile audit passes. The historical TASK-214 seven-route five-language
+130-route desktop/mobile audit passes. The historical TASK-214 seven-route five-language
 desktop/mobile matrix failed on sales-invoice `Outstanding` and `Due date`. Manual Chrome DevTools MCP
 found seeded-PO invoicing blocked by unclassified tax snapshots, a one-day SG due-date
 shift, incorrect invoice aging/period KPIs and a dark-button contrast gap. These were
@@ -43,8 +218,8 @@ TASK-218 repairs invoice aging/period presentation facts, TASK-219 repairs the s
 translation gaps, TASK-220 repairs the filled-action contrast gap and TASK-221 repairs the
 procurement receiving workflow; TASK-222 repairs the mobile/status usability gap and
 TASK-223 repairs the recovery audit timing boundary.
-The current full local Vitest run passes 176 files / 724 tests with 2 skipped files and 2
-skipped tests (178 files / 726 tests total). The latest code-bearing revision `ff6e0d9` passes remote CI
+The current full local Vitest run passes 198 files / 814 tests with 3 skipped files and 3
+skipped tests (201 files / 817 tests total). The latest code-bearing revision `ff6e0d9` passes remote CI
 run `34189671568`: all four Vitest shards, static/type/build gates, PostgreSQL security
 and concurrency proofs, five-language desktop/mobile i18n, smoke, full screen and both
 layout audits. GitHub Pages run `34189671604` also succeeded and its `release.json`
@@ -87,7 +262,7 @@ TASK-219 follow-up is complete on the local source: sales-invoice `Outstanding` 
 labels resolve through canonical `ar.outstanding` and `common.dueDate` keys in all five
 locale packs. Built-Demo live-locale E2E passes on desktop/mobile with route/filter retention
 and focused draft controls; shared locale refresh retains its scroll capture/restore path.
-The seven-route specialist matrix and the full PGlite browser audit pass at 129 routes ×
+The seven-route specialist matrix and the full PGlite browser audit pass at 130 routes ×
 5 languages × 2 viewports with zero blocking findings. The dynamic-date audit allowlist now
 accepts locale-generated month names such as `Sept` without weakening system-copy detection.
 This is local source/Demo evidence, not current-HEAD remote CI or deployment evidence.
@@ -126,7 +301,7 @@ device acceptance remains TASK-017.
 TASK-223 follow-up is complete on the local source: payment-voucher Retry now waits for
 the actual `navigate()` Promise, measures the recovery milestone and fails explicitly on
 rejection, a still-visible error or a bounded 10-second timeout. The full built-Demo
-129-route audit measured approximately 1333ms desktop and 949ms mobile recovery, while
+130-route audit measured approximately 1333ms desktop and 949ms mobile recovery, while
 all routes rendered with zero console/page errors, no identity leaks and no layout failures.
 The PO approval state smoke now waits for its refresh navigation and asserts the current
 TASK-221 authorized Receive goods action. This is controlled local browser evidence, not
@@ -140,15 +315,15 @@ repository history adds the TASK-195 runtime-role, migration-owner and Platform
 FORCE-RLS proof, TASK-202 Receipt Pack governance and the follow-up documentation sync;
 production deployment is still a separate release gate.
 
-The current worktree adds migrations 0100/0101/0102/0103: the Drizzle journal contains **104 migration
-entries**, generated canonical SQL contains **255 tables**, and the task registry contains
-**220 Done / 4 In Progress / 13 Todo / 3 Blocked / 240 Total**. TASK-200 now closes the
+The current worktree adds migrations 0100/0101/0102/0103/0104/0105/0106/0107/0108/0109/0110: the Drizzle journal contains **111 migration
+entries**, generated canonical SQL contains **261 tables**, and the task registry contains
+**226 Done / 6 In Progress / 5 Todo / 3 Blocked / 240 Total**. TASK-200 now closes the
 Canonical/API route parity gap by including `staff-calendar` in `API_SCREEN_ROUTES`.
 TASK-212 is done: the
 active route and dynamic shell now refresh in place on locale change while preserving
 recoverable view state; local desktop/mobile live-i18n E2E and the full i18n audit pass.
 TASK-213 is done: `sales_enquiry_line` is included in the production FORCE-RLS overlay,
-and the generated-schema coverage check passes with 225 policy tables and 10 explicit
+and the generated-schema coverage check passes with 231 policy tables and 10 explicit
 security/control-plane exemptions. Local static/unit evidence passes. TASK-195 now has a
 disposable PostgreSQL 16 proof; production deployment and exact live revision remain
 separate release evidence.
@@ -167,13 +342,13 @@ adds tenant-transaction module gates, the complete sensitive-operation classifie
 real purchasing/finance workflow evidence. Focused Platform API/PGlite tests pass 2
 files / 15 tests and disposable PostgreSQL tests pass 2 files / 2 tests; isolated layout
 E2E enters both Admin and Employee modes and verifies the locked ordinary Company
-switcher, while Demo autofill E2E, the 59-route/13-role access matrix, 129-screen
-desktop/mobile audit and 129-route × 5-language × 2-viewport audit pass. TASK-195 now
+switcher, while Demo autofill E2E, the 59-route/13-role access matrix, 130-screen
+desktop/mobile audit and 130-route × 5-language × 2-viewport audit pass. TASK-195 now
 adds a current-path PostgreSQL/FORCE-RLS proof; TASK-206 and TASK-207 are done, while
 TASK-203 is done through current-HEAD CI run `34189671568`; the remaining Platform
 release chain remains TASK-199/TASK-209 work. The pre-TASK-214 local full Vitest checkpoint passed 173 files /
 705 tests with two intentional file/test skips; the current full local Vitest run now passes
-176 files / 724 tests with 2 skipped files and 2 skipped tests. TASK-204 source-level tax interval,
+194 files / 794 tests with 3 skipped files and 3 skipped tests. TASK-204 source-level tax interval,
 classification and posting hardening is now in progress; targeted tax/purchasing/Expense
 tests pass, while production tax-owner review remains open. TASK-205 source hardening is
 also in progress: gateway status/malformed/timeout, paused-connector, retry-lease and
@@ -198,9 +373,9 @@ validation is isolated in `src/auth/tokenEnvelope.ts`, while cryptographic opera
 remain server-only in `src/auth/tokenCrypto.ts`; the serial `npm run build:demo` gate
 passes on the current worktree.
 
-The TASK-194 correction aligns deployment, security, architecture, role-permission, Demo
-and UAT material to that boundary: current inventory is 129
-Canonical / 0 Preview routes, 129 API-mode metadata routes, 1,728 English keys/72 local
+The TASK-194 correction aligned deployment, security, architecture, role-permission, Demo
+and UAT material to that boundary; at that checkpoint the inventory was 130
+Canonical / 0 Preview routes, 130 API-mode metadata routes, 1,770 English keys/72 local
 packs, 315 permission codes, 59 access-matrix routes, Company Owner 115 and PWA v264.
 The older 170-file / 666-test collection is a dated TASK-194 checkpoint; the pre-TASK-214
 local full Vitest result was 173 files / 705 tests with two intentional file/test skips.
@@ -321,14 +496,14 @@ explicit HR approval permissions; no production role template was widened to mas
 fixture mismatch. Assignment/RBAC, admin/manager and strict approval-focused tests
 pass, including expiry, revoke, multi-target, explicit deny precedence and safe
 explanation access-control cases.
-Current source registers **129 Canonical / 0 Preview** routes; all 129 declare API mode,
+Current source registers **130 Canonical / 0 Preview** routes; all 130 declare API mode,
 including `staff-calendar`. TASK-214 rendered all 129 routes at desktop/mobile but
 failed one voucher recovery assertion; TASK-183 remains historical full-matrix evidence, while TASK-210
-reran the current 129-route language matrix on both viewports. The static i18n audit
-passes **1,728 English keys and
-72 local five-language packs**. Business-record values remain outside the UI-resource
-audit; system-authored labels and state text are covered by localized packs or explicit
-business-text boundary markers.
+reran the current 130-route language matrix on both viewports. The static i18n audit
+passes **1,773 English keys and 74 local five-language packs**; the built-Demo browser
+matrix passes all 130 routes × five languages × two viewports. Business-record values
+remain outside the UI-resource audit; system-authored labels and state text are covered
+by localized packs or explicit business-text boundary markers.
 The current cross-layer access contract is also present in `src/auth/accessMatrix.ts`:
 the authenticated API matrix suite and `npm run audit:access-matrix` check route
 visibility, module/permission metadata and available detail drill-ins. This is a
@@ -570,11 +745,11 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Area | Status | Evidence |
 | --- | --- | --- |
 | Demo boot: PGlite + IndexedDB (`idb://erp-system-demo`) | ✅ Working | `web/public/assets/erp-system-data-adapter.js` |
-| Canonical schema (255 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | 104 ordered migrations through schema version 103; `drizzle/`, `src/data/schema/`; migration 0099 adds the Platform tenant actor/elevated-session foundation, migrations 0100/0101 add governed tax facts and Expense tax classification, migration 0102 adds Receipt Pack governance and Company timezone facts, and migration 0103 adds bounded document-processing dead-letter state |
+| Canonical schema (259 tables, multi-tenant `master_fn`/`company_fn`) | ✅ Working | 109 ordered migrations through schema version 108; `drizzle/`, `src/data/schema/`; migration 0099 adds the Platform tenant actor/elevated-session foundation, migrations 0100/0101 add governed tax facts and Expense tax classification, migration 0102 adds Receipt Pack governance and Company timezone facts, migration 0103 adds bounded document-processing dead-letter state, migration 0104 adds tenant-scoped Agent principals/grants, migrations 0105/0106 add Agent/owner audit attribution and its consistency check, migration 0107 adds hash-only Agent credentials and lifecycle state, and migration 0108 adds actor/Company-scoped Agent execution intents with exact reviewed facts, resource digests and expiry |
 | Cross-module transaction with rollback | ✅ Working | `src/modules/sales/confirmOrder.ts`; new orders, existing Draft confirmation, CRM conversion, Demo and API actions share the same composable commands. Draft confirmation locks the order row, rejects a second confirmation, and rolls stock/invoice/GL back together on failure. |
 | Purchasing chain: requisition/RFQ/quote → PO approval → receipt/invoice → return/credit/debit/landed cost, plus supplier contracts/performance | ✅ Canonical Demo/API data and writes | The full transaction chain uses bounded formal resources in both modes. The compact seed and showcase pack v16 now provide governed SG/MY tax snapshots for the approval → receipt → supplier-invoice path; fresh and simulated-upgrade proof produces exactly one balanced invoice, while the shared posting guard remains fail closed. Supplier contracts add effective-dated quantity tiers with audited activation; vendor performance and Purchasing reports are rebuilt from actual orders, approvals, receipts, quotations, invoices, credited returns and contract coverage rather than curated score/KPI tables. |
 | CRM chain: opportunity → convert to sales order (composed atomically with `confirmSalesOrderWithin`), end-to-end incl. screens | ✅ Canonical Demo/API data and writes | `crm-pipeline`, `new-opportunity`, `crm-customer` and `opportunity` use bounded canonical resources in both modes. Creation validates the active-company customer and is RBAC/audited; conversion uses the shared idempotent action dispatcher and `convertOpportunityToSalesOrderWithin`. Opportunity detail shows real activity/contact/order context, logs customer-linked activity and closes a lost deal through the audited idempotent `mark-lost` action. HTTP/domain tests cover creation, audit entity correlation, cross-company rejection, viewer denial, replay, terminal-state guards and rollback. |
-| Async `SCREENS` render boundary | ✅ Working | `navigate()` accepts legacy synchronous root mutation plus `string \| Promise<string>`, shows a standard skeleton, discards stale responses by render sequence, and renders a retryable no-sample-fallback error state. Dated route audits prove the loading/race/error contract; current source registers 129 routes. |
+| Async `SCREENS` render boundary | ✅ Working | `navigate()` accepts legacy synchronous root mutation plus `string \| Promise<string>`, shows a standard skeleton, discards stale responses by render sequence, and renders a retryable no-sample-fallback error state. Dated route audits prove the loading/race/error contract; current source registers 130 routes. |
 | Bundled Demo ESM runtime | ✅ Current Canonical writes migrated | `web/src/erp-demo-runtime*.ts` bundles PGlite, Drizzle, canonical schema and shared domain commands locally. CRM create/convert, Purchasing create/receive/post, Sales enquiry/quotation/order actions, Sales Draft confirmation and Demo Setup all use TypeScript commands instead of browser business SQL mirrors — including the base demo seed itself (`seedDemo()`, TASK-034), which now runs directly on first boot instead of a hand-written `erp-system-seed.sql` mirror. API builds remove this entry before bundling, so production web artifacts contain no PGlite WASM/data payload. The service worker discovers and precaches the Demo build's content-hashed runtime/WASM/data graph for offline reuse. |
 | Transaction proof script | ✅ Empty-only, fail-closed | `npm run demo` passes PGlite; with `POSTGRES_URL`, a read-only preflight rejects any user table before migration/seed. An empty PostgreSQL 16 database passes parity and true concurrency; its second run rejects deterministically without changing counts. |
 | Sales screens (orders, detail, invoices and idempotent confirmation) | ✅ Canonical Demo/API data and writes | Four Canonical routes read bounded formal customer/order/line/invoice resources in both modes. Confirmation executes the shared transactional command with a real warehouse, inventory movements, invoice and balanced GL; unsupported prototype actions are not exposed. |
@@ -601,13 +776,13 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Personal activity | ✅ Canonical Demo/API sanitized actor read model | `account/activity` reads only the signed-in actor's active-company audit facts, newest first. The response maps internal vocabulary to bounded category/entity/action keys and excludes payloads, request IDs, actor identity, other users, device/IP and session/security state. The five-language `my-activity` page is read-only and states this boundary. |
 | Enterprise Demo personas | ✅ 12 real permission sessions | Showcase manifest v16 owns all 12 identities directly and adds reporting lines, governed leave openings/reservations, 24 controlled July/August leave cases, 6 payroll runs, 282 payroll lines, one real pending sales approval and one balanced unpaid procure-to-pay case in each SG/MY entity within a 10,436-record deterministic pack. The calendar cases cover approved, pending, rejected, cancelled, multi-day and overlapping availability, and earlier controlled Demo rows converge in place on the same fixed business date. The controlled approval orders carry sufficient stock in the exact fulfilment warehouse, and sales availability is warehouse-specific rather than group-wide. v16 also supplies the complete sales, purchasing, treasury and landed-cost posting controls in both legal entities; its SG/MY procure-to-pay rows include governed classification/recoverability snapshots; gives each linked persona one company-managed Employee base role; removes the replaced shared compatibility grant; and deterministically binds Jordan Lee to Mei Lin for direct-manager approval. An existing IndexedDB upgrades additively without replacing user-owned data. SO-2/SO-3 remain the explicit confirmation success/rollback teaching drafts and are not mislabelled as approvals. Persona user names match their linked employee profiles. Missing SG/MY calendars, leave types, confirmed policies and posting accounts are repaired on historical IndexedDB upgrades before dependent records are created. Payroll examples follow the same SG CPF/SDL and MY EPF/SOCSO/EIS/PCB approximations as the canonical engine. `Avery Tan · Company Owner` is assigned to SG/MY with the current 115-permission template and company scope; approval, payment, payroll, sensitive tax-evidence and platform-support authority are not implicit, and the owner appears first in the switcher. Managers remain restricted to direct or explicitly granted teams. Viewer and all ten department personas display their actual effective roles. Role permissions and data scopes are regression-checked against the authoritative templates. |
 | PWA (manifest, SW, update prompt, safe areas) | ✅ Working | `web/public/manifest.webmanifest`, `sw.js`, `pwa.js`; current v264 retains the waiting worker version code/update authority, HTTP-cache bypass for `sw.js`, exact-version session suppression and one reload only after explicit acceptance, while keeping scoped API/health traffic out of Cache API. `npm run audit:pwa-update` has dated lifecycle evidence. |
-| Canonical UI i18n | ✅ Current browser verified | `node scripts/audit-i18n.mjs` verifies 1,728 English resources and 72 registered local five-language packs. The current built-Demo PGlite desktop/mobile runs passed 129 routes × 5 languages × 2 viewports with zero runtime errors, raw keys, blocking hardcoded system copy or page-level horizontal overflow. `setLang()` remains atomic and state-preserving; business-record values remain outside UI i18n. |
+| Canonical UI i18n | ✅ Current local source/Demo verified | Agent Governance module-local packs, Admin route navigation and purchase-wizard labels are synchronized across en/ms/zh/ja/vi. `I18N_REPORT_ONLY=1 node scripts/audit-i18n.mjs` passes at 1,773 canonical keys / 74 local packs, and `npm run audit:i18n` passes 130 routes × 5 languages × 2 viewports with zero resource, hardcoded, render-error or overflow findings. `setLang()` remains atomic and state-preserving; business-record values remain outside UI i18n. Production, remote-CI and physical-device evidence remain separate. |
 | Filled-action contrast | ✅ Current browser verified | `tests/e2e/action-contrast.spec.mjs` covers primary/PWA actions across light/dark desktop/mobile. Computed normal/hover contrast is 5.567:1 / 6.947:1; focus and disabled states pass. This is focused palette evidence, not exhaustive chart/print/device certification. |
 | GitHub Pages deploy | ✅ Working | `.github/workflows/deploy-pages.yml` builds the static PGlite/IndexedDB Demo and publishes only the `web/dist/` artifact; it does not publish the Node API, PostgreSQL data, `.env` files or production secrets. The repository is public and Pages is configured for workflow deployment at `https://yapweijun1996.github.io/ERP-System/`. On 2026-09-05, run `33940353016` passed both Build and Deploy; a fresh-browser smoke check reached the setup wizard, completed local demo setup, opened the dashboard and confirmed `window.ErpSystemData.mode === 'pglite'` with no `/api` requests. Production remains the separate Docker/API/PostgreSQL track. |
 | CI validation on every PR (typecheck root+web, transaction proof, demo build, schema-drift check) | ✅ Current HEAD green | Run `34189671568` passed all four Vitest shards, lint/docs/generated checks, root/web typechecks, PostgreSQL security and concurrency proofs, Demo build, five-language i18n, smoke, full screen and both layout audits. |
 | Generated PGlite schema + drift check | ✅ Working | `scripts/generate-demo-schema.mjs` generates fresh/upgrade SQL from ordered Drizzle migrations; `npm run check:demo-schema` and `npm run check:drift` run in CI. |
 | Browser smoke test (desktop + mobile, zero console/page errors, dashboard content verified) | ✅ Green | `scripts/smoke.mjs`, `npm run smoke`, Playwright, wired into CI with browser caching, TASK-015. The 2026-09-07 current worktree run passes desktop/mobile; the assertion now considers only visible semantic navigation badges while hidden zero-count badges remain in the DOM. |
-| Route production metadata and Preview contract | ✅ 129-route parity | `SCREEN_META` covers **129 Canonical / 0 Preview** routes and all 129 declare API mode, including `staff-calendar`. The screen audit fails closed on future Canonical/API metadata gaps. Preview pages, if reintroduced, distinguish Sample Data from Canonical Data and lock write-like actions. |
+| Route production metadata and Preview contract | ✅ 130-route parity | `SCREEN_META` covers **130 Canonical / 0 Preview** routes and all 130 declare API mode, including `staff-calendar`. The screen audit fails closed on future Canonical/API metadata gaps. Preview pages, if reintroduced, distinguish Sample Data from Canonical Data and lock write-like actions. |
 | Cross-layer authorization matrix | ✅ Regression foundation | `src/auth/accessMatrix.ts` is shared by `src/api/permissionMatrix.integration.test.ts` and `scripts/audit-access-matrix.ts`; the API/browser checks cover authenticated role fixtures, 401/403 boundaries, route metadata, list/detail probes and fail-closed UI visibility. Unknown business-module keys now fail closed; authenticated `account/*` services are explicitly non-module-gated but still permission-protected. TASK-174 now supplies authorization-version invalidation, session recovery and direct-URL revocation coverage. |
 | Item Master (create/edit product master data) | ✅ Canonical Demo/API data and writes | Migration 0019 adds `category`/`reorder_point`/`reorder_qty`/`version` to `product`. `src/modules/inventory/product.ts` provides tenant-scoped create/update; both `item-master` and the separate five-language `new-item` composer write through that audited Demo/API command. `new-item` now stores only real product fields, accepts a company-unique SKU and removes the sample form's fabricated USD/GST, accounting, costing, shelf-life and negative-stock controls. New items start at 0 on hand with no stock projection or movement — initial quantity must use Purchase Receipt or Stock Adjustment. Duplicate SKU is an atomic 409; delete remains honestly unsupported rather than mutating local sample data. |
 | Customer 360 + Opportunity detail | ✅ Canonical Demo/API data and writes | Migration 0020 added nullable `industry`/`owner_user_id` to `customer`, a tenant-scoped `contact` table, and customer/opportunity targets on `activity`. `crm-customer` reads real contacts/open orders/open opportunities/activity and computes Net-30 receivables. `opportunity` now reads the same canonical customer, contact, activity and order data; its activity write can target both the opportunity and customer, conversion reuses the existing atomic command, and `mark-lost` validates the terminal state, requires a reason, increments version and appends a system activity in one transaction. Both routes use audited idempotent Demo/API actions with five-language copy. |
@@ -633,8 +808,8 @@ non-secret organization/username hint is retained locally when the user opts in.
 | Landed Cost allocation & moving-average revaluation | ✅ Canonical Demo/API data and writes | Migration 0033 adds versioned receipt-linked `landed_cost` headers, immutable allocation snapshots, `product.average_cost` and upgrade-safe account `2300`. Shared Decimal commands allocate by received value or quantity with deterministic whole-cent residuals. Allocation locks the draft/products/current balances, requires positive on-hand, revalues moving-average cost and posts balanced Dr Inventory / Cr Landed Cost Accrual without a `stock_movement`. Demo/API create and idempotent audited allocate actions, production RLS, five-language UI and inventory/GL trace links are live. Browser proof allocated S$14.00 against GR-1: Widget cost S$6.50→S$6.64, Dr/Cr S$14.00 and unchanged quantity. |
 | Project Finance Depth: Bank Receipt, Payment Voucher & project-scoped AP | ✅ Canonical Demo/API data and writes | Closes Project's third and final deferred sub-phase — every originally-scoped Phase 7 module is now real. `bank_receipt` (settles a posted progress claim's AR in full, Dr `1000` Cash / Cr `1100` AR) and `payment_voucher`+`payment_voucher_line` (settles one or more of a supplier's unpaid invoices, Dr `2100` AP / Cr `1000` Cash, and is the first code in this repo to ever flip a `supplier_invoice` to `paid`) added to `src/data/schema/finance.ts` — the first new Treasury documents here, in a new `src/modules/finance/` module (GL had been read-only until now, hence a new `finance.write` permission). `purchase_order`/`supplier_invoice` gained a nullable `project_id`: settable from the `new-purchase-order` wizard, auto-propagated onto the resulting invoice with no new user input. Seeded a new `1000` Cash & Bank chart-of-accounts row, which also fixed a long-dead `screens-fin2.js` GL tile that already summed codes `1000`+`1010` against accounts that never existed. `payment-voucher`/`new-payment-voucher` replaced 100%-fabricated screens (the old wizard's "open invoices" list was a hash of the supplier code, and "Post payment" never touched the adapter) with a real per-voucher detail and a real 2-step wizard reading genuine unpaid invoices; `project-detail` gained a real "Record receipt" action and a real "Project costs" panel. Verified live with a mathematically balanced result: one Payment Voucher (S$1,220.80 across two real unpaid invoices) and one Bank Receipt (S$54,500) left the General Ledger's Cash & Bank account at exactly S$53,279, with AP and AR each moving by the settled amounts — confirmed by resetting the demo database and re-deriving every balance from scratch. |
 | Shared ERP module shell | ✅ Working | `MODULE_DEFS`, `modulePage()` and automatic shell decoration provide a common module sub-navigation contract across all business routes, including legacy Sales/Purchasing/Inventory pages and report layouts. Active tabs are scrolled into view after routing. Smoke now passes with visible-only semantic badge assertions; actionable counts remain in canonical module KPIs and approval queues. |
-| Full screen audit — TASK-214 / TASK-223 | ✅ Local audit passes | All 129 routes rendered desktop/mobile without console/page errors, identity leaks or layout failures. Payment Voucher Retry measured about 1333ms desktop / 949ms mobile against a bounded 10-second Promise-aware budget. Production and remote CI evidence remain separate; the full local Vitest result is recorded in the current verification baseline. |
-| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Current HEAD full suite passes | `npm test` passes 176 files / 724 tests with 2 skipped files and 2 skipped tests (178 files / 726 tests total). PostgreSQL target and production remain separate gates. |
+| Full screen audit — TASK-214 / TASK-223 | ✅ Local audit passes | All 130 routes rendered desktop/mobile without console/page errors, identity leaks or layout failures. Payment Voucher Retry measured about 1333ms desktop / 949ms mobile against a bounded 10-second Promise-aware budget. Production and remote CI evidence remain separate; the full local Vitest result is recorded in the current verification baseline. |
+| Unit/API tests: domain chains, rollback, GL balance, auth security and API contracts | ✅ Current HEAD full suite passes | `npm test -- --run` passes 198 files / 814 tests with 3 skipped files and 3 skipped tests (201 files / 817 tests total). PostgreSQL target and production remain separate gates. |
 | Setup wizard (language/org/company/admin/AI preview) writes to PGlite | ✅ Working | `web/public/assets/screens-setup-wizard.js` + `ErpSystemData.completeSetup()` → shared `completeDemoSetupWithin`, gated in `app.js` boot(). Production setup remains a separate empty-database/zero-user command and does not require a deployment setup token. |
 | Topbar company switcher (real, canonical companies) | ✅ Working | `buildCompanyMenu()`/`wireCompanyMenu()` in `app.js` + `ErpSystemData.switchCompany()`, TASK-010 |
 | `VITE_DATA_MODE=demo\|api` build-time adapter seam | ✅ Working | `web/index.html` (`window.erpDataMode()`), `erp-system-data-adapter.js` (demo), `erp-system-api-adapter.js` (api), TASK-019 |
@@ -646,7 +821,7 @@ non-secret organization/username hint is retained locally when the user opts in.
 | `make setup` (`scripts/setup.sh`) and every other `make` target | ✅ Working | Run for real end-to-end (fresh `.env` creation from `.env.example`, build, health-wait, migrate, no demo seed) on an isolated stack; `make seed` remains an explicit demo-only action. The source-only `make release` path and production overlay preserve the database volume, while `make migrate` is guarded by explicit confirmation. |
 | `make setup-interactive` (`scripts/setup.sh --interactive`) | ✅ Working | Prompts for bundled-vs-external database, auto-generates strong secrets on a blank answer (validated: e.g. a manually-typed `ERP_TOKEN_ENCRYPTION_KEY` must satisfy `tokenCrypto.ts`'s exact 32-byte contract or the script re-prompts, instead of letting `api` crash at boot), and checks WEB_PORT/API_PORT/DB_PORT for real collisions. `docker-compose.yml`'s `api`/`worker` `DATABASE_URL` now genuinely honors an external override instead of silently ignoring it. Historical TASK-060 proof exercised plain, bundled-interactive and external-PostgreSQL paths and confirmed the bundled `db` service was omitted for the external run; the current setup contract stops after migration and does not seed business data. **Also fixed along the way**: the `web` service's Docker build had been silently broken since 2026-07-18 (build context couldn't reach `erp-demo-runtime-impl.ts`'s cross-workspace imports into `src/`) — nobody caught it because local dev/typecheck/`build:demo` all run from the repo root, where the paths resolve fine regardless of the Docker isolation bug. Fixed by widening `web`'s build context to the repo root, matching `Dockerfile.api`'s established pattern. |
 | PostgreSQL concurrency/parity proof | ✅ Working on dedicated empty proof DB | PGlite/PostgreSQL business results match and one of two stock races wins; forced RLS passes. The production seed CLI fails closed without explicit Demo flags or on non-empty data, and `POSTGRES_URL npm run demo` now independently rejects every non-empty target before writes. |
-| `VITE_DATA_MODE=api` Canonical boundary | ✅ 129 declared API routes / 129 Canonical | `staff-calendar` uses the shared API adapter and `/api/hr/calendar/staff`; authenticated API integration/browser evidence is recorded separately from the Demo route audit. |
+| `VITE_DATA_MODE=api` Canonical boundary | ✅ 130 declared API routes / 130 Canonical | `staff-calendar` uses the shared API adapter and `/api/hr/calendar/staff`; authenticated API integration/browser evidence is recorded separately from the Demo route audit. |
 | Production auth/security foundation | ✅ Working | Database-backed hashed Session/CSRF tokens; secure cookie options; DB login limiter; RBAC; audited company switch; encrypted invitation/password-reset endpoints; leased SMTP outbox worker; expiry maintenance; persistent idempotency/audit tables; transaction-local tenant settings and production RLS. |
 | Production first-run Platform bootstrap | ⚠️ Implemented; fresh-run checkpoint dated | TASK-192 proved empty bootstrap/reset at its checkpoint. The non-empty hosted control plane was healthy and browser-verified at `a5f1a3b` on 2026-08-13, but a new destructive empty-database replay was intentionally not performed; TASK-199 owns broader availability and immutable operational evidence. |
 | Platform Superadmin Demo quick setup | ✅ Source/test/live application release | The flag-on hosted Demo path keeps editable defaults and one-click Demo Platform login while preserving realm isolation, password toggles and tenant-only Remember. The authenticated workspace uses the 80vh/100dvh internal-scroll shell; completed tenant control hides provisioning progress and exposes later Company creation only through `+ Create Company`. The `21a5579`/`746fa52` entitlement-control release replaces the paired tables with one full-width, keyboard-accessible Master/Company tab workspace, client search/filter, explicit row Save/Reset, row-local conflict recovery and responsive mobile cards. Focused isolated E2E verifies no PATCH before Save, one existing PATCH per Save, preserved dirty/conflict state and unclipped mobile tabs. The application-only 2026-08-13 release preserved migration/principal/Master/Company/user counts at 99/1/1/2/3; live desktop and 390×844 read-only checks sent zero PATCHes and had no document overflow. Commits `e411931`/`9bcdb50` then anchored hidden switches inside their labels, added authenticated root-scroll containment and advanced the PWA to v262. A production toggle-without-Save check kept root scroll/overflow at zero, preserved the 80vh shell position, restored via local Reset and produced no console error; counts remained 99/1/1/2/3. GitHub run `31677057551` is an infrastructure failure: all Vitest shards had zero steps because account payments failed or the spending limit must be raised. |
@@ -701,6 +876,12 @@ are not more module screens:
   `c4aea93a64d123dd9882ceb3bf783be2eb28a78e` returned `health_http_404` from Pages and
   `root_http_502` from the production origin, both with exit 1 and empty stderr; this
   confirms the known public availability boundary without changing remote state;
+- A fresh read-only `npm run verify:release -- https://gmb01.xyz/erp
+  --expected-revision ff6e0d9355c38ce06065267034c020ac55eea7e9` recheck on
+  2026-09-09 returned `root_http_502` with exit 1 in 0.152 seconds and no stderr;
+  the verifier stopped before health, manifest or asset checks. This independently
+  reproduces the release-blocking origin boundary without changing remote state;
+  see [TASK-199 evidence](ai-native/evidence/TASK-199-2026-09-09.md);
 - TASK-200 is source-closed; TASK-201 still owns SLO/RPO/RTO, scale and worker telemetry.
   TASK-202's governed localized Pack lifecycle and Company timezone are implemented with
   local proof; the disposable PostgreSQL same-key race and an unsupported-original
@@ -713,9 +894,9 @@ are not more module screens:
 
 ## Canonical and Preview route boundary
 
-129 routes are registered in `SCREENS`. `SCREEN_META` is the source of truth for
-production maturity: **129 Canonical / 0 Preview**. `supportedModes` declares API for
-all 129, including `staff-calendar`. The current `audit:screens` run covers all routes
+130 routes are registered in `SCREENS`. `SCREEN_META` is the source of truth for
+production maturity: **130 Canonical / 0 Preview**. `supportedModes` declares API for
+all 130, including `staff-calendar`. The current `audit:screens` run covers all routes
 at desktop and mobile; authenticated API and i18n checks remain separate evidence classes.
 
 There are currently no Preview routes. If Preview is reintroduced, sample-backed routes
@@ -815,8 +996,8 @@ real audit trail in the browser demo, not just Admin. The mock's fabricated 4-le
 None/View/Edit/Full permission matrix was replaced with an honest 2-state
 allowed/not-allowed grid matching the real boolean `role_permission` model.
 The later EPIC-049 control-plane work promoted `master-control`, `sys-settings` and the
-connector surface. Current HEAD registers 129 Canonical / 0 Preview routes; API-screen
-metadata covers all 129, including `staff-calendar` after TASK-200.
+connector surface. Current HEAD registers 130 Canonical / 0 Preview routes; API-screen
+metadata covers all 130, including `staff-calendar` after TASK-200.
 
 **Historical tenant module access control (EPIC-018, TASK-047/048,
 2026-07-19; superseded by TASK-186 on 2026-08-12).** `module-activation-control` was a
@@ -916,8 +1097,8 @@ cost-layer semantics the schema cannot support.
 
 | Claim in docs | Reality |
 | --- | --- |
-| `VITE_DATA_MODE=api` renders every current Canonical screen with real data | **Route parity is now source-verified for all 129.** `staff-calendar` is backed by the API adapter and endpoint; authenticated API browser and integration evidence are recorded separately from the Demo route audit. |
-| Every Canonical route has five-language coverage | **Current local browser acceptance passes.** TASK-219 translated the sales-invoice Outstanding/Due date labels, and the built-Demo PGlite matrix passes all 129 routes × 5 languages × desktop/mobile with zero blocking findings. Current-HEAD remote CI and production/API evidence remain separate release gates. |
+| `VITE_DATA_MODE=api` renders every current Canonical screen with real data | **Route parity is now source-verified for all 130.** `staff-calendar` is backed by the API adapter and endpoint; authenticated API browser and integration evidence are recorded separately from the Demo route audit. |
+| Every Canonical route has five-language coverage | **Current local source/Demo matrix passes.** TASK-219 translated the sales-invoice Outstanding/Due date labels; the current browser matrix covers 130 routes × 5 languages × desktop/mobile, including the repaired Agent Governance and purchase-order routes, with zero blocking findings. Current-HEAD remote CI and production/API evidence remain separate release gates. |
 | API server has all business **write** endpoints | **Complete for the present Canonical boundary.** Production setup, auth lifecycle, CRM opportunity conversion, Sales enquiry/quotation/order conversion, service-capable order lines, Draft confirmation, RMA/credit and debit-note posting, inventory adjustment post, stock-transfer completion, work-order execution/completion, quality inspection/NCR disposition, PO creation/receipt and supplier-invoice posting are live; advanced manufacturing depth and any new finance/commercial actions remain separate future scope. |
 | `deploy/erp-server.mjs` | Still just a static "Live" placeholder page + `/health` — **not** the real API; the real API is `src/server.ts` now, run via `npm run server` locally or as the `api` service in Docker. |
 | `npm run lint` | Implemented with ESLint and part of the local/CI gate. |
@@ -1991,9 +2172,9 @@ non-English packs, safe variables/plurals, locale-aware UI formatting and atomic
 in-place switching without form, route, scroll or focus loss. Business records and
 generated/exported/statutory documents remain outside UI i18n. The 2026-08-10 static
 audit passed 1,533 canonical keys / 69 local packs and the full 128-route × 5-language
-× 2-viewport browser matrix at that checkpoint. Its PWA cache version was v259. Current
-HEAD has 1,545 keys / 72 local packs and PWA v261; TASK-194 reran the static i18n and
-build gates, not the full current browser matrix.
+× 2-viewport browser matrix at that checkpoint. Its PWA cache version was v259. The
+TASK-194 checkpoint then had 1,545 keys / 72 local packs and PWA v261; the current
+HEAD inventory is recorded above, and TASK-232 reran the full current browser matrix.
 
 ## Platform Module Entitlement tenant cutover (2026-08-12)
 
@@ -2227,7 +2408,7 @@ release/download/Print UAT remains an explicit EPIC-066 release-evidence gap.
   Platform provisioning tests, built-Demo E2E at desktop/split-pane/mobile, lint,
   typechecks, PGlite demo, PWA update audit and documentation checks pass; no deployment
   is implied.
-- EPIC-056, EPIC-057, EPIC-059 and EPIC-060 are complete at the current 129 Canonical /
+- EPIC-056, EPIC-057, EPIC-059 and EPIC-060 are complete at the current 130 Canonical /
   0 Preview boundary. EPIC-058 remediation and EPIC-061 are complete. EPIC-062 has a
   complete documentation baseline, TASK-170's platform-support foundation,
   TASK-171's canonical permission registry, TASK-172's assignment migration and

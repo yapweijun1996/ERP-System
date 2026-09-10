@@ -7,6 +7,7 @@ import { apiError, requireSession } from './http';
 
 const BESPOKE_API_MODULES: readonly [prefix: string, moduleKey: CommercialModuleKey][] = [
   ['/api/company-receipts', 'expenses_tax'],
+  ['/api/assistant', 'expenses_tax'],
   ['/api/integration', 'integration'],
   ['/api/hr', 'hr'],
   ['/api/finance', 'finance'],

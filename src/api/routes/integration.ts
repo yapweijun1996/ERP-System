@@ -17,10 +17,20 @@ import {
   getDocumentProcessingPolicyWithin,
   type DocumentProcessingPolicyInput,
 } from '../../modules/documents/processingPolicy';
+import {
+  AgentProviderConfigurationError,
+  configureAgentProviderWithin,
+  getAgentProviderConfigurationWithin,
+  type AgentProviderConfigurationInput,
+} from '../../modules/agent/providerConfiguration';
 import { apiError, context, requireSession } from '../http';
 import { ActionDispatchError, dispatchAction } from '../actionDispatcher';
 
-export function createIntegrationRouter(db: DB, encryptionKey?: Buffer): Router {
+export function createIntegrationRouter(
+  db: DB,
+  encryptionKey?: Buffer,
+  options: { agentAllowedEgressHosts?: readonly string[] } = {},
+): Router {
   const router = Router();
 
   router.get('/connectors', async (req, res) => {
@@ -49,6 +59,108 @@ export function createIntegrationRouter(db: DB, encryptionKey?: Buffer): Router 
       ),
       meta: { localOcrDefault: true, minimumExternalRetentionDays: 0 },
     });
+  });
+
+  router.get('/agent-provider', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.integrationRead)) {
+      apiError(res, 403, 'permission_denied', 'You cannot read AI provider configuration.');
+      return;
+    }
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    res.json({
+      data: await withTenantTransaction(
+        db,
+        scope,
+        (tx) => getAgentProviderConfigurationWithin(tx, scope),
+      ),
+      meta: { credentialValuesOmitted: true },
+    });
+  });
+
+  router.post('/agent-provider/actions/update', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    const payload = req.body && typeof req.body === 'object' && !Array.isArray(req.body)
+      ? req.body as Record<string, unknown>
+      : {};
+    try {
+      const result = await dispatchAction({
+        db,
+        session,
+        resource: 'integration/agent-provider',
+        resourceId: 0,
+        action: 'update',
+        payload,
+        idempotencyKey: req.header('idempotency-key'),
+        requestId: context(res).requestId,
+      }, {
+        permission: PERMISSIONS.integrationManage,
+        idempotency: 'required',
+        audit: 'none',
+        execute: async (tx, scope, input) => {
+          const secret = payload.secret;
+          if (secret !== undefined && typeof secret !== 'string') {
+            throw new AgentProviderConfigurationError(
+              'invalid_credential',
+              'Provider credential must be supplied as a string or omitted.',
+            );
+          }
+          if (typeof secret === 'string' && (secret.length < 8 || secret.length > 4096)) {
+            throw new AgentProviderConfigurationError(
+              'invalid_credential',
+              'Provider credential must contain 8–4096 characters.',
+            );
+          }
+          if (typeof secret === 'string' && !encryptionKey) {
+            throw new AgentProviderConfigurationError(
+              'encryption_unavailable',
+              'Server credential encryption is not configured.',
+            );
+          }
+          const configurationInput: AgentProviderConfigurationInput = {
+            provider: payload.provider,
+            model: payload.model,
+            endpointUrl: payload.endpointUrl,
+            dataRegion: payload.dataRegion,
+            dataPolicy: payload.dataPolicy,
+            credentialLabel: payload.credentialLabel,
+            clearCredential: payload.clearCredential,
+            maxProviderCalls: payload.maxProviderCalls,
+            maxRetries: payload.maxRetries,
+            maxDurationMs: payload.maxDurationMs,
+            maxInputChars: payload.maxInputChars,
+            maxOutputChars: payload.maxOutputChars,
+            maxCostMicros: payload.maxCostMicros,
+            enabled: payload.enabled,
+            ...(typeof secret === 'string' && encryptionKey
+              ? { credentialEnvelope: encryptToken(secret, encryptionKey) }
+              : {}),
+          };
+          return configureAgentProviderWithin(
+            tx,
+            scope,
+            { userId: input.actorUserId, requestId: context(res).requestId },
+            configurationInput,
+            { allowedHosts: options.agentAllowedEgressHosts },
+          );
+        },
+      });
+      if (result.replayed) res.setHeader('Idempotency-Replayed', 'true');
+      res.status(result.status).json(result.body);
+    } catch (error) {
+      if (error instanceof ActionDispatchError) {
+        apiError(res, error.status, error.code, error.message);
+        return;
+      }
+      if (error instanceof AgentProviderConfigurationError) {
+        const status = error.code === 'encryption_unavailable' ? 503 : 422;
+        apiError(res, status, error.code, error.message);
+        return;
+      }
+      throw error;
+    }
   });
 
   router.post('/document-processing-policy/actions/update', async (req, res) => {

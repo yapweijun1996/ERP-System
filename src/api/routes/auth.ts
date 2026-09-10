@@ -735,18 +735,17 @@ export function createAuthRouter(db: DB, options: AuthRouterOptions): Router {
   router.post('/password-reset/actions/request', async (req, res) => {
     const lifecycle = requireLifecycle(res);
     if (!lifecycle) return;
-    const email = typeof req.body?.email === 'string' ? req.body.email : '';
+    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
     const identifier = loginIdentifierHash(`password-reset:${email}`, clientIp(req));
     const rateLimit = await checkLoginRateLimit(db, identifier);
     if (rateLimit.allowed) {
       try {
-        await requestPasswordReset(db, email, context(res).requestId, lifecycle);
         await recordLoginFailure(db, identifier);
-      } catch (error) {
+        await requestPasswordReset(db, email, context(res).requestId, lifecycle);
+      } catch {
         // Deliberately keep an identical response for existing and unknown accounts.
-        const errorType = error instanceof Error ? error.name : 'UnknownError';
         console.error(
-          `[erp-system-api] password reset request ${context(res).requestId} failed (${errorType})`,
+          `[erp-system-api] password reset request ${context(res).requestId} failed (password_reset_request_failed)`,
         );
       }
     }

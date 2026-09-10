@@ -70,8 +70,10 @@ without silently falling back to sample data.
    document Vision may persist a tenant connector only as an encrypted server envelope;
    plaintext is never returned and is decrypted only at the worker call boundary. A
    general ERP chat assistant is not implemented. See [AI_PROVIDERS.md](AI_PROVIDERS.md).
-8. **No secrets in the demo bundle.** `build:demo` output must contain no production
-   URLs, credentials, or customer data.
+8. **No secrets in the demo bundle.** `build:demo` output must contain no production ERP
+   URLs, credentials, or customer data. The user-approved public GPT Demo gateway
+   is an explicit outbound inference endpoint; its short-lived session token stays
+   in memory and is never bundled.
 
 ## 3. Original MVP-1 core data model (implemented baseline — 18 tables)
 
@@ -137,7 +139,7 @@ and [SCALABILITY.md](SCALABILITY.md).
 
 ### 4.3 Preview and deferred depth
 
-The current route baseline is **129 Canonical / 0 Preview**. All 129 routes declare API
+The current route baseline is **130 Canonical / 0 Preview**. All 130 routes declare API
 support, including `staff-calendar`, which is backed by the authenticated
 `/api/hr/calendar/staff` contract. The old Mock-screen
 statement from the early MVP is historical and no longer describes the shipped route
@@ -147,8 +149,8 @@ incomplete feature may be introduced only as an explicitly labelled `Preview · 
 Data` or `Preview · Canonical Data` route, with write-like actions disabled until its
 schema, resource/command, permission, tests and localization are complete.
 
-Current source inventory (2026-09-08) is 129/0 routes, 1,728 English keys and 72 local
-five-language packs. TASK-214 rendered all 129 routes but the full screen gate failed
+Current source inventory (2026-09-09) is 130/0 routes, 1,770 English keys and 72 local
+five-language packs. TASK-214 rendered its 129-route baseline but the full screen gate failed
 one recovery assertion; TASK-219 now closes the targeted invoice-label finding and the
 current full five-language browser matrix passes. TASK-220 closes the filled-action contrast
 finding in the built Demo at desktop/mobile; API-mode browser and physical-device
@@ -278,8 +280,8 @@ controls exist.
 - **i18n:** every system-authored browser UI string uses the en/ms/zh/ja/vi i18n
   layer. The current Web preference is browser-local (`aria-lang`), defaults to
   English and is orthogonal to company country. `app_user.language` remains reserved
-  for compatibility and is not currently wired. Current inventory is 1,728 English
-  keys / 72 local packs; the current 129-route × 5-language × 2-viewport browser
+  for compatibility and is not currently wired. Current inventory is 1,770 English
+  keys / 72 local packs; the current 130-route × 5-language × 2-viewport browser
   matrix passes. Filled primary/PWA actions now use a separate contrast-safe action token;
   the focused contrast E2E covers both themes, normal/hover/focus/disabled states and
   desktop/mobile widths. TASK-222 additionally verifies localized PO workflow statuses,
@@ -617,8 +619,10 @@ read/manage. They do not include business modules, workflow/approval, payment, p
 MAC, support, simulation or any `platform.*` permission. Company Owner retains the
 explicit tenant model and cannot mutate MAC. Platform mutations require independent
 session, Platform CSRF, request ID, `Idempotency-Key`, duplicate conflict detection and
-append-only audit; response replays never store plaintext passwords. Password reset email
-is deferred while SMTP is unset (TASK-193 blocked).
+append-only audit; response replays never store plaintext passwords. Tenant password-reset request/confirm APIs and the five-language recovery page
+have local isolated-mail evidence. Confirmation rechecks live human login
+eligibility and revokes tenant sessions. Platform email recovery remains
+unimplemented; production SMTP and delivery are still deferred (TASK-193 blocked).
 
 The implementation is production-RLS compatible for the current provisioning path.
 `createCompanyWithin` generates `companyFn` server-side and establishes transaction-local

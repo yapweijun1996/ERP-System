@@ -405,6 +405,10 @@ async function signOutDemo(){
     && typeof window.ErpReceiptDrafts.confirmAndClearBeforeLogout==='function'
     && !await window.ErpReceiptDrafts.confirmAndClearBeforeLogout()
   ) return;
+  if(window.ErpWebMcp&&typeof window.ErpWebMcp.invalidate==='function'){
+    window.ErpWebMcp.invalidate('logout');
+  }
+  window.ErpWebMcpConfirmation=null;
   /* api mode: destroy the real server-side session, not just a local flag. */
   if(window.ErpSystemDemo&&typeof window.ErpSystemDemo.logout==='function'){
     try{ await window.ErpSystemDemo.logout(); }catch{}
@@ -452,6 +456,9 @@ function moduleConfigFromRows(rows){
 async function loadModuleControl(){
   const sessionModules=DB.erpSystem&&DB.erpSystem.modules;
   MODULE_CONTROL_CACHE=moduleConfigFromRows(sessionModules);
+  if(window.ErpWebMcp&&typeof window.ErpWebMcp.sync==='function'){
+    void window.ErpWebMcp.sync('capability-change');
+  }
 }
 function readModuleControl(){
   /* The authenticated session is the source for commercial modules that do
@@ -932,7 +939,7 @@ const SUBROUTES = {
   integration:['integration','integration-logs','data-import'],
   finance:['gl','account-ledger','journal-entry','new-journal-entry','payment-voucher','new-payment-voucher','bank-rec','pnl','ar-aging','company-receipts'], hr:['leave-approval','leave-workflow','hr-directory','employee','new-employee','hr-calendar','staff-calendar','payroll-run','payslip'],
   mywork:['my-leave','leave-application','my-claims','expense-claim','my-receipts','company-receipts','receipt-tax-evidence','team-calendar','my-approvals'],
-  workflow:['approval-inbox'], bi:['bi-dashboard','sales-analysis','stock-aging'], admin:['role-permission','master-control','user-mgmt','audit-log','sys-settings','company-onboarding','notifications'],
+  workflow:['approval-inbox'], bi:['bi-dashboard','sales-analysis','stock-aging'], admin:['role-permission','master-control','user-mgmt','agent-mgmt','audit-log','sys-settings','company-onboarding','notifications'],
 };
 DB.nav.forEach(g=>g.items.forEach(m=>{ ROUTE_MODULE[m.route]=m.id; }));
 Object.entries(SUBROUTES).forEach(([mod,routes])=>routes.forEach(r=>{ if(!ROUTE_MODULE[r]) ROUTE_MODULE[r]=mod; }));
@@ -982,7 +989,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'bank-rec',
   'bi-dashboard','sales-analysis','stock-aging',
   'my-activity','notifications',
-  'integration','master-control','sys-settings',
+  'integration','master-control','sys-settings','agent-mgmt',
 ]);
 const CANONICAL_DATA_PREVIEW_ROUTES = new Set([]);
 const API_SCREEN_ROUTES = new Set([
@@ -1025,7 +1032,7 @@ const API_SCREEN_ROUTES = new Set([
   'sales-home','sales-reports','report-sales-customer','report-sales-rep','report-quote-conversion','report-generic','sales-commission','txn-view',
   'my-activity',
   'notifications',
-  'integration','master-control','sys-settings',
+  'integration','master-control','sys-settings','agent-mgmt',
   'my-leave','leave-application','my-claims','expense-claim','my-receipts','company-receipts','receipt-tax-evidence','team-calendar','my-approvals',
 ]);
 const SCREEN_ACTIVE_ALIASES = {
@@ -1121,7 +1128,7 @@ const MODULE_DEFS = {
   ]},
   admin:{ labelKey:'nav.admin', home:'user-mgmt', items:[
     ['user-mgmt','Users','people'],['role-permission','Roles & Permissions','shield'],
-    ['master-control','Master Control','grid'],['audit-log','Audit Log','history'],
+    ['agent-mgmt','Agent Governance','shield','route.agent-mgmt'],['master-control','Master Control','grid'],['audit-log','Audit Log','history'],
     ['sys-settings','System Settings','gear'],['company-onboarding','Company Onboarding','check'],
   ]},
 };
@@ -1204,7 +1211,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
   workspace:[
     'bank-rec','data-import','integration','master-control',
     'company-onboarding','mrp',
-    'sales-commission','settings','sys-settings',
+    'sales-commission','settings','sys-settings','agent-mgmt',
   ],
   board:['crm-pipeline'],
   'activity-feed':['integration-logs','my-activity','notifications'],
@@ -1820,9 +1827,17 @@ function navigate(route, params){
   const sequence=++SCREEN_RENDER_SEQUENCE;
   CURRENT_ROUTE=route;
   CURRENT_ROUTE_PARAMS=Object.assign({},params||{});
+  window.__ERP_CURRENT_ROUTE__=route;
+  window.ErpWebMcpConfirmation=null;
   if(!routeAllowed(route)){
+    if(window.ErpWebMcp&&typeof window.ErpWebMcp.invalidate==='function'){
+      window.ErpWebMcp.invalidate('navigation');
+    }
     root.innerHTML=routeDeniedByPermission(route)?permissionBlockedPanel():moduleBlockedPanel(route);
     setActiveNav(route); closeAllPops(); return Promise.resolve(false);
+  }
+  if(window.ErpWebMcp&&typeof window.ErpWebMcp.sync==='function'){
+    void window.ErpWebMcp.sync('navigation');
   }
   if(!SCREENS[route]){
     // unbuilt module -> graceful panel inside a simple shell
@@ -2249,6 +2264,9 @@ function wireCompanyMenu(){
     const fn=b.dataset.co;
     if(!window.ErpSystemDemo||!window.ErpSystemDemo.switchCompany){ toast('Company switch needs the PGlite adapter.','warn'); return; }
     if(!DB.erpSystem||!DB.erpSystem.scope||fn===DB.erpSystem.scope.companyFn) return;
+    if(window.ErpWebMcp&&typeof window.ErpWebMcp.invalidate==='function'){
+      window.ErpWebMcp.invalidate('company-change');
+    }
     window.ErpSystemDemo.switchCompany(fn).then(async()=>{
       await loadModuleControl();
       await loadNotifications();
@@ -2261,7 +2279,12 @@ function wireCompanyMenu(){
       refreshNotifs();
       if(CURRENT_ROUTE) navigate(CURRENT_ROUTE);
       toast('Switched to '+DB.company.name,'ok');
-    }).catch(e=>toast('Switch failed: '+((e&&e.message)||e),'danger'));
+    }).catch(e=>{
+      if(window.ErpWebMcp&&typeof window.ErpWebMcp.sync==='function'){
+        void window.ErpWebMcp.sync('company-change-failed');
+      }
+      toast('Switch failed: '+((e&&e.message)||e),'danger');
+    });
   }));
   $('#companyMenu').querySelector('[data-co-action="master"]')?.addEventListener('click',()=>{ closeAllPops(); navigate('master-control'); });
 }
@@ -2397,6 +2420,10 @@ function renderTabbar(){
 /* ---------- boot ---------- */
 async function boot(){
   if(typeof initI18n==='function') await initI18n();
+  if(window.ErpTenantRecovery&&window.ErpTenantRecovery.isActive()){
+    window.ErpTenantRecovery.render();
+    return;
+  }
   /* Demo authentication is local and can say “signed in” before its PGlite
      adapter has finished opening. Wait for the adapter before any signed-in
      shell readers (notifications, approvals, module projection) run, so a

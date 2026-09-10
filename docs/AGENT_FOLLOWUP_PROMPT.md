@@ -22,11 +22,16 @@ READ FIRST
 6. Recalculate current counts with the GOAL.md command. Do not reuse an old total.
 
 STARTING POINT
-Start TASK-228 if it is still Todo and its dependencies are Done.
-If it is already in progress, inspect its evidence and resume the first unverified
-checkpoint. If Done, follow the execution guide's eligible task order.
-TASK-199 retains inherited production priority when access and authorization make
-it actionable. Missing production access must not block independent local work.
+Read docs/GOAL_EXECUTION_PLAN.md and recompute the live registry first.
+The current milestone is Phase 2: the real Receipt-to-Pack assistant pilot.
+TASK-234 is the active continuation: OpenAI Responses adapter, Company resolver
+and explicit-activation server wiring are now implemented locally. Verify their
+current evidence, then complete the approved real-model pilot when account,
+model/data-policy and cost authority are available. Never infer live AI from
+injected HTTP fixtures or activate calls from credentials alone.
+After TASK-234 passes, follow TASK-236 -> TASK-231 -> TASK-237 in dependency order.
+TASK-199 retains production priority when authorized origin access is available.
+Supporting auth/tax/operations work does not replace the pilot milestone.
 
 EXECUTION LOOP
 - Work on one primary task and one S-checkpoint at a time.

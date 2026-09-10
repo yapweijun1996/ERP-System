@@ -44,6 +44,7 @@ export const PERMISSIONS = {
   documentsGovernanceManage: 'documents.governance.manage',
   documentsRecordsManage: 'documents.records.manage',
   documentsFinanceReview: 'documents.finance.review',
+  documentsKnowledgeRead: 'documents.knowledge.read',
   expensesPolicyManage: 'expenses.policy.manage',
   expensesFinanceVerify: 'expenses.finance.verify',
   expensesManagerApprove: 'expenses.approve.manager',

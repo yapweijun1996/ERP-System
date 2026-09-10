@@ -22,7 +22,16 @@ function minifyLegacyAssets(){
 
       await Promise.all(legacyFiles.map(async (fileName) => {
         const outputPath = path.join(outputAssetsDir, fileName);
-        const source = await readFile(outputPath, 'utf8');
+        /* Vite's public-directory copy can complete after closeBundle on a
+           clean output directory. Read the source asset in that case so a
+           newly added legacy script is still minified into the build. */
+        let source: string;
+        try {
+          source = await readFile(outputPath, 'utf8');
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+          source = await readFile(path.join(publicAssetsDir, fileName), 'utf8');
+        }
         const result = await transformWithEsbuild(source, outputPath, {
           loader: 'js',
           minify: true,

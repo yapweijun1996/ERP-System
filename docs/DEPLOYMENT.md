@@ -77,6 +77,12 @@ Pages exited `1` with `health_http_404`, and the production origin exited `1` wi
 `root_http_502`; both emitted no stderr. These are structured confirmations of the
 existing availability boundary, not a deployment attempt.
 
+On 2026-09-09, the same verifier was rerun against the release revision
+`ff6e0d9355c38ce06065267034c020ac55eea7e9` at `https://gmb01.xyz/erp`; it returned
+`root_http_502` with exit `1` before health, manifest or asset checks. See the
+[dated TASK-199 evidence](ai-native/evidence/TASK-199-2026-09-09.md). No remote
+state was changed.
+
 The final-review Platform workspace edits were later committed in `84a18b5`: they
 further refactor that resume behavior into an explicit presentation state machine and
 extend its E2E assertions. They are source-present only, have no current deployment
@@ -818,3 +824,17 @@ backup and staging proof, production deployment must:
 
 Do not deploy only the application containers when committed migrations through 0103 have
 not been applied; the source code cannot safely invent missing tables at runtime.
+
+
+## Receipt assistant opt-in
+
+The API service passes the Receipt assistant settings from `.env.example` through
+Compose to `receiptAssistantOptionsFromEnvironment`. Default activation is false;
+credential presence does not activate calls. Review
+[AI_PROVIDERS.md](AI_PROVIDERS.md#receipt-assistant-runtime-connection--2026-09-09)
+for the required Agent key, explicit pricing/output cap, Company data policy and
+run budget. Use the authenticated Company integration API to configure encrypted
+provider credentials; never place provider keys in browser settings or `VITE_*`.
+Only the fixed global OpenAI Responses GPT-4.1 mini snapshot is supported by this
+pilot adapter. Keep the switch off until account/model/data/spend authorization
+is recorded. These local source changes are not a deployment or live-model proof.

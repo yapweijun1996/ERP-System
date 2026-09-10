@@ -13,6 +13,62 @@
 .company-receipt-pack-frame{width:min(92vw,1100px);height:min(78vh,900px);background:#eef2f7}
 .company-receipt-pack-frame iframe{width:100%;height:100%;border:0;background:#fff}
 
+/* TASK-234/S4 contextual Receipt assistant. The modal owns the viewport; only
+   its body scrolls so the title, status and recovery actions remain reachable. */
+:where([hidden]){display:none!important;}
+.modal.receipt-assistant-modal{
+  display:grid;grid-template-rows:auto minmax(0,1fr) auto;
+  height:min(820px,calc(100dvh - 24px));max-height:calc(100dvh - 24px);
+  overflow:hidden;
+}
+.modal.receipt-assistant-modal .modal-head{min-width:0;}
+.modal.receipt-assistant-modal .modal-head h3{min-width:0;overflow-wrap:anywhere;}
+.modal.receipt-assistant-modal .modal-body{
+  min-height:0;overflow:auto;overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;padding:4px 20px 20px;
+}
+.modal.receipt-assistant-modal .modal-foot{
+  position:static;flex-wrap:wrap;align-items:center;
+  padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));
+}
+.receipt-assistant-workspace{display:grid;gap:14px;min-width:0;}
+.receipt-assistant-context{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;padding:12px 14px;border:1px solid var(--hairline);border-radius:var(--r-m);background:var(--surface-2);}
+.receipt-assistant-context>div{display:grid;gap:3px;min-width:0;}
+.receipt-assistant-context small{color:var(--muted);font-size:calc(11px * var(--fs,1));text-transform:uppercase;letter-spacing:.05em;}
+.receipt-assistant-context strong{min-width:0;overflow-wrap:anywhere;}
+.receipt-assistant-description{margin:0;color:var(--muted);line-height:1.5;}
+.receipt-assistant-fixture{margin:0;}
+.receipt-assistant-draft{display:grid;gap:12px;padding:14px;border:1px solid var(--hairline);border-radius:var(--r-m);background:var(--surface-2);}
+.receipt-assistant-section-title{display:flex;align-items:baseline;justify-content:space-between;gap:12px;min-width:0;}
+.receipt-assistant-section-title h4{margin:0;font-size:calc(14px * var(--fs,1));}
+.receipt-assistant-section-title .hint{min-width:0;text-align:right;}
+.receipt-assistant-range{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+.receipt-assistant-submit{width:max-content;min-height:42px;}
+.receipt-assistant-progress{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:calc(13px * var(--fs,1));}
+.receipt-assistant-progress .progress-spinner{width:16px;height:16px;flex:none;border:2px solid color-mix(in srgb,var(--accent-action) 25%,transparent);border-top-color:var(--accent-action);border-radius:50%;animation:receipt-assistant-spin .8s linear infinite;}
+@keyframes receipt-assistant-spin{to{transform:rotate(360deg)}}
+.receipt-assistant-preview,.receipt-assistant-sources,.receipt-assistant-success{min-width:0;padding:14px;border:1px solid var(--hairline);border-radius:var(--r-m);background:var(--surface);}
+.receipt-assistant-preview{display:grid;gap:12px;}
+.receipt-assistant-facts{grid-template-columns:repeat(4,minmax(0,1fr));}
+.receipt-assistant-preview-rows,.receipt-assistant-source-list{display:grid;gap:7px;margin:0;padding:0;list-style:none;}
+.receipt-assistant-preview-rows li{display:flex;justify-content:space-between;gap:12px;min-width:0;padding:8px 0;border-top:1px solid var(--hairline);}
+.receipt-assistant-preview-rows li:first-child{border-top:0;padding-top:0;}
+.receipt-assistant-preview-rows b,.receipt-assistant-preview-rows span{min-width:0;overflow-wrap:anywhere;}
+.receipt-assistant-preview-rows span{color:var(--muted);text-align:right;}
+.receipt-assistant-source-list li{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap;padding:7px 0;border-bottom:1px solid var(--hairline);}
+.receipt-assistant-source-list li:last-child{border-bottom:0;padding-bottom:0;}
+.receipt-assistant-source-list code{min-width:0;overflow-wrap:anywhere;word-break:break-word;}
+.receipt-assistant-source-list small{color:var(--muted);}
+.receipt-assistant-error{margin:0;overflow-wrap:anywhere;}
+.receipt-assistant-success{margin:0;overflow-wrap:anywhere;}
+.receipt-assistant-success code{word-break:break-all;}
+.receipt-assistant-modal .modal-foot .btn{min-height:42px;}
+.receipt-assistant-modal :is(button,input,textarea):focus-visible{outline:3px solid color-mix(in srgb,var(--accent-action) 45%,transparent);outline-offset:2px;}
+
+@media (prefers-reduced-motion:reduce){
+  .receipt-assistant-progress .progress-spinner{animation:none;}
+}
+
 @media(max-width:700px){
   [data-company-receipt-register] .sales-tablewrap{overflow:visible;border:0;background:transparent;}
   [data-company-receipt-register] .dt-page,
@@ -36,4 +92,21 @@
   [data-company-receipt-register] .transaction-list-pagination{flex-wrap:wrap;padding:10px 0;}
   .company-receipt-filters{width:100%;display:grid;grid-template-columns:1fr 1fr}
   .company-receipt-filters>input[type="search"],.company-receipt-filters>select{grid-column:1/-1;min-width:0;width:100%}
+  .modal.receipt-assistant-modal{width:calc(100vw - 16px);height:calc(100dvh - 16px);max-height:calc(100dvh - 16px);}
+  .modal.receipt-assistant-modal .modal-head{padding:14px 16px 10px;}
+  .modal.receipt-assistant-modal .modal-head .x{width:44px;height:44px;min-width:44px;}
+  .modal.receipt-assistant-modal .modal-body{padding:4px 16px 16px;}
+  .modal.receipt-assistant-modal .modal-foot{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));}
+  .modal.receipt-assistant-modal .modal-foot .btn{width:100%;min-width:0;min-height:44px;}
+  .receipt-assistant-context,.receipt-assistant-section-title{align-items:flex-start;flex-direction:column;}
+  .receipt-assistant-section-title .hint{text-align:left;}
+  .receipt-assistant-range,.receipt-assistant-facts{grid-template-columns:minmax(0,1fr);}
+  .receipt-assistant-preview-rows li{display:grid;gap:3px;}
+  .receipt-assistant-preview-rows span{text-align:left;}
+  .receipt-assistant-submit{width:100%;min-height:44px;justify-content:center;}
 }
+
+.receipt-assistant-preview-rows li>div{min-width:0;flex:1;}
+.receipt-assistant-row-facts{display:grid;grid-template-columns:minmax(80px,1fr) minmax(0,2fr);gap:4px 12px;margin:8px 0 0;font-size:12px;}
+.receipt-assistant-row-facts dt{color:var(--muted);}
+.receipt-assistant-row-facts dd{margin:0;overflow-wrap:anywhere;}

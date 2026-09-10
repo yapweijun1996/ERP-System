@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
+import { receiptPdfFontFeatures, savePdfWithOpenTypeFonts } from './pdfFont';
 
 export interface EvidencePdfDocument {
   fileName: string;
@@ -80,6 +81,7 @@ export async function renderEvidencePdf(
   let font: Awaited<ReturnType<PDFDocument['embedFont']>> | null = null;
   const getFont = async () => font ??= await pdf.embedFont(
     options.fontBytes ?? StandardFonts.Helvetica,
+    { features: { ...receiptPdfFontFeatures } },
   );
 
   if (options.leadingPdf) {
@@ -141,5 +143,5 @@ export async function renderEvidencePdf(
       sha256: '0'.repeat(64),
     }, options.emptyMessage ?? 'No evidence was supplied.', unicode);
   }
-  return pdf.save({ useObjectStreams: false });
+  return savePdfWithOpenTypeFonts(pdf, font ? [font] : []);
 }

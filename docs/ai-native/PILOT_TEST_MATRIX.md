@@ -1,10 +1,12 @@
 # Receipt Agent Pilot: Contracts and Test Matrix
 
-Reviewed: 2026-09-08. Target design; all new Agent cases start **Not run**.
+Reviewed: 2026-09-10. This matrix defines expected results, not a blanket
+completion status. Shared actions and local Agent/G06/MCP/browser fixtures are
+implemented; the same-run real-provider human pilot remains open.
 Read the selected [task packet](../AI_NATIVE_EXECUTION.md#recommended-sequence).
 These cases supplement its four goal criteria and the common DoD.
 
-## Source-confirmed starting contract
+## Current source-confirmed contract
 
 - The router is mounted at `/api/company-receipts` by [app.ts](../../src/api/app.ts).
 - [companyReceipts.ts](../../src/api/routes/companyReceipts.ts) rejects client-supplied
@@ -15,8 +17,10 @@ These cases supplement its four goal criteria and the common DoD.
   and valid inclusive dateFrom/dateTo. The response exposes meta.nextCursor.
 - POST /packs calls `createCompanyReceiptPackWithin` and appends audit in a tenant
   transaction; it returns 201 for a new immutable Pack and 200 for replay.
-- Existing input is packKey, search, dateFrom, dateTo, locale. There is no arbitrary
-  receiptIds input and no existing Agent confirmation token in this command.
+- The ordinary human Pack input is packKey, search, dateFrom, dateTo, locale.
+  Arbitrary receiptIds are not accepted. Agent execution separately requires the
+  persisted G06 intent and exact reviewed digests; it cannot substitute the human
+  endpoint for approval.
 - Same packKey with different actor/visibility/locale/filters returns
   `company_receipt_pack_key_conflict` (409). Existing Pack replay does not rebuild
   a snapshot from current receipt facts.
@@ -28,15 +32,19 @@ These cases supplement its four goal criteria and the common DoD.
 - Read and artifact access recheck current visibility; an old snapshot is not a
   permanent permission grant. Governed quarantine and retention checks still apply.
 
-## Six planned pilot action names
+## Six implemented pilot action names
 
-Names below are proposed stable tool identifiers, not implemented MCP APIs.
+The versioned action contracts and dispatcher are implemented in
+[agentActions.ts](../../src/api/agentActions.ts); MCP and assistant adapters use
+that governed boundary. This source fact does not prove a real-provider run or
+production acceptance. Local evidence and remaining live gates are recorded in
+[TASK-234 evidence](evidence/TASK-234-2026-09-09.md).
 
-| Proposed action | Existing route/domain basis | Scope |
+| Action | Route/domain basis | Scope |
 | --- | --- | --- |
 | receipt.search | GET /api/company-receipts | Authorized bounded search |
 | receipt.get | GET /api/company-receipts/:receiptId | Authorized detail |
-| receipt_pack.prepare | New G01 preparation using shared domain selection | Read-only reviewed facts; not authorization |
+| receipt_pack.prepare | G01 preparation using shared domain selection | Read-only reviewed facts; not authorization |
 | receipt_pack.create | POST /api/company-receipts/packs through G06 | Exact confirmed intent; no duplicate Pack |
 | receipt_pack.get | GET /api/company-receipts/packs/:packId | Current authorized snapshot metadata |
 | receipt_pack.export | GET /api/company-receipts/packs/:packId/pdf | Current authorized artifact access |
@@ -88,10 +96,10 @@ authorized APIs or isolated test database assertions and compare expected record
 Record before/after counts and IDs for P06-P11; inspect artifact bytes for P12.
 Do not use production raw SQL or fixture bypasses as customer-facing Agent tools.
 
-For TASK-228, P06-P08 use the existing authenticated human Pack route to prove the
-current create/replay contract; they do not claim the future Agent confirmation
-gate. P09 can prove current session/permission invalidation there, while delegated
-grant revocation belongs to TASK-232. P10 requires TASK-233. Actual protocol/browser
+Historical TASK-228 foundation evidence used the authenticated human Pack route
+for P06-P08. That evidence alone does not prove Agent confirmation; use the
+subsequent TASK-233 G06 evidence for the implemented approval boundary. P09 can prove current session/permission invalidation there, while delegated
+grant revocation is evidenced under TASK-232. P10 is governed by TASK-233. Actual protocol/browser
 versions of these cases belong to TASK-229/230. This distinction prevents a
 foundation task from waiting for its own downstream integrations.
 

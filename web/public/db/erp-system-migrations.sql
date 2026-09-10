@@ -13107,3 +13107,498 @@ DO $$ BEGIN
  ALTER TABLE "document_scan_job" ADD CONSTRAINT "ck_document_scan_job_status" CHECK ("document_scan_job"."status" in ('queued','scanning','clean','infected','indeterminate','unavailable','dead_letter'));
 EXCEPTION WHEN duplicate_object THEN null;
 END $$;
+
+-- 0104_windy_gabe_jones
+CREATE TABLE IF NOT EXISTS "agent_grant" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "agent_grant_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
+	"master_fn" text NOT NULL,
+	"company_fn" text NOT NULL,
+	"agent_principal_id" bigint NOT NULL,
+	"action_name" text NOT NULL,
+	"permission_key" text NOT NULL,
+	"resource_key" text NOT NULL,
+	"scope" text NOT NULL,
+	"target_type" text DEFAULT 'none' NOT NULL,
+	"target_id" text DEFAULT '' NOT NULL,
+	"field_allowlist" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"amount_limit" numeric(18, 4),
+	"amount_currency" text,
+	"valid_from" timestamp with time zone DEFAULT now() NOT NULL,
+	"valid_until" timestamp with time zone,
+	"revoked_at" timestamp with time zone,
+	"revoked_by_user_id" bigint,
+	"revocation_reason" text,
+	"version" integer DEFAULT 1 NOT NULL,
+	"created_by_user_id" bigint NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "ck_agent_grant_scope" CHECK ("agent_grant"."scope" in ('self', 'team', 'department', 'company')),
+	CONSTRAINT "ck_agent_grant_target_type" CHECK ("agent_grant"."target_type" in ('none', 'company', 'branch', 'department', 'team', 'employee', 'region', 'business_unit', 'legal_entity', 'cost_center')),
+	CONSTRAINT "ck_agent_grant_target" CHECK (("agent_grant"."target_type" = 'none' and "agent_grant"."target_id" = '') or ("agent_grant"."target_type" <> 'none' and char_length("agent_grant"."target_id") > 0)),
+	CONSTRAINT "ck_agent_grant_fields" CHECK (jsonb_array_length("agent_grant"."field_allowlist") > 0),
+	CONSTRAINT "ck_agent_grant_amount" CHECK ("agent_grant"."amount_limit" is null or "agent_grant"."amount_limit" >= 0),
+	CONSTRAINT "ck_agent_grant_amount_currency" CHECK (("agent_grant"."amount_limit" is null and "agent_grant"."amount_currency" is null)
+      or ("agent_grant"."amount_limit" is not null and "agent_grant"."amount_currency" is not null)),
+	CONSTRAINT "ck_agent_grant_window" CHECK ("agent_grant"."valid_until" is null or "agent_grant"."valid_until" > "agent_grant"."valid_from"),
+	CONSTRAINT "ck_agent_grant_revocation" CHECK (("agent_grant"."revoked_at" is null and "agent_grant"."revoked_by_user_id" is null and "agent_grant"."revocation_reason" is null)
+      or ("agent_grant"."revoked_at" is not null and "agent_grant"."revoked_by_user_id" is not null and "agent_grant"."revocation_reason" is not null)),
+	CONSTRAINT "ck_agent_grant_version" CHECK ("agent_grant"."version" > 0)
+);
+
+--> statement-breakpoint
+
+CREATE TABLE IF NOT EXISTS "agent_principal" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "agent_principal_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
+	"master_fn" text NOT NULL,
+	"company_fn" text NOT NULL,
+	"principal_key" text NOT NULL,
+	"display_name" text NOT NULL,
+	"kind" text DEFAULT 'delegated_agent' NOT NULL,
+	"actor_user_id" bigint NOT NULL,
+	"owner_user_id" bigint NOT NULL,
+	"status" text DEFAULT 'active' NOT NULL,
+	"version" integer DEFAULT 1 NOT NULL,
+	"disabled_at" timestamp with time zone,
+	"disabled_by_user_id" bigint,
+	"disabled_reason" text,
+	"revoked_at" timestamp with time zone,
+	"revoked_by_user_id" bigint,
+	"revocation_reason" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "uq_agent_principal_tenant_id" UNIQUE("id","master_fn","company_fn"),
+	CONSTRAINT "ck_agent_principal_kind" CHECK ("agent_principal"."kind" in ('delegated_agent', 'service_automation')),
+	CONSTRAINT "ck_agent_principal_status" CHECK ("agent_principal"."status" in ('active', 'paused', 'revoked', 'disabled')),
+	CONSTRAINT "ck_agent_principal_version" CHECK ("agent_principal"."version" > 0),
+	CONSTRAINT "ck_agent_principal_key" CHECK (char_length("agent_principal"."principal_key") between 3 and 128),
+	CONSTRAINT "ck_agent_principal_display_name" CHECK (char_length("agent_principal"."display_name") between 1 and 160),
+	CONSTRAINT "ck_agent_principal_revocation" CHECK (("agent_principal"."revoked_at" is null and "agent_principal"."revoked_by_user_id" is null and "agent_principal"."revocation_reason" is null)
+      or ("agent_principal"."revoked_at" is not null and "agent_principal"."revoked_by_user_id" is not null and "agent_principal"."revocation_reason" is not null))
+);
+
+--> statement-breakpoint
+
+ALTER TABLE "app_user" DROP CONSTRAINT "ck_app_user_platform_actor_login";
+--> statement-breakpoint
+
+ALTER TABLE "app_user" DROP CONSTRAINT "ck_app_user_identity_kind";
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_grant" ADD CONSTRAINT "agent_grant_amount_currency_currency_code_fk" FOREIGN KEY ("amount_currency") REFERENCES "public"."currency"("code") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_grant" ADD CONSTRAINT "agent_grant_revoked_by_user_id_app_user_user_id_fk" FOREIGN KEY ("revoked_by_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_grant" ADD CONSTRAINT "agent_grant_created_by_user_id_app_user_user_id_fk" FOREIGN KEY ("created_by_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_grant" ADD CONSTRAINT "fk_agent_grant_company_master" FOREIGN KEY ("master_fn","company_fn") REFERENCES "public"."company"("master_fn","company_fn") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_grant" ADD CONSTRAINT "fk_agent_grant_principal_tenant" FOREIGN KEY ("agent_principal_id","master_fn","company_fn") REFERENCES "public"."agent_principal"("id","master_fn","company_fn") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_grant" ADD CONSTRAINT "fk_agent_grant_creator_membership" FOREIGN KEY ("created_by_user_id","company_fn") REFERENCES "public"."user_company"("user_id","company_fn") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_principal" ADD CONSTRAINT "agent_principal_actor_user_id_app_user_user_id_fk" FOREIGN KEY ("actor_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_principal" ADD CONSTRAINT "agent_principal_owner_user_id_app_user_user_id_fk" FOREIGN KEY ("owner_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_principal" ADD CONSTRAINT "agent_principal_disabled_by_user_id_app_user_user_id_fk" FOREIGN KEY ("disabled_by_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_principal" ADD CONSTRAINT "agent_principal_revoked_by_user_id_app_user_user_id_fk" FOREIGN KEY ("revoked_by_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_principal" ADD CONSTRAINT "fk_agent_principal_company_master" FOREIGN KEY ("master_fn","company_fn") REFERENCES "public"."company"("master_fn","company_fn") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_principal" ADD CONSTRAINT "fk_agent_principal_owner_membership" FOREIGN KEY ("owner_user_id","company_fn") REFERENCES "public"."user_company"("user_id","company_fn") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_agent_grant_lookup" ON "agent_grant" USING btree ("master_fn","company_fn","agent_principal_id","action_name","valid_from","valid_until");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_agent_grant_permission" ON "agent_grant" USING btree ("master_fn","company_fn","permission_key","resource_key","scope");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_agent_principal_key" ON "agent_principal" USING btree ("master_fn","company_fn","principal_key");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_agent_principal_actor_user" ON "agent_principal" USING btree ("actor_user_id");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_agent_principal_owner" ON "agent_principal" USING btree ("master_fn","company_fn","owner_user_id","status");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_agent_principal_status" ON "agent_principal" USING btree ("master_fn","company_fn","status","id");
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "app_user" ADD CONSTRAINT "ck_app_user_non_human_login" CHECK ("app_user"."identity_kind" = 'human' or "app_user"."login_enabled" = false);
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "app_user" ADD CONSTRAINT "ck_app_user_identity_kind" CHECK ("app_user"."identity_kind" in ('human', 'platform_actor', 'agent', 'service_automation'));
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+-- 0105_boring_sentinels
+ALTER TABLE "audit_log" ADD COLUMN IF NOT EXISTS "agent_principal_id" bigint;
+--> statement-breakpoint
+
+ALTER TABLE "audit_log" ADD COLUMN IF NOT EXISTS "delegator_user_id" bigint;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "audit_log" ADD CONSTRAINT "audit_log_agent_principal_id_agent_principal_id_fk" FOREIGN KEY ("agent_principal_id") REFERENCES "public"."agent_principal"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "audit_log" ADD CONSTRAINT "audit_log_delegator_user_id_app_user_user_id_fk" FOREIGN KEY ("delegator_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_audit_agent_activity" ON "audit_log" USING btree ("agent_principal_id","occurred_at","id");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_audit_delegator_activity" ON "audit_log" USING btree ("delegator_user_id","occurred_at","id");
+
+-- 0106_military_preak
+DO $$ BEGIN
+ ALTER TABLE "audit_log" ADD CONSTRAINT "ck_audit_agent_attribution" CHECK (("audit_log"."agent_principal_id" is null and "audit_log"."delegator_user_id" is null)
+      or ("audit_log"."agent_principal_id" is not null and "audit_log"."actor_user_id" is not null and "audit_log"."delegator_user_id" is not null));
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+-- 0107_small_gambit
+CREATE TABLE IF NOT EXISTS "agent_credential" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "agent_credential_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
+	"master_fn" text NOT NULL,
+	"company_fn" text NOT NULL,
+	"agent_principal_id" bigint NOT NULL,
+	"credential_key" text NOT NULL,
+	"token_hash" text NOT NULL,
+	"token_hint" text NOT NULL,
+	"status" text DEFAULT 'active' NOT NULL,
+	"valid_from" timestamp with time zone DEFAULT now() NOT NULL,
+	"valid_until" timestamp with time zone,
+	"last_used_at" timestamp with time zone,
+	"revoked_at" timestamp with time zone,
+	"revoked_by_user_id" bigint,
+	"revocation_reason" text,
+	"version" integer DEFAULT 1 NOT NULL,
+	"created_by_user_id" bigint NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "ck_agent_credential_status" CHECK ("agent_credential"."status" in ('active', 'revoked')),
+	CONSTRAINT "ck_agent_credential_key" CHECK (char_length("agent_credential"."credential_key") between 8 and 160),
+	CONSTRAINT "ck_agent_credential_hash" CHECK ("agent_credential"."token_hash" ~ '^[0-9a-f]{64}$'),
+	CONSTRAINT "ck_agent_credential_hint" CHECK (char_length("agent_credential"."token_hint") between 4 and 32),
+	CONSTRAINT "ck_agent_credential_window" CHECK ("agent_credential"."valid_until" is null or "agent_credential"."valid_until" > "agent_credential"."valid_from"),
+	CONSTRAINT "ck_agent_credential_revocation" CHECK ((
+    ("agent_credential"."revoked_at" is null and "agent_credential"."revoked_by_user_id" is null and "agent_credential"."revocation_reason" is null)
+    or ("agent_credential"."revoked_at" is not null and "agent_credential"."revoked_by_user_id" is not null and "agent_credential"."revocation_reason" is not null)
+  )),
+	CONSTRAINT "ck_agent_credential_version" CHECK ("agent_credential"."version" > 0)
+);
+
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_credential" ADD CONSTRAINT "agent_credential_revoked_by_user_id_app_user_user_id_fk" FOREIGN KEY ("revoked_by_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_credential" ADD CONSTRAINT "agent_credential_created_by_user_id_app_user_user_id_fk" FOREIGN KEY ("created_by_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_credential" ADD CONSTRAINT "fk_agent_credential_company_master" FOREIGN KEY ("master_fn","company_fn") REFERENCES "public"."company"("master_fn","company_fn") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_credential" ADD CONSTRAINT "fk_agent_credential_principal_tenant" FOREIGN KEY ("agent_principal_id","master_fn","company_fn") REFERENCES "public"."agent_principal"("id","master_fn","company_fn") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_credential" ADD CONSTRAINT "fk_agent_credential_creator_membership" FOREIGN KEY ("created_by_user_id","company_fn") REFERENCES "public"."user_company"("user_id","company_fn") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_credential" ADD CONSTRAINT "fk_agent_credential_revoker_membership" FOREIGN KEY ("revoked_by_user_id","company_fn") REFERENCES "public"."user_company"("user_id","company_fn") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_agent_credential_key" ON "agent_credential" USING btree ("master_fn","company_fn","agent_principal_id","credential_key");
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_agent_credential_hash" ON "agent_credential" USING btree ("token_hash");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_agent_credential_principal" ON "agent_credential" USING btree ("master_fn","company_fn","agent_principal_id","status","id");
+
+-- 0108_breezy_naoko
+CREATE TABLE IF NOT EXISTS "agent_execution_intent" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "agent_execution_intent_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
+	"master_fn" text NOT NULL,
+	"company_fn" text NOT NULL,
+	"agent_principal_id" bigint NOT NULL,
+	"action_name" text NOT NULL,
+	"actor_user_id" bigint NOT NULL,
+	"pack_key" text NOT NULL,
+	"visibility" text NOT NULL,
+	"locale" text NOT NULL,
+	"filters" jsonb NOT NULL,
+	"selection_digest" text NOT NULL,
+	"resource_version_digest" text NOT NULL,
+	"payload_digest" text NOT NULL,
+	"reviewed_facts" jsonb NOT NULL,
+	"intent_key_hash" text NOT NULL,
+	"status" text DEFAULT 'prepared' NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"decision_by_user_id" bigint,
+	"decision_reason" text,
+	"decided_at" timestamp with time zone,
+	"version" integer DEFAULT 1 NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "ck_agent_execution_intent_action" CHECK ("agent_execution_intent"."action_name" in ('receipt_pack.create')),
+	CONSTRAINT "ck_agent_execution_intent_pack_key" CHECK ("agent_execution_intent"."pack_key" ~ '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'),
+	CONSTRAINT "ck_agent_execution_intent_visibility" CHECK ("agent_execution_intent"."visibility" in ('own', 'company')),
+	CONSTRAINT "ck_agent_execution_intent_locale" CHECK ("agent_execution_intent"."locale" in ('en', 'ms', 'zh', 'ja', 'vi')),
+	CONSTRAINT "ck_agent_execution_intent_json" CHECK (jsonb_typeof("agent_execution_intent"."filters") = 'object' and jsonb_typeof("agent_execution_intent"."reviewed_facts") = 'object'),
+	CONSTRAINT "ck_agent_execution_intent_hashes" CHECK ("agent_execution_intent"."intent_key_hash" ~ '^[0-9a-f]{64}$'
+      and "agent_execution_intent"."selection_digest" ~ '^[0-9a-f]{64}$'
+      and "agent_execution_intent"."resource_version_digest" ~ '^[0-9a-f]{64}$'
+      and "agent_execution_intent"."payload_digest" ~ '^[0-9a-f]{64}$'),
+	CONSTRAINT "ck_agent_execution_intent_status" CHECK ("agent_execution_intent"."status" in ('prepared', 'approved', 'rejected', 'cancelled', 'expired', 'consumed')),
+	CONSTRAINT "ck_agent_execution_intent_decision" CHECK ((
+      "agent_execution_intent"."status" = 'prepared'
+      and "agent_execution_intent"."decision_by_user_id" is null
+      and "agent_execution_intent"."decision_reason" is null
+      and "agent_execution_intent"."decided_at" is null
+    )
+    or (
+      "agent_execution_intent"."status" = 'expired'
+      and "agent_execution_intent"."decision_by_user_id" is null
+      and "agent_execution_intent"."decision_reason" = 'expired'
+      and "agent_execution_intent"."decided_at" is not null
+    )
+    or (
+      "agent_execution_intent"."status" in ('approved', 'rejected', 'cancelled', 'consumed')
+      and "agent_execution_intent"."decision_by_user_id" is not null
+      and char_length("agent_execution_intent"."decision_reason") between 3 and 1000
+      and "agent_execution_intent"."decided_at" is not null
+    )),
+	CONSTRAINT "ck_agent_execution_intent_expiry" CHECK ("agent_execution_intent"."expires_at" > "agent_execution_intent"."created_at"),
+	CONSTRAINT "ck_agent_execution_intent_version" CHECK ("agent_execution_intent"."version" > 0)
+);
+
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_execution_intent" ADD CONSTRAINT "agent_execution_intent_decision_by_user_id_app_user_user_id_fk" FOREIGN KEY ("decision_by_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_execution_intent" ADD CONSTRAINT "fk_agent_execution_intent_company_master" FOREIGN KEY ("master_fn","company_fn") REFERENCES "public"."company"("master_fn","company_fn") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_execution_intent" ADD CONSTRAINT "fk_agent_execution_intent_principal_tenant" FOREIGN KEY ("agent_principal_id","master_fn","company_fn") REFERENCES "public"."agent_principal"("id","master_fn","company_fn") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_execution_intent" ADD CONSTRAINT "fk_agent_execution_intent_actor_membership" FOREIGN KEY ("actor_user_id","company_fn") REFERENCES "public"."user_company"("user_id","company_fn") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_execution_intent" ADD CONSTRAINT "fk_agent_execution_intent_decision_membership" FOREIGN KEY ("decision_by_user_id","company_fn") REFERENCES "public"."user_company"("user_id","company_fn") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_agent_execution_intent_key" ON "agent_execution_intent" USING btree ("master_fn","company_fn","agent_principal_id","intent_key_hash");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_agent_execution_intent_actor" ON "agent_execution_intent" USING btree ("master_fn","company_fn","actor_user_id","status","id");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_agent_execution_intent_expiry" ON "agent_execution_intent" USING btree ("master_fn","company_fn","status","expires_at","id");
+
+-- 0109_open_karen_page
+CREATE TABLE IF NOT EXISTS "agent_knowledge_document" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "agent_knowledge_document_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
+	"master_fn" text NOT NULL,
+	"company_fn" text NOT NULL,
+	"corpus_key" text NOT NULL,
+	"title" text NOT NULL,
+	"document_id" bigint NOT NULL,
+	"document_version_id" bigint NOT NULL,
+	"effective_from" date NOT NULL,
+	"effective_to" date,
+	"required_permission" text DEFAULT 'documents.knowledge.read' NOT NULL,
+	"field_allowlist" jsonb DEFAULT '["title","content","effectiveFrom","effectiveTo","documentId","documentVersionId","documentVersionNo","sourceSha256"]'::jsonb NOT NULL,
+	"status" text DEFAULT 'active' NOT NULL,
+	"version" integer DEFAULT 1 NOT NULL,
+	"revoked_at" timestamp with time zone,
+	"revoked_by_user_id" bigint,
+	"revocation_reason" text,
+	"created_by_user_id" bigint NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "ck_agent_knowledge_corpus_key" CHECK ("agent_knowledge_document"."corpus_key" ~ '^[a-z][a-z0-9._-]{2,63}$'),
+	CONSTRAINT "ck_agent_knowledge_title" CHECK (char_length("agent_knowledge_document"."title") between 1 and 160),
+	CONSTRAINT "ck_agent_knowledge_effective_window" CHECK ("agent_knowledge_document"."effective_to" is null or "agent_knowledge_document"."effective_to" > "agent_knowledge_document"."effective_from"),
+	CONSTRAINT "ck_agent_knowledge_permission" CHECK ("agent_knowledge_document"."required_permission" = 'documents.knowledge.read'),
+	CONSTRAINT "ck_agent_knowledge_fields" CHECK (jsonb_typeof("agent_knowledge_document"."field_allowlist") = 'array'
+      and jsonb_array_length("agent_knowledge_document"."field_allowlist") > 0),
+	CONSTRAINT "ck_agent_knowledge_status" CHECK ("agent_knowledge_document"."status" in ('active', 'revoked', 'expired')),
+	CONSTRAINT "ck_agent_knowledge_version" CHECK ("agent_knowledge_document"."version" > 0),
+	CONSTRAINT "ck_agent_knowledge_revocation" CHECK ((
+    ("agent_knowledge_document"."status" <> 'revoked' and "agent_knowledge_document"."revoked_at" is null
+      and "agent_knowledge_document"."revoked_by_user_id" is null and "agent_knowledge_document"."revocation_reason" is null)
+    or ("agent_knowledge_document"."status" = 'revoked' and "agent_knowledge_document"."revoked_at" is not null
+      and "agent_knowledge_document"."revoked_by_user_id" is not null
+      and char_length("agent_knowledge_document"."revocation_reason") between 3 and 1000)
+  ))
+);
+
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_knowledge_document" ADD CONSTRAINT "agent_knowledge_document_document_id_managed_document_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."managed_document"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_knowledge_document" ADD CONSTRAINT "agent_knowledge_document_document_version_id_document_version_id_fk" FOREIGN KEY ("document_version_id") REFERENCES "public"."document_version"("id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_knowledge_document" ADD CONSTRAINT "agent_knowledge_document_revoked_by_user_id_app_user_user_id_fk" FOREIGN KEY ("revoked_by_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_knowledge_document" ADD CONSTRAINT "agent_knowledge_document_created_by_user_id_app_user_user_id_fk" FOREIGN KEY ("created_by_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_knowledge_document" ADD CONSTRAINT "fk_agent_knowledge_company_master" FOREIGN KEY ("master_fn","company_fn") REFERENCES "public"."company"("master_fn","company_fn") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_knowledge_document" ADD CONSTRAINT "fk_agent_knowledge_creator_membership" FOREIGN KEY ("created_by_user_id","company_fn") REFERENCES "public"."user_company"("user_id","company_fn") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_knowledge_document" ADD CONSTRAINT "fk_agent_knowledge_revoker_membership" FOREIGN KEY ("revoked_by_user_id","company_fn") REFERENCES "public"."user_company"("user_id","company_fn") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_agent_knowledge_corpus_version" ON "agent_knowledge_document" USING btree ("master_fn","company_fn","corpus_key","document_version_id");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_agent_knowledge_lookup" ON "agent_knowledge_document" USING btree ("master_fn","company_fn","corpus_key","status","effective_from","id");
+
+-- 0110_parched_random
+CREATE TABLE IF NOT EXISTS "agent_provider_config" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "agent_provider_config_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
+	"master_fn" text NOT NULL,
+	"company_fn" text NOT NULL,
+	"provider" text DEFAULT 'deterministic.zero_spend' NOT NULL,
+	"model" text NOT NULL,
+	"endpoint_url" text,
+	"data_region" text DEFAULT 'tenant-local' NOT NULL,
+	"data_policy" text DEFAULT 'tenant_no_training' NOT NULL,
+	"credential_envelope" jsonb,
+	"credential_label" text,
+	"max_provider_calls" integer DEFAULT 1 NOT NULL,
+	"max_retries" integer DEFAULT 0 NOT NULL,
+	"max_duration_ms" integer DEFAULT 30000 NOT NULL,
+	"max_input_chars" integer DEFAULT 16000 NOT NULL,
+	"max_output_chars" integer DEFAULT 4000 NOT NULL,
+	"max_cost_micros" integer DEFAULT 0 NOT NULL,
+	"enabled" boolean DEFAULT true NOT NULL,
+	"version" integer DEFAULT 1 NOT NULL,
+	"updated_by_user_id" bigint NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "ck_agent_provider_config_provider" CHECK ("agent_provider_config"."provider" in ('deterministic.zero_spend', 'openai', 'google', 'openai_compatible')),
+	CONSTRAINT "ck_agent_provider_config_model" CHECK (char_length("agent_provider_config"."model") between 1 and 160),
+	CONSTRAINT "ck_agent_provider_config_region" CHECK (char_length("agent_provider_config"."data_region") between 2 and 80),
+	CONSTRAINT "ck_agent_provider_config_policy" CHECK ("agent_provider_config"."data_policy" in ('tenant_only', 'tenant_no_training')),
+	CONSTRAINT "ck_agent_provider_config_credential_label" CHECK ("agent_provider_config"."credential_label" is null or char_length("agent_provider_config"."credential_label") between 1 and 80),
+	CONSTRAINT "ck_agent_provider_config_calls" CHECK ("agent_provider_config"."max_provider_calls" between 1 and 32),
+	CONSTRAINT "ck_agent_provider_config_retries" CHECK ("agent_provider_config"."max_retries" >= 0 and "agent_provider_config"."max_retries" < "agent_provider_config"."max_provider_calls"),
+	CONSTRAINT "ck_agent_provider_config_duration" CHECK ("agent_provider_config"."max_duration_ms" between 1000 and 120000),
+	CONSTRAINT "ck_agent_provider_config_input" CHECK ("agent_provider_config"."max_input_chars" between 1 and 100000),
+	CONSTRAINT "ck_agent_provider_config_output" CHECK ("agent_provider_config"."max_output_chars" between 1 and 100000),
+	CONSTRAINT "ck_agent_provider_config_cost" CHECK ("agent_provider_config"."max_cost_micros" between 0 and 2000000000),
+	CONSTRAINT "ck_agent_provider_config_version" CHECK ("agent_provider_config"."version" > 0)
+);
+
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_provider_config" ADD CONSTRAINT "agent_provider_config_updated_by_user_id_app_user_user_id_fk" FOREIGN KEY ("updated_by_user_id") REFERENCES "public"."app_user"("user_id") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_provider_config" ADD CONSTRAINT "fk_agent_provider_config_company_master" FOREIGN KEY ("master_fn","company_fn") REFERENCES "public"."company"("master_fn","company_fn") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "agent_provider_config" ADD CONSTRAINT "fk_agent_provider_config_updater_membership" FOREIGN KEY ("updated_by_user_id","company_fn") REFERENCES "public"."user_company"("user_id","company_fn") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_agent_provider_config_company" ON "agent_provider_config" USING btree ("master_fn","company_fn");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "idx_agent_provider_config_provider" ON "agent_provider_config" USING btree ("master_fn","company_fn","provider","enabled");
