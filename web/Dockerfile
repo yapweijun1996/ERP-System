@@ -27,6 +27,7 @@ COPY scripts/public-base-path.mjs scripts/public-base-path.d.mts scripts/write-n
 WORKDIR /app/web
 RUN npm run build \
   && node /app/scripts/write-release-manifest.mjs /app/web/dist \
+  && chmod 0644 /app/web/dist/release.json \
   && node /app/scripts/write-nginx-config.mjs /app/web/nginx.conf.template /app/web/nginx.conf
 
 FROM nginx:alpine
