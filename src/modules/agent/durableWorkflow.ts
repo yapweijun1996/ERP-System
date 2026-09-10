@@ -1064,6 +1064,10 @@ async function processRun(
       const code = safeErrorCode(error);
       const nextAttempt = refreshed.attempts + 1;
       const canRetry = retryable(error) && nextAttempt < refreshed.maxAttempts;
+      await tx.update(agentWorkflowRun).set({
+        attempts: Math.min(nextAttempt, refreshed.maxAttempts),
+        updatedAt: now,
+      }).where(eq(agentWorkflowRun.id, refreshed.id));
       const executeStep = (await readSteps(tx, scope, refreshed.id, true)).find((step) => step.stepKey === 'execute');
       if (executeStep) await tx.update(agentWorkflowStep).set({
         state: canRetry ? 'queued' : 'failed',

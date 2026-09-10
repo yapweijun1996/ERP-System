@@ -4,6 +4,7 @@ import type { DB } from '../../data/db';
 import {
   agentGrant,
   agentWorkflowRun,
+  agentWorkflowStep,
   companyModule,
   companyReceiptPack,
   documentScanJob,
@@ -280,6 +281,22 @@ describe('durable Receipt Pack Agent workflow', () => {
     const final = await readReceiptPackWorkflow(db, scope, queued.workflow.id, admin.userId);
     expect(final.id).toBe(queued.workflow.id);
     expect(final.state).toBe('succeeded');
+  });
+
+  it('dead-letters a bounded effect after the configured attempt budget', async () => {
+    const { queued } = await queueApproved('durable-trigger-key-0006');
+    await db.update(agentWorkflowRun).set({ maxAttempts: 1 }).where(eq(agentWorkflowRun.id, queued.workflow.id));
+    await withTenantTransaction(db, scope, (tx) => tx.delete(agentWorkflowStep).where(and(
+      eq(agentWorkflowStep.runId, queued.workflow.id),
+      eq(agentWorkflowStep.stepKey, 'execute'),
+    )));
+    const result = await processAgentWorkflowBatch(db, { workerId: 'workflow-budget', now: at });
+    expect(result.failed).toBe(1);
+    const final = await readReceiptPackWorkflow(db, scope, queued.workflow.id, admin.userId);
+    expect(final.state).toBe('failed');
+    expect(final.lastError).toBe('agent_workflow_step_missing');
+    expect(final.attempts).toBe(1);
+    expect(await db.select().from(companyReceiptPack)).toHaveLength(0);
   });
 });
 
