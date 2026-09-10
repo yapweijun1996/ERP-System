@@ -8,16 +8,19 @@ selection digest. Demo preparation, persisted approval and execution now use sha
 G06 commands with actor/Company ownership and transactional audit. Local integration
 and Company Receipts browser regression pass; authentication remains synthetic.
 Real operator acceptance remains open. Pages release
-`db33a6420f7ad7b7d744062ad624b5392a94d5a2` is deployed by run 34422487666.
+`eaf7f6ebe9527fb895080201b71bfec9494751ce` is deployed by run 34423634266.
 All 135 served assets match the clean committed build; the remaining manifest
 entry is the unserved empty `.nojekyll` marker. The previous release has a
 hash-verified local rollback copy. Full-suite local regression passed: 895 tests,
-with 3 PostgreSQL tests skipped. Remote CI run 34422487691 is still in progress.
+with 3 PostgreSQL tests skipped. Remote CI run 34423634351 is in progress; the prior run was superseded
+after all four unit-test shards passed.
 Browser access resumed. The real existing-Master setup path exposed a static
 catalog/entitlement mismatch. The local repair projects actual Master availability,
 disables unavailable modules/dependencies and preserves the shared write guard.
-Eight focused tests, four browser viewports and common local gates pass; this
-follow-up repair is not yet deployed.
+Eight focused tests, four browser viewports and common local gates pass. The
+repair is deployed; full human pilot acceptance remains open. Chrome control
+again requires Mac unlock. Continue in an isolated fresh Demo session or an
+already authorized workspace; do not overwrite the old Master's disabled modules.
 The assistant success view now opens its existing Pack PDF after rechecking the
 completion artifact hash; opening does not execute another creation command.
 Selected rows are now progressively expandable beyond 20 with amount, currency,
@@ -1201,3 +1204,15 @@ by the source audit in [ERP_EXCELLENCE_REVIEW.md](ERP_EXCELLENCE_REVIEW.md):
 7. tax-rule ranges use one `[valid_from, valid_to)` contract and GL tax posting must
    dispatch by governed SG GST/MY SST classification, while AI/Vision source capability
    remains separate from provider-failure and production-configuration proof.
+
+
+## Demo workspace identity restoration — 2026-09-10
+
+`erp-system-data-adapter.js` resolves a selected human account's same-Master
+Company role membership before `readPayload` constructs the scoped projection.
+A browser Company preference cannot grant access. `applyData` only chooses a
+showcase owner when no identity has been selected; a missing selected identity
+has no owner flag or permissions. Invalid membership clears the local session.
+This is Demo workspace restoration, not production authentication. The setup
+browser regression covers new-Company login, reload, stale preference, denied
+cross-Company switching and revocation. Shared business commands retain authority.

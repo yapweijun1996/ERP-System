@@ -8,16 +8,24 @@ selection digest. Demo preparation, persisted approval and execution now use sha
 G06 commands with actor/Company ownership and transactional audit. Local integration
 and Company Receipts browser regression pass; authentication remains synthetic.
 Real operator acceptance remains open. Pages release
-`db33a6420f7ad7b7d744062ad624b5392a94d5a2` is deployed by run 34422487666.
+`eaf7f6ebe9527fb895080201b71bfec9494751ce` is deployed by run 34423634266.
 All 135 served assets match the clean committed build; the remaining manifest
 entry is the unserved empty `.nojekyll` marker. The previous release has a
 hash-verified local rollback copy. Full-suite local regression passed: 895 tests,
-with 3 PostgreSQL tests skipped. Remote CI run 34422487691 is still in progress.
+with 3 PostgreSQL tests skipped. Remote CI run 34423634351 is in progress; the prior run was superseded
+after all four unit-test shards passed.
 Browser access resumed. The real existing-Master setup path exposed a static
 catalog/entitlement mismatch. The local repair projects actual Master availability,
 disables unavailable modules/dependencies and preserves the shared write guard.
-Eight focused tests, four browser viewports and common local gates pass; this
-follow-up repair is not yet deployed.
+Eight focused tests, four browser viewports and common local gates pass. The
+repair is deployed; full human pilot acceptance remains open. Chrome control
+again requires Mac unlock. Continue in an isolated fresh Demo session or an
+already authorized workspace; do not overwrite the old Master's disabled modules.
+The isolated live setup completed, but login exposed a Company-scope restoration
+bug that substituted the seeded owner for the new administrator. A local Demo
+adapter repair restores actual role membership before payload loading and retires
+invalid sessions without identity fallback. New login/reload/revocation assertions
+and the receipt browser regressions pass; this follow-up is not yet deployed.
 The assistant success view now opens its existing Pack PDF after rechecking the
 completion artifact hash; opening does not execute another creation command.
 Selected rows are now progressively expandable beyond 20 with amount, currency,

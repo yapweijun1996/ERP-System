@@ -328,6 +328,45 @@ async function main() {
           await page.locator('#wizNext').click();
           await page.locator('#wizFinish').click();
           await page.waitForFunction(() => localStorage.getItem('aria-setup-wizard-complete') === '1', null, { timeout: TIMEOUT });
+          await page.locator('#loginEmail').waitFor({ state: 'visible', timeout: TIMEOUT });
+          await page.locator('#loginEmail').fill('wizard.regression@example.test');
+          await page.locator('#loginPassword').fill('fixture-only-password');
+          await page.locator('#loginForm button[type="submit"]').click();
+          await page.waitForFunction(() => typeof DB !== 'undefined'
+            && DB.user?.email === 'wizard.regression@example.test'
+            && DB.company?.name === 'Synthetic Wizard Regression', null, { timeout: 15000 });
+          const ownCompany = await page.evaluate(() => DB.erpSystem.scope.companyFn);
+          await page.reload({ waitUntil: 'domcontentloaded' });
+          await page.waitForFunction(() => typeof DB !== 'undefined'
+            && DB.user?.email === 'wizard.regression@example.test'
+            && DB.company?.name === 'Synthetic Wizard Regression', null, { timeout: TIMEOUT });
+          await page.evaluate(() => localStorage.setItem('aria-active-company-fn', 'C-SG'));
+          await page.reload({ waitUntil: 'domcontentloaded' });
+          await page.waitForFunction(() => typeof DB !== 'undefined'
+            && DB.user?.email === 'wizard.regression@example.test'
+            && DB.company?.name === 'Synthetic Wizard Regression', null, { timeout: TIMEOUT });
+          const identity = await page.evaluate(async () => {
+            const adapter = window.ErpSystemData;
+            let denied = false;
+            try { await adapter.switchCompany('C-SG'); } catch { denied = true; }
+            const scope = DB.erpSystem.scope.companyFn;
+            const removed = await adapter.db.query(
+              'delete from user_company_role where user_id=(select user_id from app_user where master_fn=$1 and email=$2) returning user_id',
+              [DB.erpSystem.scope.masterFn, 'wizard.regression@example.test'],
+            );
+            if (!removed.rows.length) throw new Error('Membership revocation fixture was not applied');
+            return { denied, scope };
+          });
+          if (!identity.denied || identity.scope !== ownCompany) throw new Error('Company Owner crossed a membership boundary');
+          await page.reload({ waitUntil: 'domcontentloaded' });
+          await page.locator('#loginEmail').waitFor({ state: 'visible', timeout: TIMEOUT });
+          const revoked = await page.evaluate(() => ({
+            signedIn: Boolean(localStorage.getItem('aria-demo-auth')),
+            email: DB.user.email, permissions: DB.user.permissionKeys, owner: DB.user.is_company_owner,
+          }));
+          if (revoked.signedIn || revoked.owner || revoked.permissions.length || revoked.email !== 'wizard.regression@example.test') {
+            throw new Error(`Revoked membership retained or substituted authority: ${JSON.stringify(revoked)}`);
+          }
         }
 
         if (runtimeErrors.length) {

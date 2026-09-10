@@ -461,8 +461,36 @@
     await db.exec(await fetchSql('erp-system-demo-sales-credit.sql'));
   }
 
+  async function demoWorkspaceCompanies(db,email){
+    return (await db.query(
+      'select distinct c.company_fn from app_user u '+
+      'join user_company_role membership on membership.user_id=u.user_id '+
+      'join company c on c.company_fn=membership.company_fn and c.master_fn=u.master_fn '+
+      'where u.master_fn=$1 and lower(u.email)=$2 and u.is_active=true '+
+      "and u.identity_kind='human' and u.login_enabled=true and u.account_state<>'offboarded' "+
+      'order by c.company_fn',[SCOPE.masterFn,email])).rows.map(function(row){ return row.company_fn; });
+  }
+
+  async function restoreDemoWorkspace(db){
+    var email='',preferredCompany='';
+    try{
+      email=String(localStorage.getItem('aria-active-user-email')||'').trim().toLowerCase();
+      preferredCompany=localStorage.getItem('aria-active-company-fn')||'';
+    }catch{}
+    if(!email) return;
+    var companies=await demoWorkspaceCompanies(db,email);
+    if(!companies.length){
+      try{ localStorage.removeItem('aria-demo-auth'); }catch{}
+      return;
+    }
+    SCOPE.companyFn=companies.includes(preferredCompany)?preferredCompany
+      :(companies.includes(SCOPE.companyFn)?SCOPE.companyFn:companies[0]);
+    try{ localStorage.setItem('aria-active-company-fn',SCOPE.companyFn); }catch{}
+  }
+
   /* Read everything the Aria screens need, tenant-scoped, numbers cast in SQL. */
   async function readPayload(db){
+    await restoreDemoWorkspace(db);
     async function rows(sql){ return (await db.query(sql)).rows; }
     /* alias-qualified tenant scope, safe inside joins */
     function w(a){ return a + ".master_fn='" + SCOPE.masterFn + "'"; }
@@ -486,7 +514,7 @@
       "from app_user u join user_company_role ucr on ucr.user_id = u.user_id and ucr.company_fn='" + SCOPE.companyFn + "' " +
       "left join role r on r.role_id = ucr.role_id " +
       "left join role_permission rp on rp.role_id = r.role_id " +
-      "where " + w('u') + " and u.is_active " +
+      "where " + w('u') + " and u.is_active and u.identity_kind='human' and u.login_enabled=true and u.account_state<>'offboarded' " +
       "group by u.user_id, u.username, u.email, u.full_name, u.language, " +
       "u.password_change_required, u.initial_password_expires_at, u.account_state order by u.user_id");
     var products = await rows(
@@ -775,16 +803,15 @@
       env: 'DEMO',
     };
 
-    /* TASK-024: real seeded user (was hardcoded "Admin" before), with a
-       browser-persisted "switch demo user" selection. Defaults to whichever
-       seeded user is Company Owner, preserving the pre-TASK-024 default
-       experience for anyone who never switches. */
+    /* Default to a showcase owner only before an identity has been selected.
+       An unavailable selected account must never inherit another user's role. */
     var activeUserEmail = null;
     try { activeUserEmail = localStorage.getItem('aria-active-user-email'); } catch {}
-    var activeUser = (d.users || []).filter(function(u){ return u.email === activeUserEmail; })[0]
-      || (d.users || []).filter(function(u){ return u.is_company_owner; })[0]
-      || (d.users || [])[0]
-      || { email: 'admin@acme.co', full_name: 'Admin', is_superadmin: false, is_company_owner: true, permissions: [] };
+    var activeUser = (activeUserEmail
+      ? (d.users || []).find(function(u){ return String(u.email||'').toLowerCase() === activeUserEmail.toLowerCase(); })
+      : (d.users || []).find(function(u){ return u.is_company_owner; }) || (d.users || [])[0])
+      || { email: activeUserEmail || 'admin@acme.co', full_name: activeUserEmail || 'Admin',
+        is_superadmin: false, is_company_owner: false, permissions: [] };
     var userDisplayName = activeUser.full_name || activeUser.email;
     state.activeUserId = activeUser.user_id || null;
     var impersonatorEmail = null;
@@ -1508,10 +1535,11 @@
     var active=(DB.erpSystem&&DB.erpSystem.users||[]).find(function(user){
       return Number(user.user_id)===Number(state.activeUserId);
     });
-    if(active&&!active.is_company_owner&&!(active.companies||[]).includes(companyFn)){
+    if(!active||!(active.companies||[]).includes(companyFn)){
       return Promise.reject(new Error('This Demo persona has no role in the selected company.'));
     }
     SCOPE.companyFn = companyFn;
+    try{ localStorage.setItem('aria-active-company-fn',companyFn); }catch{}
     return refresh();
   }
 
@@ -1663,7 +1691,7 @@
       }
     }
     try{
-      ['aria-demo-auth','aria-active-user-email',DEMO_IMPERSONATOR_KEY,
+      ['aria-demo-auth','aria-active-user-email','aria-active-company-fn',DEMO_IMPERSONATOR_KEY,
        'aria-period','aria-demo-employee-credential-key']
         .forEach(function(key){ localStorage.removeItem(key); });
       /* A static demo reset should return to the first-run wizard so the
@@ -1691,7 +1719,7 @@
     if(!trimmed) throw new Error('Enter your account email.');
     var result=await requireDemoDb().query(
       'select user_id,email,password_hash,password_change_required,initial_password_expires_at,account_state '+
-      'from app_user where master_fn=$1 and lower(email)=$2 and is_active=true limit 1',
+      "from app_user where master_fn=$1 and lower(email)=$2 and is_active=true and identity_kind='human' and login_enabled=true limit 1",
       [SCOPE.masterFn,trimmed]);
     var user=result.rows[0];
     if(!user||user.account_state==='offboarded') throw new Error('Invalid email or password.');
@@ -1703,6 +1731,9 @@
     if(user.password_change_required&&user.initial_password_expires_at
       &&new Date(user.initial_password_expires_at)<=new Date()){
       throw new Error('The temporary password has expired. Ask HR to reset it.');
+    }
+    if(!(await demoWorkspaceCompanies(requireDemoDb(),trimmed)).length){
+      throw new Error('This account has no active Company role.');
     }
     try {
       if (trimmed) localStorage.setItem('aria-active-user-email', trimmed);

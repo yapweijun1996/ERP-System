@@ -10,6 +10,25 @@ The five S-checkpoints are execution checkpoints, not five new task records.
 Check a checkpoint only after its listed exit is observed and recorded.
 All four G07 criteria plus common DoD remain required for task completion.
 
+## Restore the actual Demo login identity — 2026-09-10
+
+The isolated live pilot completed setup, but signing in with the new Company's
+administrator rendered the original seeded Company Owner. Demo boot reset scope
+to C-SG; the selected user was absent from that Company's role projection, and
+applyData silently chose another owner. Repair this before further pilot writes.
+
+The Demo adapter owns browser workspace preference restoration, not business
+permission grants. Resolve the selected human account's actual same-Master role
+memberships before loading Company data. Restore a saved Company only while it
+remains authorized, otherwise choose an authorized membership. Never substitute
+another identity for a requested account. Invalid membership retires the local
+session; Company switching also requires current membership for owners.
+
+Verify new-Company setup -> real login form -> correct user/company -> reload,
+rejected stale Company preference and revoked-membership sign-out. Preserve Demo
+persona selection, public one-click fixtures, shared commands and API auth policy.
+Run existing setup/receipt browser regressions and common gates before release.
+
 ## Existing-Master setup obstruction — 2026-09-10
 
 The deployed real-browser pilot found an upgraded existing IndexedDB Master with

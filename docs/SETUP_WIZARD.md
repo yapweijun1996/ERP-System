@@ -224,3 +224,15 @@ that Platform activation is required. Missing configuration follows the existing
 trusted-bootstrap defaults without inserting rows during the read. Submission
 still validates current entitlement transactionally; the picker is not authority.
 Production first-run setup creates a new Master and retains its bootstrap defaults.
+
+
+## Demo login workspace restoration
+
+The Demo adapter restores Company scope from the selected active human account's
+same-Master role memberships before loading screen data. The saved Company is a
+preference, not a grant: if unavailable, use an authorized Company. When the
+selected account has no eligible membership, retire the local signed-in session
+and keep an unprivileged identity display instead of selecting another owner.
+Explicit Company switching also checks membership for Company Owners. The reset
+workflow clears the Company preference with other Demo session preferences.
+Production session derivation remains unchanged.
