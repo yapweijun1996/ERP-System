@@ -1,5 +1,5 @@
-import { eq } from 'drizzle-orm';
-import { describe, expect, it, vi } from 'vitest';
+import { and, eq } from 'drizzle-orm';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   appUser,
   documentExtraction,
@@ -21,18 +21,25 @@ import {
   processDocumentJobBatch,
   retryDocumentProcessing,
 } from './processing';
+import { createHttpByokVisionExtractor, createHttpLocalOcrExtractor } from './processingDrivers';
 
 const scope = { masterFn: 'M1', companyFn: 'C-SG' };
 const uploadNow = new Date('2026-07-26T11:59:00.000Z');
 const jpeg = Uint8Array.from([
   0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
 ]);
+const changedJpeg = Uint8Array.from([...jpeg, 0x01]);
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 async function setup() {
   const db = await freshDb();
   await seedDemo(db);
   const [viewer] = await db.select().from(appUser).where(eq(appUser.username, 'viewer'));
-  return { db, viewer };
+  const [admin] = await db.select().from(appUser).where(eq(appUser.username, 'admin'));
+  return { db, viewer, admin };
 }
 
 const safeReceiptFields = [
@@ -137,6 +144,54 @@ describe('quarantined document processing', () => {
     expect(retry).toMatchObject({ scansClaimed: 0, extractionsClaimed: 0 });
     expect(scan).toHaveBeenCalledTimes(1);
     expect(extract).toHaveBeenCalledTimes(1);
+  });
+
+  it('persists bounded processing errors without provider details', async () => {
+    const { db, viewer } = await setup();
+    const sensitiveMessage = 'provider response https://fixture-user:fixture-secret@vision.example.test/result?token=fixture';
+    const scanned = await uploadReceiptDocument(db, scope, { userId: viewer.userId }, {
+      clientDraftId: 'processing_error_redaction_scan_001',
+      fileName: 'scan-error.jpg',
+      declaredMimeType: 'image/jpeg',
+      content: jpeg,
+      processingNow: uploadNow,
+    });
+    const scanResult = await processDocumentJobBatch(db, {
+      scanner: { scan: async () => { throw new Error(sensitiveMessage); } },
+      maxAttempts: 1,
+      now: new Date('2026-07-26T12:00:00.000Z'),
+    });
+    expect(scanResult).toMatchObject({ scansClaimed: 1, failed: 1 });
+    const [scanJob] = await db.select().from(documentScanJob)
+      .where(eq(documentScanJob.versionId, scanned.version.id));
+    const scanSignal = (await db.select().from(outboxEvent))
+      .find((row) => row.topic === 'document.scan.requested'
+        && row.aggregateId === String(scanned.version.id));
+    expect(scanJob.lastError).toBe('Document processing failed.');
+    expect(scanSignal?.lastError).toBe('Document processing failed.');
+    expect(JSON.stringify({ scanJob, scanSignal })).not.toContain('fixture-secret');
+
+    const extracted = await uploadReceiptDocument(db, scope, { userId: viewer.userId }, {
+      clientDraftId: 'processing_error_redaction_extract_001',
+      fileName: 'extract-error.jpg',
+      declaredMimeType: 'image/jpeg',
+      content: Uint8Array.from([0xff, 0xd8, 0xff, 0xe1, 0x00, 0x10, 0x45]),
+      processingNow: uploadNow,
+    });
+    const extractionResult = await processDocumentJobBatch(db, {
+      scanner: cleanScanner(),
+      localOcr: { extract: async () => { throw new Error(sensitiveMessage); } },
+      now: new Date('2026-07-26T12:01:00.000Z'),
+    });
+    expect(extractionResult).toMatchObject({ scansClaimed: 1, clean: 1, extractionsClaimed: 1, failed: 1 });
+    const [extractionJob] = await db.select().from(documentExtraction)
+      .where(eq(documentExtraction.versionId, extracted.version.id));
+    const extractionSignal = (await db.select().from(outboxEvent))
+      .find((row) => row.topic === 'document.extraction.requested'
+        && row.aggregateId === String(extracted.version.id));
+    expect(extractionJob.lastError).toBe('Document processing failed.');
+    expect(extractionSignal?.lastError).toBe('Document processing failed.');
+    expect(JSON.stringify({ extractionJob, extractionSignal })).not.toContain('fixture-secret');
   });
 
   it('never creates extraction work for infected or indeterminate content', async () => {
@@ -265,6 +320,53 @@ describe('quarantined document processing', () => {
     }));
   });
 
+  it('does not call Vision or local OCR when an optional connector has a malformed envelope', async () => {
+    const { db, viewer } = await setup();
+    await db.insert(documentProcessingPolicy).values({
+      ...scope,
+      extractionProvider: 'byok_vision',
+      visionProvider: 'openai_compatible',
+      visionRegion: 'local',
+      visionRetentionDays: 0,
+      visionBaseUrl: 'http://127.0.0.1:1234/v1',
+      visionModel: 'receipt-vision-local',
+      visionCredentialRequired: false,
+      updatedByUserId: viewer.userId,
+    });
+    await db.update(integrationConnector).set({
+      credentialRequired: false,
+      status: 'connected',
+      health: 'healthy',
+      endpointHost: 'vision-gateway.example.test',
+      credentialEnvelope: { secret: 'plaintext' },
+      enabled: true,
+    }).where(eq(integrationConnector.connectorKey, 'document-vision'));
+    await uploadReceiptDocument(db, scope, { userId: viewer.userId }, {
+      clientDraftId: 'processing_compatible_malformed_001',
+      fileName: 'receipt.jpg',
+      declaredMimeType: 'image/jpeg',
+      content: jpeg,
+      processingNow: uploadNow,
+    });
+    const vision = vi.fn();
+    const localOcr = vi.fn();
+    const result = await processDocumentJobBatch(db, {
+      scanner: cleanScanner(),
+      vision: { extract: vision },
+      localOcr: { extract: localOcr },
+      now: new Date('2026-07-26T12:00:00.000Z'),
+    });
+
+    expect(result).toMatchObject({ clean: 1, extracted: 0, failed: 1 });
+    expect(vision).not.toHaveBeenCalled();
+    expect(localOcr).not.toHaveBeenCalled();
+    expect((await db.select().from(documentExtraction))[0]).toMatchObject({
+      provider: 'byok_vision',
+      status: 'unavailable',
+      rawText: null,
+    });
+  });
+
   it('does not call Vision or local OCR after a connector is revoked', async () => {
     const { db, viewer } = await setup();
     const encryptionKey = Buffer.alloc(32, 8);
@@ -284,6 +386,51 @@ describe('quarantined document processing', () => {
     }).where(eq(integrationConnector.connectorKey, 'document-vision'));
     await uploadReceiptDocument(db, scope, { userId: viewer.userId }, {
       clientDraftId: 'processing_vision_revoked_001',
+      fileName: 'receipt.jpg',
+      declaredMimeType: 'image/jpeg',
+      content: jpeg,
+      processingNow: uploadNow,
+    });
+    const vision = vi.fn();
+    const localOcr = vi.fn();
+    const result = await processDocumentJobBatch(db, {
+      scanner: cleanScanner(),
+      vision: { extract: vision },
+      localOcr: { extract: localOcr },
+      credentialEncryptionKey: encryptionKey,
+      now: new Date('2026-07-26T12:00:00.000Z'),
+    });
+
+    expect(result).toMatchObject({ clean: 1, extracted: 0, failed: 1 });
+    expect(vision).not.toHaveBeenCalled();
+    expect(localOcr).not.toHaveBeenCalled();
+    expect((await db.select().from(documentExtraction))[0]).toMatchObject({
+      provider: 'byok_vision',
+      status: 'unavailable',
+      rawText: null,
+    });
+  });
+
+  it('does not call Vision when a persisted credential envelope is malformed', async () => {
+    const { db, viewer } = await setup();
+    const encryptionKey = Buffer.alloc(32, 8);
+    await db.insert(documentProcessingPolicy).values({
+      ...scope,
+      extractionProvider: 'byok_vision',
+      visionProvider: 'openai',
+      visionRegion: 'sg',
+      visionRetentionDays: 0,
+      updatedByUserId: viewer.userId,
+    });
+    await db.update(integrationConnector).set({
+      status: 'connected',
+      health: 'healthy',
+      endpointHost: 'api.example.invalid',
+      credentialEnvelope: { secret: 'plaintext' },
+      enabled: true,
+    }).where(eq(integrationConnector.connectorKey, 'document-vision'));
+    await uploadReceiptDocument(db, scope, { userId: viewer.userId }, {
+      clientDraftId: 'processing_vision_malformed_001',
       fileName: 'receipt.jpg',
       declaredMimeType: 'image/jpeg',
       content: jpeg,
@@ -383,6 +530,365 @@ describe('quarantined document processing', () => {
     expect((await db.select().from(receiptInboxItem))[0]).toMatchObject({
       versionId: stored.version.id,
       status: 'review_required',
+    });
+  });
+
+  it.each([401, 500])(
+    'keeps extraction unsafe when the HTTP Vision driver returns %s',
+    async (status) => {
+      const { db, viewer } = await setup();
+      const encryptionKey = Buffer.alloc(32, 10);
+      await db.insert(documentProcessingPolicy).values({
+        ...scope,
+        extractionProvider: 'byok_vision',
+        visionProvider: 'openai',
+        visionRegion: 'sg',
+        visionRetentionDays: 0,
+        updatedByUserId: viewer.userId,
+      });
+      await db.update(integrationConnector).set({
+        status: 'connected',
+        health: 'healthy',
+        endpointHost: 'vision.example.test',
+        credentialEnvelope: encryptToken('vision-http-secret', encryptionKey),
+        enabled: true,
+      }).where(eq(integrationConnector.connectorKey, 'document-vision'));
+      const stored = await uploadReceiptDocument(db, scope, { userId: viewer.userId }, {
+        clientDraftId: `processing_vision_http_${status}`,
+        fileName: 'receipt.jpg',
+        declaredMimeType: 'image/jpeg',
+        content: jpeg,
+        processingNow: uploadNow,
+      });
+      const fetchMock = vi.fn(async () => new Response(
+        JSON.stringify({ error: 'upstream-secret https://vision.example.test/?token=fixture' }),
+        { status, headers: { 'content-type': 'application/json' } },
+      ));
+      vi.stubGlobal('fetch', fetchMock);
+      const localOcr = vi.fn(async () => ({ rawText: 'must not be used', model: 'local-fallback' }));
+
+      const result = await processDocumentJobBatch(db, {
+        scanner: cleanScanner(),
+        vision: createHttpByokVisionExtractor('https://vision.example.test/extract'),
+        localOcr: { extract: localOcr },
+        credentialEncryptionKey: encryptionKey,
+        workerId: `vision-http-worker-${status}`,
+        now: new Date('2026-07-26T12:00:00.000Z'),
+      });
+
+      expect(result).toMatchObject({
+        scansClaimed: 1,
+        clean: 1,
+        extractionsClaimed: 1,
+        extracted: 0,
+        failed: 1,
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(localOcr).not.toHaveBeenCalled();
+      const [extraction] = await db.select().from(documentExtraction)
+        .where(eq(documentExtraction.versionId, stored.version.id));
+      expect(extraction).toMatchObject({
+        provider: 'byok_vision',
+        status: 'failed',
+        rawText: null,
+        lastError: 'Document processing failed.',
+      });
+      expect(JSON.stringify(extraction)).not.toContain('upstream-secret');
+      expect(JSON.stringify(extraction)).not.toContain('fixture');
+    },
+  );
+
+  it('persists extraction through the HTTP Local OCR worker path', async () => {
+    const { db, viewer } = await setup();
+    const stored = await uploadReceiptDocument(db, scope, { userId: viewer.userId }, {
+      clientDraftId: 'processing_local_ocr_http_001',
+      fileName: 'receipt.jpg',
+      declaredMimeType: 'image/jpeg',
+      content: jpeg,
+      processingNow: uploadNow,
+    });
+    const fetchMock = vi.fn(async (_url: string | URL, init?: RequestInit) => {
+      expect(init?.method).toBe('POST');
+      expect(init?.redirect).toBe('error');
+      expect(init?.headers).toMatchObject({
+        'content-type': 'image/jpeg',
+        'x-content-sha256': stored.version.sha256,
+      });
+      expect(Buffer.from(init?.body as Uint8Array)).toEqual(Buffer.from(jpeg));
+      return new Response(JSON.stringify({
+        rawText: 'Coffee Demo Pte Ltd\nDEMO-234-0911\nSGD 32.80',
+        model: 'tesseract-5.5.3-local',
+        safetyClear: true,
+        fields: safeReceiptFields,
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await processDocumentJobBatch(db, {
+      scanner: cleanScanner(),
+      localOcr: createHttpLocalOcrExtractor('http://127.0.0.1:4567/extract'),
+      workerId: 'local-ocr-http-worker',
+      now: new Date('2026-07-26T12:00:00.000Z'),
+    });
+
+    expect(result).toMatchObject({
+      scansClaimed: 1,
+      clean: 1,
+      extractionsClaimed: 1,
+      extracted: 1,
+      failed: 0,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect((await db.select().from(documentExtraction))[0]).toMatchObject({
+      versionId: stored.version.id,
+      provider: 'local_ocr',
+      model: 'tesseract-5.5.3-local',
+      status: 'succeeded',
+      rawText: 'Coffee Demo Pte Ltd\nDEMO-234-0911\nSGD 32.80',
+    });
+  });
+
+  it('keeps each tenant scope bound when claiming Local OCR jobs', async () => {
+    const { db, viewer, admin } = await setup();
+    const singapore = await uploadReceiptDocument(db, scope, { userId: viewer.userId }, {
+      clientDraftId: 'processing_local_ocr_scope_sg_001',
+      fileName: 'sg-receipt.jpg',
+      declaredMimeType: 'image/jpeg',
+      content: jpeg,
+      processingNow: uploadNow,
+    });
+    const malaysia = await uploadReceiptDocument(
+      db,
+      { masterFn: 'M1', companyFn: 'C-MY' },
+      { userId: admin.userId },
+      {
+        clientDraftId: 'processing_local_ocr_scope_my_001',
+        fileName: 'my-receipt.jpg',
+        declaredMimeType: 'image/jpeg',
+        content: changedJpeg,
+        processingNow: uploadNow,
+      },
+    );
+    const extract = vi.fn(async (input: {
+      content: Uint8Array;
+      sha256: string;
+      mimeType: string;
+    }) => ({
+      rawText: `tenant-source:${input.sha256}`,
+      model: 'local-ocr-tenant-scope-test',
+      safetyClear: true,
+    }));
+
+    const result = await processDocumentJobBatch(db, {
+      scanner: cleanScanner(),
+      localOcr: { extract },
+      workerId: 'local-ocr-tenant-scope-worker',
+      now: new Date('2026-07-26T12:00:00.000Z'),
+    });
+
+    expect(result).toMatchObject({
+      scansClaimed: 2,
+      clean: 2,
+      extractionsClaimed: 2,
+      extracted: 2,
+      failed: 0,
+    });
+    expect(extract).toHaveBeenCalledTimes(2);
+    const calls = extract.mock.calls.map(([input]) => input);
+    expect(new Set(calls.map((input) => input.sha256))).toEqual(new Set([
+      singapore.version.sha256,
+      malaysia.version.sha256,
+    ]));
+    expect(calls.find((input) => input.sha256 === singapore.version.sha256)?.content)
+      .toEqual(jpeg);
+    expect(calls.find((input) => input.sha256 === malaysia.version.sha256)?.content)
+      .toEqual(changedJpeg);
+
+    const extractions = await db.select().from(documentExtraction);
+    expect(extractions).toHaveLength(2);
+    expect(extractions.find((row) => row.versionId === singapore.version.id)).toMatchObject({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      provider: 'local_ocr',
+      status: 'succeeded',
+      rawText: `tenant-source:${singapore.version.sha256}`,
+    });
+    expect(extractions.find((row) => row.versionId === malaysia.version.id)).toMatchObject({
+      masterFn: 'M1',
+      companyFn: 'C-MY',
+      provider: 'local_ocr',
+      status: 'succeeded',
+      rawText: `tenant-source:${malaysia.version.sha256}`,
+    });
+  });
+
+  it('keeps each tenant extraction policy and credential bound in one worker pass', async () => {
+    const { db, viewer, admin } = await setup();
+    const malaysiaScope = { masterFn: 'M1', companyFn: 'C-MY' };
+    const encryptionKey = Buffer.alloc(32, 13);
+    await db.insert(documentProcessingPolicy).values({
+      ...malaysiaScope,
+      extractionProvider: 'byok_vision',
+      visionProvider: 'openai_compatible',
+      visionRegion: 'my',
+      visionRetentionDays: 30,
+      visionBaseUrl: 'https://vision.my.example.test/extract',
+      visionModel: 'my-vision-v1',
+      visionCredentialRequired: true,
+      updatedByUserId: admin.userId,
+    });
+    await db.update(integrationConnector).set({
+      status: 'connected',
+      health: 'healthy',
+      endpointHost: 'vision.my.example.test',
+      credentialEnvelope: encryptToken('my-only-vision-secret', encryptionKey),
+      enabled: true,
+    }).where(and(
+      eq(integrationConnector.masterFn, malaysiaScope.masterFn),
+      eq(integrationConnector.companyFn, malaysiaScope.companyFn),
+      eq(integrationConnector.connectorKey, 'document-vision'),
+    ));
+    const singapore = await uploadReceiptDocument(db, scope, { userId: viewer.userId }, {
+      clientDraftId: 'processing_policy_scope_sg_001',
+      fileName: 'sg-policy-receipt.jpg',
+      declaredMimeType: 'image/jpeg',
+      content: jpeg,
+      processingNow: uploadNow,
+    });
+    const malaysia = await uploadReceiptDocument(db, malaysiaScope, { userId: admin.userId }, {
+      clientDraftId: 'processing_policy_scope_my_001',
+      fileName: 'my-policy-receipt.jpg',
+      declaredMimeType: 'image/jpeg',
+      content: changedJpeg,
+      processingNow: uploadNow,
+    });
+    const localOcr = vi.fn(async (input: {
+      content: Uint8Array;
+      sha256: string;
+      region?: string;
+      credential?: string;
+    }) => {
+      expect(input.region).toBeUndefined();
+      expect(input.credential).toBeUndefined();
+      return { rawText: `sg-local:${input.sha256}`, model: 'sg-local-ocr', safetyClear: true };
+    });
+    const vision = vi.fn(async (input: {
+      content: Uint8Array;
+      sha256: string;
+      region?: string;
+      retentionDays?: number;
+      credential?: string;
+      provider?: string;
+      baseUrl?: string;
+      model?: string;
+    }) => {
+      expect(input.region).toBe('my');
+      expect(input.retentionDays).toBe(30);
+      expect(input.credential).toBe('my-only-vision-secret');
+      expect(input.provider).toBe('openai_compatible');
+      expect(input.baseUrl).toBe('https://vision.my.example.test/extract');
+      expect(input.model).toBe('my-vision-v1');
+      return { rawText: `my-vision:${input.sha256}`, model: 'my-vision-v1', safetyClear: true };
+    });
+
+    const result = await processDocumentJobBatch(db, {
+      scanner: cleanScanner(),
+      localOcr: { extract: localOcr },
+      vision: { extract: vision },
+      credentialEncryptionKey: encryptionKey,
+      workerId: 'policy-scope-worker',
+      now: new Date('2026-07-26T12:00:00.000Z'),
+    });
+
+    expect(result).toMatchObject({
+      scansClaimed: 2,
+      clean: 2,
+      extractionsClaimed: 2,
+      extracted: 2,
+      failed: 0,
+    });
+    expect(localOcr).toHaveBeenCalledTimes(1);
+    expect(vision).toHaveBeenCalledTimes(1);
+    expect(localOcr.mock.calls[0][0].content).toEqual(jpeg);
+    expect(localOcr.mock.calls[0][0].sha256).toBe(singapore.version.sha256);
+    expect(vision.mock.calls[0][0].content).toEqual(changedJpeg);
+    expect(vision.mock.calls[0][0].sha256).toBe(malaysia.version.sha256);
+
+    const extractions = await db.select().from(documentExtraction);
+    expect(extractions.find((row) => row.versionId === singapore.version.id)).toMatchObject({
+      masterFn: 'M1',
+      companyFn: 'C-SG',
+      provider: 'local_ocr',
+      model: 'sg-local-ocr',
+      status: 'succeeded',
+      rawText: `sg-local:${singapore.version.sha256}`,
+    });
+    expect(extractions.find((row) => row.versionId === malaysia.version.id)).toMatchObject({
+      masterFn: 'M1',
+      companyFn: 'C-MY',
+      provider: 'byok_vision',
+      model: 'my-vision-v1',
+      status: 'succeeded',
+      rawText: `my-vision:${malaysia.version.sha256}`,
+    });
+  });
+
+  it('persists the provider visual fingerprint through the HTTP Vision worker path', async () => {
+    const { db, viewer } = await setup();
+    const encryptionKey = Buffer.alloc(32, 10);
+    const visualFingerprint = 'ab'.repeat(32);
+    await db.insert(documentProcessingPolicy).values({
+      ...scope,
+      extractionProvider: 'byok_vision',
+      visionProvider: 'openai',
+      visionRegion: 'sg',
+      visionRetentionDays: 0,
+      updatedByUserId: viewer.userId,
+    });
+    await db.update(integrationConnector).set({
+      status: 'connected',
+      health: 'healthy',
+      endpointHost: 'vision.example.test',
+      credentialEnvelope: encryptToken('vision-http-secret', encryptionKey),
+      enabled: true,
+    }).where(eq(integrationConnector.connectorKey, 'document-vision'));
+    const stored = await uploadReceiptDocument(db, scope, { userId: viewer.userId }, {
+      clientDraftId: 'processing_vision_http_fingerprint',
+      fileName: 'receipt.jpg',
+      declaredMimeType: 'image/jpeg',
+      content: jpeg,
+      processingNow: uploadNow,
+    });
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+      rawText: 'Merchant Example\nTotal 10.00',
+      model: 'vision-fingerprint-test',
+      visualFingerprint: visualFingerprint.toUpperCase(),
+    }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await processDocumentJobBatch(db, {
+      scanner: cleanScanner(),
+      vision: createHttpByokVisionExtractor('https://vision.example.test/extract'),
+      credentialEncryptionKey: encryptionKey,
+      workerId: 'vision-http-fingerprint-worker',
+      now: new Date('2026-07-26T12:00:00.000Z'),
+    });
+
+    expect(result).toMatchObject({
+      scansClaimed: 1,
+      clean: 1,
+      extractionsClaimed: 1,
+      extracted: 1,
+      failed: 0,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [extraction] = await db.select().from(documentExtraction)
+      .where(eq(documentExtraction.versionId, stored.version.id));
+    expect(extraction).toMatchObject({
+      provider: 'byok_vision',
+      status: 'succeeded',
+      model: 'vision-fingerprint-test',
+      visualFingerprint,
     });
   });
 

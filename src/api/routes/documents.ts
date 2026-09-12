@@ -8,6 +8,7 @@ import {
   documentGovernanceEvent,
   documentPurgeRequest,
   documentTombstone,
+  documentVersion,
   managedDocument,
 } from '../../data/schema';
 import {
@@ -25,7 +26,10 @@ import {
   accessManagedDocument,
   type DocumentAccessAction,
 } from '../../modules/documents/access';
-import { DocumentQuarantineError } from '../../modules/documents/processing';
+import {
+  DocumentQuarantineError,
+  retryDocumentProcessingWithin,
+} from '../../modules/documents/processing';
 import { DocumentStorageError } from '../../modules/documents/storage';
 import { appendAudit } from '../audit';
 import { ActionDispatchError, dispatchAction } from '../actionDispatcher';
@@ -303,6 +307,33 @@ export function createDocumentsRouter(db: DB): Router {
         idempotency: 'required',
         audit: 'required',
         execute: async (tx, tenant, input) => {
+          if (action === 'retry-processing') {
+            const versionId = payload.versionId;
+            if (typeof versionId !== 'number'
+              || !Number.isSafeInteger(versionId) || versionId <= 0) {
+              throw new ActionDispatchError(
+                400,
+                'invalid_action_payload',
+                'A positive document version id is required.',
+              );
+            }
+            const [version] = await tx.select({ id: documentVersion.id })
+              .from(documentVersion)
+              .where(and(
+                eq(documentVersion.masterFn, tenant.masterFn),
+                eq(documentVersion.companyFn, tenant.companyFn),
+                eq(documentVersion.documentId, id),
+                eq(documentVersion.id, versionId),
+              )).limit(1);
+            if (!version) {
+              throw new ActionDispatchError(
+                404,
+                'document_version_missing',
+                'The document version is unavailable in the active company.',
+              );
+            }
+            return retryDocumentProcessingWithin(tx, tenant, version.id);
+          }
           const expectedVersion = payload.expectedVersion;
           if (typeof expectedVersion !== 'number') {
             throw new ActionDispatchError(

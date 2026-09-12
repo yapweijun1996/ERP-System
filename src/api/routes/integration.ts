@@ -14,6 +14,7 @@ import {
   configureDocumentProcessingPolicyWithin,
   configureReceiptAutoSubmitPolicyWithin,
   DocumentProcessingPolicyError,
+  getDocumentProcessingReadinessWithin,
   getDocumentProcessingPolicyWithin,
   type DocumentProcessingPolicyInput,
 } from '../../modules/documents/processingPolicy';
@@ -58,6 +59,27 @@ export function createIntegrationRouter(
         (tx) => getDocumentProcessingPolicyWithin(tx, scope),
       ),
       meta: { localOcrDefault: true, minimumExternalRetentionDays: 0 },
+    });
+  });
+
+  router.get('/document-processing-readiness', async (req, res) => {
+    const session = await requireSession(db, req, res);
+    if (!session) return;
+    if (!await hasPermission(db, session, PERMISSIONS.integrationRead)) {
+      apiError(res, 403, 'permission_denied', 'You cannot read document processing readiness.');
+      return;
+    }
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    res.json({
+      data: await withTenantTransaction(
+        db,
+        scope,
+        (tx) => getDocumentProcessingReadinessWithin(tx, scope),
+      ),
+      meta: {
+        credentialValuesOmitted: true,
+        evidenceBoundary: 'source-vs-configured-provider',
+      },
     });
   });
 

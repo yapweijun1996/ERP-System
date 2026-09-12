@@ -16,6 +16,7 @@ import {
 } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
+import { isEncryptedToken } from '../../auth/tokenEnvelope';
 import { decryptToken, type EncryptedToken } from '../../auth/tokenCrypto';
 import {
   withDocumentWorkerTransaction,
@@ -123,6 +124,32 @@ function retryAt(now: Date, attempts: number): Date {
   // review. Local OCR is never an implicit fallback for a selected Vision policy.
   const delay = Math.min(60 * 60 * 1000, 2 ** Math.min(attempts, 10) * 1000);
   return new Date(now.getTime() + delay);
+}
+
+function processingErrorMessage(error: unknown): string {
+  if (error instanceof DocumentQuarantineError) {
+    return error.message;
+  }
+  const message = error instanceof Error ? error.message : String(error);
+  const normalized = message.toLowerCase();
+  if (normalized.includes('timeout') || normalized.includes('aborted')) {
+    return 'Document processing request timed out.';
+  }
+  if (normalized.includes('unavailable') || normalized.includes('not configured')) {
+    return 'Document processing service is unavailable.';
+  }
+  if (normalized.includes('requires') || normalized.includes('credential')
+    || normalized.includes('region') || normalized.includes('retention')) {
+    return 'Document processing policy requirements are not met.';
+  }
+  if (normalized.includes('indeterminate')) {
+    return 'Document scanner returned an indeterminate result.';
+  }
+  if (normalized.includes('invalid') || normalized.includes('malformed')
+    || normalized.includes('unsupported') || normalized.includes('extractable')) {
+    return 'Document processing returned invalid output.';
+  }
+  return 'Document processing failed.';
 }
 
 function maxAttemptsFor(value: number | undefined): number {
@@ -270,56 +297,64 @@ async function policyFor(db: DB, scope: Scope) {
  * document version. This is the explicit operator retry boundary after the
  * bounded automatic retry policy has moved work to dead letter.
  */
+export async function retryDocumentProcessingWithin(
+  db: DB,
+  scope: Scope,
+  versionId: number,
+  now = new Date(),
+) {
+  const [scan] = await db.select().from(documentScanJob).where(and(
+    eq(documentScanJob.masterFn, scope.masterFn),
+    eq(documentScanJob.companyFn, scope.companyFn),
+    eq(documentScanJob.versionId, versionId),
+  )).limit(1).for('update');
+  const [extraction] = await db.select().from(documentExtraction).where(and(
+    eq(documentExtraction.masterFn, scope.masterFn),
+    eq(documentExtraction.companyFn, scope.companyFn),
+    eq(documentExtraction.versionId, versionId),
+    eq(documentExtraction.extractionVersion, 1),
+  )).limit(1).for('update');
+  let scanRequeued = false;
+  let extractionRequeued = false;
+  if (scan?.status === 'dead_letter') {
+    await db.update(documentScanJob).set({
+      status: 'queued',
+      attempts: 0,
+      availableAt: now,
+      lockedAt: null,
+      lockedBy: null,
+      deadLetteredAt: null,
+      updatedAt: now,
+    }).where(eq(documentScanJob.id, scan.id));
+    await requeueSignal(db, scope, DOCUMENT_SCAN_TOPIC, versionId, now);
+    scanRequeued = true;
+  } else if (scan?.status === 'clean' && extraction?.status === 'dead_letter') {
+    await db.update(documentExtraction).set({
+      status: 'queued',
+      attempts: 0,
+      availableAt: now,
+      lockedAt: null,
+      lockedBy: null,
+      deadLetteredAt: null,
+      updatedAt: now,
+    }).where(eq(documentExtraction.id, extraction.id));
+    await requeueSignal(db, scope, DOCUMENT_EXTRACTION_TOPIC, versionId, now);
+    extractionRequeued = true;
+  }
+  if (!scan && !extraction) {
+    throw new Error('Document processing job is unavailable.');
+  }
+  return { scanRequeued, extractionRequeued };
+}
+
 export async function retryDocumentProcessing(
   db: DB,
   scope: Scope,
   versionId: number,
   now = new Date(),
 ) {
-  return withTenantTransaction(db, scope, async (tx) => {
-    const [scan] = await tx.select().from(documentScanJob).where(and(
-      eq(documentScanJob.masterFn, scope.masterFn),
-      eq(documentScanJob.companyFn, scope.companyFn),
-      eq(documentScanJob.versionId, versionId),
-    )).limit(1).for('update');
-    const [extraction] = await tx.select().from(documentExtraction).where(and(
-      eq(documentExtraction.masterFn, scope.masterFn),
-      eq(documentExtraction.companyFn, scope.companyFn),
-      eq(documentExtraction.versionId, versionId),
-      eq(documentExtraction.extractionVersion, 1),
-    )).limit(1).for('update');
-    let scanRequeued = false;
-    let extractionRequeued = false;
-    if (scan?.status === 'dead_letter') {
-      await tx.update(documentScanJob).set({
-        status: 'queued',
-        attempts: 0,
-        availableAt: now,
-        lockedAt: null,
-        lockedBy: null,
-        deadLetteredAt: null,
-        updatedAt: now,
-      }).where(eq(documentScanJob.id, scan.id));
-      await requeueSignal(tx, scope, DOCUMENT_SCAN_TOPIC, versionId, now);
-      scanRequeued = true;
-    } else if (scan?.status === 'clean' && extraction?.status === 'dead_letter') {
-      await tx.update(documentExtraction).set({
-        status: 'queued',
-        attempts: 0,
-        availableAt: now,
-        lockedAt: null,
-        lockedBy: null,
-        deadLetteredAt: null,
-        updatedAt: now,
-      }).where(eq(documentExtraction.id, extraction.id));
-      await requeueSignal(tx, scope, DOCUMENT_EXTRACTION_TOPIC, versionId, now);
-      extractionRequeued = true;
-    }
-    if (!scan && !extraction) {
-      throw new Error('Document processing job is unavailable.');
-    }
-    return { scanRequeued, extractionRequeued };
-  });
+  return withTenantTransaction(db, scope, (tx) =>
+    retryDocumentProcessingWithin(tx, scope, versionId, now));
 }
 
 function normalizeReceiptFieldValue(fieldKey: string, value: string): string {
@@ -590,16 +625,19 @@ async function createExtractionAfterClean(
         eq(integrationConnector.connectorKey, 'document-vision'),
       )).limit(1);
       model = policy.visionModel ?? `${policy.visionProvider ?? 'vision'}-vision`;
+      const malformedCredential = connector?.credentialEnvelope != null
+        && !isEncryptedToken(connector.credentialEnvelope);
       if (
         !options.vision
         || !policy.visionProvider
         || !policy.visionRegion
         || policy.visionRetentionDays == null
+        || malformedCredential
         || (policy.visionCredentialRequired && (
           !connector
           || !connector.enabled
           || connector.status !== 'connected'
-          || !connector.credentialEnvelope
+          || !isEncryptedToken(connector.credentialEnvelope)
         ))
       ) {
         status = 'unavailable';
@@ -760,7 +798,7 @@ export async function processDocumentJobBatch(
         throw new Error(`Scanner returned indeterminate result: ${result.resultCode ?? 'unknown'}`);
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = processingErrorMessage(error);
       const status = options.scanner ? 'indeterminate' : 'unavailable';
       const nextAttempts = job.attempts + 1;
       const terminal = nextAttempts >= maxAttempts;
@@ -771,7 +809,7 @@ export async function processDocumentJobBatch(
         lockedAt: null,
         lockedBy: null,
         deadLetteredAt: terminal ? now : null,
-        lastError: message.slice(0, 1000),
+        lastError: message,
         updatedAt: now,
       }).where(and(eq(documentScanJob.id, job.id), eq(documentScanJob.lockedBy, workerId))));
       await markSignalFailed(
@@ -802,6 +840,9 @@ export async function processDocumentJobBatch(
         return { policy, connector };
       });
       const { policy, connector } = context;
+      if (connector?.credentialEnvelope != null && !isEncryptedToken(connector.credentialEnvelope)) {
+        throw new Error('BYOK Vision connector credentials are unavailable.');
+      }
       const source = await versionContext(db, scope, job.versionId);
       const stored = await readManagedDocument(
         db,
@@ -820,7 +861,7 @@ export async function processDocumentJobBatch(
       let credential: string | undefined;
       if (job.provider === 'byok_vision' && policy.visionCredentialRequired) {
         if (!connector?.enabled || connector.status !== 'connected'
-          || !connector.credentialEnvelope || !policy.visionRegion
+          || !isEncryptedToken(connector.credentialEnvelope) || !policy.visionRegion
           || policy.visionRetentionDays == null) {
           throw new Error(
             'BYOK Vision requires a connected credential, region and retention policy.',
@@ -877,7 +918,8 @@ export async function processDocumentJobBatch(
       await markSignalDelivered(db, scope, DOCUMENT_EXTRACTION_TOPIC, job.versionId, now);
       extracted += 1;
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const rawMessage = error instanceof Error ? error.message : String(error);
+      const message = processingErrorMessage(error);
       const nextAttempts = job.attempts + 1;
       const terminal = nextAttempts >= maxAttempts;
       const availableAt = retryAt(now, nextAttempts);
@@ -885,15 +927,15 @@ export async function processDocumentJobBatch(
         status: terminal
           ? 'dead_letter'
           : error instanceof DocumentQuarantineError
-          || message.toLowerCase().includes('unavailable')
-          || message.toLowerCase().includes('requires')
+          || rawMessage.toLowerCase().includes('unavailable')
+          || rawMessage.toLowerCase().includes('requires')
           ? 'unavailable'
           : 'failed',
         availableAt,
         lockedAt: null,
         lockedBy: null,
         deadLetteredAt: terminal ? now : null,
-        lastError: message.slice(0, 1000),
+        lastError: message,
         updatedAt: now,
       }).where(and(eq(documentExtraction.id, job.id), eq(documentExtraction.lockedBy, workerId))));
       await markSignalFailed(

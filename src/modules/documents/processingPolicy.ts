@@ -1,6 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import { appendAudit } from '../../api/audit';
+import { isEncryptedToken } from '../../auth/tokenEnvelope';
 import {
   documentProcessingPolicy,
   integrationConnector,
@@ -68,6 +69,95 @@ export async function getDocumentProcessingPolicyWithin(
     autoSubmitMinConfidence: '0.9800',
     version: 0,
     updatedAt: null,
+  };
+}
+
+/**
+ * Return a secret-free readiness projection. Source capability, Company
+ * configuration and live provider evidence are deliberately separate so a
+ * stored credential can never be mistaken for a verified external service.
+ */
+export async function getDocumentProcessingReadinessWithin(
+  exec: DB,
+  scope: DocumentProcessingPolicyScope,
+) {
+  const policy = await getDocumentProcessingPolicyWithin(exec, scope);
+  const [connector] = await exec.select({
+    status: integrationConnector.status,
+    health: integrationConnector.health,
+    endpointHost: integrationConnector.endpointHost,
+    credentialRequired: integrationConnector.credentialRequired,
+    credentialEnvelope: integrationConnector.credentialEnvelope,
+    enabled: integrationConnector.enabled,
+    lastCheckedAt: integrationConnector.lastCheckedAt,
+    lastSuccessAt: integrationConnector.lastSuccessAt,
+    lastErrorCode: integrationConnector.lastErrorCode,
+  }).from(integrationConnector).where(and(
+    eq(integrationConnector.masterFn, scope.masterFn),
+    eq(integrationConnector.companyFn, scope.companyFn),
+    eq(integrationConnector.connectorKey, 'document-vision'),
+  )).limit(1);
+
+  const credentialPresent = connector?.credentialEnvelope != null;
+  const credentialValid = !credentialPresent || isEncryptedToken(connector?.credentialEnvelope);
+  const credentialConfigured = connector == null
+    ? false
+    : credentialValid && (!connector.credentialRequired || credentialPresent);
+  const reasonCodes: string[] = [];
+  if (policy.extractionProvider === 'local_ocr') {
+    reasonCodes.push('local_ocr_selected');
+  } else {
+    if (!connector) reasonCodes.push('provider_connector_missing');
+    if (!connector?.enabled || connector.status !== 'connected') {
+      reasonCodes.push('provider_connector_not_connected');
+    }
+    if (connector?.credentialRequired && !credentialPresent) {
+      reasonCodes.push('provider_credentials_missing');
+    }
+    if (credentialPresent && !credentialValid) {
+      reasonCodes.push('provider_credentials_invalid');
+    }
+    if (!connector?.endpointHost) reasonCodes.push('provider_endpoint_missing');
+    if (!policy.visionRegion) reasonCodes.push('provider_region_missing');
+    if (policy.visionRetentionDays == null) reasonCodes.push('provider_retention_missing');
+    if (connector?.health !== 'healthy' || !connector.lastCheckedAt || !connector.lastSuccessAt) {
+      reasonCodes.push(connector?.lastErrorCode ?? 'provider_health_unverified');
+    }
+  }
+  const externalProviderReady = policy.extractionProvider === 'byok_vision'
+    && reasonCodes.length === 0;
+
+  return {
+    sourceCapability: {
+      localOcr: true,
+      byokVision: true,
+    },
+    configured: {
+      extractionProvider: policy.extractionProvider,
+      visionProvider: policy.visionProvider,
+      visionRegion: policy.visionRegion,
+      visionRetentionDays: policy.visionRetentionDays,
+      visionBaseUrl: policy.visionBaseUrl,
+      visionModel: policy.visionModel,
+      credentialRequired: connector?.credentialRequired ?? true,
+      credentialConfigured,
+      endpointHost: connector?.endpointHost ?? null,
+      connectorStatus: connector?.status ?? 'missing',
+      connectorEnabled: connector?.enabled ?? false,
+      health: connector?.health ?? 'unknown',
+      lastCheckedAt: connector?.lastCheckedAt ?? null,
+      lastSuccessAt: connector?.lastSuccessAt ?? null,
+      lastErrorCode: connector?.lastErrorCode ?? null,
+    },
+    evidence: {
+      externalProviderReady,
+      class: policy.extractionProvider === 'local_ocr'
+        ? 'local-ocr-source-capability'
+        : externalProviderReady
+          ? 'provider-health-verified'
+          : 'configured-provider-unverified',
+      reasonCodes: [...new Set(reasonCodes)],
+    },
   };
 }
 
@@ -152,7 +242,8 @@ export async function configureDocumentProcessingPolicyWithin(
       eq(integrationConnector.companyFn, scope.companyFn),
       eq(integrationConnector.connectorKey, 'document-vision'),
     )).limit(1);
-    if (!connector?.enabled || connector.status !== 'connected' || !connector.credentialEnvelope) {
+    if (!connector?.enabled || connector.status !== 'connected'
+      || !isEncryptedToken(connector.credentialEnvelope)) {
       throw new DocumentProcessingPolicyError(
         'vision_connector_required',
         'Configure and enable the encrypted Document Vision connector before selecting BYOK Vision.',

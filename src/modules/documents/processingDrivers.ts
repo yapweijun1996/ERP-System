@@ -4,19 +4,107 @@ import type {
   MalwareScanner,
 } from './processing';
 
+const MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
+
+async function cancelResponseBody(response: Response) {
+  try {
+    await response.body?.cancel();
+  } catch {
+    // Preserve the bounded application-owned error when cleanup fails.
+  }
+}
+
 function boundedUrl(value: string, label: string): URL {
   const url = new URL(value);
   if (!['http:', 'https:'].includes(url.protocol)) {
     throw new Error(`${label} must use HTTP or HTTPS.`);
   }
+  if (url.username || url.password || url.search || url.hash) {
+    throw new Error(`${label} must not contain credentials, query parameters or fragments.`);
+  }
   return url;
+}
+
+async function boundedResponseText(response: Response): Promise<string> {
+  const contentLength = response.headers.get('content-length');
+  if (contentLength != null) {
+    const normalizedLength = contentLength.trim();
+    const parsedLength = Number(normalizedLength);
+    if (!/^\d+$/.test(normalizedLength) || !Number.isSafeInteger(parsedLength)) {
+      await cancelResponseBody(response);
+      throw new Error('Document processing service returned an invalid content length.');
+    }
+    if (Number.isFinite(parsedLength) && parsedLength > MAX_RESPONSE_BYTES) {
+      await cancelResponseBody(response);
+      throw new Error('Document processing service response exceeds the 8 MiB limit.');
+    }
+  }
+  if (!response.body) {
+    const text = await response.text();
+    // Custom runtimes may expose text() without a readable body; enforce the
+    // same byte cap before parsing instead of trusting that fallback.
+    if (new TextEncoder().encode(text).byteLength > MAX_RESPONSE_BYTES) {
+      throw new Error('Document processing service response exceeds the 8 MiB limit.');
+    }
+    return text;
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  let readerCancelled = false;
+  const cancelReader = async () => {
+    if (readerCancelled) return;
+    readerCancelled = true;
+    try {
+      await reader.cancel();
+    } catch {
+      // Preserve the original bounded or transport error if stream cancellation fails.
+    }
+  };
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_RESPONSE_BYTES) {
+        await cancelReader();
+        throw new Error('Document processing service response exceeds the 8 MiB limit.');
+      }
+      chunks.push(value);
+    }
+  } catch (error) {
+    await cancelReader();
+    throw error;
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
 }
 
 async function responseJson(response: Response) {
   if (!response.ok) {
+    await cancelResponseBody(response);
     throw new Error(`Document processing service returned HTTP ${response.status}.`);
   }
-  return response.json() as Promise<Record<string, unknown>>;
+  const text = await boundedResponseText(response);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error('Document processing service returned an invalid JSON response.');
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Document processing service returned an invalid JSON response.');
+  }
+  return parsed as Record<string, unknown>;
 }
 
 function extractionResult(
@@ -32,6 +120,16 @@ function extractionResult(
   }
   if (body.fields != null && !Array.isArray(body.fields)) {
     throw new Error(`${service} returned invalid structured fields.`);
+  }
+  let visualFingerprint: string | undefined;
+  if (body.visualFingerprint != null) {
+    if (typeof body.visualFingerprint !== 'string') {
+      throw new Error(`${service} returned an invalid visual fingerprint.`);
+    }
+    visualFingerprint = body.visualFingerprint.trim().toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(visualFingerprint)) {
+      throw new Error(`${service} returned an invalid visual fingerprint.`);
+    }
   }
   const fields: ExtractionFieldCandidate[] = (body.fields ?? []).map((value, index) => {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -62,6 +160,7 @@ function extractionResult(
   return {
     rawText: body.rawText,
     model: String(body.model || fallbackModel).slice(0, 160),
+    visualFingerprint,
     safetyClear: body.safetyClear === true,
     fields,
   };
@@ -73,6 +172,7 @@ export function createHttpMalwareScanner(urlValue: string): MalwareScanner {
     async scan(input) {
       const response = await fetch(url, {
         method: 'POST',
+        redirect: 'error',
         headers: {
           'content-type': input.mimeType,
           'x-content-sha256': input.sha256,
@@ -99,6 +199,7 @@ export function createHttpLocalOcrExtractor(urlValue: string): DocumentExtractor
     async extract(input) {
       const response = await fetch(url, {
         method: 'POST',
+        redirect: 'error',
         headers: {
           'content-type': input.mimeType,
           'x-content-sha256': input.sha256,
@@ -131,6 +232,7 @@ export function createHttpByokVisionExtractor(urlValue: string): DocumentExtract
       if (input.model) headers['x-provider-model'] = input.model;
       const response = await fetch(url, {
         method: 'POST',
+        redirect: 'error',
         headers,
         body: Buffer.from(input.content),
         signal: AbortSignal.timeout(120_000),
