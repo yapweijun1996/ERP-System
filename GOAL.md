@@ -132,7 +132,7 @@ whenever task status or a goal checkbox changes.
 | Inherited open delivery tasks at baseline | 0 | 8 | 8 |
 | New AI Native delivery workstreams, TASK-228–239 | 7 | 5 | 12 |
 | Goal DoD criteria, G01.1–G12.4 | 32 | 16 | 48 |
-| Execution checkpoints, five per delivery packet | 42 | 18 | 60 |
+| Execution checkpoints, five per delivery packet | 43 | 17 | 60 |
 | Goal documentation tasks, TASK-227 and TASK-240 | 2 | 0 | 2 |
 
 Registry states: **227 Done / 6 In Progress / 4 Todo / 3 Blocked / 240 Total**.
