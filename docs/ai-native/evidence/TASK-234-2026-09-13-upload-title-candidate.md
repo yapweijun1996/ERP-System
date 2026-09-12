@@ -68,6 +68,7 @@ both themes and focus/overflow checks.
 | `npm run docs:check` | Pass in candidate, 72 Markdown files / 759 local links |
 | `git diff --check` | Pass |
 | Root integration | Pass, commit `5e983e9`; `git diff --cached --check` and final working-tree diff check pass |
+| Final root state | HEAD `c97f47e4f7cf059407d7e67631d41511e59a6b54`; 40 pre-existing dirty paths preserved, no unmerged paths, cached diff empty |
 | `LIST_LAYOUT_ONLY=1 node scripts/audit-screens.mjs` | Not completed: the candidate run remained in Chromium route enumeration for 60 seconds after reporting 50 routes; no assertion failure was emitted. Existing root evidence records the same audit passing before this candidate was assembled. |
 
 The first focused E2E attempt needed a temporary `web/node_modules` link in the
