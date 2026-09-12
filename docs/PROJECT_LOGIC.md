@@ -57,7 +57,9 @@ The reproducible Receipt pilot runner now passes SG/MY local fixture journeys,
 exact-confirmation cancellation and persisted Pack/PDF verification after database
 reopen. Each preview row must match a successful receipt detail read, and exact
 source files are retrieved through document permissions and hash-verified before
-confirmation. File retrieval does not establish human viewing. Fixture usage is explicitly synthetic; interactive live mode remains gated
+confirmation. The inspection guard rejects duplicate preview/detail identities and
+extra successful details before approval. File retrieval does not establish human
+viewing. Fixture usage is explicitly synthetic; interactive live mode remains gated
 by account/data-policy/spend authorization. See [pilot execution evidence](ai-native/evidence/TASK-234-2026-09-09.md#reproducible-pilot-runner--local-fixture-evidence).
 
 The active milestone is Phase 2 of [GOAL.md](../GOAL.md), the real Receipt-to-Pack

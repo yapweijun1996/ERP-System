@@ -443,6 +443,14 @@ callback; rejected evidence cannot reach approval. File retrieval is not proof o
 human viewing, OCR, scanner execution or model image understanding. Real-model and
 operator confirmation/viewing remain separate authorized acceptance gates.
 
+2026-09-13 identity-hardening follow-up: `verifyPilotInspection` now also fails
+closed when preview receipt IDs repeat, successful `receipt.get` identities repeat,
+or the successful detail identity set contains an extra/missing receipt. The
+one-to-one set check runs before version/document/hash comparison and before the
+review callback. New duplicate/extra identity negatives pass alongside the SG/MY
+fixture runner; this strengthens local orchestration evidence without changing
+tenant, document-permission or Pack command rules. See [dated identity-guard evidence](evidence/TASK-234-2026-09-13-inspection-identity-guard.md).
+
 ### Reproducible pilot execution checkpoint
 
 Implemented a typed local orchestration harness under `src/pilot/receiptPilot.ts` and a
