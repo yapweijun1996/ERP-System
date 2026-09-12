@@ -560,6 +560,72 @@ describe('Company Receipts API', () => {
     expect((await revokedRead.json()).error.code).toBe('permission_denied');
   });
 
+  it('serves Pack print as an inline PDF artifact and audits the export access', async () => {
+    const scope = { masterFn: 'M1', companyFn: 'C-SG' };
+    const uploaded = await evidence(scope, adminId, 'receipt_api_print_0001');
+    await withTenantTransaction(db, scope, (tx) => createCompanyReceiptWithin(
+      tx,
+      scope,
+      adminId,
+      payload(uploaded.document.id, uploaded.version.id),
+    ));
+    const auth = await login('admin', 'demo1234');
+    const created = await fetch(`${baseUrl}/api/company-receipts/packs`, {
+      method: 'POST',
+      headers: {
+        cookie: auth.cookie,
+        'x-csrf-token': auth.csrf,
+        'content-type': 'application/json',
+        'x-request-id': 'company-receipt-pack-print-create-0001',
+      },
+      body: JSON.stringify({
+        packKey: 'company-receipt-pack:print-0001',
+        dateFrom: '2026-08-10',
+        dateTo: '2026-08-10',
+        locale: 'en',
+      }),
+    });
+    expect(created.status).toBe(201);
+    const createdBody = await created.json() as { data: { pack: { id: number } } };
+    const printResponse = await fetch(
+      `${baseUrl}/api/company-receipts/packs/${createdBody.data.pack.id}/pdf?action=print`,
+      { headers: { cookie: auth.cookie, 'x-request-id': 'company-receipt-pack-print-0001' } },
+    );
+    expect(printResponse.status).toBe(200);
+    expect(printResponse.headers.get('content-type')).toBe('application/pdf');
+    expect(printResponse.headers.get('content-disposition')).toMatch(/^inline;/);
+    expect(Number(printResponse.headers.get('content-length'))).toBeGreaterThan(0);
+    expect(printResponse.headers.get('cache-control')).toBe('private, no-store');
+    expect(printResponse.headers.get('x-receipt-pack-sha256')).toMatch(/^[0-9a-f]{64}$/);
+    expect(printResponse.headers.get('x-receipt-pack-source-sha256')).toMatch(/^[0-9a-f]{64}$/);
+    expect(printResponse.headers.get('x-receipt-pack-access-purpose'))
+      .toBe('receipt_pack_original_evidence_export');
+    const reader = printResponse.body?.getReader();
+    expect(reader).toBeDefined();
+    const firstChunk = await reader!.read();
+    await reader!.cancel();
+    expect(firstChunk.done).toBe(false);
+    expect(new TextDecoder().decode(firstChunk.value?.subarray(0, 4))).toBe('%PDF');
+    const [printAudit] = await db.select({
+      action: auditLog.action,
+      after: auditLog.after,
+    }).from(auditLog).where(and(
+      eq(auditLog.masterFn, scope.masterFn),
+      eq(auditLog.companyFn, scope.companyFn),
+      eq(auditLog.entity, 'company_receipt_pack'),
+      eq(auditLog.entityId, String(createdBody.data.pack.id)),
+      eq(auditLog.action, 'pdf_print'),
+    ));
+    expect(printAudit).toMatchObject({
+      action: 'pdf_print',
+      after: {
+        accessPurpose: 'receipt_pack_original_evidence_export',
+        snapshotVisibility: 'company',
+        currentVisibility: 'company',
+      },
+    });
+  }, 120_000);
+
   it('denies register reads when only the legacy receipt mutation grant remains', async () => {
     const [employeeRole] = await db.select().from(role).where(and(
       eq(role.masterFn, 'M1'),
