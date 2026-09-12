@@ -205,7 +205,7 @@ export function validateReceiptPilotCaseSet(
     expected: testCase.expected,
   }));
   if (new Set(signatures).size !== signatures.length) throw new Error('pilot_case_input_duplicate');
-  const categories = [...new Set(cases.map((testCase) => testCase.category))].sort();
+  const categories: string[] = [...new Set(cases.map((testCase) => testCase.category))].sort();
   for (const category of Array.from({ length: 16 }, (_, index) => `P${String(index + 1).padStart(2, '0')}`)) {
     if (!categories.includes(category)) throw new Error('pilot_case_category_missing');
   }
