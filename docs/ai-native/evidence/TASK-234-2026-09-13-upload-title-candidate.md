@@ -86,3 +86,13 @@ release owner must authorize publication of the committed source through the
 main-only Pages workflow, then verify hosted My Receipts upload without a
 temporary source override. That hosted check still cannot substitute for the
 real server/provider and business-acceptance gates.
+
+## Local preview title recheck — 2026-09-13
+
+After reloading the current local Vite preview at
+`http://127.0.0.1:4397/?toolbar-audit=1#company-receipts`, the accessible page
+contains exactly one heading named `Expenses & Tax unavailable` and zero
+elements whose exact text is `Expenses &amp; Tax unavailable`. This confirms the
+parameterized i18n title repair in the served local build. The check is local
+browser evidence only; no source override, remote write, publication, provider
+request or capability-count change occurred.
