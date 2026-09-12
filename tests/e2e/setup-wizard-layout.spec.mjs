@@ -93,6 +93,7 @@ async function main() {
   const viewports = [
     { label: 'desktop', width: 1280, height: 900 },
     { label: 'split-pane', width: 753, height: 837 },
+    { label: 'reported-pane', width: 603, height: 837 },
     { label: 'iPhone', width: 390, height: 844 },
     { label: 'small-mobile', width: 375, height: 812 },
   ];
@@ -279,6 +280,48 @@ async function main() {
             || moduleState.horizontalOverflow > 1) {
             throw new Error(`desktop: module activation defaults or layout regressed: ${JSON.stringify(moduleState)}`);
           }
+
+          // Long content must scroll independently while both navigation bars stay visible.
+          for (const size of [{ width: 1280, height: 900 }, { width: 603, height: 837 },
+            { width: 390, height: 844 }, { width: 603, height: 420 }]) {
+            await page.setViewportSize(size);
+            const scrollState = await page.evaluate(() => {
+              const body = document.querySelector('#wizStepBody');
+              const panel = document.querySelector('.wizard-panel');
+              const header = document.querySelector('.wizard-brandbar');
+              const footer = document.querySelector('.wizard-savebar');
+              body.scrollTop = 0;
+              const initial = [header.getBoundingClientRect().top, footer.getBoundingClientRect().bottom];
+              const positions = [];
+              for (const fraction of [0, 0.5, 1]) {
+                body.scrollTop = (body.scrollHeight - body.clientHeight) * fraction;
+                const h = header.getBoundingClientRect();
+                const f = footer.getBoundingClientRect();
+                const b = body.getBoundingClientRect();
+                positions.push({ top: h.top, bottom: f.bottom, bodyTop: b.top, bodyBottom: b.bottom,
+                  headerBottom: h.bottom, footerTop: f.top });
+              }
+              const lastInput = body.querySelector('input[data-module-key="agent_governance"]')
+                || [...body.querySelectorAll('input')].at(-1);
+              lastInput.blur();
+              lastInput.focus();
+              const focused = lastInput.getBoundingClientRect();
+              const bounds = body.getBoundingClientRect();
+              return { initial, positions, height: innerHeight, bodyHeight: body.clientHeight,
+                maxScroll: body.scrollHeight - body.clientHeight, panelScroll: panel.scrollTop,
+                documentOverflow: document.documentElement.scrollWidth > innerWidth,
+                focusedVisible: focused.top >= bounds.top && focused.bottom <= bounds.bottom };
+            });
+            if (scrollState.bodyHeight <= 0 || scrollState.maxScroll <= 0 || scrollState.panelScroll !== 0
+              || scrollState.documentOverflow || !scrollState.focusedVisible
+              || scrollState.positions.some(position => Math.abs(position.top - scrollState.initial[0]) > 1
+                || Math.abs(position.bottom - scrollState.initial[1]) > 1
+                || position.top < 0 || position.bottom > scrollState.height
+                || position.bodyTop < position.headerBottom || position.bodyBottom > position.footerTop)) {
+              throw new Error(`Persistent wizard navigation failed at ${size.width}x${size.height}: ${JSON.stringify(scrollState)}`);
+            }
+          }
+          await page.setViewportSize({ width: viewport.width, height: viewport.height });
 
           await page.locator('#wizModuleSeg input[data-module-key="sales"]').click();
           if (!await page.locator('#wizModuleSeg input[data-module-key="finance"]').isChecked()) {

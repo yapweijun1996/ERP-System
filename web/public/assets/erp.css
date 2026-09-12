@@ -156,7 +156,10 @@ body.auth-locked #scrim{display:none !important;}
 /* ===== first-run setup — mobile-first language selection ===== */
 #setupWizardView.auth-view{padding:20px;}
 #setupWizardView .wizard-panel{width:min(680px,100%);height:80vh;min-height:80vh;
-  justify-content:flex-start;gap:0;padding:38px 38px 28px;overflow:auto;scrollbar-width:thin;}
+  justify-content:flex-start;gap:0;padding:38px 38px 28px;overflow:hidden;}
+/* Keep navigation outside the single scrolling region, including long steps. */
+#setupWizardView .wizard-brandbar,#setupWizardView .stepper,#setupWizardView .wizard-savebar{flex-shrink:0;}
+#setupWizardView .wizard-step-body{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:3px;scroll-padding-block:8px;}
 #setupWizardView .wizard-panel::before{content:"";position:absolute;z-index:0;pointer-events:none;
   top:-72px;left:-10%;width:120%;height:270px;border-radius:0 0 54% 30% / 0 0 42% 24%;
   background:radial-gradient(ellipse at 78% 38%,rgba(191,219,254,.80),transparent 52%),

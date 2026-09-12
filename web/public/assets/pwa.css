@@ -166,7 +166,7 @@ html,body{
     height:calc(100dvh - 40px - var(--safe-top) - var(--safe-bottom));
     min-height:calc(100dvh - 40px - var(--safe-top) - var(--safe-bottom));
   }
-  /* The wizard panel scrolls vertically on touch layouts. Keep its decorative
+  /* The wizard content scrolls vertically on touch layouts. Keep its decorative
      header shape inside the panel so it cannot create a horizontal swipe area. */
   #setupWizardView .wizard-panel::before{left:0;width:100%;}
   .detail{
@@ -294,7 +294,7 @@ html,body{
 
 /* The initial language choice is a short decision, not a scrolling form.
    These scoped reductions retain 44px touch targets and leave the longer
-   data-entry steps free to use the panel's normal vertical scrolling. */
+   data-entry steps free to use the content area's vertical scrolling. */
 @media (max-width:980px){
   #setupWizardView .wizard-panel{padding:24px 28px 18px;}
   #setupWizardView .wizard-brandbar{align-items:center;gap:12px;}
@@ -358,7 +358,7 @@ html,body{
 }
 
 /* Module activation is deliberately a readable checklist: it can use the
-   wizard panel's normal vertical scroll without reintroducing horizontal
+   wizard content area's vertical scroll without reintroducing horizontal
    overflow or shrinking checkbox targets below touch size. */
 #setupWizardView .wiz-module-grid{
   display:grid;
