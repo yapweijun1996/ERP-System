@@ -1,0 +1,16 @@
+- generic [active] [ref=e1]:
+  - link "Skip to content" [ref=e2] [cursor=pointer]:
+    - /url: "#viewRoot"
+  - main "Loading ERP workspace" [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e7]:
+        - generic [ref=e8]: Aria ERP
+        - generic [ref=e9]: Secure workspace
+      - heading "Loading workspace…" [level=1] [ref=e10]
+      - status [ref=e18]:
+        - generic [ref=e19]:
+          - strong [ref=e20]: Starting local demo database
+          - generic [ref=e21]: 3%
+        - progressbar "Demo database loading progress" [ref=e22]
+        - paragraph [ref=e24]: Loading PGlite and connecting to IndexedDB…
+        - generic [ref=e25]: First visit may take longer while the demo workspace is prepared.

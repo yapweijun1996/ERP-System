@@ -1,0 +1,100 @@
+- generic [active] [ref=f2e1]:
+  - link "Skip to content" [ref=f2e2] [cursor=pointer]:
+    - /url: "#viewRoot"
+  - generic [ref=f2e26]:
+    - complementary "Primary navigation" [ref=f2e27]:
+      - button "Aria Acme Mfg." [ref=f2e28] [cursor=pointer]:
+        - generic [ref=f2e31]:
+          - text: Aria
+          - generic [ref=f2e32]: Acme Mfg.
+      - generic [ref=f2e33]:
+        - heading "Operations" [level=6] [ref=f2e34]
+        - button "Home" [ref=f2e35] [cursor=pointer]
+        - button "Sales" [ref=f2e40] [cursor=pointer]
+        - button "Purchasing" [ref=f2e45] [cursor=pointer]
+        - button "CRM" [ref=f2e51] [cursor=pointer]
+        - button "Inventory" [ref=f2e55] [cursor=pointer]
+        - button "Warehouse" [ref=f2e60] [cursor=pointer]
+        - button "Manufacturing" [ref=f2e65] [cursor=pointer]
+        - button "Quality" [ref=f2e69] [cursor=pointer]
+      - generic [ref=f2e74]:
+        - heading "Finance & Back office" [level=6] [ref=f2e75]
+        - button "My Work" [ref=f2e76] [cursor=pointer]
+        - button "Finance" [ref=f2e81] [cursor=pointer]
+        - button "HR / Payroll" [ref=f2e86] [cursor=pointer]
+        - button "Projects" [ref=f2e92] [cursor=pointer]
+        - button "Service" [ref=f2e98] [cursor=pointer]
+        - button "Fixed Assets" [ref=f2e102] [cursor=pointer]
+      - generic [ref=f2e107]:
+        - heading "Platform" [level=6] [ref=f2e108]
+        - button "Approvals" [ref=f2e109] [cursor=pointer]
+        - button "Reporting / BI" [ref=f2e115] [cursor=pointer]
+        - button "Admin" [ref=f2e119] [cursor=pointer]
+        - button "Integration" [ref=f2e124] [cursor=pointer]
+      - button "Settings" [ref=f2e129] [cursor=pointer]
+    - generic [ref=f2e134]:
+      - banner [ref=f2e135]:
+        - button "Search (Command K)" [ref=f2e136]:
+          - searchbox "Search documents, items, partners, actions…" [ref=f2e140]
+          - generic [ref=f2e141]: ⌘K
+        - button "Acme Singapore Singapore HQ" [ref=f2e142] [cursor=pointer]:
+          - generic [ref=f2e143]: Acme Singapore
+          - generic [ref=f2e146]: Singapore HQ
+        - button "FY2026 · P06 June 2026 · SGD" [ref=f2e147] [cursor=pointer]:
+          - generic [ref=f2e148]: FY2026 · P06
+          - generic [ref=f2e151]: June 2026 · SGD
+        - generic [ref=f2e152]: DEMO
+        - button "Quick create" [ref=f2e153] [cursor=pointer]
+        - button "2" [ref=f2e156] [cursor=pointer]
+        - button "Team Calendar" [ref=f2e161] [cursor=pointer]
+        - button "Language" [ref=f2e165] [cursor=pointer]
+        - button "Toggle appearance" [ref=f2e169] [cursor=pointer]
+        - button [ref=f2e173] [cursor=pointer]:
+          - img "Avery Tan · Company Owner profile image" [ref=f2e174]
+      - generic [ref=f2e180]:
+        - generic [ref=f2e181]:
+          - navigation "Breadcrumb" [ref=f2e182]:
+            - generic [ref=f2e183]: Acme Singapore
+            - generic [aria-hidden] [ref=f2e184]: ›
+            - button "My Work" [ref=f2e185] [cursor=pointer]
+            - generic [aria-hidden] [ref=f2e186]: ›
+            - generic [ref=f2e187]: My Receipts
+          - tablist "My Work" [ref=f2e188]:
+            - tab "My Leave" [ref=f2e189] [cursor=pointer]
+            - tab "My Claims" [ref=f2e194] [cursor=pointer]
+            - tab "My Receipts" [selected] [ref=f2e199] [cursor=pointer]
+            - tab "Receipt & Tax Evidence" [ref=f2e204] [cursor=pointer]
+            - tab "Team Calendar" [ref=f2e210] [cursor=pointer]
+            - tab "My Approvals" [ref=f2e216] [cursor=pointer]
+          - generic [ref=f2e220]:
+            - heading "My Receipts" [level=1] [ref=f2e221]
+            - generic [ref=f2e222]: "0"
+          - generic [ref=f2e223]: Every stored file stays quarantined until malware scanning is clean; preview, extraction, claims and export remain blocked beforehand.
+        - generic [ref=f2e224]:
+          - generic [ref=f2e225]:
+            - button "Offline draft 0" [disabled] [ref=f2e226] [cursor=pointer]:
+              - generic [ref=f2e227]: Offline draft
+              - generic [ref=f2e228]: "0"
+            - button "Stored securely 0" [disabled] [ref=f2e229] [cursor=pointer]:
+              - generic [ref=f2e230]: Stored securely
+              - generic [ref=f2e231]: "0"
+          - generic [ref=f2e232]: JPEG · PNG · HEIC · PDF · 20 MB · PDF ≤ 20 pages
+          - generic [ref=f2e234]: Offline drafts are stored only on this device. Signing out warns and clears every unsynchronised draft.
+          - generic [ref=f2e239]:
+            - heading "No receipts or drafts" [level=3] [ref=f2e243]
+            - paragraph [ref=f2e244]: Take a photo or choose JPEG, PNG, HEIC or PDF evidence (20 MB maximum; PDFs up to 20 pages).
+  - dialog [aria-hidden]:
+    - generic:
+      - searchbox
+      - button
+    - generic:
+      - generic:
+        - generic: ↑↓
+        - generic: Navigate
+      - generic:
+        - generic: ↵
+        - generic: Select
+      - generic:
+        - generic: esc
+        - generic: Close
+  - generic: Account · Avery Tan · Company Owner

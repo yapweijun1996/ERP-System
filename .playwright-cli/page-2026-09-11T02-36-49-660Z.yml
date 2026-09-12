@@ -1,0 +1,167 @@
+- generic [ref=f2e1]:
+  - link "Skip to content" [ref=f2e2] [cursor=pointer]:
+    - /url: "#viewRoot"
+  - generic [ref=f2e26]:
+    - complementary "Primary navigation" [ref=f2e27]:
+      - button "Aria Acme Mfg." [ref=f2e28] [cursor=pointer]:
+        - generic [ref=f2e31]:
+          - text: Aria
+          - generic [ref=f2e32]: Acme Mfg.
+      - generic [ref=f2e33]:
+        - heading "Operations" [level=6] [ref=f2e34]
+        - button "Home" [ref=f2e35] [cursor=pointer]
+        - button "Sales" [ref=f2e40] [cursor=pointer]
+        - button "Purchasing" [ref=f2e45] [cursor=pointer]
+        - button "CRM" [ref=f2e51] [cursor=pointer]
+        - button "Inventory" [ref=f2e55] [cursor=pointer]
+        - button "Warehouse" [ref=f2e60] [cursor=pointer]
+        - button "Manufacturing" [ref=f2e65] [cursor=pointer]
+        - button "Quality" [ref=f2e69] [cursor=pointer]
+      - generic [ref=f2e74]:
+        - heading "Finance & Back office" [level=6] [ref=f2e75]
+        - button "My Work" [ref=f2e76] [cursor=pointer]
+        - button "Finance" [ref=f2e81] [cursor=pointer]
+        - button "HR / Payroll" [ref=f2e86] [cursor=pointer]
+        - button "Projects" [ref=f2e92] [cursor=pointer]
+        - button "Service" [ref=f2e98] [cursor=pointer]
+        - button "Fixed Assets" [ref=f2e102] [cursor=pointer]
+      - generic [ref=f2e107]:
+        - heading "Platform" [level=6] [ref=f2e108]
+        - button "Approvals" [ref=f2e109] [cursor=pointer]
+        - button "Reporting / BI" [ref=f2e115] [cursor=pointer]
+        - button "Admin" [ref=f2e119] [cursor=pointer]
+        - button "Integration" [ref=f2e124] [cursor=pointer]
+      - button "Settings" [ref=f2e129] [cursor=pointer]
+    - generic [ref=f2e134]:
+      - banner [ref=f2e135]:
+        - button "Search (Command K)" [ref=f2e136]:
+          - searchbox "Search documents, items, partners, actions…" [ref=f2e140]
+          - generic [ref=f2e141]: ⌘K
+        - button "Acme Singapore Singapore HQ" [ref=f2e142] [cursor=pointer]:
+          - generic [ref=f2e143]: Acme Singapore
+          - generic [ref=f2e146]: Singapore HQ
+        - button "FY2026 · P06 June 2026 · SGD" [ref=f2e147] [cursor=pointer]:
+          - generic [ref=f2e148]: FY2026 · P06
+          - generic [ref=f2e151]: June 2026 · SGD
+        - generic [ref=f2e152]: DEMO
+        - button "Quick create" [ref=f2e153] [cursor=pointer]
+        - button "2" [ref=f2e156] [cursor=pointer]
+        - button "Team Calendar" [ref=f2e161] [cursor=pointer]
+        - button "Language" [ref=f2e165] [cursor=pointer]
+        - button "Toggle appearance" [ref=f2e169] [cursor=pointer]
+        - button [ref=f2e173] [cursor=pointer]:
+          - img "Avery Tan · Company Owner profile image" [ref=f2e174]
+      - generic [ref=f2e180]:
+        - generic [ref=f2e181]:
+          - navigation "Breadcrumb" [ref=f2e182]:
+            - generic [ref=f2e183]: Acme Singapore
+            - generic [aria-hidden] [ref=f2e184]: ›
+            - button "My Work" [ref=f2e185] [cursor=pointer]
+            - generic [aria-hidden] [ref=f2e186]: ›
+            - generic [ref=f2e187]: My Receipts
+          - tablist "My Work" [ref=f2e188]:
+            - tab "My Leave" [ref=f2e189] [cursor=pointer]
+            - tab "My Claims" [ref=f2e194] [cursor=pointer]
+            - tab "My Receipts" [selected] [ref=f2e199] [cursor=pointer]
+            - tab "Receipt & Tax Evidence" [ref=f2e204] [cursor=pointer]
+            - tab "Team Calendar" [ref=f2e210] [cursor=pointer]
+            - tab "My Approvals" [ref=f2e216] [cursor=pointer]
+          - generic [ref=f2e220]:
+            - heading "My Receipts" [level=1] [ref=f2e221]
+            - generic [ref=f2e222]: "0"
+          - generic [ref=f2e223]: Every stored file stays quarantined until malware scanning is clean; preview, extraction, claims and export remain blocked beforehand.
+        - generic [ref=f2e224]:
+          - generic [ref=f2e225]:
+            - button "Offline draft 0" [disabled] [ref=f2e226] [cursor=pointer]:
+              - generic [ref=f2e227]: Offline draft
+              - generic [ref=f2e228]: "0"
+            - button "Stored securely 0" [disabled] [ref=f2e229] [cursor=pointer]:
+              - generic [ref=f2e230]: Stored securely
+              - generic [ref=f2e231]: "0"
+          - generic [ref=f2e232]: JPEG · PNG · HEIC · PDF · 20 MB · PDF ≤ 20 pages
+          - generic [ref=f2e234]: Offline drafts are stored only on this device. Signing out warns and clears every unsynchronised draft.
+          - generic [ref=f2e239]:
+            - heading "No receipts or drafts" [level=3] [ref=f2e243]
+            - paragraph [ref=f2e244]: Take a photo or choose JPEG, PNG, HEIC or PDF evidence (20 MB maximum; PDFs up to 20 pages).
+  - dialog [aria-hidden]:
+    - generic:
+      - searchbox
+      - button
+    - generic:
+      - generic:
+        - generic: ↑↓
+        - generic: Navigate
+      - generic:
+        - generic: ↵
+        - generic: Select
+      - generic:
+        - generic: esc
+        - generic: Close
+  - generic: Account · Avery Tan · Company Owner
+  - dialog [ref=f2e306]:
+    - generic [ref=f2e307]:
+      - heading "Switch demo user" [level=3] [ref=f2e312]
+      - button "Close" [active] [ref=f2e313] [cursor=pointer]
+    - generic [ref=f2e316]:
+      - paragraph [ref=f2e317]: Choose a real permission persona. Company Owner retains explicit company administration access; sensitive approval and payment authority remains separate.
+      - list [ref=f2e318]:
+        - button "Avery Tan · Company Owner admin@acme.co · Company Owner Company-scoped administration" [disabled] [ref=f2e319] [cursor=pointer]:
+          - generic [ref=f2e323]:
+            - text: Avery Tan · Company Owner
+            - generic [ref=f2e324]: admin@acme.co · Company Owner
+            - generic [ref=f2e325]: Company-scoped administration
+        - button "Chen Wei · Company Admin company-admin@acme.co · Company Admin + Employee 1 company access" [ref=f2e329] [cursor=pointer]:
+          - generic [ref=f2e333]:
+            - text: Chen Wei · Company Admin
+            - generic [ref=f2e334]: company-admin@acme.co · Company Admin + Employee
+            - generic [ref=f2e335]: 1 company access
+        - button "Daniel Lim · Sales sales@acme.co · Employee + Sales 1 company access" [ref=f2e336] [cursor=pointer]:
+          - generic [ref=f2e340]:
+            - text: Daniel Lim · Sales
+            - generic [ref=f2e341]: sales@acme.co · Employee + Sales
+            - generic [ref=f2e342]: 1 company access
+        - button "Grace Lee · Finance Checker finance-checker@acme.co · Employee + Finance Checker 2 company access" [ref=f2e343] [cursor=pointer]:
+          - generic [ref=f2e347]:
+            - text: Grace Lee · Finance Checker
+            - generic [ref=f2e348]: finance-checker@acme.co · Employee + Finance Checker
+            - generic [ref=f2e349]: 2 company access
+        - button "Jordan Lee · Viewer viewer@acme.co · Employee + Viewer 1 company access" [ref=f2e350] [cursor=pointer]:
+          - generic [ref=f2e354]:
+            - text: Jordan Lee · Viewer
+            - generic [ref=f2e355]: viewer@acme.co · Employee + Viewer
+            - generic [ref=f2e356]: 1 company access
+        - button "Kenji Sato · Production production@acme.co · Employee + Production 1 company access" [ref=f2e357] [cursor=pointer]:
+          - generic [ref=f2e361]:
+            - text: Kenji Sato · Production
+            - generic [ref=f2e362]: production@acme.co · Employee + Production
+            - generic [ref=f2e363]: 1 company access
+        - button "Linh Nguyen · HR hr@acme.co · Employee + HR 2 company access" [ref=f2e364] [cursor=pointer]:
+          - generic [ref=f2e368]:
+            - text: Linh Nguyen · HR
+            - generic [ref=f2e369]: hr@acme.co · Employee + HR
+            - generic [ref=f2e370]: 2 company access
+        - button "Marcus Ong · Service service@acme.co · Employee + Service 1 company access" [ref=f2e371] [cursor=pointer]:
+          - generic [ref=f2e375]:
+            - text: Marcus Ong · Service
+            - generic [ref=f2e376]: service@acme.co · Employee + Service
+            - generic [ref=f2e377]: 1 company access
+        - button "Mei Lin · Manager manager@acme.co · Employee + Manager 1 company access" [ref=f2e378] [cursor=pointer]:
+          - generic [ref=f2e382]:
+            - text: Mei Lin · Manager
+            - generic [ref=f2e383]: manager@acme.co · Employee + Manager
+            - generic [ref=f2e384]: 1 company access
+        - button "Nur Aisyah · Buyer buyer@acme.co · Buyer + Employee 1 company access" [ref=f2e385] [cursor=pointer]:
+          - generic [ref=f2e389]:
+            - text: Nur Aisyah · Buyer
+            - generic [ref=f2e390]: buyer@acme.co · Buyer + Employee
+            - generic [ref=f2e391]: 1 company access
+        - button "Ravi Kumar · Warehouse warehouse@acme.co · Employee + Warehouse 1 company access" [ref=f2e392] [cursor=pointer]:
+          - generic [ref=f2e396]:
+            - text: Ravi Kumar · Warehouse
+            - generic [ref=f2e397]: warehouse@acme.co · Employee + Warehouse
+            - generic [ref=f2e398]: 1 company access
+        - button "Siti Aminah · Finance Preparer finance-preparer@acme.co · Employee + Finance Preparer 2 company access" [ref=f2e399] [cursor=pointer]:
+          - generic [ref=f2e403]:
+            - text: Siti Aminah · Finance Preparer
+            - generic [ref=f2e404]: finance-preparer@acme.co · Employee + Finance Preparer
+            - generic [ref=f2e405]: 2 company access

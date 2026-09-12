@@ -1,0 +1,35 @@
+- generic [ref=e1]:
+  - link "Skip to content" [ref=e2] [cursor=pointer]:
+    - /url: "#viewRoot"
+  - main "First-run setup" [ref=e26]:
+    - generic [ref=e123]:
+      - generic [ref=e124]:
+        - generic [ref=e128]:
+          - generic [ref=e129]: Aria ERP
+          - generic [ref=e130]: First-run setup
+        - combobox "Language" [ref=e136] [cursor=pointer]:
+          - option "English" [selected]
+          - option "Bahasa Melayu"
+          - option "简体中文"
+          - option "日本語"
+          - option "Tiếng Việt"
+      - generic [ref=e140]:
+        - generic "Language" [ref=e141] [cursor=pointer]
+        - generic "Organization" [ref=e147] [cursor=pointer]: "2"
+        - generic "Company" [ref=e152]: "3"
+        - generic "Admin user" [ref=e157]: "4"
+        - generic "Modules" [ref=e162]: "5"
+        - generic "AI (optional)" [ref=e167]: "6"
+        - generic "Finish" [ref=e172]: "7"
+      - generic [ref=e176]:
+        - heading "Name your organization" [level=2] [ref=e177]
+        - paragraph [ref=e178]: The top-level group or holding entity. Every company you add belongs to it.
+        - generic [ref=e179]:
+          - generic [ref=e180]: Organization name
+          - textbox "e.g. Acme Group" [active] [ref=e181]: Acme Group
+        - generic [ref=e182]:
+          - generic [ref=e183]: Organization login code
+          - textbox "e.g. ACME" [ref=e184]: ACME
+      - generic [ref=e186]:
+        - button "Back" [ref=e187] [cursor=pointer]
+        - button "Continue" [ref=e191] [cursor=pointer]

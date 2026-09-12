@@ -1,0 +1,60 @@
+- generic [active] [ref=e1]:
+  - link "Skip to content" [ref=e2] [cursor=pointer]:
+    - /url: "#viewRoot"
+  - main "First-run setup" [ref=e26]:
+    - generic [ref=e603]:
+      - generic [ref=e604]:
+        - generic [ref=e608]:
+          - generic [ref=e609]: Aria ERP
+          - generic [ref=e610]: First-run setup
+        - combobox "Language" [ref=e616] [cursor=pointer]:
+          - option "English" [selected]
+          - option "Bahasa Melayu"
+          - option "简体中文"
+          - option "日本語"
+          - option "Tiếng Việt"
+      - generic [ref=e620]:
+        - generic "Language" [ref=e621] [cursor=pointer]
+        - generic "Organization" [ref=e627] [cursor=pointer]
+        - generic "Company" [ref=e633] [cursor=pointer]
+        - generic "Admin user" [ref=e639] [cursor=pointer]
+        - generic "Modules" [ref=e645] [cursor=pointer]
+        - generic "AI (optional)" [ref=e651] [cursor=pointer]
+        - generic "Finish" [ref=e657] [cursor=pointer]: "7"
+      - generic [ref=e661]:
+        - heading "Review and finish" [level=2] [ref=e662]
+        - paragraph [ref=e663]: Finishing writes the company, tax rule, chart of accounts and admin user to this browser’s demo database (PGlite/IndexedDB).
+        - generic [ref=e665]:
+          - generic [ref=e666]:
+            - generic [ref=e667]: Language
+            - generic [ref=e668]: English
+          - generic [ref=e669]:
+            - generic [ref=e670]: Organization
+            - generic [ref=e671]: Acme Group
+          - generic [ref=e672]:
+            - generic [ref=e673]: Login code
+            - generic [ref=e674]: ACME
+          - generic [ref=e675]:
+            - generic [ref=e676]: Company
+            - generic [ref=e677]: Acme Singapore
+          - generic [ref=e678]:
+            - generic [ref=e679]: Country
+            - generic [ref=e680]: SG
+          - generic [ref=e681]:
+            - generic [ref=e682]: Currency
+            - generic [ref=e683]: SGD
+          - generic [ref=e684]:
+            - generic [ref=e685]: Tax regime
+            - generic [ref=e686]: GST 9%
+          - generic [ref=e687]:
+            - generic [ref=e688]: Admin user
+            - generic [ref=e689]: Demo Administrator · admin.acme@acme.co
+          - generic [ref=e690]:
+            - generic [ref=e691]: Active modules
+            - generic [ref=e692]: Human Resources, Expenses & Tax
+          - generic [ref=e693]:
+            - generic [ref=e694]: AI provider
+            - generic [ref=e695]: None — skip for now
+      - generic [ref=e696]:
+        - button "Back" [ref=e697] [cursor=pointer]
+        - button "Finish setup" [disabled] [ref=e701]

@@ -1,0 +1,16 @@
+- generic [active] [ref=f2e1]:
+  - link "Skip to content" [ref=f2e2] [cursor=pointer]:
+    - /url: "#viewRoot"
+  - main "Loading ERP workspace" [ref=f2e3]:
+    - generic [ref=f2e4]:
+      - generic [ref=f2e7]:
+        - generic [ref=f2e8]: Aria ERP
+        - generic [ref=f2e9]: Secure workspace
+      - heading "Loading workspace…" [level=1] [ref=f2e10]
+      - status [ref=f2e18]:
+        - generic [ref=f2e19]:
+          - strong [ref=f2e20]: Reading demo workspace
+          - generic [ref=f2e21]: 98%
+        - progressbar "Demo database loading progress" [ref=f2e22]
+        - paragraph [ref=f2e24]: Preparing the sign-in screen…
+        - generic [ref=f2e25]: First visit may take longer while the demo workspace is prepared.

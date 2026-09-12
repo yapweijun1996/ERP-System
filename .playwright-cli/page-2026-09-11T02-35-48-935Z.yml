@@ -1,0 +1,114 @@
+- generic [active] [ref=e1]:
+  - link "Skip to content" [ref=e2] [cursor=pointer]:
+    - /url: "#viewRoot"
+  - main "First-run setup" [ref=e26]:
+    - generic [ref=e351]:
+      - generic [ref=e352]:
+        - generic [ref=e356]:
+          - generic [ref=e357]: Aria ERP
+          - generic [ref=e358]: First-run setup
+        - combobox "Language" [ref=e364] [cursor=pointer]:
+          - option "English" [selected]
+          - option "Bahasa Melayu"
+          - option "简体中文"
+          - option "日本語"
+          - option "Tiếng Việt"
+      - generic [ref=e368]:
+        - generic "Language" [ref=e369] [cursor=pointer]
+        - generic "Organization" [ref=e375] [cursor=pointer]
+        - generic "Company" [ref=e381] [cursor=pointer]
+        - generic "Admin user" [ref=e387] [cursor=pointer]
+        - generic "Modules" [ref=e393] [cursor=pointer]: "5"
+        - generic "AI (optional)" [ref=e398]: "6"
+        - generic "Finish" [ref=e403]: "7"
+      - generic [ref=e407]:
+        - heading "Activate company modules" [level=2] [ref=e408]
+        - paragraph [ref=e409]: Choose what this company needs first. You can adjust Company allocation later from the Platform workspace.
+        - generic [ref=e410]:
+          - generic [ref=e411] [cursor=pointer]:
+            - 'checkbox "Sales Includes: finance" [ref=e412]'
+            - generic [ref=e413]:
+              - generic [ref=e414]: Sales
+              - generic [ref=e416]: "Includes: finance"
+          - generic [ref=e417] [cursor=pointer]:
+            - 'checkbox "Purchasing Includes: finance" [ref=e418]'
+            - generic [ref=e419]:
+              - generic [ref=e420]: Purchasing
+              - generic [ref=e422]: "Includes: finance"
+          - generic [ref=e423] [cursor=pointer]:
+            - checkbox "CRM" [ref=e424]
+            - generic [ref=e425]: CRM
+          - generic [ref=e428] [cursor=pointer]:
+            - checkbox "Inventory" [ref=e429]
+            - generic [ref=e430]: Inventory
+          - generic [ref=e433] [cursor=pointer]:
+            - 'checkbox "Warehouse Includes: inventory" [ref=e434]'
+            - generic [ref=e435]:
+              - generic [ref=e436]: Warehouse
+              - generic [ref=e438]: "Includes: inventory"
+          - generic [ref=e439] [cursor=pointer]:
+            - 'checkbox "Manufacturing Includes: inventory, warehouse" [ref=e440]'
+            - generic [ref=e441]:
+              - generic [ref=e442]: Manufacturing
+              - generic [ref=e444]: "Includes: inventory, warehouse"
+          - generic [ref=e445] [cursor=pointer]:
+            - 'checkbox "Quality Includes: inventory" [ref=e446]'
+            - generic [ref=e447]:
+              - generic [ref=e448]: Quality
+              - generic [ref=e450]: "Includes: inventory"
+          - generic [ref=e451] [cursor=pointer]:
+            - checkbox "Finance" [ref=e452]
+            - generic [ref=e453]: Finance
+          - generic [ref=e456] [cursor=pointer]:
+            - checkbox "Human Resources Recommended Staff directory, employee accounts, calendar and leave applications. Selected" [checked] [ref=e457]
+            - generic [ref=e458]:
+              - generic [ref=e459]:
+                - generic [ref=e460]: Human Resources
+                - emphasis [ref=e461]: Recommended
+              - generic [ref=e462]: Staff directory, employee accounts, calendar and leave applications.
+            - generic [ref=e463]: Selected
+          - generic [ref=e464] [cursor=pointer]:
+            - 'checkbox "Payroll Includes: finance" [ref=e465]'
+            - generic [ref=e466]:
+              - generic [ref=e467]: Payroll
+              - generic [ref=e469]: "Includes: finance"
+          - generic [ref=e470] [cursor=pointer]:
+            - 'checkbox "Projects Includes: finance" [ref=e471]'
+            - generic [ref=e472]:
+              - generic [ref=e473]: Projects
+              - generic [ref=e475]: "Includes: finance"
+          - generic [ref=e476] [cursor=pointer]:
+            - 'checkbox "Service Includes: crm" [ref=e477]'
+            - generic [ref=e478]:
+              - generic [ref=e479]: Service
+              - generic [ref=e481]: "Includes: crm"
+          - generic [ref=e482] [cursor=pointer]:
+            - 'checkbox "Assets Includes: finance" [ref=e483]'
+            - generic [ref=e484]:
+              - generic [ref=e485]: Assets
+              - generic [ref=e487]: "Includes: finance"
+          - generic [ref=e488] [cursor=pointer]:
+            - checkbox "Workflow" [ref=e489]
+            - generic [ref=e490]: Workflow
+          - generic [ref=e493] [cursor=pointer]:
+            - checkbox "Business Intelligence" [ref=e494]
+            - generic [ref=e495]: Business Intelligence
+          - generic [ref=e498] [cursor=pointer]:
+            - checkbox "Integrations" [ref=e499]
+            - generic [ref=e500]: Integrations
+          - generic [ref=e503] [cursor=pointer]:
+            - checkbox "Expenses & Tax Recommended Company receipts, tax evidence packs and print/download. Selected" [checked] [ref=e504]
+            - generic [ref=e505]:
+              - generic [ref=e506]:
+                - generic [ref=e507]: Expenses & Tax
+                - emphasis [ref=e508]: Recommended
+              - generic [ref=e509]: Company receipts, tax evidence packs and print/download.
+            - generic [ref=e510]: Selected
+        - paragraph [ref=e511]: Roles and permissions remain available in Admin Settings.
+        - region "Time & attendance (planned)" [ref=e512]:
+          - generic [ref=e517]:
+            - generic [ref=e518]: Time & attendance (planned)
+            - generic [ref=e519]: Clock in/out and Face ID are not available yet, so they cannot be enabled here.
+      - generic [ref=e520]:
+        - button "Back" [ref=e521] [cursor=pointer]
+        - button "Continue" [ref=e525] [cursor=pointer]
