@@ -8,6 +8,12 @@ import {
   documentScanJob,
   leaveRequest,
   outboxEvent,
+  reportJob,
+  staffAppointment,
+  staffAppointmentOutboundEvent,
+  staffAppointmentReminder,
+  taxEvidenceReportJob,
+  taxEvidenceSnapshot,
 } from '../data/schema';
 import type { DB } from '../data/db';
 import { setLocalStatementTimeout } from '../data/tenantTransaction';
@@ -239,6 +245,117 @@ describe('worker queue telemetry', () => {
       pending: 1,
       ready: 0,
     });
+  });
+
+  it('reconciles reporting and calendar queue aggregates with claim predicates', async () => {
+    const db = await freshDb();
+    await seedDemo(db);
+    const [admin] = await db.select().from(appUser).where(eq(appUser.email, 'admin@acme.co'));
+    const [connection] = await db.select().from(calendarOutboundConnection);
+    const [appointment] = await db.select().from(staffAppointment);
+    const now = new Date('2026-09-07T00:00:00.000Z');
+    const expiredLease = new Date(now.getTime() - 10 * 60 * 1_000 - 1);
+    const activeLease = new Date(now.getTime() - 1_000);
+
+    await db.insert(reportJob).values([
+      {
+        masterFn: 'M1', companyFn: 'C-SG', actorUserId: admin.userId,
+        reportKey: 'profit_loss', format: 'pdf', locale: 'en',
+        presentationCurrency: 'SGD', filters: {},
+        availableAt: now, expiresAt: new Date('2026-09-14T00:00:00.000Z'),
+      },
+      {
+        masterFn: 'M1', companyFn: 'C-SG', actorUserId: admin.userId,
+        reportKey: 'profit_loss', format: 'xlsx', locale: 'en',
+        presentationCurrency: 'SGD', filters: {}, status: 'running', attempts: 1,
+        availableAt: now, lockedAt: activeLease, lockedBy: 'report-worker',
+        expiresAt: new Date('2026-09-14T00:00:00.000Z'),
+      },
+      {
+        masterFn: 'M1', companyFn: 'C-SG', actorUserId: admin.userId,
+        reportKey: 'profit_loss', format: 'pdf', locale: 'en',
+        presentationCurrency: 'SGD', filters: {}, status: 'failed', attempts: 3,
+        availableAt: now, expiresAt: new Date('2026-09-14T00:00:00.000Z'),
+      },
+    ]);
+
+    const snapshots = await db.insert(taxEvidenceSnapshot).values([
+      {
+        masterFn: 'M1', companyFn: 'C-SG', snapshotKey: 'telemetry-tax-snapshot-a',
+        filters: {}, sourceSha256: '0'.repeat(64), rowCount: 1, documentCount: 0,
+        originalGross: '1.00', baseExpense: '1.00', baseInputTax: '0.00', baseGross: '1.00',
+        createdByUserId: admin.userId,
+      },
+      {
+        masterFn: 'M1', companyFn: 'C-SG', snapshotKey: 'telemetry-tax-snapshot-b',
+        filters: {}, sourceSha256: '1'.repeat(64), rowCount: 1, documentCount: 0,
+        originalGross: '1.00', baseExpense: '1.00', baseInputTax: '0.00', baseGross: '1.00',
+        createdByUserId: admin.userId,
+      },
+    ]).returning({ id: taxEvidenceSnapshot.id });
+    await db.insert(taxEvidenceReportJob).values([
+      {
+        masterFn: 'M1', companyFn: 'C-SG', jobKey: 'telemetry-tax-queued',
+        snapshotId: snapshots[0].id, actorUserId: admin.userId, locale: 'en',
+        status: 'running', attempts: 2, availableAt: now, lockedAt: expiredLease,
+        lockedBy: 'stale-tax-worker',
+      },
+      {
+        masterFn: 'M1', companyFn: 'C-SG', jobKey: 'telemetry-tax-failed',
+        snapshotId: snapshots[1].id, actorUserId: admin.userId, locale: 'en',
+        status: 'failed', attempts: 3, availableAt: now,
+      },
+    ]);
+
+    await db.insert(staffAppointmentOutboundEvent).values([
+      {
+        masterFn: 'M1', companyFn: 'C-SG', connectionId: connection.id,
+        appointmentId: appointment.id, appointmentRevisionNo: appointment.recordVersion,
+        occurrenceStartAt: appointment.startAt, eventType: 'created',
+        eventKey: 'telemetry-appointment-active', payload: { event: 'created' },
+        availableAt: now, lockedAt: activeLease, lockedBy: 'calendar-worker',
+      },
+      {
+        masterFn: 'M1', companyFn: 'C-SG', connectionId: connection.id,
+        appointmentId: appointment.id, appointmentRevisionNo: appointment.recordVersion,
+        occurrenceStartAt: new Date(appointment.startAt.getTime() + 60 * 60 * 1_000),
+        eventType: 'changed', eventKey: 'telemetry-appointment-failed',
+        payload: { event: 'changed' }, status: 'failed', attempts: 1, availableAt: now,
+      },
+    ]);
+    await db.insert(staffAppointmentReminder).values([
+      {
+        masterFn: 'M1', companyFn: 'C-SG', appointmentId: appointment.id,
+        occurrenceStartAt: appointment.startAt,
+        reminderAt: new Date(now.getTime() - 60 * 1_000), availableAt: now,
+      },
+      {
+        masterFn: 'M1', companyFn: 'C-SG', appointmentId: appointment.id,
+        occurrenceStartAt: new Date(appointment.startAt.getTime() + 2 * 60 * 60 * 1_000),
+        reminderAt: new Date(now.getTime() + 60 * 1_000), availableAt: now,
+      },
+      {
+        masterFn: 'M1', companyFn: 'C-SG', appointmentId: appointment.id,
+        occurrenceStartAt: new Date(appointment.startAt.getTime() + 3 * 60 * 60 * 1_000),
+        reminderAt: new Date(now.getTime() - 30 * 1_000),
+        status: 'failed', attempts: 1, availableAt: now,
+      },
+    ]);
+
+    const snapshotResult = await readWorkerQueueTelemetry(db, { now, scope: 'primary' });
+    expect(snapshotResult.queues.find(row => row.queue === 'report')).toMatchObject({
+      pending: 2, ready: 1, inFlight: 1, retrying: 1, failed: 1, deadLettered: 0,
+    });
+    expect(snapshotResult.queues.find(row => row.queue === 'tax-evidence')).toMatchObject({
+      pending: 1, ready: 1, inFlight: 0, retrying: 1, failed: 1, deadLettered: 0,
+    });
+    expect(snapshotResult.queues.find(row => row.queue === 'calendar-appointment')).toMatchObject({
+      pending: 2, ready: 1, inFlight: 1, retrying: 1, failed: 1, deadLettered: 0,
+    });
+    expect(snapshotResult.queues.find(row => row.queue === 'calendar-reminder')).toMatchObject({
+      pending: 3, ready: 2, inFlight: 0, retrying: 1, failed: 1, deadLettered: 0,
+    });
+    expect(JSON.stringify(snapshotResult)).not.toContain('telemetry-appointment-active');
   });
 
   it('logs a structured record for the selected worker scope', async () => {
