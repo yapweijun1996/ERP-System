@@ -10,6 +10,9 @@ The five S-checkpoints are execution checkpoints, not five new task records.
 Check a checkpoint only after its listed exit is observed and recorded.
 All four G07 criteria plus common DoD remain required for task completion.
 
+Focused source regression evidence for the My Receipts `{data, meta}` capability
+envelope is recorded in [the dated test record](evidence/TASK-234-2026-09-13-my-receipts-capability-regression.md).
+
 ## Remove mandatory account activation — user decision 2026-09-10
 
 Outcome: accounts created in Demo or a real Company are usable immediately.
