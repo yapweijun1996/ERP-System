@@ -669,7 +669,7 @@ function moduleBlockedPanel(route){
   const reason=st.visible?t('access.moduleInactive'):t('access.moduleHidden');
   return `<div class="content full"><section class="master">
     <div class="pagehead">${crumbs([DB.company.name,t('access.moduleCrumb')])}
-      <div class="h1row"><h1>${esc(t('access.moduleUnavailable',{module:label}))}</h1>${cap(reason,'warn')}</div>
+      <div class="h1row"><h1>${t('access.moduleUnavailable',{module:label})}</h1>${cap(reason,'warn')}</div>
       <div class="h1sub">${esc(t('access.modulePlatformControlled'))}</div>
     </div>
     ${statePanel({icon:'lock',title:t('access.moduleNotAvailable'),body:t('access.modulePlatformHelp')})}

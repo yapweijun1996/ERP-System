@@ -52,6 +52,16 @@ async function main(){
     await page.waitForFunction(()=>window.ErpSystemData&&window.navigate,{timeout:TIMEOUT});
     await page.waitForFunction(()=>typeof DB!=='undefined'&&DB.user&&Array.isArray(DB.user.permissionKeys),
       null,{timeout:TIMEOUT});
+    await page.evaluate(async()=>{
+      const modules=Array.isArray(DB.erpSystem?.modules)?DB.erpSystem.modules:[];
+      const expensesTax=modules.find(row=>String(row?.moduleKey||row?.module_key||'')==='expenses_tax');
+      if(!expensesTax) throw new Error('Expenses & Tax module fixture is unavailable.');
+      expensesTax.enabled=false;
+      await loadModuleControl();
+      await navigate('company-receipts');
+    });
+    assert(await page.locator('.pagehead h1').innerText()==='Expenses & Tax unavailable',
+      'module access title must render ampersands as text rather than HTML entities');
     const mockPdf=await PDFDocument.create();mockPdf.addPage([595,842]);
     const mockPdfBase64=Buffer.from(await mockPdf.save({useObjectStreams:false})).toString('base64');
     await page.evaluate(async mockPdfBase64=>{
