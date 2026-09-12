@@ -22,6 +22,23 @@ render as text. The candidate is scoped for release-owner review and still
 requires reconciliation with any newer main-branch release source before
 publication.
 
+## Root integration — 2026-09-13
+
+The upload-envelope fix is now committed on the current root branch as
+`5e983e9bd88a1d2bb4f0d25695d1a61f2d6a167b` (`Fix My Receipts capability envelope
+handling`). The committed diff is limited to `web/public/assets/screens-hr.js`:
+the screen now unwraps the adapter's `{data, meta}` response before checking the
+server-derived receipt write capability. Existing title/i18n repairs and their
+locale assertions are already present in the root history. This closes the local
+source handoff for the candidate while leaving release publication and hosted
+verification as separate gates.
+
+The post-integration expected result was observed: an authorized Demo employee
+can reach the receipt capture path, while Company Receipts access text remains
+translated without literal `&amp;` output. The focused E2E passed after a fresh
+Demo build; no production database, provider request, external upload or secret
+was used.
+
 ## Expected and observed result
 
 Expected: an authorized employee can reach the My Receipts upload controls, and
@@ -50,6 +67,7 @@ both themes and focus/overflow checks.
 | `npm run test:e2e:receipt-assistant` | Pass, assistant workspace desktop/mobile and governance paths |
 | `npm run docs:check` | Pass in candidate, 72 Markdown files / 759 local links |
 | `git diff --check` | Pass |
+| Root integration | Pass, commit `5e983e9`; `git diff --cached --check` and final working-tree diff check pass |
 | `LIST_LAYOUT_ONLY=1 node scripts/audit-screens.mjs` | Not completed: the candidate run remained in Chromium route enumeration for 60 seconds after reporting 50 routes; no assertion failure was emitted. Existing root evidence records the same audit passing before this candidate was assembled. |
 
 The first focused E2E attempt needed a temporary `web/node_modules` link in the
@@ -62,7 +80,7 @@ No provider key, external upload, production database, Pages push/deployment,
 real server-provider request, human Pack/Print verdict or production OCR was
 used. The registry and GOAL counts are unchanged at 227/240 done, 7/12 AI
 workstreams, 31/48 criteria and 41/60 checkpoints; G07.3 remains open. A
-release owner must authorize publication of the exact reviewed source through
-the main-only Pages workflow, then verify hosted My Receipts upload without a
+release owner must authorize publication of the committed source through the
+main-only Pages workflow, then verify hosted My Receipts upload without a
 temporary source override. That hosted check still cannot substitute for the
 real server/provider and business-acceptance gates.
