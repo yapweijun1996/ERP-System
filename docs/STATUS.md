@@ -1,5 +1,13 @@
 # Project Status — reviewed 2026-09-11
 
+TASK-234 governed HEIC original inspection — 2026-09-13: commit
+`335aa9c172a12f54f8a321f5c5d0cc36286832ae` keeps the assistant's exact
+receipt/document/version/SHA-256 guard, accepts `image/heic` and `image/heif`,
+and presents unsupported browser formats as an explicit governed-original
+download instead of a false image preview. Company Receipts and Receipt
+Assistant browser regressions pass; production provider, publication and
+human acceptance remain separate. See [dated evidence](ai-native/evidence/TASK-234-2026-09-13-heic-original-download.md).
+
 Public Pages deployment and hosted Demo E2E — 2026-09-11: the latest successful
 Pages workflow serves the current branch, whose application assets come from
 code release `ae7a3cfabde0e03a704d943dc1d99cc3bb672e2a`. Public `release.json`

@@ -167,6 +167,13 @@ confirmation payload, and check desktop/375px layout. Run common CLAUDE gates
 and affected browser regressions. This proves review availability only; original
 file inspection and real-provider human acceptance remain separate open gates.
 
+The same assistant inspection path now accepts governed HEIC/HEIF originals after
+matching the receipt/document version and SHA-256. Browsers that cannot decode
+those formats receive an explicit governed-original explanation and a download
+link retaining the original file name; PDF/PNG/JPEG/WebP previews are unchanged.
+The focused Company Receipts E2E verifies the split and object-URL cleanup. This
+is local source/Demo evidence and does not close production or human acceptance.
+
 ## Open the verified assistant result — 2026-09-10
 
 Outcome: after governed assistant success, the user can open that exact persisted

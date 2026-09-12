@@ -1,5 +1,12 @@
 # ERP-System Project Logic
 
+TASK-234 governed HEIC original inspection — 2026-09-13: the Receipt Assistant
+now accepts HEIC/HEIF content after the existing tenant, version and SHA-256
+checks. It avoids an unsupported browser image preview and offers a download
+with the governed original name; PDF/PNG/JPEG/WebP previews remain unchanged.
+This is local source/Demo evidence only and does not replace production provider
+or business acceptance. See [dated evidence](ai-native/evidence/TASK-234-2026-09-13-heic-original-download.md).
+
 Production Receipt-to-Pack checkpoint — 2026-09-10: the fresh local production
 API/Web revision `9ec8c0e5c1361dfe77c8a3e8cdca4730e0b56e05` now has the new Master
 `M-47F82ACB0A19`, SG Company `C-SG-136B3C173074` and MY Company
