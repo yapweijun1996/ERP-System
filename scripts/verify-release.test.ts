@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import process from 'node:process';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { verifyRelease } from './verify-release.mjs';
 
 const expectedRevision = 'test-release-revision';
@@ -179,6 +179,96 @@ describe('verifyRelease', () => {
     running.setMode('redirect');
     await expect(verifyRelease({ origin: running.baseUrl, expectedRevision }))
       .rejects.toMatchObject({ code: 'final_url_mismatch' });
+  });
+
+  it('cancels an early-failing response body before rejecting its final URL', async () => {
+    const cancel = vi.fn(async () => undefined);
+    const responseWithBody = new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('untrusted body'));
+      },
+      cancel,
+    }), { status: 200, headers: { 'content-type': 'text/html' } });
+    Object.defineProperty(responseWithBody, 'url', { value: 'http://127.0.0.1:1/unreviewed' });
+
+    await expect(verifyRelease({
+      origin: running.baseUrl,
+      expectedRevision,
+      fetchImpl: async () => responseWithBody,
+    })).rejects.toMatchObject({ code: 'final_url_mismatch' });
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('cancels an advertised oversized response before reading its body', async () => {
+    const cancel = vi.fn(async () => undefined);
+    const responseWithBody = new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('oversized body'));
+      },
+      cancel,
+    }), {
+      status: 200,
+      headers: {
+        'content-length': String(2 * 1024 * 1024 + 1),
+        'content-type': 'text/html',
+      },
+    });
+    Object.defineProperty(responseWithBody, 'url', { value: running.baseUrl });
+
+    await expect(verifyRelease({
+      origin: running.baseUrl,
+      expectedRevision,
+      fetchImpl: async () => responseWithBody,
+    })).rejects.toMatchObject({ code: 'evidence_too_large' });
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('releases the reader when a response stream fails', async () => {
+    const cancel = vi.fn(async () => undefined);
+    const responseWithBody = new Response(new ReadableStream({
+      start(controller) {
+        controller.error(new Error('fixture stream failure'));
+      },
+      cancel,
+    }), { status: 200, headers: { 'content-type': 'text/html' } });
+    Object.defineProperty(responseWithBody, 'url', { value: running.baseUrl });
+
+    await expect(verifyRelease({
+      origin: running.baseUrl,
+      expectedRevision,
+      fetchImpl: async () => responseWithBody,
+    })).rejects.toMatchObject({ code: 'evidence_read_error' });
+    expect(cancel).toHaveBeenCalledTimes(0);
+    expect(responseWithBody.body?.locked).toBe(false);
+  });
+
+  it('cancels a streamed reader when reading fails before returning a fixed error', async () => {
+    const readError = new Error('fixture transport detail');
+    const cancel = vi.fn(async () => undefined);
+    const releaseLock = vi.fn();
+    const responseWithBody = {
+      url: running.baseUrl,
+      status: 200,
+      headers: new Headers({ 'content-type': 'text/html' }),
+      body: {
+        getReader: () => ({
+          read: async () => { throw readError; },
+          cancel,
+          releaseLock,
+        }),
+      },
+    } as unknown as Response;
+
+    await expect(verifyRelease({
+      origin: running.baseUrl,
+      expectedRevision,
+      fetchImpl: async () => responseWithBody,
+    })).rejects.toMatchObject({
+      code: 'evidence_read_error',
+      message: 'Could not read root.',
+    });
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(releaseLock).toHaveBeenCalledTimes(1);
   });
 
   it('returns machine-readable success and failure status from the CLI', async () => {

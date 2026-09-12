@@ -56,6 +56,16 @@ async function readResponseBody(response, target) {
   if (!reader) {
     fail('evidence_read_error', `Could not read ${target.name}.`);
   }
+  let readerCancelled = false;
+  const cancelReader = async () => {
+    if (readerCancelled) return;
+    readerCancelled = true;
+    try {
+      await reader.cancel();
+    } catch {
+      // Preserve the original bounded or transport error if stream cancellation fails.
+    }
+  };
 
   try {
     while (true) {
@@ -63,18 +73,29 @@ async function readResponseBody(response, target) {
       if (done) break;
       totalBytes += value.byteLength;
       if (totalBytes > maxBytes) {
-        await reader.cancel();
+        await cancelReader();
         fail('evidence_too_large', `${target.name} exceeded the bounded evidence size.`);
       }
       chunks.push(Buffer.from(value));
     }
   } catch (error) {
+    await cancelReader();
     if (error instanceof ReleaseVerificationError) throw error;
     fail('evidence_read_error', `Could not read ${target.name}.`);
+  } finally {
+    reader.releaseLock();
   }
 
   const bytes = Buffer.concat(chunks, totalBytes);
   return target.binary ? bytes : new TextDecoder().decode(bytes);
+}
+
+async function cancelResponseBody(response) {
+  try {
+    await response.body?.cancel();
+  } catch {
+    // Preserve the original bounded verification error when cleanup fails.
+  }
 }
 
 async function fetchEvidence(target, fetchImpl) {
@@ -92,10 +113,12 @@ async function fetchEvidence(target, fetchImpl) {
   try {
     finalUrl = new URL(response.url);
   } catch {
+    await cancelResponseBody(response);
     fail('final_url_mismatch', `${target.name} did not expose a valid final URL.`);
   }
   if (finalUrl.origin !== target.url.origin
     || normalizedPath(finalUrl.pathname) !== normalizedPath(target.url.pathname)) {
+    await cancelResponseBody(response);
     fail('final_url_mismatch', `${target.name} ended at an unreviewed origin or path.`);
   }
 
@@ -103,9 +126,11 @@ async function fetchEvidence(target, fetchImpl) {
   const contentLength = response.headers.get('content-length');
   const declaredLength = contentLength === null ? null : Number(contentLength);
   if (declaredLength !== null && (!Number.isFinite(declaredLength) || declaredLength < 0)) {
+    await cancelResponseBody(response);
     fail('invalid_content_length', `${target.name} returned an invalid content length.`);
   }
   if (declaredLength !== null && declaredLength > maxBytes) {
+    await cancelResponseBody(response);
     fail('evidence_too_large', `${target.name} exceeded the bounded evidence size.`);
   }
   const body = await readResponseBody(response, target);
