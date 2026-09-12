@@ -397,11 +397,30 @@ async function main(): Promise<void> {
       && response.url().includes('action=download') && response.status() === 200, { timeout: TIMEOUT });
     await page.locator('[data-receipt-pack-pdf]').click();
     await download;
-    await page.evaluate(() => { window.open = () => ({}) as Window; });
+    await page.evaluate(() => {
+      (window as Window & { __receiptPrintOpen?: { url: string; target: string; features: string } }).__receiptPrintOpen = undefined;
+      window.open = (url?: string | URL, target?: string, features?: string) => {
+        (window as Window & { __receiptPrintOpen?: { url: string; target: string; features: string } }).__receiptPrintOpen = {
+          url: String(url ?? ''),
+          target: String(target ?? ''),
+          features: String(features ?? ''),
+        };
+        return {} as Window;
+      };
+    });
     const print = page.waitForResponse((response) => response.url().includes('/api/company-receipts/packs/')
       && response.url().includes('action=print') && response.status() === 200, { timeout: TIMEOUT });
     await page.locator('[data-receipt-pack-print]').click();
     await print;
+    await page.waitForFunction(() => Boolean(
+      (window as Window & { __receiptPrintOpen?: { url: string; target: string; features: string } }).__receiptPrintOpen,
+    ), { timeout: TIMEOUT });
+    const printWindow = await page.evaluate(() =>
+      (window as Window & { __receiptPrintOpen?: { url: string; target: string; features: string } }).__receiptPrintOpen,
+    );
+    assert(printWindow?.target === '_blank' && printWindow.features.includes('noopener')
+      && printWindow.url.startsWith('blob:'),
+    'authenticated API Print did not open the generated PDF blob in a protected new window');
 
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
       'authenticated API desktop page overflowed horizontally');
