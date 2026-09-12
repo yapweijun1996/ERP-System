@@ -27,6 +27,9 @@ pgdata/
 # Local audit reports, screenshots, and database dumps
 /output/
 
+# Playwright CLI local session artifacts
+.playwright-cli/
+
 # Odoo study material — NEVER commit (LGPL contamination risk; see docs/STUDYING_ODOO.md)
 /odoo/
 /vendor-study/
