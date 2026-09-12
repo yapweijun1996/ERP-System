@@ -41,13 +41,13 @@ Each scored case has a versioned input fixture, expected permitted actions and i
 
   Evidence: [2026-09-13 frozen case set and independent oracle](evidence/TASK-237-2026-09-13-s1-case-set.md).
 
-- [ ] **S2 — Automate deterministic and adversarial gates.**
+- [x] **S2 — Automate deterministic and adversarial gates.**
 
   Action: Run P01-P16 where applicable, prompt-injection and malicious-tool cases. Require 100 percent pass for each security/transaction invariant and zero false success. No allowlist may suppress an unexplained failure.
 
   Checkpoint exit: Deliberately broken fixture variants fail the gate and return nonzero exit status.
 
-  Evidence: Not run.
+  Evidence: [2026-09-13 deterministic gate and broken-fixture failure](evidence/TASK-237-2026-09-13-s2-deterministic-gate.md).
 
 - [ ] **S3 — Run three recorded model evaluations.**
 
