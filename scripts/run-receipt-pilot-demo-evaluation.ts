@@ -118,11 +118,20 @@ function p95(values: readonly number[]): number {
 }
 
 async function gatewayProposal(page: Page, message: string): Promise<DemoProposal> {
-  return page.evaluate(async (input) => {
+  const result = await page.evaluate(async (input) => {
     const gateway = (window as GatewayWindow).ReceiptDemoGateway;
-    if (!gateway) throw Object.assign(new Error('demo_gateway_script_missing'), { code: 'demo_gateway_script_missing' });
-    return gateway.propose({ message: input });
+    if (!gateway) return { ok: false as const, code: 'demo_gateway_script_missing' };
+    try {
+      return { ok: true as const, proposal: await gateway.propose({ message: input }) };
+    } catch (error) {
+      const code = error && typeof error === 'object' && 'code' in error
+        ? String((error as { code?: unknown }).code || 'demo_gateway_error')
+        : 'demo_gateway_error';
+      return { ok: false as const, code };
+    }
   }, message);
+  if (!result.ok) throw Object.assign(new Error(result.code), { code: result.code });
+  return result.proposal;
 }
 
 async function evaluateRun(browser: Browser, run: number): Promise<DemoRunResult> {
