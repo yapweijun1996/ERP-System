@@ -47,8 +47,11 @@ tax rate, classification, recoverability or production row was changed.
 | `npm run typecheck` and `npm run typecheck:web` | Type checks pass | Exit 0 |
 | `npm run demo` | Demo/PGlite transaction, tax, stock and GL proof passes | Exit 0; no `POSTGRES_URL` configured |
 | `npm run build:demo` | Demo bundle builds | Exit 0; existing Vite warnings only |
-| `npm run docs:check` | Documentation links pass | 88 Markdown files / 809 local links |
+| `npm run docs:check` | Documentation links pass | 89 Markdown files / 811 local links |
 | `git diff --check` and `git diff --cached --check` | No whitespace errors | Exit 0 |
+
+The post-record root review also passed: `GOAL.md`, `PROGRESS.md` and
+`GOAL_PROMPT.md` contained 178 local links with 0 missing files or fragments.
 
 ## Acceptance boundary
 
@@ -63,11 +66,14 @@ was silently replaced.
 
 ## Current handoff
 
-- **Revision:** `f178dffe93176d15d888f8ecfef8b684eaad279c` on `main`.
-- **Repository state:** `main` is 19 commits ahead of `origin/main`; 37 dirty
+- **Source revision:** `f178dffe93176d15d888f8ecfef8b684eaad279c` on `main`.
+- **Evidence-record revision:** `389530b49a9606d7e778177dfede0067f0cc9cd0`.
+- **Repository state:** `main` is 20 commits ahead of `origin/main`; 37 dirty
   paths remain, no unmerged paths exist, and the index is empty. The dirty paths
   include pre-existing documentation, HR, receipt and task-registry work and
   were not included in this focused commit.
+- **KB readback:** item `bedbace4-df19-4ce0-882c-b9274b1f654d` was read back from
+  `erp-system-project-logic`; the KB reports 133 items / 133 embedded items.
 - **Registry / GOAL counts:** unchanged at 227 done, 6 in progress, 4 todo and
   3 blocked across 240 tasks; 31/48 criteria, 41/60 checkpoints; no
   dependency-ready Todo. This source increment does not satisfy qualified-owner
