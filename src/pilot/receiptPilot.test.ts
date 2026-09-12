@@ -52,6 +52,17 @@ describe('Receipt pilot rehearsal and live authorization gate', () => {
       toolResults: scenario === 'missing' ? [] : [{ action: 'receipt.get', callId: 'detail', ok: scenario !== 'failed', body: { data: receipt } }],
     })).toThrow('pilot_inspection_missing');
   });
+  it.each(['duplicate_preview', 'duplicate_detail', 'extra_detail'])('rejects %s inspection identities', (scenario) => {
+    const receipt = { id: 1, version: 2, documentId: 3, documentVersionId: 4, documentVersionNo: 1, documentSha256: 'a'.repeat(64) };
+    const row = { receiptId: 1, receiptVersion: 2, documentId: 3, documentVersionId: 4, documentSha256: 'a'.repeat(64) };
+    const extraReceipt = { ...receipt, id: 2, documentId: 5, documentVersionId: 6 };
+    const rows = scenario === 'duplicate_preview' ? [row, row] : [row];
+    const details = scenario === 'duplicate_detail' ? [receipt, receipt]
+      : scenario === 'extra_detail' ? [receipt, extraReceipt] : [receipt];
+    expect(() => verifyPilotInspection({ preview: { rows }, toolResults: details.map((data, index) => ({
+      action: 'receipt.get', callId: `detail-${index}`, ok: true, body: { data },
+    })) })).toThrow('pilot_inspection_missing');
+  });
   it('cancels a mismatched confirmation without persisting a Pack', async () => {
     let failure: PilotFailure | undefined;
     try {

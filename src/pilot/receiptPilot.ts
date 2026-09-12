@@ -79,10 +79,21 @@ interface InspectedReceipt {
 export function verifyPilotInspection(result: Pick<ReceiptAssistantResult, 'toolResults' | 'preview'>): InspectedReceipt[] {
   const rows = (result.preview as { rows?: Array<Record<string, unknown>> } | undefined)?.rows;
   check(rows?.length, 'pilot_inspection_missing');
+  const rowIds = rows.map((row) => row.receiptId);
+  check(rowIds.every((id) => Number.isSafeInteger(id) && (id as number) > 0)
+    && new Set(rowIds).size === rowIds.length,
+  'pilot_inspection_missing');
+  const expectedIds = new Set(rowIds as number[]);
+  const details = result.toolResults.filter((tool) => tool.ok && tool.action === 'receipt.get')
+    .map((tool) => (tool.body as { data?: InspectedReceipt } | undefined)?.data);
+  const detailIds = details.map((receipt) => receipt?.id);
+  check(details.length === rows.length
+    && detailIds.every((id) => Number.isSafeInteger(id) && (id as number) > 0)
+    && new Set(detailIds).size === detailIds.length
+    && detailIds.every((id) => expectedIds.has(id as number)),
+  'pilot_inspection_missing');
   return rows.map((row) => {
-    const observed = result.toolResults.filter((tool) => tool.ok && tool.action === 'receipt.get')
-      .map((tool) => (tool.body as { data?: InspectedReceipt } | undefined)?.data)
-      .find((receipt) => receipt?.id === row.receiptId);
+    const observed = details.find((receipt) => receipt?.id === row.receiptId);
     check(observed && observed.version === row.receiptVersion
       && observed.documentId === row.documentId && observed.documentVersionId === row.documentVersionId
       && observed.documentSha256 === row.documentSha256
