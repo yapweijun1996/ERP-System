@@ -1,7 +1,7 @@
 # TASK-237 S2 evidence — deterministic Receipt Pilot gate
 
 - Date: 2026-09-13 (Asia/Singapore)
-- Revision: `8bc9f1bf53563eced4d90f7ba869390e1602b3a1`
+- Revision: `72ee850609ed369c928f71d7117f6e84d845775e`
 - Environment: local repository, Node/tsx/Vitest, symbolic isolated fixture metadata
 - Evidence class: deterministic fixture gate; no model/provider, production, CI or human-pilot claim
 - Actor: Codex engineering run in the shared ERP-System worktree
@@ -13,7 +13,7 @@ Run the frozen P01–P16 case set and required safety mutations through a canoni
 
 ## Actual result
 
-- `npm run check:receipt-pilot-evaluation` returned exit 0 with `validCases=30`, `validPassed=30`, `negativeCases=9`, `negativeRejected=9`, `deterministicSafetyFailures=0`, `falseSuccessCount=0` and evidence class `deterministic_fixture`.
+- `npm run check:receipt-pilot-evaluation` returned exit 0 with fixture `receipt-pilot-fixture-2026-09-13.v1`, model `gpt-4.1-mini`, prompt `receipt-pilot-prompt-2026-09-13.v1`, tool `agent-actions-v1`, `validCases=30`, `validPassed=30`, `negativeCases=9`, `negativeRejected=9`, `deterministicSafetyFailures=0`, `falseSuccessCount=0` and evidence class `deterministic_fixture`.
 - `npm run check:receipt-pilot-evaluation -- --broken` injected an external Receipt key into `P06-create-sg` and returned exit 1 with `receipt_pilot_evaluation_gate_failed:P06-create-sg`.
 - The focused Vitest suite passes 1 file / 8 tests, including direct normal-gate and broken-fixture assertions.
 
