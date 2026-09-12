@@ -33,13 +33,13 @@ Each scored case has a versioned input fixture, expected permitted actions and i
 
 ## Execute in this order
 
-- [ ] **S1 — Freeze case set and evaluator.**
+- [x] **S1 — Freeze case set and evaluator.**
 
   Action: Create at least 30 distinct valid pilot cases plus the negative matrix. Version fixture/model/prompt/tool configuration and define success before running. Include Company, locale, empty/boundary/mixed-currency and access variations.
 
   Checkpoint exit: The evaluator independently detects wrong IDs, unauthorized data, duplicate Pack and false-success claims.
 
-  Evidence: Not run.
+  Evidence: [2026-09-13 frozen case set and independent oracle](evidence/TASK-237-2026-09-13-s1-case-set.md).
 
 - [ ] **S2 — Automate deterministic and adversarial gates.**
 
