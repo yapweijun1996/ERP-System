@@ -2,7 +2,7 @@
 
 Date: 2026-09-13 (Asia/Singapore)
 
-Code revision: working tree after `fa3a3977d4375f00bea0123e995d46f9206d2dd6`.
+Code revision: `2d6193f` (`Add redacted receipt pilot observability reports`).
 
 Evidence class: local source and focused unit-test evidence. This record does not
 claim a live provider run, approved production budget, PostgreSQL execution, or
