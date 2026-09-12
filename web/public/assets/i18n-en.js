@@ -1259,6 +1259,8 @@ window.__ERP_I18N_EN__=Object.freeze({
   "receiptAssistant.artifact": "PDF artifact",
   "receiptAssistant.reason": "Confirmation reason",
   "receiptAssistant.reasonPlaceholder": "I reviewed the cited receipts and exact Pack contents.",
+  "receiptAssistant.unsupportedEvidence": "This file type stays as the governed original. Download it to inspect it in a compatible viewer.",
+  "receiptAssistant.downloadEvidence": "Download original evidence",
   "route.new-stock-adjustment": "New Stock Adjustment",
   "route.team-calendar": "Team Calendar",
   "route.staff-calendar": "Staff Calendar",

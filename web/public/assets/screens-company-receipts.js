@@ -35,6 +35,7 @@
     approve:'Approve exact Pack',cancel:'Cancel',close:'Close',retry:'Try again',statusDraft:'Draft — ready to review',statusRunning:'Running — reading permitted facts',statusWaiting:'Waiting — review and confirm',
     statusSucceeded:'Succeeded — Pack and artifact verified',statusFailed:'Failed — no Pack was created',statusCancelled:'Cancelled — no Pack was created',
     providerUnavailable:'The approved assistant provider is unavailable. Your draft is preserved; use the standard Pack preview or try again later.',cancellationNotice:'The run was cancelled before Pack creation.',
+    unsupportedEvidence:'This file type stays as the governed original. Download it to inspect it in a compatible viewer.',downloadEvidence:'Download original evidence',
     scopeChanged:'The active Company changed. This draft cannot continue across Companies; review it again in the current Company.',rangeRequired:'Choose both Date from and Date to before asking the assistant to prepare a Pack.',
     success:'The persisted Pack was read back and its PDF evidence was verified.',packRecord:'Pack record',artifact:'PDF artifact',reason:'Confirmation reason',reasonPlaceholder:'I reviewed the cited receipts and exact Pack contents.',
   };
@@ -105,6 +106,7 @@
     const assistantSession={
       opened:false,draft:'',search:'',dateFrom:'',dateTo:'',scopeKey:null,state:'draft',result:null,
       error:null,reason:'',busy:false,executionStarted:false,controller:null,
+      evidenceUrl:null,evidenceType:'',evidenceFileName:'',
     };
     async function reload(){
       response=await adapter.companyReceipts({limit:pageSize,search:filters.search,dateFrom:filters.dateFrom,dateTo:filters.dateTo});
@@ -290,6 +292,21 @@
     function assistantStateTone(state){
       return ({draft:'neutral',running:'info',waiting:'warn',succeeded:'ok',failed:'danger',cancelled:'neutral'})[state]||'neutral';
     }
+    function clearAssistantEvidence(){
+      if(assistantSession.evidenceUrl) URL.revokeObjectURL(assistantSession.evidenceUrl);
+      assistantSession.evidenceUrl=null;assistantSession.evidenceType='';assistantSession.evidenceFileName='';
+    }
+    function assistantEvidenceBody(a){
+      if(!assistantSession.evidenceUrl) return '';
+      const type=assistantSession.evidenceType;
+      if(type==='application/pdf'){
+        return `<section class="company-receipt-pack-frame" data-receipt-assistant-evidence-preview><iframe src="${esc(assistantSession.evidenceUrl)}" title="${esc(c.originalFile)}"></iframe></section>`;
+      }
+      if(['image/png','image/jpeg','image/webp'].includes(type)){
+        return `<section class="company-receipt-pack-frame" data-receipt-assistant-evidence-preview><img src="${esc(assistantSession.evidenceUrl)}" alt="${esc(c.originalFile)}" style="max-width:100%;height:auto"></section>`;
+      }
+      return `<section class="receipt-assistant-evidence-download" data-receipt-assistant-evidence-preview><div class="callout info">${ic('file')}<span>${esc(a.unsupportedEvidence)}<br><a class="btn soft sm" download="${esc(assistantSession.evidenceFileName||c.originalFile)}" href="${esc(assistantSession.evidenceUrl)}">${ic('download')}<span>${esc(a.downloadEvidence)}</span></a></span></div></section>`;
+    }
     function assistantSourceBody(result,a){
       const sources=Array.isArray(result&&result.sources)?result.sources:[];
       if(!sources.length) return `<p class="hint">${esc(a.noSources)}</p>`;
@@ -351,7 +368,7 @@
           ${assistantSession.state==='draft'||assistantSession.state==='failed'||assistantSession.state==='cancelled'?`<button class="receipt-assistant-submit" type="submit" data-receipt-assistant-submit ${assistantSession.busy?'disabled':''}>${ic('comment')}<span>${esc(assistantSession.state==='draft'?a.run:a.retry)}</span></button>`:''}
         </form>
         ${errorBody}${progress}
-        ${assistantSession.evidenceUrl?`<section class="company-receipt-pack-frame" data-receipt-assistant-evidence-preview>${assistantSession.evidenceType==='application/pdf'?`<iframe src="${esc(assistantSession.evidenceUrl)}" title="${esc(c.originalFile)}"></iframe>`:`<img src="${esc(assistantSession.evidenceUrl)}" alt="${esc(c.originalFile)}" style="max-width:100%;height:auto">`}</section>`:''}
+        ${assistantEvidenceBody(a)}
         ${assistantPreviewBody(result,a)}
         <section class="receipt-assistant-sources" aria-labelledby="receipt-assistant-sources-title"><div class="receipt-assistant-section-title"><h4 id="receipt-assistant-sources-title">${esc(a.sources)}</h4></div>${assistantSourceBody(result,a)}</section>
         ${assistantSuccessBody(result,a)}
@@ -429,7 +446,7 @@
       if(!assistantSession.dateFrom||!assistantSession.dateTo||assistantSession.dateFrom>assistantSession.dateTo){assistantSession.error={code:'assistant_range_invalid',message:a.rangeRequired};renderAssistant('[data-receipt-assistant-from]');return;}
       if(!assistantCurrentScope()){renderAssistant();return;}
       if(typeof adapter.receiptAssistant!=='function'){assistantSession.state='failed';assistantSession.error={code:'assistant_provider_unavailable',message:a.providerUnavailable};renderAssistant();return;}
-      if(assistantSession.evidenceUrl){URL.revokeObjectURL(assistantSession.evidenceUrl);assistantSession.evidenceUrl=null;}
+      clearAssistantEvidence();
       assistantSession.previewLimit=20;assistantSession.error=null;assistantSession.result=null;assistantSession.state='running';assistantSession.busy=true;assistantSession.executionStarted=false;
       const controller=new AbortController();assistantSession.controller=controller;renderAssistant();
       try{
@@ -497,18 +514,18 @@
       if(assistantSession.busy||!assistantCurrentScope()) return;
       const modal=$('#modalEl'),result=assistantSession.result,row=result?.preview?.rows?.[index];
       if(!row) return;
-      if(assistantSession.evidenceUrl){URL.revokeObjectURL(assistantSession.evidenceUrl);assistantSession.evidenceUrl=null;}
+      clearAssistantEvidence();
       assistantSession.busy=true;assistantSession.error=null;renderAssistant();
       try{
         const detail=(await adapter.companyReceipt(row.receiptId))?.data;
         if(!detail||detail.version!==row.receiptVersion||detail.documentId!==row.documentId||detail.documentVersionId!==row.documentVersionId||detail.documentSha256!==row.documentSha256) throw new Error(c.selectionChanged);
         const file=(await adapter.documentContent(detail.documentId,detail.documentVersionNo))?.data;
         const type=String(file?.contentType||'').split(';')[0];
-        if(!file?.content||file.content.byteLength>20*1024*1024||!['application/pdf','image/png','image/jpeg','image/webp'].includes(type)||file.versionNo!==detail.documentVersionNo||file.sha256!==row.documentSha256) throw new Error(c.notReady);
+        if(!file?.content||file.content.byteLength>20*1024*1024||!['application/pdf','image/png','image/jpeg','image/webp','image/heic','image/heif'].includes(type)||file.versionNo!==detail.documentVersionNo||file.sha256!==row.documentSha256) throw new Error(c.notReady);
         const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',file.content)),byte=>byte.toString(16).padStart(2,'0')).join('');
         if(hash!==row.documentSha256) throw new Error(c.notReady);
         if(!modal?.isConnected||$('#modalEl')!==modal||!assistantCurrentScope()||assistantSession.result!==result) return;
-        assistantSession.evidenceUrl=URL.createObjectURL(new Blob([file.content],{type:type}));assistantSession.evidenceType=type;
+        assistantSession.evidenceUrl=URL.createObjectURL(new Blob([file.content],{type:type}));assistantSession.evidenceType=type;assistantSession.evidenceFileName=String(detail.originalFileName||row.originalFileName||c.originalFile);
       }catch(error){assistantSession.error={message:assistantErrorMessage(error,assistantCopy())};}
       finally{
         assistantSession.busy=false;
@@ -544,7 +561,7 @@
         assistantSession.opened=true;assistantSession.scopeKey=assistantScopeKey();assistantSession.draft='';assistantSession.search=filters.search||'';assistantSession.dateFrom=filters.dateFrom||'';assistantSession.dateTo=filters.dateTo||'';assistantSession.state='draft';assistantSession.result=null;assistantSession.error=null;
       }
       appModal({icon:'comment',title:a.title,width:'min(980px, calc(100vw - 24px))',body:assistantBody(a),actions:assistantActions(a),onClose:()=>{
-        if(assistantSession.evidenceUrl){URL.revokeObjectURL(assistantSession.evidenceUrl);assistantSession.evidenceUrl=null;}
+        clearAssistantEvidence();
         if(assistantSession.pdfUrl){URL.revokeObjectURL(assistantSession.pdfUrl);assistantSession.pdfUrl=null;}
         if(assistantSession.state==='running'&&assistantSession.busy&&!assistantSession.executionStarted){assistantSession.state='cancelled';assistantSession.error={code:'assistant_cancelled',message:assistantCopy().cancellationNotice};assistantSession.busy=false;assistantSession.controller?.abort();assistantSession.controller=null;}
       }});

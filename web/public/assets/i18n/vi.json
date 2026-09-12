@@ -1284,6 +1284,8 @@
   "receiptAssistant.artifact": "Tệp PDF",
   "receiptAssistant.reason": "Lý do xác nhận",
   "receiptAssistant.reasonPlaceholder": "Tôi đã xem các biên lai có nguồn và nội dung Gói chính xác.",
+  "receiptAssistant.unsupportedEvidence": "Loại tệp này được giữ nguyên dưới dạng bản gốc được quản trị. Hãy tải xuống để kiểm tra bằng trình xem tương thích.",
+  "receiptAssistant.downloadEvidence": "Tải chứng từ gốc",
   "route.new-stock-adjustment": "Điều chỉnh tồn kho mới",
   "route.team-calendar": "Lịch nhóm",
   "route.staff-calendar": "Lịch nhân viên",

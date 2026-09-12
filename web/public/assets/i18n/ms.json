@@ -1284,6 +1284,8 @@
   "receiptAssistant.artifact": "Artifak PDF",
   "receiptAssistant.reason": "Sebab pengesahan",
   "receiptAssistant.reasonPlaceholder": "Saya telah menyemak resit bersumber dan kandungan Pek yang tepat.",
+  "receiptAssistant.unsupportedEvidence": "Jenis fail ini kekal sebagai asal yang ditadbir. Muat turun untuk menyemaknya dalam pemapar yang serasi.",
+  "receiptAssistant.downloadEvidence": "Muat turun bukti asal",
   "route.new-stock-adjustment": "Pelarasan Stok Baharu",
   "route.team-calendar": "Kalendar Pasukan",
   "route.staff-calendar": "Kalendar Kakitangan",

@@ -198,6 +198,50 @@ async function main(){
     assert(await page.locator('.dt-body .dt-r').count()===25,'first page must contain 25 rows');
     assert(await page.locator('[data-missing-date-route]').count()===1,
       'undated receipts must remain visible with an explicit correction action');
+    const heicBase64=Buffer.from(Uint8Array.from([
+      0x00,0x00,0x00,0x18,0x66,0x74,0x79,0x70,0x68,0x65,0x69,0x63,
+      0x00,0x00,0x00,0x00,0x6d,0x69,0x66,0x31,0x68,0x65,0x69,0x63,
+    ])).toString('base64');
+    await page.evaluate(async heicBase64=>{
+      const raw=atob(heicBase64),content=new Uint8Array(raw.length);
+      for(let index=0;index<raw.length;index+=1) content[index]=raw.charCodeAt(index);
+      const digest=await crypto.subtle.digest('SHA-256',content);
+      const sha256=Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,'0')).join('');
+      const row={receiptId:901,receiptVersion:1,transactionDate:'2026-08-11',merchant:'HEIC Merchant',
+        receiptNumber:'HEIC-901',category:'Travel',amount:'12.3400',currency:'SGD',businessPurpose:'HEIC review',
+        notes:'',uploaderUserId:1,uploaderName:'Finance User',documentId:41,documentVersionId:42,
+        documentSha256:sha256,originalFileName:'receipt.heic'};
+      ErpSystemData.receiptAssistant=async()=>({data:{state:'waiting',preview:{rows:[row],rowCount:1,
+        totals:[{currency:'SGD',amount:'12.3400',receiptCount:1}],filters:{dateFrom:'2026-08-11',dateTo:'2026-08-11'},visibility:'company'},
+        sources:[{sourceType:'receipt',sourceId:'901',recordVersion:1}],confirmation:{available:false}}});
+      ErpSystemData.companyReceipt=async()=>({data:{version:1,documentId:41,documentVersionId:42,
+        documentVersionNo:1,documentSha256:sha256,originalFileName:'receipt.heic'}});
+      ErpSystemData.documentContent=async()=>({data:{content,contentType:'image/heic',versionNo:1,sha256}});
+      await navigate('company-receipts');
+    },heicBase64);
+    await page.locator('[data-receipt-assistant-open]').click();
+    await page.locator('.receipt-assistant-modal [data-receipt-assistant-message]').fill('Review HEIC evidence');
+    await page.locator('.receipt-assistant-modal [data-receipt-assistant-from]').fill('2026-08-11');
+    await page.locator('.receipt-assistant-modal [data-receipt-assistant-to]').fill('2026-08-11');
+    await page.locator('.receipt-assistant-modal [data-receipt-assistant-submit]').click();
+    await page.locator('.receipt-assistant-modal [data-receipt-assistant-evidence="0"]').click();
+    await page.locator('.receipt-assistant-modal [data-receipt-assistant-evidence-preview]').waitFor({timeout:TIMEOUT});
+    assert(await page.locator('.receipt-assistant-modal [data-receipt-assistant-evidence-preview] a[download]').count()===1,
+      'HEIC evidence must remain downloadable as the governed original');
+    assert(await page.locator('.receipt-assistant-modal [data-receipt-assistant-evidence-preview] img').count()===0,
+      'HEIC evidence must not be presented as a falsely decoded image');
+    assert((await page.locator('.receipt-assistant-modal [data-receipt-assistant-evidence-preview]').innerText()).includes('governed original'),
+      'HEIC evidence must explain why a compatible viewer is required');
+    assert(await page.locator('.receipt-assistant-modal [data-receipt-assistant-evidence-preview] a[download]').getAttribute('download')==='receipt.heic',
+      'HEIC download must preserve the governed original filename');
+    await page.locator('.receipt-assistant-modal [data-receipt-assistant-close]').click();
+    await page.evaluate(()=>{
+      const actual=window.__actualCompanyReceiptAdapter;
+      ErpSystemData.receiptAssistant=actual.receiptAssistant;
+      ErpSystemData.companyReceipt=actual.companyReceipt;
+      ErpSystemData.documentContent=actual.documentContent;
+      return navigate('company-receipts');
+    });
     await page.evaluate(()=>{window.__receiptActions={create:false,edit:false,void:false};return navigate('company-receipts');});
     await page.locator('[data-company-receipt-register="canonical"]').waitFor({timeout:TIMEOUT});
     assert(await page.locator('[data-company-receipt-confirm]').count()===0,

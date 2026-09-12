@@ -1284,6 +1284,8 @@
   "receiptAssistant.artifact": "PDFアーティファクト",
   "receiptAssistant.reason": "確認理由",
   "receiptAssistant.reasonPlaceholder": "出典付きの領収書と正確なパック内容を確認しました。",
+  "receiptAssistant.unsupportedEvidence": "このファイル形式は管理された原本のまま保持されます。互換ビューアで確認するにはダウンロードしてください。",
+  "receiptAssistant.downloadEvidence": "原本の証憑をダウンロード",
   "route.new-stock-adjustment": "新規在庫調整",
   "route.team-calendar": "チームカレンダー",
   "route.staff-calendar": "スタッフカレンダー",

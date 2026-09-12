@@ -1284,6 +1284,8 @@
   "receiptAssistant.artifact": "PDF 文件",
   "receiptAssistant.reason": "确认原因",
   "receiptAssistant.reasonPlaceholder": "我已审核带来源的收据和准确的收据包内容。",
+  "receiptAssistant.unsupportedEvidence": "此文件类型将保留为受治理的原件。请下载后使用兼容的查看器检查。",
+  "receiptAssistant.downloadEvidence": "下载原始凭证",
   "route.new-stock-adjustment": "新建库存调整",
   "route.team-calendar": "团队日历",
   "route.staff-calendar": "员工日历",
