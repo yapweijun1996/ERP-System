@@ -12,6 +12,8 @@ All four G07 criteria plus common DoD remain required for task completion.
 
 Focused source regression evidence for the My Receipts `{data, meta}` capability
 envelope is recorded in [the dated test record](evidence/TASK-234-2026-09-13-my-receipts-capability-regression.md).
+The browser-level authorized-control check is recorded in [the dated browser
+evidence](evidence/TASK-234-2026-09-13-my-receipts-browser-controls.md).
 
 ## Remove mandatory account activation — user decision 2026-09-10
 

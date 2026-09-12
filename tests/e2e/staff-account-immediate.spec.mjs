@@ -112,6 +112,12 @@ try {
     if (!denied) throw new Error('Employee could reveal HR credential handoff');
     await page.evaluate(() => navigate('my-receipts'));
     await page.getByRole('heading', { name: 'My Receipts', exact: true }).waitFor({ state: 'visible' });
+    await page.getByRole('button', { name: 'Take photo', exact: true }).waitFor({ state: 'visible' });
+    await page.getByRole('button', { name: 'Choose file', exact: true }).waitFor({ state: 'visible' });
+    if (await page.locator('[data-receipt-camera]').count() !== 1
+      || await page.locator('[data-receipt-file]').count() !== 1) {
+      throw new Error('Authorized employee receipt capture controls are missing');
+    }
     if (await page.locator('#activationForm').count()) throw new Error('Activation form still exists');
     if (await page.getByRole('heading', { name: 'Employee self service is unavailable' }).count()) throw new Error('Employee link missing');
     if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error('Horizontal overflow');
