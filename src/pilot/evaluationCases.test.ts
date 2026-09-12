@@ -53,6 +53,8 @@ describe('Receipt pilot frozen evaluation set and independent oracle', () => {
 
   it('runs the deterministic gate and rejects a deliberately broken fixture', () => {
     expect(runReceiptPilotEvaluation()).toMatchObject({
+      fixtureVersion: 'receipt-pilot-fixture-2026-09-13.v1', modelVersion: 'gpt-4.1-mini',
+      promptVersion: 'receipt-pilot-prompt-2026-09-13.v1', toolVersion: 'agent-actions-v1',
       validCases: 30, validPassed: 30, negativeCases: 9, negativeRejected: 9,
       deterministicSafetyFailures: 0, falseSuccessCount: 0, evidenceClass: 'deterministic_fixture',
     });

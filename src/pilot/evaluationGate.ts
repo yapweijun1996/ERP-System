@@ -1,6 +1,9 @@
 import {
   NEGATIVE_RECEIPT_PILOT_CASES,
   RECEIPT_PILOT_EVALUATION_FIXTURE_VERSION,
+  RECEIPT_PILOT_EVALUATION_MODEL_VERSION,
+  RECEIPT_PILOT_EVALUATION_PROMPT_VERSION,
+  RECEIPT_PILOT_EVALUATION_TOOL_VERSION,
   VALID_RECEIPT_PILOT_CASES,
   evaluateReceiptPilotCase,
   validateReceiptPilotCaseSet,
@@ -14,6 +17,9 @@ export interface ReceiptPilotGateOptions {
 
 export interface ReceiptPilotGateResult {
   readonly fixtureVersion: string;
+  readonly modelVersion: string;
+  readonly promptVersion: string;
+  readonly toolVersion: string;
   readonly validCases: number;
   readonly validPassed: number;
   readonly negativeCases: number;
@@ -88,6 +94,9 @@ export function runReceiptPilotEvaluation(options: ReceiptPilotGateOptions = {})
   }
   return {
     fixtureVersion: RECEIPT_PILOT_EVALUATION_FIXTURE_VERSION,
+    modelVersion: RECEIPT_PILOT_EVALUATION_MODEL_VERSION,
+    promptVersion: RECEIPT_PILOT_EVALUATION_PROMPT_VERSION,
+    toolVersion: RECEIPT_PILOT_EVALUATION_TOOL_VERSION,
     validCases: summary.validCount,
     validPassed,
     negativeCases: summary.negativeCount,
