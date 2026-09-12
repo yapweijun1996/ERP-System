@@ -70,5 +70,7 @@ After the source commit, the exact GOAL count validator remained 227 done,
 6 in progress, 4 todo and 3 blocked across 240 tasks, with 31/48 criteria,
 41/60 checkpoints and no dependency-ready Todo. The task-registry fingerprint
 remained `aaa7dabbab59f42ec1c4ae1c705aaa259ad7e2f85b6f57824a42c04ab23e86de`.
-Documentation and root-link checks were rerun after this record was added and
-their outputs are recorded in the continuation log.
+Documentation gates after the record was added were also persisted: `npm run
+docs:check` passed 88 Markdown files / 807 local links; the root
+`GOAL.md`/`PROGRESS.md`/`GOAL_PROMPT.md` link-and-fragment review passed 3 files /
+176 local links / 0 missing; `git diff --check` and conflict-marker scan passed.
