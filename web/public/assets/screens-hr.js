@@ -2092,11 +2092,12 @@ async function openReceiptEditor(draft,onDone){
 SCREENS['my-receipts']=async function(root){
   const s=receiptCaptureCopy(),adapter=myWorkAdapter(),draftStore=window.ErpReceiptDrafts;
   if(!draftStore) throw new Error('Offline receipt draft storage is unavailable.');
-  const context=await myWorkContextOrIdentityPage(
+  const contextResponse=await myWorkContextOrIdentityPage(
     root,'my-receipts',s('title'),s('sub'),adapter,
   );
-  if(!context) return;
-  const canWriteReceipts=Boolean(context.capabilities&&context.capabilities.receipts&&context.capabilities.receipts.writable);
+  if(!contextResponse) return;
+  const context=contextResponse.data;
+  const canWriteReceipts=Boolean(context&&context.capabilities&&context.capabilities.receipts&&context.capabilities.receipts.writable);
   let response;
   try{ response=await adapter.receipts(); }
   catch(error){
