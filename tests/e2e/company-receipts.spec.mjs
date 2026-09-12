@@ -73,6 +73,16 @@ async function main(){
       assert(title===expected&& !title.includes('&amp;'),
         `module access title must render translated text for ${language} without HTML entities`);
     }
+    const accessBody=await page.evaluate(()=>{
+      const original=DB.company.name;
+      DB.company.name='Acme & Sons';
+      document.querySelector('#viewRoot').innerHTML=permissionBlockedPanel();
+      const text=document.querySelector('[data-access-denied="403"] p')?.textContent||'';
+      DB.company.name=original;
+      return text;
+    });
+    assert(accessBody.includes('Acme & Sons')&&!accessBody.includes('&amp;'),
+      'permission access text must render dynamic ampersands without double escaping');
     const mockPdf=await PDFDocument.create();mockPdf.addPage([595,842]);
     const mockPdfBase64=Buffer.from(await mockPdf.save({useObjectStreams:false})).toString('base64');
     await page.evaluate(async mockPdfBase64=>{
