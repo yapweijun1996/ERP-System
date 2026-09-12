@@ -4,6 +4,8 @@ import {
   withCalendarWorkerTransaction,
   withDocumentWorkerTransaction,
   withReportingWorkerTransaction,
+  MAX_LOCAL_STATEMENT_TIMEOUT_MS,
+  setLocalStatementTimeout,
 } from '../data/tenantTransaction';
 
 export type WorkerTelemetryScope = 'primary' | 'calendar';
@@ -32,7 +34,38 @@ export interface WorkerQueueTelemetry {
 export interface WorkerTelemetrySnapshot {
   generatedAt: string;
   scope: WorkerTelemetryScope;
+  /** Wall-clock duration of the aggregate snapshot read, in milliseconds. */
+  queryDurationMs: number;
   queues: WorkerQueueTelemetry[];
+}
+
+export interface WorkerTelemetryReadOptions {
+  now?: Date;
+  scope?: WorkerTelemetryScope;
+  /** Optional per-statement PostgreSQL budget for aggregate telemetry reads. */
+  queryTimeoutMs?: number;
+}
+
+export const WORKER_TELEMETRY_QUERY_TIMEOUT_MAX_MS = MAX_LOCAL_STATEMENT_TIMEOUT_MS;
+
+/** Parse an optional worker telemetry query budget without allowing an
+ * unbounded or malformed value to reach the database session. */
+export function parseWorkerTelemetryQueryTimeoutMs(
+  value: string | undefined,
+): number | undefined {
+  if (!value) return undefined;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
+  const bounded = Math.floor(parsed);
+  if (bounded < 1) return undefined;
+  return Math.min(bounded, WORKER_TELEMETRY_QUERY_TIMEOUT_MAX_MS);
+}
+
+function normalizeQueryTimeoutMs(value: number | undefined): number | undefined {
+  if (value == null || !Number.isFinite(value) || value <= 0) return undefined;
+  const bounded = Math.floor(value);
+  if (bounded < 1) return undefined;
+  return Math.min(bounded, WORKER_TELEMETRY_QUERY_TIMEOUT_MAX_MS);
 }
 
 interface QueueSpec {
@@ -40,7 +73,9 @@ interface QueueSpec {
   // These values are fixed source constants, never request or tenant input.
   table: string;
   pending: string;
-  ready: (now: Date, expiredLease: Date) => SQL;
+  ready: (now: Date, expiredLease: Date, useJoinedConnection?: boolean) => SQL;
+  /** Join the tenant-scoped enabled calendar connection once per aggregate. */
+  joinEnabledConnection?: boolean;
   leaseMs: number;
   failed: string;
   deadLettered: string;
@@ -51,7 +86,9 @@ const OUTBOX_PENDING = `${OUTBOX_SCOPE} AND delivered_at IS NULL AND dead_letter
 const REPORT_PENDING = "status IN ('queued', 'running')";
 const TAX_EVIDENCE_PENDING = "status IN ('queued', 'running')";
 const DOCUMENT_SCAN_PENDING = "status IN ('queued', 'scanning', 'indeterminate', 'unavailable')";
+const DOCUMENT_SCAN_READY = "status IN ('queued', 'indeterminate', 'unavailable')";
 const DOCUMENT_EXTRACTION_PENDING = "status IN ('queued', 'extracting', 'failed', 'unavailable')";
+const DOCUMENT_EXTRACTION_READY = "status IN ('queued', 'failed', 'unavailable')";
 const CALENDAR_PENDING = "status IN ('pending', 'failed')";
 
 function readyWithLease(
@@ -86,9 +123,11 @@ function readyForCalendar(
   pending: string,
   now: Date,
   expiredLease: Date,
+  useJoinedConnection = false,
 ): SQL {
-  return sql`${readyWithLease(pending, now, expiredLease)}
-    AND EXISTS (
+  const enabledConnection = useJoinedConnection
+    ? sql`connection.id IS NOT NULL`
+    : sql`EXISTS (
       SELECT 1
       FROM "calendar_outbound_connection" AS connection
       WHERE connection.id = queue.connection_id
@@ -96,6 +135,8 @@ function readyForCalendar(
         AND connection.company_fn = queue.company_fn
         AND connection.is_enabled = TRUE
     )`;
+  return sql`${readyWithLease(pending, now, expiredLease)}
+    AND ${enabledConnection}`;
 }
 
 function readyForReminder(
@@ -141,7 +182,7 @@ const DOCUMENT_SCAN_SPEC: QueueSpec = {
   queue: 'document-scan',
   table: '"document_scan_job"',
   pending: DOCUMENT_SCAN_PENDING,
-  ready: (now, expiredLease) => readyWithLease(DOCUMENT_SCAN_PENDING, now, expiredLease),
+  ready: (now, expiredLease) => readyWithLease(DOCUMENT_SCAN_READY, now, expiredLease),
   leaseMs: 5 * 60 * 1000,
   failed: "status IN ('indeterminate', 'unavailable')",
   deadLettered: "status = 'dead_letter' OR dead_lettered_at IS NOT NULL",
@@ -151,7 +192,7 @@ const DOCUMENT_EXTRACTION_SPEC: QueueSpec = {
   queue: 'document-extraction',
   table: '"document_extraction"',
   pending: DOCUMENT_EXTRACTION_PENDING,
-  ready: (now, expiredLease) => readyWithLease(DOCUMENT_EXTRACTION_PENDING, now, expiredLease),
+  ready: (now, expiredLease) => readyWithLease(DOCUMENT_EXTRACTION_READY, now, expiredLease),
   leaseMs: 5 * 60 * 1000,
   failed: "status IN ('failed', 'unavailable')",
   deadLettered: "status = 'dead_letter' OR dead_lettered_at IS NOT NULL",
@@ -161,7 +202,10 @@ const CALENDAR_LEAVE_SPEC: QueueSpec = {
   queue: 'calendar-leave',
   table: '"calendar_outbound_event"',
   pending: CALENDAR_PENDING,
-  ready: (now, expiredLease) => readyForCalendar(CALENDAR_PENDING, now, expiredLease),
+  ready: (now, expiredLease, useJoinedConnection) => (
+    readyForCalendar(CALENDAR_PENDING, now, expiredLease, useJoinedConnection)
+  ),
+  joinEnabledConnection: true,
   leaseMs: 5 * 60 * 1000,
   failed: "status = 'failed'",
   deadLettered: 'FALSE',
@@ -171,7 +215,10 @@ const CALENDAR_APPOINTMENT_SPEC: QueueSpec = {
   queue: 'calendar-appointment',
   table: '"staff_appointment_outbound_event"',
   pending: CALENDAR_PENDING,
-  ready: (now, expiredLease) => readyForCalendar(CALENDAR_PENDING, now, expiredLease),
+  ready: (now, expiredLease, useJoinedConnection) => (
+    readyForCalendar(CALENDAR_PENDING, now, expiredLease, useJoinedConnection)
+  ),
+  joinEnabledConnection: true,
   leaseMs: 5 * 60 * 1000,
   failed: "status = 'failed'",
   deadLettered: 'FALSE',
@@ -233,12 +280,24 @@ async function readQueueAggregate(
 ): Promise<WorkerQueueTelemetry> {
   const expiredLease = new Date(now.getTime() - spec.leaseMs);
   const pending = sql.raw(spec.pending);
+  const enabledConnectionJoin = spec.joinEnabledConnection
+    ? sql`LEFT JOIN (
+        SELECT id, master_fn, company_fn
+        FROM "calendar_outbound_connection"
+        WHERE is_enabled = TRUE
+      ) AS connection
+        ON connection.id = queue.connection_id
+        AND connection.master_fn = queue.master_fn
+        AND connection.company_fn = queue.company_fn`
+    : sql``;
   // Table names and predicates above are fixed source constants. Keeping this
   // read-only query generic prevents eight queue implementations from drifting.
   const result = await db.execute(sql`
     SELECT
       count(*) FILTER (WHERE ${pending}) AS pending,
-      count(*) FILTER (WHERE ${spec.ready(now, expiredLease)}) AS ready,
+      count(*) FILTER (
+        WHERE ${spec.ready(now, expiredLease, spec.joinEnabledConnection)}
+      ) AS ready,
       count(*) FILTER (
         WHERE ${pending}
           AND locked_at IS NOT NULL
@@ -249,6 +308,7 @@ async function readQueueAggregate(
       count(*) FILTER (WHERE ${sql.raw(spec.deadLettered)}) AS dead_lettered,
       min(created_at) FILTER (WHERE ${pending}) AS oldest_pending_at
     FROM ${sql.raw(spec.table)} AS queue
+    ${enabledConnectionJoin}
   `) as { rows: QueueAggregateRow[] };
   const row = result.rows[0] ?? {};
   return {
@@ -268,34 +328,46 @@ async function readGroup(
   specs: readonly QueueSpec[],
   now: Date,
   workerScope: 'outbox' | 'reporting' | 'documents' | 'calendar',
+  queryTimeoutMs: number | undefined,
 ): Promise<WorkerQueueTelemetry[]> {
   if (workerScope === 'outbox') {
-    return Promise.all(specs.map(spec => readQueueAggregate(db, spec, now)));
+    if (queryTimeoutMs == null) {
+      return Promise.all(specs.map(spec => readQueueAggregate(db, spec, now)));
+    }
+    return db.transaction(async (tx) => {
+      await setLocalStatementTimeout(tx, queryTimeoutMs);
+      return Promise.all(specs.map(spec => readQueueAggregate(tx, spec, now)));
+    });
   }
   if (workerScope === 'reporting') {
-    return withReportingWorkerTransaction(db, tx => (
-      Promise.all(specs.map(spec => readQueueAggregate(tx, spec, now)))
-    ));
+    return withReportingWorkerTransaction(db, async (tx) => {
+      await setLocalStatementTimeout(tx, queryTimeoutMs);
+      return Promise.all(specs.map(spec => readQueueAggregate(tx, spec, now)));
+    });
   }
   if (workerScope === 'documents') {
-    return withDocumentWorkerTransaction(db, tx => (
-      Promise.all(specs.map(spec => readQueueAggregate(tx, spec, now)))
-    ));
+    return withDocumentWorkerTransaction(db, async (tx) => {
+      await setLocalStatementTimeout(tx, queryTimeoutMs);
+      return Promise.all(specs.map(spec => readQueueAggregate(tx, spec, now)));
+    });
   }
-  return withCalendarWorkerTransaction(db, tx => (
-    Promise.all(specs.map(spec => readQueueAggregate(tx, spec, now)))
-  ));
+  return withCalendarWorkerTransaction(db, async (tx) => {
+    await setLocalStatementTimeout(tx, queryTimeoutMs);
+    return Promise.all(specs.map(spec => readQueueAggregate(tx, spec, now)));
+  });
 }
 
 export async function readWorkerQueueTelemetry(
   db: DB,
-  options: { now?: Date; scope?: WorkerTelemetryScope } = {},
+  options: WorkerTelemetryReadOptions = {},
 ): Promise<WorkerTelemetrySnapshot> {
+  const startedAt = Date.now();
   const now = options.now ?? new Date();
   const scope = options.scope ?? 'primary';
+  const queryTimeoutMs = normalizeQueryTimeoutMs(options.queryTimeoutMs);
   const specs = scope === 'calendar' ? CALENDAR_SPECS : PRIMARY_SPECS;
   const outbox = specs.includes(OUTBOX_SPEC)
-    ? readGroup(db, [OUTBOX_SPEC], now, 'outbox')
+    ? readGroup(db, [OUTBOX_SPEC], now, 'outbox', queryTimeoutMs)
     : Promise.resolve([]);
   const reportingSpecs = specs.filter(spec => (
     spec === REPORT_SPEC || spec === TAX_EVIDENCE_SPEC
@@ -310,9 +382,15 @@ export async function readWorkerQueueTelemetry(
   ));
   const [outboxRows, reportingRows, documentRows, calendarRows] = await Promise.all([
     outbox,
-    reportingSpecs.length ? readGroup(db, reportingSpecs, now, 'reporting') : Promise.resolve([]),
-    documentSpecs.length ? readGroup(db, documentSpecs, now, 'documents') : Promise.resolve([]),
-    calendarSpecs.length ? readGroup(db, calendarSpecs, now, 'calendar') : Promise.resolve([]),
+    reportingSpecs.length
+      ? readGroup(db, reportingSpecs, now, 'reporting', queryTimeoutMs)
+      : Promise.resolve([]),
+    documentSpecs.length
+      ? readGroup(db, documentSpecs, now, 'documents', queryTimeoutMs)
+      : Promise.resolve([]),
+    calendarSpecs.length
+      ? readGroup(db, calendarSpecs, now, 'calendar', queryTimeoutMs)
+      : Promise.resolve([]),
   ]);
   const byQueue = new Map([
     ...outboxRows,
@@ -323,6 +401,7 @@ export async function readWorkerQueueTelemetry(
   return {
     generatedAt: now.toISOString(),
     scope,
+    queryDurationMs: Math.max(0, Date.now() - startedAt),
     queues: specs.map(spec => byQueue.get(spec.queue)!).filter(Boolean),
   };
 }
@@ -330,7 +409,7 @@ export async function readWorkerQueueTelemetry(
 export async function logWorkerQueueTelemetry(
   db: DB,
   workerId: string,
-  options: { now?: Date; scope?: WorkerTelemetryScope } = {},
+  options: WorkerTelemetryReadOptions = {},
 ): Promise<WorkerTelemetrySnapshot> {
   const snapshot = await readWorkerQueueTelemetry(db, options);
   console.log(JSON.stringify({
@@ -344,7 +423,7 @@ export async function logWorkerQueueTelemetry(
 type WorkerTelemetryLogger = (
   db: DB,
   workerId: string,
-  options: { scope: WorkerTelemetryScope },
+  options: WorkerTelemetryReadOptions,
 ) => Promise<WorkerTelemetrySnapshot>;
 
 export function createWorkerTelemetryEmitter(
@@ -353,6 +432,7 @@ export function createWorkerTelemetryEmitter(
   scope: WorkerTelemetryScope,
   options: {
     intervalMs: number;
+    queryTimeoutMs?: number;
     now?: () => number;
     log?: WorkerTelemetryLogger;
     onError?: (error: unknown) => void;
@@ -370,7 +450,10 @@ export function createWorkerTelemetryEmitter(
     lastStartedAt = startedAt;
     inFlight = true;
     void Promise.resolve()
-      .then(() => log(db, workerId, { scope }))
+      .then(() => log(db, workerId, {
+        scope,
+        queryTimeoutMs: options.queryTimeoutMs,
+      }))
       .catch(onError)
       .finally(() => {
         inFlight = false;

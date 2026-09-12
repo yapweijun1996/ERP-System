@@ -21,7 +21,10 @@ import {
   createHttpLocalOcrExtractor,
   createHttpMalwareScanner,
 } from './modules/documents/processingDrivers';
-import { createWorkerTelemetryEmitter } from './worker/telemetry';
+import {
+  createWorkerTelemetryEmitter,
+  parseWorkerTelemetryQueryTimeoutMs,
+} from './worker/telemetry';
 
 const databaseUrl = process.env.DATABASE_URL;
 const encryptionKey = process.env.ERP_TOKEN_ENCRYPTION_KEY;
@@ -54,9 +57,13 @@ const telemetryPollMs = Math.max(
   10_000,
   Number(process.env.WORKER_TELEMETRY_POLL_MS) || 60_000,
 );
+const telemetryQueryTimeoutMs = parseWorkerTelemetryQueryTimeoutMs(
+  process.env.WORKER_TELEMETRY_QUERY_TIMEOUT_MS,
+);
 let lastMaintenanceAt = 0;
 const emitTelemetryIfDue = createWorkerTelemetryEmitter(db, workerId, 'primary', {
   intervalMs: telemetryPollMs,
+  queryTimeoutMs: telemetryQueryTimeoutMs,
   onError(error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[erp-worker] telemetry failed: ${message}`);

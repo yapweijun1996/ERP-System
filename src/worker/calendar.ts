@@ -6,7 +6,10 @@ import {
   processStaffAppointmentOutboundBatch,
 } from '../modules/hr/calendarSync';
 import { processStaffAppointmentReminderBatch } from '../modules/hr/appointmentReminders';
-import { createWorkerTelemetryEmitter } from './telemetry';
+import {
+  createWorkerTelemetryEmitter,
+  parseWorkerTelemetryQueryTimeoutMs,
+} from './telemetry';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -26,8 +29,12 @@ const telemetryPollMs = Math.max(
   10_000,
   Number(process.env.WORKER_TELEMETRY_POLL_MS) || 60_000,
 );
+const telemetryQueryTimeoutMs = parseWorkerTelemetryQueryTimeoutMs(
+  process.env.WORKER_TELEMETRY_QUERY_TIMEOUT_MS,
+);
 const emitTelemetryIfDue = createWorkerTelemetryEmitter(db, workerId, 'calendar', {
   intervalMs: telemetryPollMs,
+  queryTimeoutMs: telemetryQueryTimeoutMs,
   onError(error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[erp-calendar-worker] telemetry failed: ${message}`);
