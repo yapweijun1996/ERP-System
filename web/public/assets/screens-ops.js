@@ -57,7 +57,7 @@ SCREENS['dashboard'] = function(root){
         <div class="dash-sectitle"><span>${esc(t('dash.sec.queue'))}</span><span class="ln"></span><span><a href="javascript:navigate('approval-inbox')">${esc(t('dash.openall'))}</a></span></div>
         <div class="dashgrid">
           <button class="wcard span2" style="cursor:default" onclick="event.stopPropagation()">
-            <div class="wc-top"><span class="wc-ic accent">${ic('flow')}</span><h4>${esc(t('dash.q.pending'))}</h4><span class="wc-meta">${esc(t('dash.q.moduleCount',{count:approvalModuleCount}))}</span></div>
+            <div class="wc-top"><span class="wc-ic accent">${ic('flow')}</span><h4>${esc(t('dash.q.pending'))}</h4><span class="wc-meta">${t('dash.q.moduleCount',{count:approvalModuleCount})}</span></div>
             ${apprList}
           </button>
           <div class="wcard" style="cursor:default">

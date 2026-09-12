@@ -684,7 +684,7 @@ function permissionBlockedPanel(){
     </div>
     <div class="statepanel"><div class="ic">${ic('lock')}</div>
       <h3 data-i18n="access.routeDenied">${esc(t('access.routeDenied'))}</h3>
-      <p data-i18n="access.routeBody" data-i18n-params="${params}">${esc(t('access.routeBody',{company:DB.company.name}))}</p>
+      <p data-i18n="access.routeBody" data-i18n-params="${params}">${t('access.routeBody',{company:DB.company.name})}</p>
     </div>
   </section></div>`;
 }
@@ -771,7 +771,7 @@ function openEmployeeWorkspaceConfirm(target){
   appModal({
     icon:'shield',
     title:t('employeeWorkspace.confirmTitle'),
-    body:`<p class="hint" style="margin:0 0 14px;line-height:1.5">${esc(t('employeeWorkspace.confirmBody',{name}))}</p>
+    body:`<p class="hint" style="margin:0 0 14px;line-height:1.5">${t('employeeWorkspace.confirmBody',{name})}</p>
       <div class="fld"><span>${esc(t('employeeWorkspace.reason'))}</span>
         <input id="employeeWorkspaceReason" maxlength="240" value="${esc(t('employeeWorkspace.defaultReason'))}">
       </div>${detail?`<p class="hint" style="margin:10px 0 0">${esc(detail)}</p>`:''}`,
@@ -2270,18 +2270,18 @@ function buildPeriodMenu(){
   const years=DB.fiscalYears||[DB.fiscal];
   const fyRows=years.map(fy=>`<button class="menu-item" data-fy="${esc(fy.fyLabel)}">
     <span style="font-family:var(--mono);font-size:11px;color:var(--muted);min-width:30px;flex:none">${esc(fy.fyLabel.replace(/^FY/,''))}</span>
-    <span>${esc(fy.fyLabel)}<small style="display:block;color:var(--muted);font-size:11px">${esc(t('fiscal.periodCount',{range:fyRangeLabel(fy),count:fy.periodCount}))}</small></span>
+    <span>${esc(fy.fyLabel)}<small style="display:block;color:var(--muted);font-size:11px">${t('fiscal.periodCount',{range:fyRangeLabel(fy),count:fy.periodCount})}</small></span>
     <span class="meta">${fy===DB.fiscal?ic('check'):cap(yearStatus(fy.state||''),fyTone(fy.state))}</span></button>`).join('');
   const fySection=`<div class="menu-section"><div class="menu-head">${esc(t('fiscal.year'))}</div>${fyRows}
     <button class="menu-item" data-period-action="new">${ic('plus')||ic('add')||''}<span>${esc(t('fiscal.newYear'))}</span><span class="meta">${ic('arrowR')}</span></button></div>`;
   // ── period selector for the working FY ──
-  const head=`<div class="menu-head">${esc(t('fiscal.periods',{year:DB.fiscal.fyLabel}))} · <span style="text-transform:none;letter-spacing:0;margin-left:4px">${esc(fyRangeLabel())}</span></div>`;
+  const head=`<div class="menu-head">${t('fiscal.periods',{year:DB.fiscal.fyLabel})} · <span style="text-transform:none;letter-spacing:0;margin-left:4px">${esc(fyRangeLabel())}</span></div>`;
   const rows=ps.map(p=>`<button class="menu-item" data-period="${p.i}">
     <span style="font-family:var(--mono);font-size:11px;color:var(--muted);min-width:30px;flex:none">${esc(p.code)}</span>
     <span>${esc(p.label)}<small style="display:block;color:var(--muted);font-size:11px">${esc(p.status==='Open'?t('fiscal.currentPostingPeriod'):p.status==='Closed'?t('fiscal.closedForPosting'):t('fiscal.futurePeriod'))}</small></span>
     <span class="meta">${p.selected?ic('check'):cap(periodStatus(p.status),tone(p.status))}</span></button>`).join('');
   return `${fySection}<div class="menu-section">${head}<div style="max-height:264px;overflow:auto">${rows}</div></div>
-    <div class="menu-section"><button class="menu-item" data-period-action="setup">${ic('gear')}<span>${esc(t('fiscal.setupYear',{year:DB.fiscal.fyLabel}))}</span><span class="meta">${ic('arrowR')}</span></button></div>`;
+    <div class="menu-section"><button class="menu-item" data-period-action="setup">${ic('gear')}<span>${t('fiscal.setupYear',{year:DB.fiscal.fyLabel})}</span><span class="meta">${ic('arrowR')}</span></button></div>`;
 }
 function wirePeriodMenu(){
   const m=$('#periodMenu'); if(!m) return;

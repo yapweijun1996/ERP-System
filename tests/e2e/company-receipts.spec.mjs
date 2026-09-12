@@ -60,8 +60,19 @@ async function main(){
       await loadModuleControl();
       await navigate('company-receipts');
     });
-    assert(await page.locator('.pagehead h1').innerText()==='Expenses & Tax unavailable',
-      'module access title must render ampersands as text rather than HTML entities');
+    const unavailableTitles={
+      en:'Expenses & Tax unavailable',
+      ms:'Perbelanjaan & Cukai tidak tersedia',
+      vi:'Chi phí & Thuế không khả dụng',
+      ja:'経費と税務 は利用できません',
+      zh:'费用与税务 不可用',
+    };
+    for(const [language,expected] of Object.entries(unavailableTitles)){
+      await page.evaluate(async value=>{await setLang(value);await navigate('company-receipts');},language);
+      const title=await page.locator('.pagehead h1').innerText();
+      assert(title===expected&& !title.includes('&amp;'),
+        `module access title must render translated text for ${language} without HTML entities`);
+    }
     const mockPdf=await PDFDocument.create();mockPdf.addPage([595,842]);
     const mockPdfBase64=Buffer.from(await mockPdf.save({useObjectStreams:false})).toString('base64');
     await page.evaluate(async mockPdfBase64=>{

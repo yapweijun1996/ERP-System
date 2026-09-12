@@ -46,12 +46,12 @@ SCREENS['new-employee'] = async function(root){
           <p class="hint">${esc(t('staff.passwordHint'))}</p>
         </div></div>
         <div class="panel" ${step===3?'':'hidden'}><div class="panel-h">${ic('shield')}<h3>${esc(t('staff.companyRoles'))}</h3></div><div class="panel-body">
-          <div class="callout info">${esc(t('staff.roleHint',{company:DB.company.name}))}</div>
+          <div class="callout info">${t('staff.roleHint',{company:DB.company.name})}</div>
           <div class="check-grid">${roles.length?roles.map(role=>`<label class="check-row"><input type="checkbox" name="neRole" value="${role.roleId}"><span><b>${esc(roleDisplayName(role))}</b><small>${esc(roleDisplayKey(role))}</small></span></label>`).join(''):`<div class="empty-state">${esc(t('staff.noRoles'))}</div>`}</div>
           <div class="fldrow c2" style="margin-top:12px"><div class="fld"><span>${esc(s('fieldAnnualDays'))}</span><input type="number" id="neLeave" min="0" max="40" value="14"></div></div>
         </div></div>
       </div></div></div></div>
-      <div class="set-savebar"><div class="staff-onboarding-save-context"><b>${esc(t('staff.stepCount',{step}))}</b><small>${esc(steps[step-1])}</small></div><div class="grow"></div>
+      <div class="set-savebar"><div class="staff-onboarding-save-context"><b>${t('staff.stepCount',{step})}</b><small>${esc(steps[step-1])}</small></div><div class="grow"></div>
         ${btn(step===1?t('common.cancel'):t('staff.back'),{cls:'soft',attrs:'id="neBack"'})}
         ${btn(step<3?t('staff.continue'):t('staff.activate'),{icon:step<3?'arrowR':'plus',cls:'primary',attrs:'id="neNext"'})}</div>
     </section></div>`;
