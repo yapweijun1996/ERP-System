@@ -55,7 +55,7 @@ Each scored case has a versioned input fixture, expected permitted actions and i
 
   Checkpoint exit: Each run independently meets the threshold; negative tests pass separately; fixtures are distinguished from live model results.
 
-  Evidence: Not run.
+  Evidence: [2026-09-13 Demo model evaluation attempt](evidence/TASK-237-2026-09-13-demo-model-evaluation-attempt.md); the three runs were rate-limited before the required denominator and this checkpoint remains unchecked.
 
 - [ ] **S4 — Measure observability and budgets.**
 
@@ -81,10 +81,10 @@ is needed. Do not mark the task Done merely because all five checkpoints are che
 
 - **G10.1:** Version a receipt-pilot evaluation set with happy paths, invalid input, prompt injection, unauthorized data access, stale approval, revocation and retry scenarios.
   - Required evidence: Frozen valid/negative cases and independent oracle.
-  - Current result: Not run.
+  - Current result: Frozen valid/negative cases and the independent oracle are recorded in S1; the deterministic gate reports 30/30 valid and 9/9 negative cases. Live model-scored receipt-action runs remain unverified.
 - **G10.2:** Require every deterministic authorization/transaction invariant to pass and zero false-success results; achieve at least 95 percent verified success in each of three recorded runs, each containing at least 30 valid pilot cases.
   - Required evidence: Three per-run success denominators and all invariants.
-  - Current result: Not run.
+  - Current result: The Demo query-only attempt reached 5/30, 5/30 and 4/30 before the gateway rate limit. It does not satisfy the three complete model-scored receipt-action runs or the 95 percent threshold.
 - **G10.3:** Record redacted run/model/tool versions, correlation IDs, approvals, resource postconditions, latency and full retry cost; never log secrets or unnecessary sensitive payloads.
   - Required evidence: Redacted traces, latency and total retry cost.
   - Current result: Local report contract and validator pass; live redacted traces, measured latency/cost and owner-approved budgets remain unverified.

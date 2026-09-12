@@ -667,9 +667,14 @@ function moduleBlockedPanel(route){
   const label=item?item.label:mod==='expenses_tax'?t('module.expensesTax'):(mod||route);
   const st=mod?moduleState(mod):{ visible:true, active:true };
   const reason=st.visible?t('access.moduleInactive'):t('access.moduleHidden');
+  /* Resolve the placeholder before escaping the complete heading.  The i18n
+     runtime escapes interpolated values for HTML templates; escaping the
+     already-interpolated result here would surface entities such as `&amp;`
+     in the visible title when a module label contains an ampersand. */
+  const title=esc(t('access.moduleUnavailable').replace('{module}',label));
   return `<div class="content full"><section class="master">
     <div class="pagehead">${crumbs([DB.company.name,t('access.moduleCrumb')])}
-      <div class="h1row"><h1>${t('access.moduleUnavailable',{module:label})}</h1>${cap(reason,'warn')}</div>
+      <div class="h1row"><h1>${title}</h1>${cap(reason,'warn')}</div>
       <div class="h1sub">${esc(t('access.modulePlatformControlled'))}</div>
     </div>
     ${statePanel({icon:'lock',title:t('access.moduleNotAvailable'),body:t('access.modulePlatformHelp')})}
