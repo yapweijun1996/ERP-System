@@ -48,16 +48,25 @@ async function fixture(db: DB, suffix = '1') {
     code: `PUR-SUP-${suffix}`,
     name: `Fictional Supplier ${suffix}`,
   }).returning({ id: supplier.id });
-  await db.insert(taxRule).values({
-    masterFn: SCOPE.masterFn,
-    companyFn: SCOPE.companyFn,
-    taxRegime: 'GST',
-    taxCode: 'SR',
-    rate: '9.000',
-    taxClassification: 'gst_standard',
-    inputTaxRecoverablePct: '100.0000',
-    validFrom: '2024-01-01',
-  }).onConflictDoNothing();
+  const [existingTaxRule] = await db.select({ id: taxRule.id }).from(taxRule).where(and(
+    eq(taxRule.masterFn, SCOPE.masterFn),
+    eq(taxRule.companyFn, SCOPE.companyFn),
+    eq(taxRule.taxRegime, 'GST'),
+    eq(taxRule.taxCode, 'SR'),
+    eq(taxRule.validFrom, '2024-01-01'),
+  )).limit(1);
+  if (!existingTaxRule) {
+    await db.insert(taxRule).values({
+      masterFn: SCOPE.masterFn,
+      companyFn: SCOPE.companyFn,
+      taxRegime: 'GST',
+      taxCode: 'SR',
+      rate: '9.000',
+      taxClassification: 'gst_standard',
+      inputTaxRecoverablePct: '100.0000',
+      validFrom: '2024-01-01',
+    });
+  }
   await db.insert(account).values([
     { masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, code: '1400', name: 'Inventory', type: 'asset' },
     { masterFn: SCOPE.masterFn, companyFn: SCOPE.companyFn, code: '1200', name: 'Input Tax', type: 'asset' },
