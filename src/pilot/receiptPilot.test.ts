@@ -34,8 +34,18 @@ describe('Receipt pilot rehearsal and live authorization gate', () => {
     });
     try {
       expect(result.evidence).toMatchObject({ mode: 'fixture', syntheticDataOnly: true, confirmationSource: 'simulated_fixture', persistedAfterReopen: true, savedPdfVerified: true, humanViewedPdf: false, productionVerified: false,
-        sourceFilesHashVerified: true, humanViewedSources: false, providerCalls: 5 });
+        sourceFilesHashVerified: true, humanViewedSources: false, providerCalls: 5,
+        observability: {
+          schemaVersion: 'receipt-pilot-observability-2026-09-13.v1',
+          evidenceClass: 'deterministic_fixture', environment: 'local_fixture',
+          budget: { state: 'pending' },
+        },
+      });
       expect(result.evidence.receiptIds).toHaveLength(2);
+      expect(result.evidence.observability.correlation.run).toMatch(/^sha256:[a-f0-9]{64}$/);
+      expect(result.evidence.observability.correlation.run).not.toContain('assistant-');
+      expect(result.evidence.observability.metrics.fullRetryCostMicros)
+        .toBe(Math.max(result.evidence.observability.metrics.spentCostMicros, result.evidence.observability.metrics.reservedCostMicros));
       const evidence = await readFile(path.join(result.outputDirectory, 'evidence.json'), 'utf8');
       expect(evidence).not.toMatch(/synthetic-pilot-key|intentKey|credentialEnvelope|demo1234|erp_session/);
       expect((await stat(path.join(result.outputDirectory, 'evidence.json'))).mode & 0o777).toBe(0o600);

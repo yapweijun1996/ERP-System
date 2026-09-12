@@ -21,6 +21,14 @@ import { createReceiptAssistantProviderFactory } from '../api/receiptAssistantPr
 import { createApp } from '../api/app';
 import type { ReceiptAssistantResult, ReceiptAssistantExecutionResult } from '../api/receiptAssistant';
 import { OPENAI_RECEIPT_SNAPSHOT } from '../modules/agent/openAiProvider';
+import {
+  createReceiptPilotObservabilityReport,
+} from './evaluationObservability';
+import {
+  RECEIPT_PILOT_EVALUATION_FIXTURE_VERSION,
+  RECEIPT_PILOT_EVALUATION_PROMPT_VERSION,
+  RECEIPT_PILOT_EVALUATION_TOOL_VERSION,
+} from './evaluationCases';
 
 export interface PilotPolicy {
   mode: 'fixture' | 'live';
@@ -272,6 +280,49 @@ export async function runReceiptPilot(policy: PilotPolicy, review: (value: Pilot
     check(JSON.stringify(rendered.pack.rows.map((row) => row.receiptId).sort()) === JSON.stringify(ids.sort()), 'pilot_persisted_selection_mismatch');
     await artifact(outputDirectory, 'receipt-pack.pdf', rendered.content);
     check(hash(await readFile(path.join(outputDirectory, 'receipt-pack.pdf'))) === rendered.sha256, 'pilot_saved_pdf_mismatch');
+    const approvalReference = confirmation.intentKey ?? policy.approvalReference;
+    const observability = createReceiptPilotObservabilityReport({
+      evidenceClass: policy.mode === 'fixture' ? 'deterministic_fixture' : 'model_evaluation',
+      environment: policy.mode === 'fixture' ? 'local_fixture' : 'local_provider',
+      versions: {
+        fixture: RECEIPT_PILOT_EVALUATION_FIXTURE_VERSION,
+        model: conversation.model,
+        prompt: RECEIPT_PILOT_EVALUATION_PROMPT_VERSION,
+        tool: RECEIPT_PILOT_EVALUATION_TOOL_VERSION,
+      },
+      correlation: {
+        run: conversation.runId,
+        request: `receipt-pilot-request:${conversation.runId}`,
+        grant: 'receipt-pilot',
+        approval: approvalReference,
+        tool: conversation.toolResults.map((tool) => tool.callId).join(','),
+        database: `${scope.masterFn}:${scope.companyFn}:${databasePath}`,
+        artifact: `${rendered.pack.id}:${rendered.sha256}`,
+      },
+      approval: {
+        state: confirmed ? 'approved' : 'rejected',
+        reference: approvalReference,
+      },
+      resourcePostconditions: [
+        ...inspected.map((receipt) => ({ kind: 'receipt' as const, identifier: String(receipt.id), version: receipt.version, state: 'verified' as const })),
+        { kind: 'pack' as const, identifier: String(rendered.pack.id), version: rendered.pack.recordVersion, state: 'verified' as const },
+        { kind: 'artifact' as const, identifier: rendered.sha256, version: 1, state: 'verified' as const },
+      ],
+      metrics: {
+        elapsedMs: Date.now() - startedAt,
+        providerDurationMs,
+        p95LatencyMs: providerDurationMs,
+        providerCalls: conversation.providerCalls,
+        retries: conversation.retries,
+        spentCostMicros: conversation.spentCostMicros,
+        reservedCostMicros: conversation.reservedCostMicros,
+        maxObservedConcurrency: 1,
+      },
+      budget: {
+        state: 'pending', owner: 'pending-owner-approval', p95LatencyMs: null,
+        maxCostMicros: null, maxProviderCalls: null, maxConcurrency: null, reference: null,
+      },
+    });
     const evidence = {
       version: 1, mode: policy.mode, syntheticDataOnly: true, completed: true, productionVerified: false,
       confirmationSource: policy.mode === 'fixture' ? 'simulated_fixture' : 'interactive_operator',
@@ -286,6 +337,7 @@ export async function runReceiptPilot(policy: PilotPolicy, review: (value: Pilot
       persistedAfterReopen: true, savedPdfVerified: true, humanViewedPdf: false,
       inspectedReceiptIds: inspected.map((receipt) => receipt.id), sourceFilesHashVerified: true,
       humanViewedSources: false,
+      observability,
     };
     await artifact(outputDirectory, 'evidence.json', JSON.stringify(evidence, null, 2) + '\n');
     return { outputDirectory, evidence };

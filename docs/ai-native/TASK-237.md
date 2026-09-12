@@ -63,7 +63,7 @@ Each scored case has a versioned input fixture, expected permitted actions and i
 
   Checkpoint exit: Per-run reports contain latency and full retry cost; missing approved budgets keep the operational gate open.
 
-  Evidence: Not run.
+  Evidence: [2026-09-13 redacted observability report contract](evidence/TASK-237-2026-09-13-observability-contract.md); owner-approved numerical budgets and measured live runs remain unverified.
 
 - [ ] **S5 — Exercise release regression and disable.**
 
@@ -87,7 +87,7 @@ is needed. Do not mark the task Done merely because all five checkpoints are che
   - Current result: Not run.
 - **G10.3:** Record redacted run/model/tool versions, correlation IDs, approvals, resource postconditions, latency and full retry cost; never log secrets or unnecessary sensitive payloads.
   - Required evidence: Redacted traces, latency and total retry cost.
-  - Current result: Not run.
+  - Current result: Local report contract and validator pass; live redacted traces, measured latency/cost and owner-approved budgets remain unverified.
 - **G10.4:** Gate model/prompt/tool changes on the same evaluations, record environment and evidence artifacts, and exercise a failed rollout plus emergency disable.
   - Required evidence: CI regression failure, rollback/disable evidence.
   - Current result: Not run.
