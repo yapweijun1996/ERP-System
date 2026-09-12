@@ -89,6 +89,20 @@ jobs:
       - name: Typecheck web
         run: npm run typecheck:web
 
+      - name: Receipt Pilot deterministic evaluation gate
+        run: npm run check:receipt-pilot-evaluation
+
+      - name: Receipt Pilot broken fixture must fail closed
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          if npm run check:receipt-pilot-evaluation -- --broken >output/receipt-pilot-broken.log 2>&1; then
+            cat output/receipt-pilot-broken.log
+            echo "The deliberately broken Receipt Pilot fixture unexpectedly passed."
+            exit 1
+          fi
+          grep -Fq "receipt_pilot_evaluation_gate_failed:P06-create-sg" output/receipt-pilot-broken.log
+
       - name: Check generated PGlite artifacts
         run: npm run check:demo-schema
 
