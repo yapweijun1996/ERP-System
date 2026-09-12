@@ -71,7 +71,7 @@ Each scored case has a versioned input fixture, expected permitted actions and i
 
   Checkpoint exit: G10 includes real CI execution, evaluator failure detection and rollout/disable evidence.
 
-  Evidence: Not run.
+  Evidence: [2026-09-13 local CI gate wiring and failure probe](evidence/TASK-237-2026-09-13-ci-gate-wiring.md); remote CI execution, rollout retention and emergency disable remain unverified.
 
 ## DoD mapping: all four must pass
 
