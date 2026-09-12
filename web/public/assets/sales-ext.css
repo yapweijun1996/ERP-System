@@ -31,9 +31,12 @@
 }
 .transaction-list-body [data-list-empty]{height:auto;min-height:240px;}
 .transaction-list-pagination{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 0;}
+@media(max-width:760px){
+  /* The shared toolbar wraps at this breakpoint; a flex spacer would otherwise reserve an empty row. */
+  .transaction-list-body .toolbar>.grow{display:none;}
+}
 @media(max-width:560px){
   .report-list-customer{width:100%;min-width:0;order:-1;}
-  .transaction-list-body .toolbar>.grow{display:none;}
   .transaction-list-pagination{justify-content:space-between;}
 }
 .master-detail-register-workspace{
