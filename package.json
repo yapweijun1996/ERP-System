@@ -31,6 +31,7 @@
     "check:production-rls": "npm run check:demo-schema && tsx scripts/check-production-rls.ts",
     "check:permissions": "tsx scripts/check-permissions.ts",
     "check:worker-telemetry": "node scripts/validate-worker-telemetry.mjs",
+    "check:receipt-pilot-evaluation": "tsx scripts/check-receipt-pilot-evaluation.ts",
     "check:availability": "node scripts/check-availability.mjs",
     "check:availability-alert": "node scripts/check-availability-alert.mjs",
     "docs:check": "node scripts/check-docs.mjs",

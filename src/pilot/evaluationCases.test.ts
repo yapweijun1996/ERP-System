@@ -6,6 +6,7 @@ import {
   validateReceiptPilotCaseSet,
   type ReceiptPilotObservedResult,
 } from './evaluationCases';
+import { runReceiptPilotEvaluation } from './evaluationGate';
 
 describe('Receipt pilot frozen evaluation set and independent oracle', () => {
   it('freezes at least 30 distinct valid cases and the required dimensions', () => {
@@ -48,5 +49,13 @@ describe('Receipt pilot frozen evaluation set and independent oracle', () => {
   it('keeps the negative matrix outside the positive denominator', () => {
     expect(NEGATIVE_RECEIPT_PILOT_CASES.every((testCase) => testCase.id.startsWith('N'))).toBe(true);
     expect(new Set(NEGATIVE_RECEIPT_PILOT_CASES.map((testCase) => testCase.kind)).size).toBe(9);
+  });
+
+  it('runs the deterministic gate and rejects a deliberately broken fixture', () => {
+    expect(runReceiptPilotEvaluation()).toMatchObject({
+      validCases: 30, validPassed: 30, negativeCases: 9, negativeRejected: 9,
+      deterministicSafetyFailures: 0, falseSuccessCount: 0, evidenceClass: 'deterministic_fixture',
+    });
+    expect(() => runReceiptPilotEvaluation({ broken: true })).toThrow('receipt_pilot_evaluation_gate_failed');
   });
 });
