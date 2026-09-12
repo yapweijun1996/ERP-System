@@ -129,7 +129,7 @@ async function main(){
         createdAt:'2026-08-11T08:00:00.000Z',updatedAt:'2026-08-11T08:00:00.000Z',
       });
       window.__receiptQueries=[];window.__receiptCreates=[];
-      window.__receiptPackPayloads=[];window.__receiptPackPdfActions=[];
+      window.__receiptPackPayloads=[];window.__receiptPackPdfActions=[];window.__receiptPrintOpen=null;
       window.__receiptUpdates=[];window.__receiptVoids=[];
       ErpSystemData.companyReceipts=async query=>{
         window.__receiptQueries.push({...query});
@@ -183,7 +183,10 @@ async function main(){
         window.__receiptVoids.push({id,...payload});
         return {data:{...makeRow(Number(id)),status:'voided',version:2,voidReason:payload.reason},meta:{scope:'uploader',tombstone:true}};
       };
-      window.open=()=>({});
+      window.open=(url,target,features)=>{
+        window.__receiptPrintOpen={url:String(url),target:String(target||''),features:String(features||'')};
+        return {};
+      };
       await navigate('company-receipts');
     },mockPdfBase64);
     const register=page.locator('[data-company-receipt-register="canonical"]');
@@ -331,6 +334,10 @@ async function main(){
     await page.waitForFunction(()=>window.__receiptPackPdfActions.at(-1)?.action==='download');
     await page.locator('[data-receipt-pack-print]').click();
     await page.waitForFunction(()=>window.__receiptPackPdfActions.at(-1)?.action==='print');
+    assert(await page.evaluate(()=>{
+      const opened=window.__receiptPrintOpen;
+      return opened?.target==='_blank'&&opened.url.startsWith('blob:')&&opened.features.includes('noopener');
+    }), 'Print must open the generated PDF blob in a protected new window');
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth),
       'desktop page overflowed horizontally');
 
