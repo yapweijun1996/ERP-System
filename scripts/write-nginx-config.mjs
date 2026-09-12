@@ -22,6 +22,7 @@ export function renderNginxConfig(template, publicBasePath = resolvePublicBasePa
   # Cloudflare tunnel routing preserves the public path. Rewrite this known
   # mount once, then let the root API/static locations own the request.
   location = ${mountPath} {
+    absolute_redirect off;
     return 308 ${publicBasePath};
   }
 

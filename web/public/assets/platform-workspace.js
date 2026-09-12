@@ -360,6 +360,7 @@
       </div>
       <form class="auth-form" id="platformAwareLoginForm" autocomplete="off">
         <div id="tenantCredentials">
+          <button type="button" class="btn soft" id="tenantRecoveryButton">${esc(window.tf('recovery.title','Recover account'))}</button>
           <div class="fld"><span>${esc(pt('field.organizationCode','Organization code'))}</span><input id="tenantOrganizationCode" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="${esc(pt('field.organizationPlaceholder','e.g. ACME'))}"></div>
           <div class="fld"><span>${esc(pt('field.username','Username'))}</span><input id="tenantUsername" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="${esc(pt('field.usernamePlaceholder','e.g. admin'))}"></div>
         </div>
@@ -375,6 +376,9 @@
       </form>
       <div class="auth-foot"><span class="cap ok"><span class="dot"></span>${esc(pt('login.production','Production'))}</span><span>${esc(pt('login.realmIsolation','Credentials and sessions are isolated by realm.'))}</span></div>
     </section>`;
+    view.querySelector('#tenantRecoveryButton').addEventListener('click',function(){
+      if(window.ErpTenantRecovery) window.ErpTenantRecovery.render();
+    });
     var realm=initialRealm==='platform'?'platform':'tenant';
     function toggle(next){
       realm=next;

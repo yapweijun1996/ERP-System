@@ -11,6 +11,9 @@
    One tenant, base currency USD, FY2026 period P06 (June).
    ============================================================ */
 const DB = {};
+/* Keep the canonical session object reachable by browser adapters that run in
+   isolated script scopes. This is the same object, not a second state store. */
+if(typeof window==='object') window.DB=DB;
 
 DB.company = { name:'Northwind Manufacturing', branch:'Kuala Lumpur HQ', currency:'USD', timeZone:'UTC', period:'FY2026 · P06', periodLabel:'June 2026', env:'PRODUCTION' };
 /* fiscal-year configuration (drives the topbar period switcher + setup) */

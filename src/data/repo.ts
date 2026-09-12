@@ -77,7 +77,10 @@ export async function getEffectiveTaxRate(db: DB, scope: Scope, taxCode: string,
         or(isNull(taxRule.validTo), gt(taxRule.validTo, onDate)),
       ),
     )
-    .orderBy(desc(taxRule.validFrom))
-    .limit(1);
-  return rows[0] ?? null;
+    .orderBy(desc(taxRule.validFrom), desc(taxRule.id))
+    .limit(2);
+  // An overlapping effective window is an ambiguous tax fact. Returning no
+  // rule makes every posting caller fail closed instead of silently choosing
+  // one version based on insertion order.
+  return rows.length === 1 ? rows[0] : null;
 }

@@ -39,6 +39,7 @@ describe('canonical control-plane API', () => {
     for (const path of [
       '/api/integration/connectors',
       '/api/integration/document-processing-policy',
+      '/api/integration/document-processing-readiness',
       '/api/admin/master-control',
       '/api/settings/overview',
     ]) {
@@ -48,6 +49,25 @@ describe('canonical control-plane API', () => {
       expect(payload).not.toContain('credentialEnvelope');
       if (path !== '/api/admin/master-control') expect(payload).not.toContain('masterFn');
     }
+    const initialReadiness = await (await fetch(
+      `${baseUrl}/api/integration/document-processing-readiness`,
+      { headers: { cookie: auth.header } },
+    )).json();
+    expect(initialReadiness).toMatchObject({
+      data: {
+        sourceCapability: { localOcr: true, byokVision: true },
+        configured: { extractionProvider: 'local_ocr', credentialConfigured: false },
+        evidence: { externalProviderReady: false, class: 'local-ocr-source-capability' },
+      },
+      meta: { credentialValuesOmitted: true, evidenceBoundary: 'source-vs-configured-provider' },
+    });
+    const tamperedReadiness = await (await fetch(
+      `${baseUrl}/api/integration/document-processing-readiness?masterFn=M2&companyFn=C-MY`,
+      { headers: { cookie: auth.header } },
+    )).json();
+    expect(tamperedReadiness).toEqual(initialReadiness);
+    expect(JSON.stringify(tamperedReadiness)).not.toContain('M2');
+    expect(JSON.stringify(tamperedReadiness)).not.toContain('C-MY');
     const connectors = await (await fetch(`${baseUrl}/api/integration/connectors`, { headers: { cookie: auth.header } })).json();
     const target = connectors.data.find((row: { connectorKey: string }) => row.connectorKey === 'warehouse-webhook');
     const secret = 'super-secret-webhook-token';
@@ -89,6 +109,29 @@ describe('canonical control-plane API', () => {
       },
     );
     expect(configureVision.status).toBe(200);
+    const checkedVision = await fetch(
+      `${baseUrl}/api/integration/connectors/${vision.id}/actions/check-health`,
+      {
+        method: 'POST',
+        headers: {
+          cookie: auth.header,
+          'x-csrf-token': auth.csrf,
+          'content-type': 'application/json',
+          'idempotency-key': 'document-vision-health-check',
+        },
+        body: '{}',
+      },
+    );
+    expect(checkedVision.status).toBe(200);
+    expect(await checkedVision.json()).toMatchObject({
+      data: {
+        status: 'connected',
+        enabled: true,
+        health: 'warning',
+        lastErrorCode: 'provider_health_unverified',
+        lastSuccessAt: null,
+      },
+    });
     const saveDocumentPolicy = () => fetch(
       `${baseUrl}/api/integration/document-processing-policy/actions/update`,
       {
@@ -117,6 +160,24 @@ describe('canonical control-plane API', () => {
         visionRetentionDays: 0,
       },
     });
+    const configuredReadiness = await (await fetch(
+      `${baseUrl}/api/integration/document-processing-readiness`,
+      { headers: { cookie: auth.header } },
+    )).json();
+    expect(configuredReadiness).toMatchObject({
+      data: {
+        configured: {
+          extractionProvider: 'byok_vision',
+          credentialConfigured: true,
+          connectorStatus: 'connected',
+          health: 'warning',
+        },
+        evidence: { externalProviderReady: false, class: 'configured-provider-unverified' },
+      },
+    });
+    expect(configuredReadiness.data.evidence.reasonCodes).toContain('provider_health_unverified');
+    expect(JSON.stringify(configuredReadiness)).not.toContain('document-vision-api-key');
+    expect(JSON.stringify(configuredReadiness)).not.toContain('credentialEnvelope');
     const documentPolicyReplay = await saveDocumentPolicy();
     expect(documentPolicyReplay.status).toBe(200);
     expect(documentPolicyReplay.headers.get('idempotency-replayed')).toBe('true');

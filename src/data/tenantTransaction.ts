@@ -1,6 +1,24 @@
 import { sql } from 'drizzle-orm';
+import type { PgTransactionConfig } from 'drizzle-orm/pg-core';
 import type { DB } from './db';
 import type { Scope } from './repo';
+
+export const MAX_LOCAL_STATEMENT_TIMEOUT_MS = 120_000;
+
+/**
+ * Apply a transaction-local PostgreSQL statement timeout. The value is supplied
+ * as a parameter rather than interpolated SQL so only the caller's bounded
+ * numeric configuration can reach the session setting.
+ */
+export async function setLocalStatementTimeout(
+  exec: DB,
+  timeoutMs: number | undefined,
+): Promise<void> {
+  if (timeoutMs == null || !Number.isFinite(timeoutMs) || timeoutMs <= 0) return;
+  const boundedTimeoutMs = Math.min(Math.floor(timeoutMs), MAX_LOCAL_STATEMENT_TIMEOUT_MS);
+  if (boundedTimeoutMs < 1) return;
+  await exec.execute(sql`select set_config('statement_timeout', ${`${boundedTimeoutMs}ms`}, true)`);
+}
 
 /**
  * Establish the transaction-local tenant context used by PostgreSQL FORCE RLS.
@@ -22,11 +40,12 @@ export function withTenantTransaction<T>(
   db: DB,
   scope: Scope,
   command: (tx: DB) => Promise<T>,
+  config?: PgTransactionConfig,
 ): Promise<T> {
   return db.transaction(async (tx) => {
     await setTenantContext(tx, scope);
     return command(tx);
-  });
+  }, config);
 }
 
 /**

@@ -2,6 +2,7 @@
 // app can be exercised against PGlite and PostgreSQL without opening a port.
 import { createApp } from './api/app';
 import { createPostgresDb } from './data/db';
+import { receiptAssistantOptionsFromEnvironment } from './receiptAssistantBootstrap';
 
 const port = Number(process.env.PORT) || 3000;
 const databaseUrl = process.env.DATABASE_URL;
@@ -20,6 +21,7 @@ const app = createApp(db, {
   tokenEncryptionKey: process.env.ERP_TOKEN_ENCRYPTION_KEY,
   publicUrl: process.env.ERP_PUBLIC_URL,
   revision: process.env.ERP_RELEASE_COMMIT,
+  receiptAssistant: receiptAssistantOptionsFromEnvironment(process.env),
 });
 
 app.listen(port, () => {

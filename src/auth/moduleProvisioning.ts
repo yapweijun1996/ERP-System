@@ -27,6 +27,26 @@ export function defaultMasterModuleConfiguration(): Map<CommercialModuleKey, {
   }]));
 }
 
+/** Read the same defaults used by bootstrap without changing existing entitlements. */
+export async function readSetupModuleCatalogWithin(exec: DB, masterFn: string) {
+  const rows = await exec.select().from(masterModule).where(eq(masterModule.masterFn, masterFn));
+  const configuration = defaultMasterModuleConfiguration();
+  for (const row of rows) {
+    if (isCommercialModuleKey(row.moduleKey)) configuration.set(row.moduleKey, row);
+  }
+  const available = (key: CommercialModuleKey): boolean => {
+    const definition = commercialModuleDefinition(key);
+    return configuration.get(key)?.enabled === true
+      && (definition?.dependencies.every(dependency => available(dependency)) ?? false);
+  };
+  return COMMERCIAL_MODULE_CATALOG.map(definition => ({
+    ...definition,
+    available: available(definition.key),
+    defaultCompanyAllocated: available(definition.key)
+      && configuration.get(definition.key)?.defaultCompanyAllocated === true,
+  }));
+}
+
 export function normalizeCompanyModuleSelection(
   moduleKeys: readonly string[],
 ): CommercialModuleKey[] {

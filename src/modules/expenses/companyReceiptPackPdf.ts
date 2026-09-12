@@ -1,5 +1,6 @@
 import fontkit from '@pdf-lib/fontkit';
-import { PDFDocument, rgb } from 'pdf-lib';
+import { receiptPdfFontFeatures, savePdfWithOpenTypeFonts } from '../documents/pdfFont';
+import { PDFDocument, rgb, type PDFFont } from 'pdf-lib';
 import {
   renderEvidencePdf,
   type EvidencePdfDocument,
@@ -173,6 +174,20 @@ function singleLine(value: unknown): string {
     .join('');
 }
 
+export function wrapReceiptPackText(value: unknown, font: PDFFont, size: number, width: number): string[] {
+  const lines: string[] = [];
+  let line = '';
+  for (const character of singleLine(value)) {
+    if (line && font.widthOfTextAtSize(line + character, size) > width) {
+      lines.push(line);
+      line = '';
+    }
+    line += character;
+  }
+  lines.push(line);
+  return lines;
+}
+
 async function renderRegister(pack: CompanyReceiptPackFacts): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
@@ -183,7 +198,7 @@ async function renderRegister(pack: CompanyReceiptPackFacts): Promise<Uint8Array
   pdf.setSubject('Receipt Pack ' + pack.id + ' ' + pack.sourceSha256);
   pdf.setCreationDate(createdAt);
   pdf.setModificationDate(createdAt);
-  const font = await pdf.embedFont(await regularFontBytes);
+  const font = await pdf.embedFont(await regularFontBytes, { features: { ...receiptPdfFontFeatures } });
   const bold = font;
   let page = pdf.addPage([842, 595]);
   let y = 560;
@@ -221,33 +236,28 @@ async function renderRegister(pack: CompanyReceiptPackFacts): Promise<Uint8Array
   };
   drawHeading();
   for (const row of pack.rows) {
-    if (y < 48) {
-      page = pdf.addPage([842, 595]);
-      y = 560;
-      drawHeading();
+    const cells = [
+      { x: 32, width: 65, value: row.transactionDate },
+      { x: 105, width: 227, value: row.merchant + ' | ' + (row.receiptNumber ?? '-') },
+      { x: 340, width: 217, value: row.category + ' | ' + row.businessPurpose },
+      { x: 565, width: 162, value: row.uploaderName ?? ('User ' + row.uploaderUserId) },
+      { x: 735, width: 75, value: row.amount + ' ' + row.currency },
+    ].map((cell) => ({ ...cell, lines: wrapReceiptPackText(cell.value, font, 7, cell.width) }));
+    const lineCount = Math.max(...cells.map((cell) => cell.lines.length));
+    // Keep ordinary rows together; exceptionally long rows continue without losing text.
+    if (y - lineCount * 11 < 48 && y < 479 && lineCount * 11 <= 431) {
+      page = pdf.addPage([842, 595]); y = 560; drawHeading();
     }
-    page.drawText(singleLine(row.transactionDate), { x: 32, y, size: 7, font });
-    page.drawText(singleLine(
-      row.merchant + ' | ' + (row.receiptNumber ?? '-'),
-    ).slice(0, 52), {
-      x: 105, y, size: 7, font: bold,
-    });
-    page.drawText(singleLine(
-      row.category + ' | ' + row.businessPurpose,
-    ).slice(0, 49), {
-      x: 340, y, size: 7, font,
-    });
-    page.drawText(singleLine(
-      row.uploaderName ?? ('User ' + row.uploaderUserId),
-    ).slice(0, 27), {
-      x: 565, y, size: 7, font,
-    });
-    page.drawText(singleLine(row.amount + ' ' + row.currency), {
-      x: 735, y, size: 7, font,
-    });
-    y -= 12;
+    for (let index = 0; index < lineCount; index += 1) {
+      if (y < 48) { page = pdf.addPage([842, 595]); y = 560; drawHeading(); }
+      for (const cell of cells) {
+        if (cell.lines[index]) page.drawText(cell.lines[index], { x: cell.x, y, size: 7, font });
+      }
+      y -= 11;
+    }
+    y -= 3;
   }
-  return pdf.save({ useObjectStreams: false });
+  return savePdfWithOpenTypeFonts(pdf, [font]);
 }
 
 export async function renderCompanyReceiptPackPdf(

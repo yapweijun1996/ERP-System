@@ -11,6 +11,12 @@ touch/zoom/modal usability. The current 129-route five-language desktop/mobile m
 focused contrast/mobile E2E pass locally. Physical-device acceptance remains TASK-017.
 See [TEST_COVERAGE.md](TEST_COVERAGE.md).
 
+2026-09-11 source recheck: current IRAS and Royal Malaysian Customs/MOF material
+confirms the SG 8%/9% history and exposes category-specific MY SST updates, including
+a rental/leasing FAQ versus later MOF/background conflict. The [TASK-204 dated record](ai-native/evidence/TASK-204-2026-09-11-source-review.md)
+keeps this as owner-review evidence; it does not change production configuration or
+claim statutory compliance.
+
 The ERP serves multiple countries from one codebase. Country behavior is an **attribute
 of the company (`company_fn`)**, not a build flag. Today: **Singapore (SG)** and
 **Malaysia (MY)**. The design must let a third country be added without touching existing
@@ -22,6 +28,10 @@ uses one `[valid_from, valid_to)` interval, explicit tax classification and reco
 facts, and versioned source/review metadata. The separate `GstEngine`/`SstEngine` classes
 and statutory GST F5/SST-02/MyInvois/InvoiceNow outputs described below remain target
 design, not completed filing integrations.
+
+The shared `getEffectiveTaxRate()` lookup also fails closed when more than one rule
+matches the same Company, tax code and document date; an overlapping effective window
+must be corrected rather than resolved by insertion order.
 
 The source-level TASK-204 boundary is implemented, but production release still requires
 a qualified tax owner to review configured rates, exemptions, thresholds and transitional

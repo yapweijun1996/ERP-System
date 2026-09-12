@@ -3,7 +3,8 @@ import { eq } from 'drizzle-orm';
 import { seedDemo } from '../data/seed';
 import { appUser, outboxEvent } from '../data/schema';
 import { freshDb } from '../test/helpers';
-import { requestPasswordReset } from '../auth/lifecycle';
+import { confirmPasswordReset, requestPasswordReset } from '../auth/lifecycle';
+import { verifyPassword } from '../auth/password';
 import { processOutboxBatch, type MailMessage } from './outbox';
 
 describe('outbox worker', () => {
@@ -30,7 +31,17 @@ describe('outbox worker', () => {
       to: admin.email,
       subject: 'Reset your Aria ERP password',
     });
-    expect(sent[0].text).toContain('token=');
+    const link = sent[0].text.match(/https:\/\/[^\s]+/)?.[0];
+    expect(link).toBeDefined();
+    const url = new URL(link!);
+    expect(url.search).toBe('');
+    expect(url.pathname).toBe('/reset-password');
+    const token = new URLSearchParams(url.hash.slice(1)).get('token')!;
+    await confirmPasswordReset(db, token, 'mail-recovered-password', 'mail-confirm');
+    const [recovered] = await db.select().from(appUser).where(eq(appUser.userId, admin.userId));
+    expect(verifyPassword('mail-recovered-password', recovered.passwordHash)).toBe(true);
+    await expect(confirmPasswordReset(db, token, 'replay-password', 'mail-replay'))
+      .rejects.toMatchObject({ code: 'reset_invalid' });
     const [event] = await db.select().from(outboxEvent);
     expect(event.deliveredAt).toBeInstanceOf(Date);
     expect(event.lockedBy).toBeNull();
@@ -50,14 +61,16 @@ describe('outbox worker', () => {
     const now = new Date(Date.now() + 1000);
     const result = await processOutboxBatch(db, {
       async send() {
-        throw new Error('SMTP unavailable');
+        throw new Error('SMTP rejected secret-password and #token=private-reset-token');
       },
     }, { tokenEncryptionKey: key, workerId: 'failed-worker', now });
     expect(result).toEqual({ claimed: 1, delivered: 0, failed: 1, deadLettered: 0 });
     const [event] = await db.select().from(outboxEvent);
     expect(event.deliveredAt).toBeNull();
     expect(event.lockedAt).toBeNull();
-    expect(event.lastError).toBe('SMTP unavailable');
+    expect(event.lastError).toBe('auth_mail_delivery_failed');
+    expect(JSON.stringify(event)).not.toContain('secret-password');
+    expect(JSON.stringify(event)).not.toContain('private-reset-token');
     expect(event.availableAt.getTime()).toBeGreaterThan(now.getTime());
   });
 
@@ -79,7 +92,7 @@ describe('outbox worker', () => {
 
     const result = await processOutboxBatch(db, {
       async send() {
-        throw new Error('SMTP unavailable');
+        throw new Error('SMTP rejected secret-password and #token=private-reset-token');
       },
     }, { tokenEncryptionKey: key, workerId: 'dead-letter-worker', now });
 

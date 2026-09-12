@@ -72,9 +72,17 @@ async function main(){
       await loadModuleControl();
       window.__actualCompanyReceiptAdapter={
         companyReceipts:ErpSystemData.companyReceipts,
+        companyReceipt:ErpSystemData.companyReceipt,
+        documentContent:ErpSystemData.documentContent,
         companyReceiptEvidence:ErpSystemData.companyReceiptEvidence,
         companyReceiptConfirmation:ErpSystemData.companyReceiptConfirmation,
         companyReceiptPack:ErpSystemData.companyReceiptPack,
+        companyReceiptPacks:ErpSystemData.companyReceiptPacks,
+        companyReceiptPackGet:ErpSystemData.companyReceiptPackGet,
+        companyReceiptPackPdf:ErpSystemData.companyReceiptPackPdf,
+        receiptAssistant:ErpSystemData.receiptAssistant,
+        receiptAssistantDecision:ErpSystemData.receiptAssistantDecision,
+        receiptAssistantExecute:ErpSystemData.receiptAssistantExecute,
         createCompanyReceipt:ErpSystemData.createCompanyReceipt,
         updateCompanyReceipt:ErpSystemData.updateCompanyReceipt,
         voidCompanyReceipt:ErpSystemData.voidCompanyReceipt,
@@ -101,6 +109,9 @@ async function main(){
           ?{data:[makeRow(1)],meta:baseMeta}
           :{data:Array.from({length:25},(_,index)=>{const row=makeRow(50-index);if(row.id===50&&window.__receiptDateOverrides[50])row.transactionDate=window.__receiptDateOverrides[50];return row;}),meta:{...baseMeta,nextCursor:26}};
       };
+      ErpSystemData.companyReceiptPackPrepare=async payload=>({data:{selectionDigest:'mock-pack-selection',visibility:'company',
+        filters:{search:payload?.search||'',dateFrom:payload?.dateFrom||'',dateTo:payload?.dateTo||''},rows:[makeRow(800)],
+        totals:[{currency:'SGD',amount:'12.3400',receiptCount:1}],rowCount:1,documentCount:1},meta:{preparationOnly:true}});
       ErpSystemData.companyReceiptPack=async payload=>{
         window.__receiptPackPayloads.push({...payload});
         return {data:{pack:{id:77,filters:{search:payload.search||'',dateFrom:payload.dateFrom,dateTo:payload.dateTo},
@@ -234,6 +245,7 @@ async function main(){
     await page.locator('[data-company-receipt-filters] button.primary').click();
     await page.waitForFunction(()=>window.__receiptQueries.at(-1)?.dateFrom==='2026-08-11');
     await page.locator('[data-receipt-pack-preview]').click();
+    await page.locator('[data-company-receipt-pack-confirm]').click();
     await page.waitForFunction(()=>window.__receiptPackPdfActions.at(-1)?.action==='view');
     assert(await page.locator('.company-receipt-pack-frame iframe').count()===1,
       'Receipt Pack preview must use the generated PDF without application chrome');
@@ -323,6 +335,61 @@ async function main(){
     });
     assert(new Date(actualPack.retentionUntil).getTime()>new Date('2026-08-12T00:00:00.000Z').getTime(),
       'Demo Receipt Pack retention must be derived from managed-document retention evidence');
+    // Inject only the model transport; the Demo ERP commands remain real PGlite commands.
+    await page.route('https://gpt.yapweijun1996.com/demo/**', async route=>{
+      const session=route.request().url().endsWith('/session');
+      await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(session
+        ?{token:'dmo_e2e-fixture'}
+        :{status:'completed',output:[{type:'message',content:[{type:'output_text',text:'{"search":""}'}]}]})});
+    });
+    const actualAssistant=await page.evaluate(async()=>{
+      const actual=window.__actualCompanyReceiptAdapter;
+      let run=await actual.receiptAssistant({message:'Prepare the confirmed Company Receipt Pack.',dateFrom:'2026-08-12',dateTo:'2026-08-12',locale:'en'});
+      if(run.data.state!=='waiting'||!run.data.preview||!run.data.confirmation?.packKey) throw new Error('Demo Receipt assistant did not return a waiting exact preview.');
+      const sourceRow=run.data.preview.rows[0];
+      const sourceDetail=(await actual.companyReceipt(sourceRow.receiptId)).data;
+      const sourceFile=(await actual.documentContent(sourceDetail.documentId,sourceDetail.documentVersionNo)).data;
+      const sourceHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',sourceFile.content)),byte=>byte.toString(16).padStart(2,'0')).join('');
+      if(sourceHash!==sourceRow.documentSha256||sourceFile.sha256!==sourceHash) throw new Error('Actual Demo source bytes do not match the reviewed evidence.');
+      const beforeCount=(await actual.companyReceiptPacks({limit:100})).data.length;
+      const execution={packKey:run.data.confirmation.packKey,search:'',dateFrom:'2026-08-12',dateTo:'2026-08-12',locale:'en',executionIntentId:run.data.confirmation.intentId,executionIntentKey:run.data.confirmation.intentKey,payloadDigest:run.data.confirmation.payloadDigest};
+      async function mustReject(input,code){
+        let rejected=false;
+        try{await actual.receiptAssistantExecute(input);}catch(error){rejected=!code||error.code===code;}
+        if(!rejected) throw new Error('Unreviewed or stale Demo selection was accepted.');
+        if((await actual.companyReceiptPacks({limit:100})).data.length!==beforeCount) throw new Error('Rejected Demo selection created a Pack.');
+      }
+      await mustReject(execution);
+      await mustReject({...execution,selectionDigest:run.data.confirmation.selectionDigest},'agent_execution_intent_not_approved');
+      await actual.receiptAssistantDecision('approve',{intentId:run.data.confirmation.intentId,expectedVersion:run.data.confirmation.intentVersion,reason:'Reviewed original selection before stale-facts test'});
+      await mustReject({...execution,selectionDigest:'0'.repeat(64)},'agent_execution_intent_digest_mismatch');
+      const receipt=run.data.preview.rows[0];
+      await actual.updateCompanyReceipt(receipt.receiptId,{expectedVersion:receipt.receiptVersion,businessPurpose:'Updated after preview for selection-guard regression'});
+      await mustReject({...execution,selectionDigest:run.data.confirmation.selectionDigest},'agent_execution_intent_stale');
+      const cancelled=await actual.receiptAssistant({message:'Prepare the confirmed Company Receipt Pack.',dateFrom:'2026-08-12',dateTo:'2026-08-12',locale:'en'});
+      const cancelledIntent=cancelled.data.confirmation;
+      await actual.receiptAssistantDecision('cancel',{intentId:cancelledIntent.intentId,expectedVersion:cancelledIntent.intentVersion,reason:'Cancel this prepared Pack'});
+      await mustReject({...execution,packKey:cancelledIntent.packKey,executionIntentId:cancelledIntent.intentId,executionIntentKey:cancelledIntent.intentKey,selectionDigest:cancelledIntent.selectionDigest,payloadDigest:cancelledIntent.payloadDigest},'agent_execution_intent_not_approved');
+      run=await actual.receiptAssistant({message:'Prepare the confirmed Company Receipt Pack.',dateFrom:'2026-08-12',dateTo:'2026-08-12',locale:'en'});
+      const confirmation=run.data.confirmation;
+      await actual.receiptAssistantDecision('approve',{intentId:confirmation.intentId,expectedVersion:confirmation.intentVersion,reason:'Reviewed exact Demo preview'});
+      const executed=await actual.receiptAssistantExecute({packKey:confirmation.packKey,search:'',dateFrom:'2026-08-12',dateTo:'2026-08-12',locale:'en',
+        executionIntentId:confirmation.intentId,executionIntentKey:confirmation.intentKey,selectionDigest:confirmation.selectionDigest,payloadDigest:confirmation.payloadDigest});
+      const replay=await actual.receiptAssistantExecute({...execution,packKey:confirmation.packKey,executionIntentId:confirmation.intentId,executionIntentKey:confirmation.intentKey,selectionDigest:confirmation.selectionDigest,payloadDigest:confirmation.payloadDigest});
+      if(!replay.data.replayed||replay.data.pack.id!==executed.data.pack.id) throw new Error('Reviewed Demo Pack replay was not idempotent.');
+      const persisted=await actual.companyReceiptPackGet(executed.data.pack.id);
+      const pdf=await actual.companyReceiptPackPdf(executed.data.pack.id,'view');
+      const digest=await crypto.subtle.digest('SHA-256',pdf.data.content);
+      const artifactSha256=Array.from(new Uint8Array(digest)).map(byte=>byte.toString(16).padStart(2,'0')).join('');
+      return {state:executed.data.state,packId:executed.data.pack.id,persistedId:persisted.data.id,
+        artifactSha256,reportedArtifactSha256:executed.data.verification.artifact.artifactSha256,
+        rowCount:persisted.data.rowCount};
+    });
+    assert(actualAssistant.state==='succeeded'&&actualAssistant.packId===actualAssistant.persistedId,
+      'Demo Receipt assistant must read back the persisted Pack created by the governed command');
+    assert(actualAssistant.rowCount===1&&/^[0-9a-f]{64}$/.test(actualAssistant.artifactSha256)
+      &&actualAssistant.artifactSha256===actualAssistant.reportedArtifactSha256,
+    'Demo Receipt assistant must verify the persisted PDF artifact hash before reporting success');
     for(const language of ['en','zh','ms','vi','ja']){
       await page.evaluate(async value=>{setLang(value);await navigate('company-receipts');},language);
       await page.locator('[data-company-receipt-register="canonical"]').waitFor({timeout:TIMEOUT});

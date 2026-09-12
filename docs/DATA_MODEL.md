@@ -19,6 +19,8 @@ purchasing/  supplier, purchase_order, purchase_order_line, goods_receipt,
 finance/     account (chart of accounts), gl_entry
 system/      audit_log, user_permission_override, company_module,
              master_admin_account, platform_idempotency
+agent/       agent_principal, agent_grant, agent_credential, agent_execution_intent,
+             agent_provider_config
 platform/    platform_principal, platform_role, platform_principal_role,
              platform_role_permission, platform_session, support_access_grant
 integration/ import_job, import_job_row, import_row_error, outbox_event
@@ -26,6 +28,32 @@ integration/ import_job, import_job_row, import_row_error, outbox_event
 
 `master` / `company` define the tenant hierarchy ([MULTI_TENANCY.md](MULTI_TENANCY.md));
 `company` also holds country/currency/tax_regime ([LOCALIZATION.md](LOCALIZATION.md)).
+
+Agent identity is additive to human role assignment: `agent_principal` owns the
+tenant-scoped non-login bridge, accountable human owner and lifecycle version;
+`agent_grant` records action/resource/field/scope/time/amount delegation; and
+`agent_credential` stores only a bearer-token hash and non-secret hint. Raw tokens are
+returned once by the administrator rotation command and are never reviewable. The
+issuer lookup uses a transaction-local `app.agent_issuer` RLS flag only for the
+credential/principal lookup, after which business authorization runs under the
+issuer-derived `master_fn` + `company_fn` context. `agent_execution_intent` stores
+only a hash of the separately supplied execution key plus exact normalized reviewed
+facts, receipt/document resource digests, human decision state and a server-owned
+expiry under the active Agent/actor/Company scope; it is not a business approval
+instance and cannot authorize financial posting. TASK-233/S3 rechecks this intent
+inside a serializable tenant transaction, locks the reviewed receipt rows and
+inserts the immutable Pack from the exact locked selection; duplicate execution
+replays the existing Pack and never widens the row set. S4 checks supplied digests
+before replay, requires committed intent audit evidence for approval-change replay,
+and leaves governed source corrections in the versioned receipt/audit path. Migration
+0108 brings the Agent execution-intent schema to version 108; migration 0110 adds the
+Company-owned `agent_provider_config` row. It stores only an AES-256-GCM credential
+envelope plus provider/model/data-policy/region, bounded run limits and safe rotation
+metadata. The API derives `master_fn` + `company_fn` from the authenticated session,
+returns `credential_configured` metadata rather than the envelope, and writes only
+safe before/after metadata to audit. Production FORCE-RLS covers the row and the
+authenticated Agent issuer may read only its current Company row. The generated
+schema currently contains 261 tables.
 
 Each module owns its tables. Cross-module references are by id (e.g. `sales_order_line.product_id`).
 
@@ -118,7 +146,12 @@ migrations:
 
 `audit_log` records who changed what, when. Application code treats it as append-only;
 the current table is not physically month-partitioned. Its key columns include
-`master_fn, company_fn, actor_user_id, entity, entity_id, action, diff jsonb, at`.
+`master_fn, company_fn, actor_user_id, platform_principal_id, agent_principal_id,
+delegator_user_id, entity, entity_id, action, before/after jsonb, occurred_at`.
+For an Agent action, `actor_user_id` points to the non-login Agent/service bridge,
+`agent_principal_id` identifies the registered principal and `delegator_user_id`
+identifies the accountable owner. The attribution check rejects a partial Agent
+identity tuple; human and Platform rows retain their existing nullable fields.
 
 ## 7. Tenancy, roles & permissions
 
@@ -984,8 +1017,9 @@ provisioning permissions.
 
 ## Platform tenant administration tables (migration 0099 source)
 
-- `app_user.identity_kind` distinguishes `human` from hidden `platform_actor`; a bridge
-  must have `login_enabled=false`. Existing users default to human/login-enabled.
+- `app_user.identity_kind` distinguishes `human`, hidden `platform_actor`, non-login
+  `agent` and non-login `service_automation`; every non-human bridge must have
+  `login_enabled=false`. Existing users default to human/login-enabled.
 - `platform_principal_tenant_actor` maps one Platform principal plus Master to one bridge
   `actor_user_id`; the actor is technical FK/audit evidence and is never a displayed or
   login identity.
@@ -999,8 +1033,24 @@ The bridge receives a normal Company membership and immutable system role so exi
 tenant foreign keys, RLS and permission checks stay explicit. No table grants it a
 master-scope bypass, Employee linkage, login credential, invitation or password-reset
 path. Migration 0099 is generated/source-present, not production-deployed.
-The generated PGlite schema and migration bundle are schema version 103 / 104 ordered
-entries. Migrations 0100/0101 add governed tax-rule facts, purchasing tax snapshots and
-Expense tax classification; migration 0102 adds Receipt Pack retention/governance and
-Company timezone facts; migration 0103 adds bounded document-processing dead-letter state.
+path. Migration 0099 is generated/source-present, not production-deployed.
+
+Migration 0104 adds tenant-scoped `agent_principal` and `agent_grant` rows. Each Agent
+or service principal has a distinct non-login bridge, accountable human owner, lifecycle
+status/version and no implicit role. Grants persist action/resource/field allowlists,
+scope/target, effective window, revocation/version and optional amount/currency limits;
+the resolver rechecks the owner's current authorization before use. Both tables are in
+the generic production FORCE-RLS coverage list. `agent_execution_intent` adds the
+short-lived exact reviewed-facts/digest boundary for confirmed Pack execution; its
+raw intent key is never stored. The generated PGlite schema and migration bundle is
+schema version 108 / 109 ordered entries. S3-S4 use the shared tenant transaction and
+Pack domain command to preserve the same tenant/RLS and immutable-snapshot boundary;
+they add no new business aggregate. Migrations 0105/0106 add
+append-only Agent/owner audit attribution and its consistency check; migration 0107 adds
+hash-only Agent credentials and lifecycle state; migration 0108 adds execution intents.
+Migrations 0100/0101
+add governed tax-rule facts, purchasing tax snapshots and Expense tax classification;
+migration 0102 adds Receipt Pack retention/governance and Company timezone facts;
+migration 0103 adds bounded document-processing dead-letter state. They must pass
+`check:demo-schema` and `check:drift` before release.
 They must pass `check:demo-schema` and `check:drift` before release.

@@ -32,6 +32,12 @@ function adminCopy(){
       auditColAction:'Action',auditColRecord:'Record',auditTitle:'Audit Trail',auditMeta:'{count} events · immutable system log{truncated}',
       auditTruncated:' · showing latest 100',auditNoEvents:'No activity recorded yet — actions you take are logged here in real time.',
       auditSystem:'System',
+      agentTitle:'Agent governance',agentSubtitle:'Review delegated identities, grants and hash-only credentials for the active Company.',
+      agentReview:'Review',agentRotate:'Rotate credential',agentPause:'Pause',agentResume:'Resume',agentDisable:'Emergency disable',agentRevoke:'Revoke',
+      agentGrant:'Add grant',agentRevokeGrant:'Revoke grant',agentStatus:'Status',agentOwner:'Owner user',agentGrants:'Grants',agentCredentials:'Credentials',
+      agentEmpty:'No Agent principals are registered for this Company.',agentApiOnly:'Agent governance is available in API mode for authenticated administrators.',
+      agentTokenWarning:'Copy this token now. It is shown once and cannot be retrieved later.',agentReason:'Reason',agentReasonRequired:'Enter a reason for this lifecycle action.',
+      agentAction:'Action',agentPermission:'Permission',agentFields:'Fields (comma separated)',agentSaved:'Agent lifecycle change saved.',agentError:'Agent lifecycle change failed.',agentGrantSaved:'Agent grant created.',agentGrantError:'Agent grant could not be created.',
     },
     ms:{
   "fieldEmail": "E-mel",
@@ -87,7 +93,33 @@ function adminCopy(){
   "auditMeta": "{count} peristiwa · log sistem tidak boleh diubah{truncated}",
   "auditTruncated": " · memaparkan 100 terkini",
   "auditNoEvents": "Belum ada aktiviti direkodkan — tindakan anda akan dilog di sini secara masa nyata.",
-  "auditSystem": "Sistem"
+  "auditSystem": "Sistem",
+  "agentTitle": "Tadbir Urus Ejen",
+  "agentSubtitle": "Semak identiti yang diwakilkan, geran dan kelayakan hash sahaja untuk Syarikat aktif.",
+  "agentReview": "Semak",
+  "agentRotate": "Putar kelayakan",
+  "agentPause": "Jeda",
+  "agentResume": "Sambung semula",
+  "agentDisable": "Lumpuhkan kecemasan",
+  "agentRevoke": "Tarik balik",
+  "agentGrant": "Tambah geran",
+  "agentRevokeGrant": "Tarik balik geran",
+  "agentStatus": "Status",
+  "agentOwner": "Pengguna pemilik",
+  "agentGrants": "Geran",
+  "agentCredentials": "Kelayakan",
+  "agentEmpty": "Tiada principal Ejen didaftarkan untuk Syarikat ini.",
+  "agentApiOnly": "Tadbir urus Ejen tersedia dalam mod API untuk pentadbir yang disahkan.",
+  "agentTokenWarning": "Salin token ini sekarang. Ia dipaparkan sekali sahaja dan tidak boleh diambil semula kemudian.",
+  "agentReason": "Sebab",
+  "agentReasonRequired": "Masukkan sebab untuk tindakan kitar hayat ini.",
+  "agentAction": "Tindakan",
+  "agentPermission": "Kebenaran",
+  "agentFields": "Medan (dipisahkan koma)",
+  "agentSaved": "Perubahan kitar hayat Ejen disimpan.",
+  "agentError": "Perubahan kitar hayat Ejen gagal.",
+  "agentGrantSaved": "Geran Ejen dicipta.",
+  "agentGrantError": "Geran Ejen tidak dapat dicipta."
 },
     zh:{
   "fieldEmail": "邮箱",
@@ -143,7 +175,33 @@ function adminCopy(){
   "auditMeta": "{count} 条事件 · 不可篡改的系统日志{truncated}",
   "auditTruncated": " · 显示最近 100 条",
   "auditNoEvents": "暂无活动记录 — 您执行的操作会实时记录在此处。",
-  "auditSystem": "系统"
+  "auditSystem": "系统",
+  "agentTitle": "Agent 治理",
+  "agentSubtitle": "查看当前公司的委派身份、授权和仅存哈希的凭据。",
+  "agentReview": "审核",
+  "agentRotate": "轮换凭据",
+  "agentPause": "暂停",
+  "agentResume": "恢复",
+  "agentDisable": "紧急停用",
+  "agentRevoke": "撤销",
+  "agentGrant": "添加授权",
+  "agentRevokeGrant": "撤销授权",
+  "agentStatus": "状态",
+  "agentOwner": "所有者用户",
+  "agentGrants": "授权",
+  "agentCredentials": "凭据",
+  "agentEmpty": "当前公司尚未注册任何 Agent 主体。",
+  "agentApiOnly": "经过身份验证的管理员可在 API 模式下使用 Agent 治理。",
+  "agentTokenWarning": "请立即复制此令牌。它只显示一次，之后无法找回。",
+  "agentReason": "原因",
+  "agentReasonRequired": "请输入此生命周期操作的原因。",
+  "agentAction": "操作",
+  "agentPermission": "权限",
+  "agentFields": "字段（以逗号分隔）",
+  "agentSaved": "Agent 生命周期更改已保存。",
+  "agentError": "Agent 生命周期更改失败。",
+  "agentGrantSaved": "Agent 授权已创建。",
+  "agentGrantError": "无法创建 Agent 授权。"
 },
     ja:{
   "fieldEmail": "メール",
@@ -199,7 +257,33 @@ function adminCopy(){
   "auditMeta": "{count} 件のイベント · 改ざん不可のシステムログ{truncated}",
   "auditTruncated": " · 最新100件を表示",
   "auditNoEvents": "まだ活動記録がありません — 実行した操作はここにリアルタイムで記録されます。",
-  "auditSystem": "システム"
+  "auditSystem": "システム",
+  "agentTitle": "Agent ガバナンス",
+  "agentSubtitle": "アクティブな会社の委任された ID、権限付与、ハッシュのみの認証情報を確認します。",
+  "agentReview": "確認",
+  "agentRotate": "認証情報をローテーション",
+  "agentPause": "一時停止",
+  "agentResume": "再開",
+  "agentDisable": "緊急無効化",
+  "agentRevoke": "失効",
+  "agentGrant": "権限付与を追加",
+  "agentRevokeGrant": "権限付与を失効",
+  "agentStatus": "ステータス",
+  "agentOwner": "所有者ユーザー",
+  "agentGrants": "権限付与",
+  "agentCredentials": "認証情報",
+  "agentEmpty": "この会社には Agent プリンシパルが登録されていません。",
+  "agentApiOnly": "認証済み管理者は API モードで Agent ガバナンスを利用できます。",
+  "agentTokenWarning": "このトークンを今すぐコピーしてください。一度だけ表示され、後から取得できません。",
+  "agentReason": "理由",
+  "agentReasonRequired": "このライフサイクル操作の理由を入力してください。",
+  "agentAction": "操作",
+  "agentPermission": "権限",
+  "agentFields": "フィールド（カンマ区切り）",
+  "agentSaved": "Agent のライフサイクル変更を保存しました。",
+  "agentError": "Agent のライフサイクル変更に失敗しました。",
+  "agentGrantSaved": "Agent の権限付与を作成しました。",
+  "agentGrantError": "Agent の権限付与を作成できませんでした。"
 },
     vi:{
   "fieldEmail": "E-mail",
@@ -255,7 +339,33 @@ function adminCopy(){
   "auditMeta": "{count} sự kiện · nhật ký hệ thống không thể sửa đổi{truncated}",
   "auditTruncated": " · hiển thị 100 gần nhất",
   "auditNoEvents": "Chưa có hoạt động nào được ghi nhận — các hành động của bạn sẽ được ghi lại tại đây theo thời gian thực.",
-  "auditSystem": "Hệ thống"
+  "auditSystem": "Hệ thống",
+  "agentTitle": "Quản trị tác nhân",
+  "agentSubtitle": "Xem danh tính được ủy quyền, quyền cấp và thông tin xác thực chỉ lưu hàm băm cho Công ty hiện tại.",
+  "agentReview": "Xem xét",
+  "agentRotate": "Xoay vòng thông tin xác thực",
+  "agentPause": "Tạm dừng",
+  "agentResume": "Tiếp tục",
+  "agentDisable": "Vô hiệu hóa khẩn cấp",
+  "agentRevoke": "Thu hồi",
+  "agentGrant": "Thêm quyền cấp",
+  "agentRevokeGrant": "Thu hồi quyền cấp",
+  "agentStatus": "Trạng thái",
+  "agentOwner": "Người dùng sở hữu",
+  "agentGrants": "Quyền cấp",
+  "agentCredentials": "Thông tin xác thực",
+  "agentEmpty": "Chưa có principal Tác nhân nào được đăng ký cho Công ty này.",
+  "agentApiOnly": "Quản trị tác nhân khả dụng ở chế độ API cho quản trị viên đã xác thực.",
+  "agentTokenWarning": "Sao chép token này ngay. Token chỉ hiển thị một lần và không thể lấy lại sau đó.",
+  "agentReason": "Lý do",
+  "agentReasonRequired": "Nhập lý do cho thao tác vòng đời này.",
+  "agentAction": "Thao tác",
+  "agentPermission": "Quyền",
+  "agentFields": "Trường (phân tách bằng dấu phẩy)",
+  "agentSaved": "Đã lưu thay đổi vòng đời tác nhân.",
+  "agentError": "Không thể lưu thay đổi vòng đời tác nhân.",
+  "agentGrantSaved": "Đã tạo quyền cấp cho tác nhân.",
+  "agentGrantError": "Không thể tạo quyền cấp cho tác nhân."
 },
   };
   const pack=i18nLegacy(packs);
@@ -417,6 +527,90 @@ SCREENS['user-mgmt'] = async function(root){
     return availableRoles.map(role=>`<option value="${role.roleId}">${esc(role.name)}</option>`).join('');
   }
   await render();
+};
+
+/* ---------------- AGENT GOVERNANCE (review and lifecycle controls) ---------------- */
+SCREENS['agent-mgmt'] = async function(root){
+  const s=adminCopy();
+  const adapter=window.ErpSystemData;
+  if(!adapter||adapter.mode!=='api'){
+    root.innerHTML=modulePage({
+      module:'admin',route:'agent-mgmt',title:s('agentTitle'),sub:s('agentApiOnly'),
+      body:statePanel({icon:'shield',title:s('agentApiOnly')}),
+    });
+    return;
+  }
+  let agents=[];
+  async function reload(){ agents=(await listPage('admin/agents',{limit:100})).data||[]; render(); }
+  function statusTone(status){ return {active:'ok',paused:'warn',disabled:'danger',revoked:'danger'}[status]||'neutral'; }
+  function actionButton(agent,action,label,icon,cls){
+    return `<button class="btn ${cls||'plain'} sm" data-agent-action="${esc(action)}" data-agent-id="${agent.id}" type="button">${ic(icon||'shield')}<span>${esc(label)}</span></button>`;
+  }
+  function render(){
+    const rows=agents.map(agent=>{
+      const grants=Array.isArray(agent.grants)?agent.grants:[];
+      const credentials=Array.isArray(agent.credentials)?agent.credentials:[];
+      const grantRows=grants.length?grants.map(grant=>`<div class="callout ${grant.status==='active'?'info':'neutral'}" style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="mono">${esc(grant.actionName)}</span><span>${esc(grant.permissionKey)}</span><span>${cap(grant.status,grant.status==='active'?'ok':'neutral')}</span><small>${esc((grant.fieldAllowlist||[]).join(', '))}</small>${grant.status==='active'?actionButton(agent,'revoke-grant-'+grant.id,s('agentRevokeGrant'),'x','plain'):''}</div>`).join(''):'<small style="color:var(--muted)">No grants</small>';
+      const credentialRows=credentials.length?credentials.map(credential=>`<span class="badge ${credential.status==='active'?'ok':'neutral'}" style="margin-right:5px">${esc(credential.tokenHint)} · ${esc(credential.status)}</span>`).join(''):'<small style="color:var(--muted)">No credentials</small>';
+      const primaryActions=agent.status==='active'
+        ?`${actionButton(agent,'pause',s('agentPause'),'pause','soft')}${actionButton(agent,'disable',s('agentDisable'),'x','soft')}${actionButton(agent,'revoke',s('agentRevoke'),'trash','plain')}`
+        :agent.status==='paused'
+          ?`${actionButton(agent,'resume',s('agentResume'),'check','soft')}${actionButton(agent,'disable',s('agentDisable'),'x','soft')}${actionButton(agent,'revoke',s('agentRevoke'),'trash','plain')}`
+          :agent.status==='disabled'
+            ?`${actionButton(agent,'resume',s('agentResume'),'check','soft')}${actionButton(agent,'revoke',s('agentRevoke'),'trash','plain')}`:'';
+      const rotate=agent.status!=='revoked'?actionButton(agent,'rotate-credential',s('agentRotate'),'key','soft'):'';
+      return `<tr><td class="l"><b>${esc(agent.displayName)}</b><small class="mono">${esc(agent.principalKey)} · #${agent.id}</small></td><td class="l mono">${esc(String(agent.ownerUserId))}</td><td class="l">${cap(agent.status,statusTone(agent.status))}<small>v${agent.version}</small></td><td class="l"><details><summary>${grants.length} ${esc(s('agentGrants'))} · ${credentials.length} ${esc(s('agentCredentials'))}</summary><div style="min-width:300px;padding:8px 0">${grantRows}<div style="margin-top:8px">${credentialRows}</div></div></details></td><td class="l"><div style="display:flex;gap:6px;flex-wrap:wrap">${actionButton(agent,'add-grant',s('agentGrant'),'plus','soft')}${rotate}${primaryActions}</div></td></tr>`;
+    }).join('');
+    root.innerHTML=modulePage({
+      module:'admin',route:'agent-mgmt',title:s('agentTitle'),count:agents.length,
+      sub:s('agentSubtitle'),
+      body:`<div class="panel" style="margin:0 24px 24px"><div class="panel-h"><h3>${esc(s('agentReview'))}</h3><span class="muted">${agents.length} principal${agents.length===1?'':'s'}</span></div><div class="tablewrap"><table class="lines"><thead><tr><th class="l">Agent</th><th class="l">${esc(s('agentOwner'))}</th><th class="l">${esc(s('agentStatus'))}</th><th class="l">${esc(s('agentGrants'))} / ${esc(s('agentCredentials'))}</th><th class="l">Actions</th></tr></thead><tbody>${rows||`<tr><td colspan="5" class="l">${esc(s('agentEmpty'))}</td></tr>`}</tbody></table></div></div>`,
+    });
+    root.querySelectorAll('[data-agent-action]').forEach(button=>button.addEventListener('click',()=>handleAction(Number(button.dataset.agentId),button.dataset.agentAction||'')));
+  }
+  function agentById(id){ return agents.find(agent=>Number(agent.id)===id); }
+  function openReason(agent,action,submit){
+    const requiresReason=['pause','disable','revoke','revoke-grant'].some(name=>action.indexOf(name)===0);
+    appModal({icon:'shield',title:action==='revoke-grant'?s('agentRevokeGrant'):action.replace(/-/g,' '),body:`<div class="fld"><span>${esc(s('agentReason'))}${requiresReason?' <span class="req">*</span>':''}</span><textarea id="agentLifecycleReason" rows="3" maxlength="500" placeholder="${esc(s('agentReasonRequired'))}"></textarea></div>`,actions:`${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('agentReview'),{icon:'check',cls:'primary',attrs:'data-agent-confirm="1"'})}`});
+    $('#modalEl').querySelector('[data-agent-confirm="1"]').addEventListener('click',async()=>{
+      const reason=$('#agentLifecycleReason').value.trim();
+      if(requiresReason&&!reason){ toast(s('agentReasonRequired'),'danger'); return; }
+      const confirmButton=$('#modalEl').querySelector('[data-agent-confirm="1"]'); confirmButton.disabled=true;
+      try{ await submit(reason); closeModal(); toast(s('agentSaved'),'ok'); await reload(); }
+      catch(error){ confirmButton.disabled=false; toast(error&&error.message?error.message:s('agentError'),'danger'); }
+    });
+  }
+  async function openGrant(agent){
+    appModal({icon:'plus',title:s('agentGrant'),body:`<div class="set-grid"><div class="fld"><span>${esc(s('agentAction'))}</span><select id="agentGrantAction"><option value="receipt.search">receipt.search</option></select></div><div class="fld"><span>${esc(s('agentPermission'))}</span><select id="agentGrantPermission"><option value="expenses.company_receipts.read_company">expenses.company_receipts.read_company</option></select></div><div class="fld"><span>${esc(s('agentFields'))}</span><input id="agentGrantFields" value="id,merchant" maxlength="500"></div></div>`,actions:`${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('agentGrant'),{icon:'check',cls:'primary',attrs:'data-agent-grant-confirm="1"'})}`});
+    $('#modalEl').querySelector('[data-agent-grant-confirm="1"]').addEventListener('click',async()=>{
+      const save=$('#modalEl').querySelector('[data-agent-grant-confirm="1"]'); save.disabled=true;
+      try{ await adapter.create('admin/agents/'+agent.id+'/grants',{actionName:$('#agentGrantAction').value,permissionKey:$('#agentGrantPermission').value,resourceKey:'expenses/company_receipts',scope:'company',targetType:'none',targetId:'',fieldAllowlist:$('#agentGrantFields').value.split(',').map(value=>value.trim()).filter(Boolean)}); closeModal(); toast(s('agentGrantSaved'),'ok'); await reload(); }
+      catch(error){ save.disabled=false; toast(error&&error.message?error.message:s('agentGrantError'),'danger'); }
+    });
+  }
+  async function rotate(agent){
+    const response=await adapter.action('admin/agents',agent.id,'rotate-credential',{expectedVersion:agent.version});
+    await reload();
+    const token=response.data&&response.data.token||'';
+    appModal({icon:'key',title:s('agentRotate'),body:`<div class="callout warn">${esc(s('agentTokenWarning'))}</div><div class="fld" style="margin-top:12px"><textarea rows="4" readonly aria-label="Agent credential token">${esc(token)}</textarea></div>`,actions:btn(t('common.close'),{cls:'primary',attrs:'onclick="closeModal()"'})});
+  }
+  async function handleAction(id,action){
+    const agent=agentById(id); if(!agent) return;
+    if(action==='add-grant'){ await openGrant(agent); return; }
+    if(action==='rotate-credential'){ try{ await rotate(agent); }catch(error){ toast(error&&error.message?error.message:s('agentError'),'danger'); } return; }
+    if(action.indexOf('revoke-grant-')===0){
+      const grantId=Number(action.slice('revoke-grant-'.length));
+      const grant=(agent.grants||[]).find(row=>Number(row.id)===grantId); if(!grant) return;
+      openReason(agent,action,reason=>adapter.action('admin/agents/'+agent.id+'/grants',grant.id,'revoke',{expectedVersion:grant.version,reason})); return;
+    }
+    openReason(agent,action,reason=>adapter.action('admin/agents',agent.id,action,{expectedVersion:agent.version,reason}));
+  }
+  try{ await reload(); }catch(error){
+    root.innerHTML=modulePage({
+      module:'admin',route:'agent-mgmt',title:s('agentTitle'),sub:s('agentSubtitle'),
+      body:statePanel({icon:'warn',title:error&&error.message?error.message:s('agentError')}),
+    });
+  }
 };
 
 /* ---------------- AUDIT LOG (report) ---------------- */

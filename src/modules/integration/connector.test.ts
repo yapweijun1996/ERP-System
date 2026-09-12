@@ -47,6 +47,32 @@ describe('integration connector registry', () => {
     ))).toHaveLength(3);
   });
 
+  it('does not treat configured document Vision as live provider health', async () => {
+    const db = await freshDb(); await seedDemo(db);
+    const scope = { masterFn: 'M1', companyFn: 'C-SG' };
+    const actor = { userId: 1, requestId: 'document-vision-health-test' };
+    const [vision] = await db.select().from(integrationConnector).where(and(
+      eq(integrationConnector.companyFn, 'C-SG'),
+      eq(integrationConnector.connectorKey, 'document-vision'),
+    ));
+    const key = Buffer.alloc(32, 6);
+    await configureConnectorWithin(db, scope, actor, vision.id, {
+      credentialEnvelope: encryptToken('document-vision-health-secret', key),
+      credentialLabel: 'Vision gateway',
+      endpointHost: 'vision-gateway.example.test',
+    });
+
+    const checked = await checkConnectorHealthWithin(db, scope, actor, vision.id);
+    expect(checked).toMatchObject({
+      status: 'connected',
+      enabled: true,
+      health: 'warning',
+      lastErrorCode: 'provider_health_unverified',
+      lastCheckedAt: expect.any(Date),
+    });
+    expect(checked.lastSuccessAt).toBeNull();
+  });
+
   it('stores an opaque credential envelope while returning only safe metadata', async () => {
     const db = await freshDb(); await seedDemo(db);
     const scope = { masterFn: 'M1', companyFn: 'C-SG' };
@@ -112,5 +138,61 @@ describe('integration connector registry', () => {
       credentialEnvelope: { secret: 'plaintext' } as never,
       credentialLabel: 'Invalid',
     })).rejects.toMatchObject({ code: 'invalid_credential_envelope' } satisfies Partial<ConnectorError>);
+  });
+
+  it('fails closed when a required connector contains a malformed stored envelope', async () => {
+    const db = await freshDb(); await seedDemo(db);
+    const scope = { masterFn: 'M1', companyFn: 'C-SG' };
+    const actor = { userId: 1, requestId: 'connector-malformed-stored-envelope' };
+    const [vision] = await db.select().from(integrationConnector).where(and(
+      eq(integrationConnector.companyFn, 'C-SG'),
+      eq(integrationConnector.connectorKey, 'document-vision'),
+    ));
+    await db.update(integrationConnector).set({
+      credentialEnvelope: { secret: 'plaintext' },
+      enabled: false,
+      status: 'setup',
+      health: 'unknown',
+    }).where(eq(integrationConnector.id, vision.id));
+
+    await expect(setConnectorEnabledWithin(db, scope, actor, vision.id, true))
+      .rejects.toMatchObject({ code: 'credentials_required' } satisfies Partial<ConnectorError>);
+    const checked = await checkConnectorHealthWithin(db, scope, actor, vision.id);
+    expect(checked).toMatchObject({
+      status: 'setup',
+      enabled: false,
+      health: 'warning',
+      lastErrorCode: 'invalid_credential_envelope',
+      lastCheckedAt: expect.any(Date),
+    });
+    expect(checked.lastSuccessAt).toBeNull();
+  });
+
+  it('fails closed when an optional connector contains a malformed stored envelope', async () => {
+    const db = await freshDb(); await seedDemo(db);
+    const scope = { masterFn: 'M1', companyFn: 'C-SG' };
+    const actor = { userId: 1, requestId: 'connector-optional-malformed-stored-envelope' };
+    const [csv] = await db.select().from(integrationConnector).where(and(
+      eq(integrationConnector.companyFn, 'C-SG'),
+      eq(integrationConnector.connectorKey, 'customer-csv'),
+    ));
+    await db.update(integrationConnector).set({
+      credentialEnvelope: { secret: 'plaintext' },
+      enabled: false,
+      status: 'setup',
+      health: 'unknown',
+    }).where(eq(integrationConnector.id, csv.id));
+
+    await expect(setConnectorEnabledWithin(db, scope, actor, csv.id, true))
+      .rejects.toMatchObject({ code: 'invalid_credential_envelope' } satisfies Partial<ConnectorError>);
+    const checked = await checkConnectorHealthWithin(db, scope, actor, csv.id);
+    expect(checked).toMatchObject({
+      status: 'setup',
+      enabled: false,
+      health: 'warning',
+      lastErrorCode: 'invalid_credential_envelope',
+      lastCheckedAt: expect.any(Date),
+    });
+    expect(JSON.stringify(checked)).not.toContain('plaintext');
   });
 });

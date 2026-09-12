@@ -4,11 +4,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { DB } from '../data/db';
 import {
   appUser,
+  auditLog,
   documentAccessEvent,
+  documentExtraction,
   documentPurgeRequest,
   documentScanJob,
   documentTombstone,
   managedDocument,
+  outboxEvent,
   role,
   rolePermission,
 } from '../data/schema';
@@ -307,5 +310,135 @@ describe('document governance API', () => {
     expect(keyConflict.status).toBe(409);
     expect((await keyConflict.json()).error.code).toBe('document_access_key_conflict');
     expect(await db.select().from(documentAccessEvent)).toHaveLength(2);
+  });
+
+  it('exposes tenant-scoped dead-letter retry through an audited idempotent action', async () => {
+    const viewer = await login('viewer');
+    const admin = await login('admin');
+    const stored = await uploadReceiptDocument(db, scope, { userId: viewerId }, {
+      clientDraftId: 'api_processing_retry_001',
+      fileName: 'retry-receipt.jpg',
+      declaredMimeType: 'image/jpeg',
+      content: jpeg,
+    });
+    const deadLetteredAt = new Date('2026-07-26T02:05:00.000Z');
+    await db.update(documentScanJob).set({
+      status: 'clean',
+      scanner: 'api-retry-test',
+      resultCode: 'clean',
+      completedAt: deadLetteredAt,
+    }).where(eq(documentScanJob.versionId, stored.version.id));
+    await db.insert(documentExtraction).values({
+      ...scope,
+      versionId: stored.version.id,
+      provider: 'byok_vision',
+      model: 'vision-test',
+      status: 'dead_letter',
+      attempts: 5,
+      availableAt: deadLetteredAt,
+      deadLetteredAt,
+      lastError: 'Document processing failed.',
+    });
+    await db.insert(outboxEvent).values({
+      ...scope,
+      topic: 'document.extraction.requested',
+      aggregateType: 'document_version',
+      aggregateId: String(stored.version.id),
+      payload: { versionId: stored.version.id },
+      availableAt: deadLetteredAt,
+      attempts: 5,
+      lastAttemptAt: deadLetteredAt,
+      deadLetteredAt,
+      lastError: 'Document processing failed.',
+    });
+
+    const denied = await fetch(
+      `${baseUrl}/api/documents/${stored.document.id}/actions/retry-processing`,
+      {
+        method: 'POST',
+        headers: headers(viewer, 'document-retry-denied'),
+        body: JSON.stringify({ versionId: stored.version.id }),
+      },
+    );
+    expect(denied.status).toBe(403);
+    expect((await denied.json()).error.code).toBe('permission_denied');
+
+    const wrongVersion = await fetch(
+      `${baseUrl}/api/documents/${stored.document.id}/actions/retry-processing`,
+      {
+        method: 'POST',
+        headers: headers(admin, 'document-retry-wrong-version'),
+        body: JSON.stringify({ versionId: stored.version.id + 9999 }),
+      },
+    );
+    expect(wrongVersion.status).toBe(404);
+    expect((await wrongVersion.json()).error.code).toBe('document_version_missing');
+
+    const tampered = await fetch(
+      `${baseUrl}/api/documents/${stored.document.id}/actions/retry-processing`,
+      {
+        method: 'POST',
+        headers: headers(admin, 'document-retry-tenant-tamper'),
+        body: JSON.stringify({ versionId: stored.version.id, companyFn: 'C-MY' }),
+      },
+    );
+    expect(tampered.status).toBe(400);
+    expect((await tampered.json()).error.code).toBe('tenant_override_rejected');
+
+    const retried = await fetch(
+      `${baseUrl}/api/documents/${stored.document.id}/actions/retry-processing`,
+      {
+        method: 'POST',
+        headers: headers(admin, 'document-retry-once'),
+        body: JSON.stringify({ versionId: stored.version.id }),
+      },
+    );
+    expect(retried.status).toBe(200);
+    expect(await retried.json()).toMatchObject({
+      data: { scanRequeued: false, extractionRequeued: true },
+    });
+    const [requeued] = await db.select().from(documentExtraction);
+    expect(requeued).toMatchObject({
+      versionId: stored.version.id,
+      status: 'queued',
+      attempts: 0,
+      deadLetteredAt: null,
+    });
+    const [signal] = await db.select().from(outboxEvent)
+      .where(eq(outboxEvent.topic, 'document.extraction.requested'));
+    expect(signal).toMatchObject({ deadLetteredAt: null });
+    expect(await db.select().from(auditLog)).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        entity: 'documents',
+        entityId: String(stored.document.id),
+        action: 'retry-processing',
+        actorUserId: expect.any(Number),
+      }),
+    ]));
+
+    const replay = await fetch(
+      `${baseUrl}/api/documents/${stored.document.id}/actions/retry-processing`,
+      {
+        method: 'POST',
+        headers: headers(admin, 'document-retry-once'),
+        body: JSON.stringify({ versionId: stored.version.id }),
+      },
+    );
+    expect(replay.status).toBe(200);
+    expect(replay.headers.get('idempotency-replayed')).toBe('true');
+    expect(await replay.json()).toMatchObject({
+      data: { scanRequeued: false, extractionRequeued: true },
+    });
+
+    const conflict = await fetch(
+      `${baseUrl}/api/documents/${stored.document.id}/actions/retry-processing`,
+      {
+        method: 'POST',
+        headers: headers(admin, 'document-retry-once'),
+        body: JSON.stringify({ versionId: stored.version.id + 1 }),
+      },
+    );
+    expect(conflict.status).toBe(409);
+    expect((await conflict.json()).error.code).toBe('idempotency_key_reused');
   });
 });

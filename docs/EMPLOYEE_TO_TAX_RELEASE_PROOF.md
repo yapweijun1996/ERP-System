@@ -9,7 +9,7 @@ payment, bank-result and tax-package stages under production RLS.
 
 | Chain stage | Executable evidence | Verified outcome |
 | --- | --- | --- |
-| Employee identity activation | `src/api/employeeAccount.integration.test.ts`, `src/modules/hr/employeeAccount.test.ts` | One-time encrypted credential, activation-required restriction, permanent secret clearing, replay and cross-company denial |
+| Immediate employee identity access | `src/api/employeeAccount.integration.test.ts`, `src/modules/hr/employeeAccount.test.ts` | Encrypted credential handoff, immediate authenticated access, retired activation endpoint, reset session revocation and cross-company denial |
 | Governed leave | `src/api/leaveApplication.integration.test.ts`, `src/modules/hr/leaveApplication.test.ts`, `src/modules/hr/leaveApproval.test.ts` | Actor-owned application, multi-step decision, cancellation/revision and immutable balance evidence |
 | Payroll effect | `src/api/payrollLeave.integration.test.ts`, `src/modules/payroll/payrollLeave.test.ts` | Leave earning/deduction source is applied once to a run; replay does not duplicate the source or payroll effect |
 | Receipt capture and processing | `src/modules/documents/storage.test.ts`, `src/modules/documents/processing.test.ts`, `src/api/postgresSecurity.integration.test.ts` | Immutable versions, fail-closed scan/extraction, owner/manager authorization, content hash and provider/RLS isolation |

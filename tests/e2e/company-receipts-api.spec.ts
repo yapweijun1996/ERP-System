@@ -4,7 +4,7 @@
    neither path contacts production. */
 import express from 'express';
 import type { Server } from 'node:http';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { chromium } from 'playwright';
@@ -14,7 +14,16 @@ import { createApp } from '../../src/api/app';
 import { createPgliteDb, createPostgresDb, type DB } from '../../src/data/db';
 import { guardPostgresProofDatabase } from '../../src/data/postgresProofGuard';
 import { seedDemo } from '../../src/data/seed';
-import { appUser, companyModule, documentScanJob, masterModule } from '../../src/data/schema';
+import {
+  appUser,
+  companyModule,
+  companyReceipt,
+  companyReceiptPack,
+  documentScanJob,
+  masterModule,
+  role,
+  rolePermission,
+} from '../../src/data/schema';
 import { withTenantTransaction } from '../../src/data/tenantTransaction';
 import { uploadReceiptDocument } from '../../src/modules/documents/upload';
 
@@ -126,6 +135,8 @@ async function main(): Promise<void> {
 
     const browserErrors: string[] = [];
     const receiptPackResponses: string[] = [];
+    let expectForbiddenReceiptResponses = false;
+    let expectedForbiddenConsoleErrors = 0;
     browser = await chromium.launch({ headless: true });
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
@@ -136,9 +147,19 @@ async function main(): Promise<void> {
            before a user signs in. This is expected authentication state. */
         return;
       }
+      if (/status of 403 \(Forbidden\)/.test(message.text()) && expectedForbiddenConsoleErrors > 0) {
+        expectedForbiddenConsoleErrors -= 1;
+        return;
+      }
       browserErrors.push(message.text());
     });
     page.on('response', (response) => {
+      if (expectForbiddenReceiptResponses
+        && response.status() === 403
+        && (response.url().includes('/api/company-receipts')
+          || response.url().includes('/api/auth/session/actions/switch-company'))) {
+        expectedForbiddenConsoleErrors += 1;
+      }
       if (response.url().includes('/api/company-receipts/packs')) {
         receiptPackResponses.push(`${response.request().method()} ${response.status()} ${response.url()}`);
       }
@@ -186,8 +207,14 @@ async function main(): Promise<void> {
     await page.locator('[data-receipt-confirm-currency]').fill('SGD');
     await page.locator('[data-receipt-confirm-purpose]').fill('Authenticated browser confirmation');
     await page.locator('[data-receipt-confirm-save]').click();
-    await page.waitForFunction(() => Array.from(document.querySelectorAll('.dt-body .dt-r'))
-      .some((row) => row.textContent?.includes('API Browser Merchant')), { timeout: TIMEOUT });
+    try {
+      await page.waitForFunction(() => Array.from(document.querySelectorAll('.dt-body .dt-r'))
+        .some((row) => row.textContent?.includes('API Browser Merchant')), { timeout: TIMEOUT });
+    } catch (error) {
+      throw new Error(`${error instanceof Error ? error.message : String(error)}\n`
+        + `Register: ${await page.locator('[data-company-receipt-register="canonical"]').innerText()}\n`
+        + `Browser: ${browserErrors.join(' | ')}`);
+    }
 
     await page.locator('[data-receipt-search]').fill('API Browser Merchant');
     const searched = page.waitForResponse((response) => {
@@ -204,6 +231,11 @@ async function main(): Promise<void> {
     assert((await page.locator('.dt-body').innerText()).includes('API Browser Merchant'),
       'authenticated API browser search did not return the persisted receipt');
     await page.locator('[data-receipt-preset]').selectOption('custom');
+    await page.locator('[data-receipt-from]').fill('2026-08-13');
+    await page.locator('[data-receipt-to]').fill('2026-08-12');
+    await page.locator('[data-company-receipt-filters] button.primary').click();
+    assert((await page.locator('body').innerText()).includes('Date From must be on or before Date To.'),
+      'invalid receipt date range was not shown in the fallback UI');
     await page.locator('[data-receipt-from]').fill('2026-08-12');
     await page.locator('[data-receipt-to]').fill('2026-08-12');
     const ranged = page.waitForResponse((response) => {
@@ -219,9 +251,129 @@ async function main(): Promise<void> {
     await page.waitForFunction(() => document.querySelector('.dt-body')?.textContent?.includes('API Browser Merchant'),
       { timeout: TIMEOUT });
 
+    const prepare = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return response.request().method() === 'POST'
+        && response.status() === 200
+        && url.pathname === '/api/company-receipts/packs/prepare';
+    }, { timeout: TIMEOUT });
+    await page.locator('[data-receipt-pack-preview]').focus();
+    const reviewStateBeforeCancel = await page.evaluate(() => ({
+      search: (document.querySelector('[data-receipt-search]') as HTMLInputElement)?.value,
+      dateFrom: (document.querySelector('[data-receipt-from]') as HTMLInputElement)?.value,
+      dateTo: (document.querySelector('[data-receipt-to]') as HTMLInputElement)?.value,
+    }));
+    await page.locator('[data-receipt-pack-preview]').click();
+    await prepare;
+    await page.locator('[data-company-receipt-pack-confirm]').waitFor({ timeout: TIMEOUT });
+    const countPackCreates = () => receiptPackResponses.filter((entry) => /^POST \d+ .+\/api\/company-receipts\/packs$/.test(entry)).length;
+    const createCountBeforeCancel = countPackCreates();
+    await page.locator('[data-company-receipt-pack-cancel]').click();
+    await page.locator('[data-company-receipt-pack-confirm]').waitFor({ state: 'detached', timeout: TIMEOUT });
+    const createCountAfterCancel = countPackCreates();
+    assert(createCountAfterCancel === createCountBeforeCancel,
+      'cancelling the visible Pack review created a Pack');
+    assert((await db.select().from(companyReceiptPack)).length === 0,
+      'cancelling the visible Pack review persisted a Pack row');
+    assert(await page.evaluate((expected) => {
+      const active = document.activeElement;
+      return JSON.stringify({
+        search: (document.querySelector('[data-receipt-search]') as HTMLInputElement)?.value,
+        dateFrom: (document.querySelector('[data-receipt-from]') as HTMLInputElement)?.value,
+        dateTo: (document.querySelector('[data-receipt-to]') as HTMLInputElement)?.value,
+        focus: active?.matches('[data-receipt-pack-preview]') ?? false,
+      }) === JSON.stringify({...expected,focus:true});
+    }, reviewStateBeforeCancel), 'Pack review cancellation did not preserve filters/focus');
+
+    expectForbiddenReceiptResponses = true;
+    const switchAttempt = await page.evaluate(async () => {
+      try {
+        await window.ErpSystemData.switchCompany('C-MY');
+        return { ok: true, code: null, companyFn: DB.erpSystem?.scope?.companyFn };
+      } catch (error) {
+        return {
+          ok: false,
+          code: (error as { code?: string })?.code || null,
+          companyFn: DB.erpSystem?.scope?.companyFn,
+        };
+      }
+    });
+    assert(!switchAttempt.ok && switchAttempt.code === 'company_access_denied'
+      && switchAttempt.companyFn === 'C-SG',
+    'unauthorized Company switch changed the active fallback scope');
+
+    const [viewer] = await db.select({ userId: appUser.userId }).from(appUser)
+      .where(eq(appUser.email, 'viewer@acme.co')).limit(1);
+    const [employeeRole] = await db.select({ roleId: role.roleId }).from(role)
+      .where(and(eq(role.masterFn, 'M1'), eq(role.name, 'Employee'))).limit(1);
+    assert(viewer && employeeRole, 'viewer permission fixture is unavailable');
+    await db.delete(rolePermission).where(and(
+      eq(rolePermission.masterFn, 'M1'),
+      eq(rolePermission.roleId, employeeRole.roleId),
+      eq(rolePermission.permissionKey, 'expenses.company_receipts.read_own'),
+    ));
+    const revoked = await page.evaluate(async () => {
+      await window.ErpSystemData.refresh();
+      await window.ErpWebMcp.sync('permission-revoked');
+      try {
+        await window.ErpSystemData.companyReceipts({ limit: 1 });
+        return { ok: true, code: null, state: window.ErpWebMcp.getState() };
+      } catch (error) {
+        return {
+          ok: false,
+          code: (error as { code?: string })?.code || null,
+          status: (error as { status?: number })?.status || null,
+          state: window.ErpWebMcp.getState(),
+        };
+      }
+    });
+    assert(!revoked.ok && revoked.code === 'permission_denied' && revoked.status === 403
+      && revoked.state.reason === 'unsupported-browser',
+    'server-side permission revocation did not fail closed in the unsupported-browser fallback');
+    await db.insert(rolePermission).values({
+      masterFn: 'M1', roleId: employeeRole.roleId, permissionKey: 'expenses.company_receipts.read_own',
+    });
+    const restored = await page.evaluate(async () => {
+      await window.ErpSystemData.refresh();
+      const response = await window.ErpSystemData.companyReceipts({ limit: 1 });
+      await window.ErpWebMcp.sync('permission-restored');
+      return { status: response.meta?.limit, state: window.ErpWebMcp.getState() };
+    });
+    expectForbiddenReceiptResponses = false;
+    assert(restored.status === 1 && restored.state.reason === 'unsupported-browser',
+      'fallback receipt read did not recover after permission restoration');
+
+    const prepareAgain = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return response.request().method() === 'POST'
+        && response.status() === 200
+        && url.pathname === '/api/company-receipts/packs/prepare';
+    }, { timeout: TIMEOUT });
+    await page.locator('[data-receipt-pack-preview]').click();
+    await prepareAgain;
+    await page.locator('[data-company-receipt-pack-confirm]').waitFor({ timeout: TIMEOUT });
+    const [receiptToChange] = await db.select({ id: companyReceipt.id }).from(companyReceipt)
+      .where(eq(companyReceipt.merchant, 'API Browser Merchant')).limit(1);
+    assert(receiptToChange, 'confirmed receipt fixture is unavailable for digest retry');
+    await db.update(companyReceipt).set({ merchant: 'API Browser Merchant Updated' }).where(
+      eq(companyReceipt.id, receiptToChange.id),
+    );
+    const createCountBeforeDigestRetry = countPackCreates();
+    await page.locator('[data-company-receipt-pack-confirm]').click();
+    await page.waitForFunction(() => document.querySelector('[data-pack-review-selected]')
+      ?.textContent?.includes('API Browser Merchant Updated'), { timeout: TIMEOUT });
+    assert(countPackCreates() === createCountBeforeDigestRetry,
+      'changed Pack selection digest created a Pack before renewed confirmation');
+    const created = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return response.request().method() === 'POST'
+        && [200, 201].includes(response.status())
+        && url.pathname === '/api/company-receipts/packs';
+    }, { timeout: TIMEOUT });
     const preview = page.waitForResponse((response) => response.url().includes('/api/company-receipts/packs/')
       && response.url().includes('action=view') && response.status() === 200, { timeout: TIMEOUT });
-    await page.locator('[data-receipt-pack-preview]').click();
+    await page.locator('[data-company-receipt-pack-confirm]').click();
+    await created;
     try {
       await preview;
     } catch (error) {
@@ -236,6 +388,10 @@ async function main(): Promise<void> {
       const bounds = node.getBoundingClientRect();
       return bounds.width > 0 && bounds.height > 0;
     }), 'authenticated API browser PDF preview did not occupy visible layout space');
+    const persistedPacks = await db.select().from(companyReceiptPack);
+    assert(persistedPacks.length === 1 && persistedPacks[0].rowCount === 1
+      && Boolean(persistedPacks[0].sourceSha256),
+    'confirmed Pack was not persisted with one row and a source digest');
     await page.locator('#modalEl .modal-foot button').click();
     const download = page.waitForResponse((response) => response.url().includes('/api/company-receipts/packs/')
       && response.url().includes('action=download') && response.status() === 200, { timeout: TIMEOUT });
@@ -256,7 +412,21 @@ async function main(): Promise<void> {
       'authenticated API mobile register did not render cards');
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
       'authenticated API mobile page overflowed horizontally');
+    if (process.env.TASK229_SCREENSHOT_DIR) {
+      mkdirSync(process.env.TASK229_SCREENSHOT_DIR, { recursive: true });
+      await page.screenshot({
+        path: path.join(process.env.TASK229_SCREENSHOT_DIR, 'company-receipts-mobile.png'),
+        fullPage: true,
+      });
+    }
     assert(browserErrors.length === 0, `browser errors: ${browserErrors.join(' | ')}`);
+    const fallbackState = await page.evaluate(() => ({
+      native: window.ErpWebMcp.hasNativeSupport(),
+      state: window.ErpWebMcp.getState(),
+    }));
+    assert(!fallbackState.native && fallbackState.state.reason === 'unsupported-browser'
+      && fallbackState.state.registered.length === 0,
+    'unsupported browser did not retain the ordinary UI fallback state');
     await context.close();
     console.log(`PASS Company Receipts API E2E (${POSTGRES_URL ? 'PostgreSQL' : 'PGlite'}): authenticated confirmation, refresh/search/range, Preview/PDF/Print and responsive bounds`);
   } finally {

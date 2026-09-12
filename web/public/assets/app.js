@@ -255,7 +255,7 @@ function renderLogin(){
     <div class="auth-foot">
       ${apiMode
         ? `<span class="cap ok"><span class="dot"></span>Production</span><span>Real session — see docs/STATUS.md for current auth scope</span>`
-        : `<span class="cap ok"><span class="dot"></span>Demo only</span><span>${demoOneClickAvailable?'One-click access is limited to showcase personas':'Staff credentials and first-login activation are enforced'}</span>`}
+        : `<span class="cap ok"><span class="dot"></span>Demo only</span><span>${demoOneClickAvailable?'One-click access is limited to showcase personas':'Account access is ready immediately; sign in with your account credentials.'}</span>`}
     </div>
   </section>`;
   const doLogin=(email)=>{
@@ -335,76 +335,16 @@ function renderLogin(){
   wireAuthPasswordToggle(auth,'loginPassword','loginPasswordToggle');
   setTimeout(()=>$(apiMode?'#loginOrganizationCode':'#loginPassword').focus(),60);
 }
-function renderEmployeeActivation(){
-
-  const activationCopy={
-    en:{brand:'Employee activation',title:'Complete your account',body:'Replace the temporary password and add your email before entering My Work.',email:'Email',password:'New password',confirm:'Confirm password',submit:'Activate account',signOut:'Sign out',mismatch:'Passwords do not match.',done:'Account activated. Sign in again with your new password.'},
-    ms:{brand:'Pengaktifan pekerja',title:'Lengkapkan akaun anda',body:'Gantikan kata laluan sementara dan tambah e-mel sebelum memasuki My Work.',email:'E-mel',password:'Kata laluan baharu',confirm:'Sahkan kata laluan',submit:'Aktifkan akaun',signOut:'Log keluar',mismatch:'Kata laluan tidak sepadan.',done:'Akaun diaktifkan. Log masuk semula dengan kata laluan baharu.'},
-    zh:{brand:'员工账号激活',title:'完成账号激活',body:'进入 My Work 前，请更换临时密码并填写邮箱。',email:'邮箱',password:'新密码',confirm:'确认密码',submit:'激活账号',signOut:'退出登录',mismatch:'两次密码不一致。',done:'账号已激活，请使用新密码重新登录。'},
-    ja:{brand:'従業員アカウント有効化',title:'アカウントを有効化',body:'My Work を開く前に仮パスワードを変更し、メールを入力してください。',email:'メール',password:'新しいパスワード',confirm:'パスワード確認',submit:'アカウントを有効化',signOut:'サインアウト',mismatch:'パスワードが一致しません。',done:'有効化しました。新しいパスワードで再ログインしてください。'},
-    vi:{
-  "brand": "Kích hoạt nhân viên",
-  "title": "Hoàn tất tài khoản",
-  "body": "Đổi mật khẩu tạm thời và thêm email trước khi vào My Work.",
-  "email": "E-mail",
-  "password": "Mật khẩu mới",
-  "confirm": "Xác nhận mật khẩu",
-  "submit": "Kích hoạt tài khoản",
-  "signOut": "Đăng xuất",
-  "mismatch": "Mật khẩu không khớp.",
-  "done": "Tài khoản đã kích hoạt. Hãy đăng nhập lại bằng mật khẩu mới."
-},
-  };
-  const copy=i18nLegacy(activationCopy);
-  setAuthShell(true);
-  closeAllPops(); closePalette(); closeModal();
-  let auth=$('#authView');
-  if(!auth){
-    auth=document.createElement('main');
-    auth.id='authView';
-    auth.className='auth-view';
-    document.body.insertBefore(auth,$('#app'));
-  }
-  auth.setAttribute('aria-label',copy.title);
-  auth.innerHTML=`<section class="auth-panel">
-    <div class="auth-brand"><span class="mark brand-logo-mark">${window.erpBrandLogo()}</span><span><b>Aria ERP</b><small>${esc(copy.brand)}</small></span></div>
-    <div class="auth-copy"><h1>${esc(copy.title)}</h1><p>${esc(copy.body)}</p></div>
-    <form class="auth-form" id="activationForm">
-      <div class="fld"><span>${esc(copy.email)}</span><input id="activationEmail" type="email" autocomplete="email" required></div>
-      <div class="fld"><span>${esc(copy.password)}</span><input id="activationPassword" type="password" autocomplete="new-password" minlength="8" required></div>
-      <div class="fld"><span>${esc(copy.confirm)}</span><input id="activationConfirm" type="password" autocomplete="new-password" minlength="8" required></div>
-      <div class="auth-error" id="activationError" role="alert"></div>
-      <button class="btn primary lg" type="submit">${ic('check')}<span>${esc(copy.submit)}</span></button>
-    </form>
-    <button class="btn soft" type="button" id="activationSignOut">${ic('signout')}<span>${esc(copy.signOut)}</span></button>
-  </section>`;
-  $('#activationForm').addEventListener('submit',async event=>{
-    event.preventDefault();
-    const password=$('#activationPassword').value;
-    const confirmPassword=$('#activationConfirm').value;
-    if(password!==confirmPassword){ $('#activationError').textContent=copy.mismatch; return; }
-    const button=$('#activationForm button[type="submit"]');
-    button.setAttribute('disabled','');
-    try{
-      await window.ErpSystemDemo.completeActivation({
-        email:$('#activationEmail').value.trim(),password,confirmPassword,
-      });
-      alert(copy.done);
-      location.reload();
-    }catch(error){
-      $('#activationError').textContent=(error&&error.message)||'Activation failed.';
-      button.removeAttribute('disabled');
-    }
-  });
-  $('#activationSignOut').addEventListener('click',signOutDemo);
-  setTimeout(()=>$('#activationEmail').focus(),60);
-}
 async function signOutDemo(){
   if(
     window.ErpReceiptDrafts
     && typeof window.ErpReceiptDrafts.confirmAndClearBeforeLogout==='function'
     && !await window.ErpReceiptDrafts.confirmAndClearBeforeLogout()
   ) return;
+  if(window.ErpWebMcp&&typeof window.ErpWebMcp.invalidate==='function'){
+    window.ErpWebMcp.invalidate('logout');
+  }
+  window.ErpWebMcpConfirmation=null;
   /* api mode: destroy the real server-side session, not just a local flag. */
   if(window.ErpSystemDemo&&typeof window.ErpSystemDemo.logout==='function'){
     try{ await window.ErpSystemDemo.logout(); }catch{}
@@ -452,6 +392,9 @@ function moduleConfigFromRows(rows){
 async function loadModuleControl(){
   const sessionModules=DB.erpSystem&&DB.erpSystem.modules;
   MODULE_CONTROL_CACHE=moduleConfigFromRows(sessionModules);
+  if(window.ErpWebMcp&&typeof window.ErpWebMcp.sync==='function'){
+    void window.ErpWebMcp.sync('capability-change');
+  }
 }
 function readModuleControl(){
   /* The authenticated session is the source for commercial modules that do
@@ -932,7 +875,7 @@ const SUBROUTES = {
   integration:['integration','integration-logs','data-import'],
   finance:['gl','account-ledger','journal-entry','new-journal-entry','payment-voucher','new-payment-voucher','bank-rec','pnl','ar-aging','company-receipts'], hr:['leave-approval','leave-workflow','hr-directory','employee','new-employee','hr-calendar','staff-calendar','payroll-run','payslip'],
   mywork:['my-leave','leave-application','my-claims','expense-claim','my-receipts','company-receipts','receipt-tax-evidence','team-calendar','my-approvals'],
-  workflow:['approval-inbox'], bi:['bi-dashboard','sales-analysis','stock-aging'], admin:['role-permission','master-control','user-mgmt','audit-log','sys-settings','company-onboarding','notifications'],
+  workflow:['approval-inbox'], bi:['bi-dashboard','sales-analysis','stock-aging'], admin:['role-permission','master-control','user-mgmt','agent-mgmt','audit-log','sys-settings','company-onboarding','notifications'],
 };
 DB.nav.forEach(g=>g.items.forEach(m=>{ ROUTE_MODULE[m.route]=m.id; }));
 Object.entries(SUBROUTES).forEach(([mod,routes])=>routes.forEach(r=>{ if(!ROUTE_MODULE[r]) ROUTE_MODULE[r]=mod; }));
@@ -982,7 +925,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'bank-rec',
   'bi-dashboard','sales-analysis','stock-aging',
   'my-activity','notifications',
-  'integration','master-control','sys-settings',
+  'integration','master-control','sys-settings','agent-mgmt',
 ]);
 const CANONICAL_DATA_PREVIEW_ROUTES = new Set([]);
 const API_SCREEN_ROUTES = new Set([
@@ -1025,7 +968,7 @@ const API_SCREEN_ROUTES = new Set([
   'sales-home','sales-reports','report-sales-customer','report-sales-rep','report-quote-conversion','report-generic','sales-commission','txn-view',
   'my-activity',
   'notifications',
-  'integration','master-control','sys-settings',
+  'integration','master-control','sys-settings','agent-mgmt',
   'my-leave','leave-application','my-claims','expense-claim','my-receipts','company-receipts','receipt-tax-evidence','team-calendar','my-approvals',
 ]);
 const SCREEN_ACTIVE_ALIASES = {
@@ -1121,7 +1064,7 @@ const MODULE_DEFS = {
   ]},
   admin:{ labelKey:'nav.admin', home:'user-mgmt', items:[
     ['user-mgmt','Users','people'],['role-permission','Roles & Permissions','shield'],
-    ['master-control','Master Control','grid'],['audit-log','Audit Log','history'],
+    ['agent-mgmt','Agent Governance','shield','route.agent-mgmt'],['master-control','Master Control','grid'],['audit-log','Audit Log','history'],
     ['sys-settings','System Settings','gear'],['company-onboarding','Company Onboarding','check'],
   ]},
 };
@@ -1204,7 +1147,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
   workspace:[
     'bank-rec','data-import','integration','master-control',
     'company-onboarding','mrp',
-    'sales-commission','settings','sys-settings',
+    'sales-commission','settings','sys-settings','agent-mgmt',
   ],
   board:['crm-pipeline'],
   'activity-feed':['integration-logs','my-activity','notifications'],
@@ -1820,9 +1763,17 @@ function navigate(route, params){
   const sequence=++SCREEN_RENDER_SEQUENCE;
   CURRENT_ROUTE=route;
   CURRENT_ROUTE_PARAMS=Object.assign({},params||{});
+  window.__ERP_CURRENT_ROUTE__=route;
+  window.ErpWebMcpConfirmation=null;
   if(!routeAllowed(route)){
+    if(window.ErpWebMcp&&typeof window.ErpWebMcp.invalidate==='function'){
+      window.ErpWebMcp.invalidate('navigation');
+    }
     root.innerHTML=routeDeniedByPermission(route)?permissionBlockedPanel():moduleBlockedPanel(route);
     setActiveNav(route); closeAllPops(); return Promise.resolve(false);
+  }
+  if(window.ErpWebMcp&&typeof window.ErpWebMcp.sync==='function'){
+    void window.ErpWebMcp.sync('navigation');
   }
   if(!SCREENS[route]){
     // unbuilt module -> graceful panel inside a simple shell
@@ -2249,6 +2200,9 @@ function wireCompanyMenu(){
     const fn=b.dataset.co;
     if(!window.ErpSystemDemo||!window.ErpSystemDemo.switchCompany){ toast('Company switch needs the PGlite adapter.','warn'); return; }
     if(!DB.erpSystem||!DB.erpSystem.scope||fn===DB.erpSystem.scope.companyFn) return;
+    if(window.ErpWebMcp&&typeof window.ErpWebMcp.invalidate==='function'){
+      window.ErpWebMcp.invalidate('company-change');
+    }
     window.ErpSystemDemo.switchCompany(fn).then(async()=>{
       await loadModuleControl();
       await loadNotifications();
@@ -2261,7 +2215,12 @@ function wireCompanyMenu(){
       refreshNotifs();
       if(CURRENT_ROUTE) navigate(CURRENT_ROUTE);
       toast('Switched to '+DB.company.name,'ok');
-    }).catch(e=>toast('Switch failed: '+((e&&e.message)||e),'danger'));
+    }).catch(e=>{
+      if(window.ErpWebMcp&&typeof window.ErpWebMcp.sync==='function'){
+        void window.ErpWebMcp.sync('company-change-failed');
+      }
+      toast('Switch failed: '+((e&&e.message)||e),'danger');
+    });
   }));
   $('#companyMenu').querySelector('[data-co-action="master"]')?.addEventListener('click',()=>{ closeAllPops(); navigate('master-control'); });
 }
@@ -2397,6 +2356,10 @@ function renderTabbar(){
 /* ---------- boot ---------- */
 async function boot(){
   if(typeof initI18n==='function') await initI18n();
+  if(window.ErpTenantRecovery&&window.ErpTenantRecovery.isActive()){
+    window.ErpTenantRecovery.render();
+    return;
+  }
   /* Demo authentication is local and can say “signed in” before its PGlite
      adapter has finished opening. Wait for the adapter before any signed-in
      shell readers (notifications, approvals, module projection) run, so a
@@ -2448,10 +2411,6 @@ async function boot(){
       return;
     }
     renderLogin();
-    return;
-  }
-  if(ed&&ed.activationRequired){
-    renderEmployeeActivation();
     return;
   }
   const auth=$('#authView'); if(auth) auth.remove();

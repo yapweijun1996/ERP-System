@@ -22,6 +22,7 @@ import { PERMISSIONS, hasPermission } from '../auth/permissions';
 import { buildDashboard } from './dashboard';
 import { apiError, context, requireSession } from './http';
 import { createAdminRouter } from './routes/admin';
+import { createAdminAgentsRouter } from './routes/adminAgents';
 import { createAuthRouter } from './routes/auth';
 import { createResourceRouter } from './routes/resources';
 import { parseTokenEncryptionKey } from '../auth/tokenCrypto';
@@ -46,6 +47,13 @@ import { createTaxEvidenceRouter } from './routes/taxEvidence';
 import { createOnboardingRouter } from './routes/onboarding';
 import { createPlatformRouter } from './routes/platform';
 import { createCompanyReceiptsRouter } from './routes/companyReceipts';
+import { createAgentRouter } from './routes/agent';
+import { createAssistantRouter, type ReceiptAssistantRouterOptions } from './routes/assistant';
+import { createKnowledgeRouter } from './routes/knowledge';
+import type { AgentCredentialAuthenticator } from '../auth/agentAuthentication';
+import { createMcpRouter } from './routes/mcp';
+import type { McpAuthorizationAdapter } from './mcpAuthorization';
+import type { McpRateLimitPolicy } from './mcpRateLimit';
 import { createTenantModuleEntitlementGate } from './moduleEntitlement';
 import {
   configureAuditAttributionStorage,
@@ -67,6 +75,20 @@ export interface AppOptions {
   tokenEncryptionKey?: string;
   publicUrl?: string;
   revision?: string;
+  /** Independent Agent issuer adapter; never falls back to the human session. */
+  agentAuthenticator?: AgentCredentialAuthenticator;
+  /** Independent MCP OAuth/OIDC resource-server adapter; never falls back to a browser session. */
+  mcpAuthorization?: McpAuthorizationAdapter;
+  /** Issuer advertised by the MCP Protected Resource Metadata document. */
+  mcpIssuer?: string;
+  /** Exact MCP resource audience. Defaults to publicUrl + /api/mcp/v1. */
+  mcpResourceUri?: string;
+  /** Process-local development guard; production should enforce the same policy at a shared gateway/store. */
+  mcpRateLimit?: McpRateLimitPolicy;
+  /** Exact server-approved egress hosts for OpenAI-compatible Agent providers. */
+  agentAllowedEgressHosts?: readonly string[];
+  /** Server-owned Receipt assistant adapter; absent means the assistant is unavailable. */
+  receiptAssistant?: ReceiptAssistantRouterOptions;
 }
 
 const CSRF_EXEMPT_PATHS = new Set([
@@ -76,6 +98,10 @@ const CSRF_EXEMPT_PATHS = new Set([
   '/api/auth/password-reset/actions/confirm',
   '/api/setup/actions/complete',
   '/api/setup/platform-superadmin/actions/complete',
+  // Agent calls use their own bearer issuer and never use browser CSRF state.
+  '/api/agent/actions',
+  // MCP calls use their own bearer issuer and never use browser CSRF state.
+  '/api/mcp/v1',
 ]);
 
 function platformSessionToken(req: express.Request): string | undefined {
@@ -224,10 +250,31 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
   app.use('/api/platform', createPlatformRouter(db, {
     secureCookies: options.secureCookies ?? false,
   }));
+  // This route must run before the human-session module gate. The Agent
+  // dispatcher derives its tenant from the independently authenticated issuer
+  // and checks the module entitlement inside the same tenant transaction.
+  app.use('/api/agent', createAgentRouter(db, {
+    authenticator: options.agentAuthenticator,
+  }));
+  app.use('/api/knowledge', createKnowledgeRouter(db));
+  // MCP follows the same independent bearer boundary as Agent. The route
+  // remains before the human-session module gate; its dispatcher performs the
+  // tenant/module/grant checks inside the authenticated tenant transaction.
+  app.use(createMcpRouter(db, {
+    authorization: options.mcpAuthorization,
+    issuer: options.mcpIssuer,
+    resourceUri: options.mcpResourceUri,
+    publicUrl: options.publicUrl,
+    rateLimit: options.mcpRateLimit,
+  }));
   app.use(createTenantModuleEntitlementGate(db));
+  app.use('/api/assistant', createAssistantRouter(db, options.receiptAssistant));
+  app.use('/api/admin', createAdminAgentsRouter(db));
   app.use('/api/admin', createAdminRouter(db, { lifecycle }));
   app.use('/api/account', createAccountRouter(db));
-  app.use('/api/integration', createIntegrationRouter(db, lifecycle?.tokenEncryptionKey));
+  app.use('/api/integration', createIntegrationRouter(db, lifecycle?.tokenEncryptionKey, {
+    agentAllowedEgressHosts: options.agentAllowedEgressHosts,
+  }));
   app.use('/api/settings', createSettingsRouter(db));
   app.use('/api/hr', createHrRouter(db, {
     tokenEncryptionKey: lifecycle?.tokenEncryptionKey,

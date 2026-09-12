@@ -16,8 +16,10 @@ import {
   CompanyReceiptPackError,
   createCompanyReceiptPackWithin,
   listCompanyReceiptPacksWithin,
+  normalizeCompanyReceiptPackFilters,
   readCompanyReceiptPackWithin,
   renderCompanyReceiptPackWithin,
+  selectCompanyReceiptPackWithin,
   type CompanyReceiptPackAction,
 } from '../../modules/expenses/companyReceiptPack';
 import {
@@ -31,6 +33,11 @@ import { DocumentQuarantineError } from '../../modules/documents/processing';
 import { DocumentStorageError } from '../../modules/documents/storage';
 import { appendAudit } from '../audit';
 import { apiError, context, requireSession } from '../http';
+import { SemanticContractError } from '../../modules/agent/semanticContracts';
+import {
+  readCompanyReceiptSemanticSummaryWithin,
+  SemanticReadError,
+} from '../../modules/agent/semanticReads';
 
 function findClientTenantIdentity(
   value: unknown,
@@ -134,8 +141,71 @@ export function createCompanyReceiptsRouter(db: DB): Router {
       apiError(res, error.status, error.code, error.message);
       return;
     }
+    if (error instanceof SemanticContractError) {
+      apiError(res, 400, error.code, error.message);
+      return;
+    }
+    if (error instanceof SemanticReadError) {
+      apiError(res, error.status, error.code, error.message);
+      return;
+    }
     throw error;
   }
+
+  router.get('/semantic-summary', async (req, res) => {
+    const access = await requireReceiptReadAccess(req, res);
+    if (!access) return;
+    const { session } = access;
+    const dateFrom = queryDate(req.query.dateFrom);
+    const dateTo = queryDate(req.query.dateTo);
+    if (!dateFrom || !dateTo || dateFrom > dateTo) {
+      apiError(
+        res,
+        400,
+        'semantic_query_invalid',
+        'Use a valid inclusive dateFrom/dateTo range for semantic receipt facts.',
+      );
+      return;
+    }
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const data = await withTenantTransaction(db, scope, async (tx) => {
+        // Recheck live authorization inside the tenant transaction so a
+        // permission downgrade cannot leave a stale preflight result feeding
+        // the semantic context.
+        const visibility = await hasPermission(
+          tx, session, PERMISSIONS.expensesCompanyReceiptsReadCompany,
+        )
+          ? 'company' as const
+          : await hasPermission(tx, session, PERMISSIONS.expensesCompanyReceiptsReadOwn)
+            ? 'own' as const
+            : null;
+        if (!visibility) {
+          throw new SemanticReadError(
+            'semantic_permission_denied',
+            'You cannot read Company Receipt semantic facts.',
+            403,
+          );
+        }
+        return readCompanyReceiptSemanticSummaryWithin(tx, {
+          scope,
+          actorUserId: session.userId,
+          visibility,
+        }, { dateFrom, dateTo });
+      });
+      res.json({
+        data,
+        meta: {
+          sourceAction: 'receipt.search',
+          pageSize: 100,
+          maxRows: 5000,
+          scope: data.scope.visibility,
+        },
+      });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
 
   router.get('/', async (req, res) => {
     const access = await requireReceiptReadAccess(req, res);
@@ -307,6 +377,44 @@ export function createCompanyReceiptsRouter(db: DB): Router {
           nextCursor: hasMore ? data[data.length - 1]?.id ?? null : null,
         },
       });
+    } catch (error) {
+      handleError(res, error);
+    }
+  });
+
+  router.post('/packs/prepare', async (req, res) => {
+    const access = await requireReceiptReadAccess(req, res);
+    if (!access) return;
+    const { session, visibility } = access;
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try {
+      const filters = normalizeCompanyReceiptPackFilters(req.body ?? {});
+      const selection = await withTenantTransaction(db, scope, (tx) =>
+        selectCompanyReceiptPackWithin(
+          tx,
+          scope,
+          session.userId,
+          visibility,
+          filters,
+        ));
+      const body = {
+        data: {
+          selectionDigest: selection.sourceSha256,
+          visibility,
+          filters: selection.filters,
+          rows: selection.rows,
+          totals: selection.totals,
+          rowCount: selection.rowCount,
+          documentCount: selection.documentCount,
+          preparedAt: new Date().toISOString(),
+        },
+        meta: {
+          preparationOnly: true,
+          authorizationRequired: true,
+          completeResult: true,
+        },
+      };
+      res.json(body);
     } catch (error) {
       handleError(res, error);
     }

@@ -8,6 +8,8 @@ export interface AuditEvent {
   companyFn?: string | null;
   actorUserId?: number | null;
   platformPrincipalId?: number | null;
+  agentPrincipalId?: number | null;
+  delegatorUserId?: number | null;
   requestId: string;
   entity: string;
   entityId?: string | number | null;
@@ -25,6 +27,8 @@ export async function appendAudit(db: DB, event: AuditEvent): Promise<number> {
     companyFn: event.companyFn ?? null,
     actorUserId: event.actorUserId ?? null,
     platformPrincipalId: event.platformPrincipalId ?? attribution?.platformPrincipalId ?? null,
+    agentPrincipalId: event.agentPrincipalId ?? attribution?.agentPrincipalId ?? null,
+    delegatorUserId: event.delegatorUserId ?? attribution?.delegatorUserId ?? null,
     requestId: event.requestId,
     entity: event.entity,
     entityId: event.entityId == null ? null : String(event.entityId),
@@ -50,6 +54,8 @@ export async function listEntityAudit(
     occurredAt: auditLog.occurredAt,
     actorUserId: auditLog.actorUserId,
     platformPrincipalId: auditLog.platformPrincipalId,
+    agentPrincipalId: auditLog.agentPrincipalId,
+    delegatorUserId: auditLog.delegatorUserId,
     actorName: appUser.fullName,
     actorEmail: appUser.email,
     platformPrincipalKey: platformPrincipal.principalKey,

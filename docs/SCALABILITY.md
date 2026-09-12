@@ -17,12 +17,63 @@ filesystem storage needs a shared durable design before horizontal API/worker sc
 > read-replica routing, automated materialized-view refresh, WAL/PITR/pgBackRest
 > operations or a representative 100–800 GB load/plan report. Sections 3–8 are target
 > architecture, not deployed facts. TASK-201 owns measured scale, SLO and recovery proof.
-> Its current worker telemetry performs whole-table aggregate reads and is awaited before
-> business processing when due; this must be bounded or decoupled and plan-tested at
+> Its current worker telemetry performs whole-table queue aggregates; calendar event
+> queues use a tenant-scoped derived enabled-connection `LEFT JOIN` to evaluate
+> readiness once per connection row while retaining disabled events in `pending`. The worker
+> emitter is single-flight and non-blocking, so telemetry does not await before business
+> processing. Each aggregate snapshot now records its measured `queryDurationMs`; this
+> is an observation field, not an approved SLO or budget. The aggregate query still needs a bounded budget and plan testing at
 > representative queue volume before it can be treated as production-safe monitoring.
+> A disposable PostgreSQL 16 fixture with 25,000 synthetic rows per queue measured
+> a 49ms pre-join eight-queue snapshot and a 169.348ms pre-join calendar-leave plan.
+> A follow-up 25,000-row calendar comparison measured 14.176–15.116ms for the
+> correlated `EXISTS` and 8.856–9.252ms for the joined form; the current source
+> calendar-only read returned 25,000 ready leave events in 32ms. This 122MiB local
+> baseline does not satisfy the 100–800 GB requirement.
 
 This applies **only to production PostgreSQL**. The demo (PGlite/IndexedDB) holds a few
 thousand mock rows and never approaches this scale — do not conflate the two.
+
+## 11. Worker telemetry and operational handoff
+
+`npm run check:worker-telemetry` validates newline-delimited
+`erp.worker.telemetry` records without connecting to a database or echoing worker,
+queue or payload data. It enforces the aggregate-only schema, queue order, non-negative
+integer counters, bounded timestamps and the primary/calendar queue sets. The command
+has no default performance threshold. After an Operations/database owner approves a
+numeric query budget, pass it explicitly:
+
+```bash
+npm run check:worker-telemetry -- --max-query-ms 250 telemetry.ndjson
+```
+
+An exit code of `0` means the records are structurally valid and, when a budget is
+provided, every measured duration is within that budget. Exit code `1` means malformed
+or privacy-sensitive input, or an explicit budget breach. `queryDurationMs` remains an
+observation until the owner records representative-volume p95/p99 targets and the
+actual alert destination.
+
+The workers accept an optional `WORKER_TELEMETRY_QUERY_TIMEOUT_MS` value for the
+approved per-statement budget. It is clamped to 1–120,000 ms and applied with
+transaction-local `statement_timeout` before each aggregate read; unset means no
+timeout is applied. PostgreSQL enforces cancellation at the database boundary. Demo
+PGlite accepts and scopes the same setting for parity, but its small local fixture is
+not evidence of PostgreSQL cancellation or a production budget.
+
+Before a representative run, record the source revision, database/worker identity,
+Company scope policy, queue row volume, interval, approved budget and operator. Capture
+the validator summary and `EXPLAIN (ANALYZE, BUFFERS)` output as dated evidence. If the
+budget is exceeded, keep the business worker path unchanged, increase the telemetry
+interval or pause collection through the reviewed operational change, inspect the plan,
+and do not mutate tenant data as a mitigation.
+
+The recovery handoff is also explicit: retain the previous application image and
+configuration, restore PostgreSQL plus WAL/document storage only on an isolated target,
+verify schema and tenant-scoped counts/hashes, then check `/health`, release identity,
+protected API authentication and queue reconciliation before resuming workers. Record
+RPO/RTO, alert recipient, incident owner, rollback ticket and reviewer in the evidence
+record. This section is a source-controlled procedure; it is not proof that a budget,
+alert route, restore drill or failover has been reviewed or exercised.
 
 ---
 

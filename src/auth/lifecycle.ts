@@ -349,6 +349,9 @@ export async function confirmPasswordReset(
         eq(passwordResetToken.tokenHash, hashOpaqueToken(token)),
         isNull(passwordResetToken.usedAt),
         gt(passwordResetToken.expiresAt, now),
+        eq(appUser.identityKind, 'human'),
+        eq(appUser.loginEnabled, true),
+        eq(appUser.isActive, true),
       ))
       .limit(1)
       .for('update');

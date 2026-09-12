@@ -1,3 +1,8 @@
+import { accessDemoDocumentWithin } from '../../src/data/demoDocumentAccess';
+import { readSetupModuleCatalogWithin } from '../../src/auth/moduleProvisioning';
+import { createDemoReceiptAssistantCommands } from '../../src/data/demoReceiptAssistant';
+import { createCompanyReceiptPackCommands, CompanyReceiptPackError } from '../../src/modules/expenses/companyReceiptPackCommands';
+import { createAgentExecutionIntentCommands } from '../../src/modules/agent/agentExecutionIntentCommands';
 import { PGlite, type Transaction } from '@electric-sql/pglite';
 import { drizzle, type PgliteDatabase } from 'drizzle-orm/pglite';
 import * as schema from '../../src/data/schema';
@@ -93,10 +98,16 @@ import {
 import {
   createCompanyReceiptWithin,
   listCompanyReceiptEvidenceWithin,
+  readCompanyReceiptWithin,
   readCompanyReceiptConfirmationWithin,
   updateCompanyReceiptWithin,
+  type CompanyReceiptReadVisibility,
   voidCompanyReceiptWithin,
 } from '../../src/modules/expenses/companyReceipt';
+import {
+  normalizeCompanyReceiptPackFilters,
+  selectCompanyReceiptPackSelectionWithin,
+} from '../../src/modules/expenses/companyReceiptPackSelection';
 import {
   executeCompanyReceiptPackPurge,
   initiateCompanyReceiptPackPurgeWithin,
@@ -432,10 +443,10 @@ import {
 } from '../../src/auth/adminLifecycle';
 import {
   activateStaffOnboardingWithin,
+  type StaffOnboardingCredential,
   createStaffOnboardingDraftWithin,
   type StaffOnboardingDraftInput,
 } from '../../src/modules/hr/staffOnboarding';
-import { completeEmployeeActivation } from '../../src/modules/hr/employeeAccount';
 import type { SessionData } from '../../src/auth/session';
 import ExcelJS from 'exceljs';
 import {
@@ -542,6 +553,14 @@ async function createDemoInvitation(
   );
 }
 
+const receiptPackCommands = createCompanyReceiptPackCommands(sha256Hex);
+const receiptIntentCommands = createAgentExecutionIntentCommands({
+  ...receiptPackCommands,
+  sha256: sha256Hex,
+  appendAudit,
+  isPackError: (error) => error instanceof CompanyReceiptPackError,
+});
+
 export const erpDemoRuntime = Object.freeze({
   openDatabase(dataDir: string) {
     const client = new PGlite(dataDir);
@@ -554,6 +573,13 @@ export const erpDemoRuntime = Object.freeze({
     dependencies: Object.freeze([...definition.dependencies]),
   }))),
   commands: Object.freeze({
+    readSetupModuleCatalogWithin(db: DemoOrm, masterFn: string) {
+      return readSetupModuleCatalogWithin(asDomainDb(db), masterFn);
+    },
+    accessDemoDocument: accessDemoDocumentWithin,
+    companyReceiptPackCommands: receiptPackCommands,
+    agentExecutionIntentCommands: receiptIntentCommands,
+    receiptAssistantCommands: createDemoReceiptAssistantCommands(receiptIntentCommands),
     validateReceiptUpload,
     renderCompanyReceiptPackPdf(
       pack: CompanyReceiptPackFacts,
@@ -565,6 +591,33 @@ export const erpDemoRuntime = Object.freeze({
       db: DemoOrm, scope: Scope, actorUserId: number, input: Parameters<typeof createCompanyReceiptWithin>[3],
     ) {
       return createCompanyReceiptWithin(asDomainDb(db), scope, actorUserId, input);
+    },
+    readCompanyReceiptWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      receiptId: number,
+      visibility: CompanyReceiptReadVisibility,
+    ) {
+      return readCompanyReceiptWithin(
+        asDomainDb(db), scope, actorUserId, receiptId, visibility,
+      );
+    },
+    selectCompanyReceiptPackWithin(
+      db: DemoOrm,
+      scope: Scope,
+      actorUserId: number,
+      visibility: CompanyReceiptReadVisibility,
+      input: { search?: unknown; dateFrom?: unknown; dateTo?: unknown },
+    ) {
+      return selectCompanyReceiptPackSelectionWithin(
+        asDomainDb(db),
+        scope,
+        actorUserId,
+        visibility,
+        normalizeCompanyReceiptPackFilters(input),
+        sha256Hex,
+      );
     },
     listCompanyReceiptEvidenceWithin(
       db: DemoOrm,
@@ -1228,18 +1281,11 @@ export const erpDemoRuntime = Object.freeze({
     },
     activateStaffOnboardingWithin(
       db: DemoOrm, scope: Scope, actorUserId: number, draftId: number,
-      expectedVersion: number, passwordHash: string | null,
+      expectedVersion: number, credential: StaffOnboardingCredential | null,
     ) {
       return activateStaffOnboardingWithin(
         asDomainDb(db), demoSession(scope, actorUserId), draftId,
-        expectedVersion, passwordHash, 'demo',
-      );
-    },
-    completeEmployeeActivation(
-      db: DemoOrm, userId: number, email: string, passwordHash: string,
-    ) {
-      return completeEmployeeActivation(
-        asDomainDb(db), userId, email, passwordHash, 'demo-activation',
+        expectedVersion, credential, 'demo',
       );
     },
     createProductWithin(db: DemoOrm, scope: Scope, input: CreateProductInput) {

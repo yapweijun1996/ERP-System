@@ -90,8 +90,14 @@ export async function setConnectorEnabledWithin(
   exec: DB, scope: ConnectorScope, actor: ConnectorActor, id: number, enabled: boolean,
 ) {
   const row = await ownedConnector(exec, scope, id);
-  if (enabled && row.credentialRequired && !row.credentialEnvelope) {
-    throw new ConnectorError('credentials_required', 'Configure encrypted credentials before enabling this connector.');
+  if (enabled) {
+    if (row.credentialRequired && !isEncryptedToken(row.credentialEnvelope)) {
+      throw new ConnectorError('credentials_required', 'Configure encrypted credentials before enabling this connector.');
+    }
+    if (!row.credentialRequired && row.credentialEnvelope != null
+      && !isEncryptedToken(row.credentialEnvelope)) {
+      throw new ConnectorError('invalid_credential_envelope', 'Stored connector credentials are invalid.');
+    }
   }
   return auditedUpdate(exec, scope, actor, id, enabled ? 'resume' : 'pause', row, {
     enabled,
@@ -105,14 +111,19 @@ export async function checkConnectorHealthWithin(
   exec: DB, scope: ConnectorScope, actor: ConnectorActor, id: number,
 ) {
   const row = await ownedConnector(exec, scope, id);
-  const configured = !row.credentialRequired || Boolean(row.credentialEnvelope);
+  const credentialPresent = row.credentialEnvelope != null;
+  const credentialValid = !credentialPresent || isEncryptedToken(row.credentialEnvelope);
+  const configured = credentialValid && (!row.credentialRequired || credentialPresent);
   const enabled = row.enabled && configured;
+  const liveProbeUnavailable = row.connectorKey === 'document-vision';
   return auditedUpdate(exec, scope, actor, id, 'check_health', row, {
-    health: configured ? 'healthy' : 'warning',
+    health: configured && !liveProbeUnavailable ? 'healthy' : 'warning',
     status: enabled ? 'connected' : configured ? row.status : 'setup',
     lastCheckedAt: new Date(),
-    lastSuccessAt: configured ? new Date() : row.lastSuccessAt,
-    lastErrorCode: configured ? null : 'credentials_not_configured',
+    lastSuccessAt: configured && !liveProbeUnavailable ? new Date() : row.lastSuccessAt,
+    lastErrorCode: configured
+      ? (liveProbeUnavailable ? 'provider_health_unverified' : null)
+      : credentialPresent ? 'invalid_credential_envelope' : 'credentials_not_configured',
   });
 }
 

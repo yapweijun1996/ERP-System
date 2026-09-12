@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { and, eq, isNull } from 'drizzle-orm';
+import { readFileSync } from 'node:fs';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { freshDb } from '../../test/helpers';
 import { seedDemo } from '../../data/seed';
 import {
@@ -20,9 +21,9 @@ import {
 import { hashPassword, verifyPassword } from '../../auth/password';
 import { encryptToken } from '../../auth/tokenCrypto';
 import { createSession, getSession } from '../../auth/session';
+import { revealEmployeeTemporaryPassword } from '../../auth/employeeAccountLifecycle';
 import {
   activeEmployeeSecret,
-  completeEmployeeActivation,
   createEmployeeAccount,
   offboardEmployeeAccount,
   resetEmployeeAccount,
@@ -73,8 +74,8 @@ describe('employee account lifecycle', () => {
     expect(user).toMatchObject({
       username: 'employee.one',
       email: null,
-      accountState: 'preactivated',
-      passwordChangeRequired: true,
+      accountState: 'active',
+      passwordChangeRequired: false,
     });
     const [employeeGrant] = await data.db.select().from(userCompanyRole).where(and(
       eq(userCompanyRole.userId, account.userId),
@@ -84,6 +85,59 @@ describe('employee account lifecycle', () => {
     expect(JSON.stringify(secret.credentialEnvelope)).not.toContain('Temp-employee-123!');
     await expect(provision(data, data.source.id, 'other.name'))
       .rejects.toMatchObject({ code: 'employee_account_exists' });
+  });
+
+  it('fails closed on malformed persisted credentials and cryptographic tampering', async () => {
+    const data = await fixture();
+    const account = await provision(data, data.source.id, 'employee.corrupt');
+    await data.db.update(employeeActivationSecret).set({
+      credentialEnvelope: { secret: 'plaintext' },
+    }).where(eq(employeeActivationSecret.userId, account.userId));
+
+    await expect(activeEmployeeSecret(data.db, scope, data.source.id))
+      .rejects.toMatchObject({ code: 'temporary_credential_unavailable', status: 404 });
+    await expect(revealEmployeeTemporaryPassword(data.db, scope, data.source.id, encryptionKey))
+      .rejects.toMatchObject({ code: 'temporary_credential_unavailable', status: 404 });
+
+    const repaired = encryptToken('repaired-temporary-password', encryptionKey);
+    await data.db.update(employeeActivationSecret).set({ credentialEnvelope: repaired })
+      .where(eq(employeeActivationSecret.userId, account.userId));
+    await data.db.update(employeeActivationSecret).set({
+      credentialEnvelope: {
+        ...repaired,
+        ciphertext: `${repaired.ciphertext.slice(0, -1)}${repaired.ciphertext.endsWith('A') ? 'B' : 'A'}`,
+      },
+    }).where(eq(employeeActivationSecret.userId, account.userId));
+    await expect(revealEmployeeTemporaryPassword(data.db, scope, data.source.id, encryptionKey))
+      .rejects.toMatchObject({ code: 'temporary_credential_unavailable', status: 404 });
+  });
+
+  it('rejects malformed credentials before creating or resetting an account', async () => {
+    const data = await fixture();
+    await expect(createEmployeeAccount(data.db, scope, {
+      employeeId: data.source.id,
+      username: 'employee.invalid-envelope',
+      passwordHash: hashPassword('unused-password'),
+      credentialEnvelope: { secret: 'plaintext' } as never,
+      expiresAt: new Date(Date.now() + 60_000),
+      actorUserId: data.actor.userId,
+    })).rejects.toMatchObject({ code: 'invalid_credential_envelope', status: 400 });
+    const [unlinked] = await data.db.select({ userId: employee.userId }).from(employee)
+      .where(eq(employee.id, data.source.id));
+    expect(unlinked.userId).toBeNull();
+
+    const account = await provision(data, data.source.id, 'employee.valid-before-reset');
+    await expect(resetEmployeeAccount(data.db, scope, {
+      employeeId: data.source.id,
+      passwordHash: hashPassword('unused-reset-password'),
+      credentialEnvelope: { secret: 'plaintext' } as never,
+      expiresAt: new Date(Date.now() + 60_000),
+      actorUserId: data.actor.userId,
+    })).rejects.toMatchObject({ code: 'invalid_credential_envelope', status: 400 });
+    const secrets = await data.db.select().from(employeeActivationSecret)
+      .where(eq(employeeActivationSecret.userId, account.userId));
+    expect(secrets).toHaveLength(1);
+    expect(secrets[0].purpose).toBe('activation');
   });
 
   it('creates the missing company Employee role before provisioning the first account', async () => {
@@ -117,9 +171,29 @@ describe('employee account lifecycle', () => {
       'employee.payout.manage',
       'employee.receipts.write',
       'employee.self.read',
+      'expenses.company_receipts.create',
+      'expenses.company_receipts.edit',
       'expenses.company_receipts.read_own',
+      'expenses.company_receipts.void',
     ]);
     expect(resourceScope).toMatchObject({ resourceKey: 'employee/*', scope: 'self' });
+  });
+
+  it.each([false, true])('accepts an existing Employee role without rewriting its grants (legacy=%s)', async legacy => {
+    const data = await fixture();
+    await provision(data, data.source.id, 'employee.contract.first');
+    const [baseRole] = await data.db.select().from(role).where(and(
+      eq(role.masterFn, scope.masterFn), eq(role.companyFn, scope.companyFn), eq(role.name, 'Employee'),
+    ));
+    if (legacy) await data.db.delete(rolePermission).where(and(
+      eq(rolePermission.roleId, baseRole.roleId),
+      inArray(rolePermission.permissionKey, ['expenses.company_receipts.create', 'expenses.company_receipts.edit', 'expenses.company_receipts.void']),
+    ));
+    const before = await data.db.select().from(rolePermission).where(eq(rolePermission.roleId, baseRole.roleId));
+    await provision(data, data.target.id, 'employee.contract.second');
+    const after = await data.db.select().from(rolePermission).where(eq(rolePermission.roleId, baseRole.roleId));
+    expect(after).toEqual(before);
+    expect(after).toHaveLength(legacy ? 6 : 9);
   });
 
   it('fails closed when an Employee role has privileged or altered access', async () => {
@@ -178,39 +252,42 @@ describe('employee account lifecycle', () => {
     expect(managedGrant).toBeDefined();
   });
 
-  it('completes first login, destroys the envelope and revokes all sessions', async () => {
+  it('allows immediate access without changing the assigned password or consuming its handoff', async () => {
     const data = await fixture();
-    const account = await provision(data, data.source.id, 'employee.activate');
+    const account = await provision(data, data.source.id, 'employee.ready');
     const live = await createSession(data.db, {
-      userId: account.userId,
-      masterFn: scope.masterFn,
-      activeCompanyFn: scope.companyFn,
-      username: 'employee.activate',
-      email: null,
-      fullName: data.source.fullName,
+      userId: account.userId, masterFn: scope.masterFn, activeCompanyFn: scope.companyFn,
+      username: 'employee.ready', email: null, fullName: data.source.fullName,
     });
-
-    await completeEmployeeActivation(
-      data.db,
-      account.userId,
-      'employee.activate@example.com',
-      hashPassword('Changed-password-123!'),
-    );
-
     const [user] = await data.db.select().from(appUser).where(eq(appUser.userId, account.userId));
-    const [secret] = await data.db.select().from(employeeActivationSecret)
-      .where(eq(employeeActivationSecret.userId, account.userId));
-    expect(user).toMatchObject({
-      email: 'employee.activate@example.com',
-      accountState: 'active',
-      passwordChangeRequired: false,
-    });
-    expect(verifyPassword('Temp-employee-123!', user.passwordHash)).toBe(false);
-    expect(secret.credentialEnvelope).toBeNull();
-    expect(secret.clearedAt).toBeInstanceOf(Date);
-    expect(await getSession(data.db, live.sessionId)).toBeNull();
-    await expect(activeEmployeeSecret(data.db, scope, data.source.id))
-      .rejects.toMatchObject({ code: 'temporary_credential_unavailable' });
+    expect(user.accountState).toBe('active');
+    expect(user.passwordChangeRequired).toBe(false);
+    expect(user.initialPasswordExpiresAt).toBeNull();
+    expect(verifyPassword('Temp-employee-123!', user.passwordHash)).toBe(true);
+    expect(await getSession(data.db, live.sessionId)).not.toBeNull();
+    expect((await activeEmployeeSecret(data.db, scope, data.source.id)).credentialEnvelope).not.toBeNull();
+  });
+
+  it('migrates pending accounts without changing passwords, roles or disabled state', async () => {
+    const data = await fixture();
+    const account = await provision(data, data.source.id, 'employee.migrate');
+    await data.db.update(appUser).set({
+      accountState: 'preactivated', passwordChangeRequired: true,
+      initialPasswordExpiresAt: new Date(0), isActive: false,
+    }).where(eq(appUser.userId, account.userId));
+    const [before] = await data.db.select().from(appUser).where(eq(appUser.userId, account.userId));
+    const grants = await data.db.select().from(userCompanyRole).where(eq(userCompanyRole.userId, account.userId));
+    const migration = readFileSync(new URL('../../../drizzle/0111_immediate_account_access.sql', import.meta.url), 'utf8');
+    await data.db.execute(sql.raw(migration));
+    await data.db.execute(sql.raw(migration));
+    const [after] = await data.db.select().from(appUser).where(eq(appUser.userId, account.userId));
+    expect(after).toMatchObject({ accountState: 'active', passwordChangeRequired: false,
+      initialPasswordExpiresAt: null, isActive: false, passwordHash: before.passwordHash });
+    expect(await data.db.select().from(userCompanyRole).where(eq(userCompanyRole.userId, account.userId))).toEqual(grants);
+    const evidence = await data.db.select().from(auditLog).where(and(
+      eq(auditLog.entityId, String(account.userId)), eq(auditLog.action, 'first_login_activation_removed'),
+    ));
+    expect(evidence).toHaveLength(1);
   });
 
   it('HR reset rotates the credential, clears the prior envelope and revokes sessions', async () => {
@@ -218,12 +295,7 @@ describe('employee account lifecycle', () => {
     const account = await provision(data, data.source.id, 'employee.reset');
     const [first] = await data.db.select().from(employeeActivationSecret)
       .where(eq(employeeActivationSecret.userId, account.userId));
-    await completeEmployeeActivation(
-      data.db,
-      account.userId,
-      'employee.reset@example.com',
-      hashPassword('Changed-password-123!'),
-    );
+
     const live = await createSession(data.db, {
       userId: account.userId,
       masterFn: scope.masterFn,

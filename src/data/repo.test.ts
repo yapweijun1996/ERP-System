@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { DB } from './db';
-import { taxRule } from './schema';
+import { company, currency, master, taxRule } from './schema';
 import { freshDb, TEST_SCOPE as SCOPE } from '../test/helpers';
 import { getEffectiveTaxRate, listProducts, addProduct } from './repo';
 
@@ -53,6 +53,67 @@ describe('getEffectiveTaxRate', () => {
     await seedTaxRules(db);
     const r = await getEffectiveTaxRate(db, SCOPE, 'NOPE', '2024-06-01');
     expect(r).toBeNull();
+  });
+
+  it('fails closed when overlapping rules make the effective date ambiguous', async () => {
+    const db = await freshDb();
+    await db.insert(taxRule).values([
+      {
+        masterFn: SCOPE.masterFn,
+        companyFn: SCOPE.companyFn,
+        taxRegime: 'GST',
+        taxCode: 'SR',
+        rate: '9.000',
+        validFrom: '2024-01-01',
+        validTo: '2025-01-01',
+      },
+      {
+        masterFn: SCOPE.masterFn,
+        companyFn: SCOPE.companyFn,
+        taxRegime: 'GST',
+        taxCode: 'SR',
+        rate: '10.000',
+        validFrom: '2024-06-01',
+        validTo: null,
+      },
+    ]);
+
+    expect(await getEffectiveTaxRate(db, SCOPE, 'SR', '2024-07-01')).toBeNull();
+  });
+
+  it('keeps identical tax codes isolated by Company scope and regime', async () => {
+    const db = await freshDb();
+    await db.insert(currency).values({ code: 'TST', name: 'Test currency', symbol: '$' });
+    await db.insert(master).values({ masterFn: 'MASTER-A', loginCode: 'MASTER-A', name: 'Master A' });
+    await db.insert(company).values([
+      {
+        companyFn: 'COMPANY-GST', masterFn: 'MASTER-A', name: 'GST Company', country: 'SG',
+        currency: 'TST', taxRegime: 'GST',
+      },
+      {
+        companyFn: 'COMPANY-SST', masterFn: 'MASTER-A', name: 'SST Company', country: 'MY',
+        currency: 'TST', taxRegime: 'SST',
+      },
+    ]);
+    await db.insert(taxRule).values([
+      {
+        masterFn: 'MASTER-A', companyFn: 'COMPANY-GST', taxRegime: 'GST', taxCode: 'SR',
+        rate: '9.000', taxClassification: 'gst_standard', inputTaxRecoverablePct: '100.0000',
+        validFrom: '2024-01-01', validTo: null,
+      },
+      {
+        masterFn: 'MASTER-A', companyFn: 'COMPANY-SST', taxRegime: 'SST', taxCode: 'SR',
+        rate: '8.000', taxClassification: 'sst_service', inputTaxRecoverablePct: '0.0000',
+        validFrom: '2024-01-01', validTo: null,
+      },
+    ]);
+
+    await expect(getEffectiveTaxRate(db, { masterFn: 'MASTER-A', companyFn: 'COMPANY-GST' }, 'SR', '2024-06-01'))
+      .resolves.toMatchObject({ taxRegime: 'GST', rate: '9.000' });
+    await expect(getEffectiveTaxRate(db, { masterFn: 'MASTER-A', companyFn: 'COMPANY-SST' }, 'SR', '2024-06-01'))
+      .resolves.toMatchObject({ taxRegime: 'SST', rate: '8.000' });
+    await expect(getEffectiveTaxRate(db, { masterFn: 'OTHER-MASTER', companyFn: 'COMPANY-GST' }, 'SR', '2024-06-01'))
+      .resolves.toBeNull();
   });
 });
 

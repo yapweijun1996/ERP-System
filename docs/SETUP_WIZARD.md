@@ -212,3 +212,27 @@ context before its first RLS-protected write; bundled Compose uses separate
 migration/bootstrap, API and worker roles. TASK-195's disposable PostgreSQL 16 proof
 covers the current flow under FORCE RLS. Target-host verification and production
 revision evidence remain separate release gates.
+
+
+## Existing Demo Master availability
+
+Demo setup creates a Company inside its existing seeded Master. Its module picker
+uses `readSetupModuleCatalogWithin` from `src/auth/moduleProvisioning.ts` to read
+that Master's entitlement and default allocation. An explicitly disabled module
+or dependency is unavailable and is not recommended or selected. The UI explains
+that Platform activation is required. Missing configuration follows the existing
+trusted-bootstrap defaults without inserting rows during the read. Submission
+still validates current entitlement transactionally; the picker is not authority.
+Production first-run setup creates a new Master and retains its bootstrap defaults.
+
+
+## Demo login workspace restoration
+
+The Demo adapter restores Company scope from the selected active human account's
+same-Master role memberships before loading screen data. The saved Company is a
+preference, not a grant: if unavailable, use an authorized Company. When the
+selected account has no eligible membership, retire the local signed-in session
+and keep an unprivileged identity display instead of selecting another owner.
+Explicit Company switching also checks membership for Company Owners. The reset
+workflow clears the Company preference with other Demo session preferences.
+Production session derivation remains unchanged.

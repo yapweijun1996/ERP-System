@@ -6,6 +6,7 @@ import {
   appUser,
   master,
   outboxEvent,
+  passwordResetToken,
   role,
   userInvitation,
 } from '../data/schema';
@@ -150,4 +151,45 @@ describe('invitation and password reset lifecycle', () => {
       'confirm-replay',
     )).rejects.toMatchObject({ code: 'reset_invalid' });
   });
+
+  it('rejects reset confirmation after login eligibility is revoked without consuming the token', async () => {
+    const db = await freshDb();
+    await seedDemo(db);
+    const [admin] = await db.select().from(appUser).where(eq(appUser.email, 'admin@acme.co'));
+    await requestPasswordReset(db, admin.email!, 'issue', options);
+    const [event] = await db.select().from(outboxEvent);
+    const token = decryptToken((event.payload as { token: EncryptedToken }).token, tokenEncryptionKey);
+    for (const change of [
+      { isActive: false, loginEnabled: true, identityKind: 'human' },
+      { isActive: true, loginEnabled: false, identityKind: 'human' },
+      { isActive: true, loginEnabled: false, identityKind: 'platform_actor' },
+    ]) {
+      await db.update(appUser).set(change).where(eq(appUser.userId, admin.userId));
+      await expect(confirmPasswordReset(db, token, 'changed-password', 'denied'))
+        .rejects.toMatchObject({ code: 'reset_invalid' });
+      const [unchanged] = await db.select().from(appUser).where(eq(appUser.userId, admin.userId));
+      expect(unchanged.passwordHash).toBe(admin.passwordHash);
+      const [reset] = await db.select().from(passwordResetToken);
+      expect(reset.usedAt).toBeNull();
+    }
+  });
+
+  it('invalidates superseded links and rejects the exact expiry boundary', async () => {
+    const db = await freshDb();
+    await seedDemo(db);
+    const now = new Date('2026-09-09T00:00:00Z');
+    await requestPasswordReset(db, 'admin@acme.co', 'first', options, now);
+    await requestPasswordReset(db, 'admin@acme.co', 'second', options, now);
+    const events = await db.select().from(outboxEvent).orderBy(outboxEvent.id);
+    const tokens = events.map((event) => decryptToken(
+      (event.payload as { token: EncryptedToken }).token, tokenEncryptionKey,
+    ));
+    await expect(confirmPasswordReset(db, tokens[0], 'changed-password', 'superseded', now))
+      .rejects.toMatchObject({ code: 'reset_invalid' });
+    const resets = await db.select().from(passwordResetToken).orderBy(passwordResetToken.id);
+    await expect(confirmPasswordReset(db, tokens[1], 'changed-password', 'expired', resets[1].expiresAt))
+      .rejects.toMatchObject({ code: 'reset_invalid' });
+    await confirmPasswordReset(db, tokens[1], 'changed-password', 'valid', now);
+  });
+
 });

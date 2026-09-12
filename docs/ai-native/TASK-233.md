@@ -33,45 +33,45 @@ G01 preparation must be non-authorizing. Bind execution to the complete reviewed
 
 ## Execute in this order
 
-- [ ] **S1 — Define effect and approval policy.**
+- [x] **S1 — Define effect and approval policy.**
 
   Action: Classify each pilot action: read, preparation, confirmed creation, export. Exclude purge/legal-hold/financial posting from pilot tools. Identify existing approval authority for future actions without granting the Agent self-approval.
 
   Checkpoint exit: A policy table specifies who may confirm what and the exact no-mutation boundary before confirmation.
 
-  Evidence: Not run.
+  Evidence: [TASK-233 S1 evidence](evidence/TASK-233-2026-09-09.md#s1--effect-and-approval-policy).
 
-- [ ] **S2 — Bind preparation to exact intent.**
+- [x] **S2 — Bind preparation to exact intent.**
 
   Action: Persist or securely reference the normalized reviewed facts/digest and expiration under actor/Company scope. Implement approve/reject/cancel and a separately supplied execution intent key. Do not use an unverified UI boolean or model prose as approval.
 
   Checkpoint exit: Tampered payload, changed filters, changed record/version, added matching row or expired preparation is rejected.
 
-  Evidence: Not run.
+  Evidence: [TASK-233 S2 evidence](evidence/TASK-233-2026-09-09.md#s2--exact-intent-persistence-and-expiry-binding).
 
-- [ ] **S3 — Execute once with consistent facts.**
+- [x] **S3 — Execute once with consistent facts.**
 
   Action: Recheck live authorization and approval inside the execution boundary. Ensure the persisted Pack matches the reviewed selection even under concurrent insert/edit; a check followed by an unconstrained selection is insufficient. Use locking/isolation or a guarded expected-digest contract owned by the domain.
 
   Checkpoint exit: Race tests prove either the exact approved Pack commits or nothing commits; duplicate retries create no second Pack.
 
-  Evidence: Not run.
+  Evidence: [TASK-233 S3 evidence](evidence/TASK-233-2026-09-09.md#s3--execute-once-with-consistent-facts).
 
-- [ ] **S4 — Handle replay and human corrections.**
+- [x] **S4 — Handle replay and human corrections.**
 
   Action: After a committed result, a same-intent retry returns the original result after current authorization checks; do not require a fresh approval to discover an already committed effect. Changed-payload reuse conflicts. Corrections use existing governed commands, never delete evidence.
 
   Checkpoint exit: Dropped-response replay, cancel/reject, expired grant, changed approval and correction cases have deterministic outcomes.
 
-  Evidence: Not run.
+  Evidence: [TASK-233 S4 evidence](evidence/TASK-233-2026-09-09.md#s4--handle-replay-and-human-corrections).
 
-- [ ] **S5 — Verify all negative paths.**
+- [x] **S5 — Verify all negative paths.**
 
   Action: Run existing Pack/API regression plus approval/concurrency tests and common gates. Show exact reviewed versus persisted identities and resulting artifact; record evidence links for each G06 criterion.
 
   Checkpoint exit: P06-P12 pass with zero unauthorized business writes and preserved audit history.
 
-  Evidence: Not run.
+  Evidence: [TASK-233 S5 evidence](evidence/TASK-233-2026-09-09.md#s5--verify-all-negative-paths).
 
 ## DoD mapping: all four must pass
 
@@ -81,16 +81,16 @@ is needed. Do not mark the task Done merely because all five checkpoints are che
 
 - **G06.1:** Define server-enforced action classes for read, draft, confirmed execution and approval-required execution; reuse existing business approval authority.
   - Required evidence: Effect/approver policy and unchanged human behavior.
-  - Current result: Not run.
+  - Current result: S1 policy is defined in the server action catalogue; S2 adds the server-owned exact-intent record/decision boundary; S3 connects only an approved intent to the authenticated Agent Pack command while the human Company Receipt route remains unchanged; S4 preserves that boundary across replay, approval change and current-grant rechecks; S5 completes the negative-path and browser/API regression evidence.
 - **G06.2:** Bind confirmation/approval to actor, Company, exact payload digest, resource version and expiry; changed facts invalidate approval.
   - Required evidence: Exact payload/selection/version/expiry binding.
-  - Current result: Not run.
+  - Current result: S2 binds the active Company, accountable actor, Agent principal, normalized Pack payload, selected receipt/document versions, selection/resource digests and server TTL. S3 rechecks the principal/grant/approval boundary, locks source rows and inserts the exact reviewed selection without unconstrained reselection; S4 rejects changed payload digests before replay; S5 confirms the boundary through the complete negative-path matrix and persisted artifact checks.
 - **G06.3:** Prove cancel, reject, stale version, concurrent execution and timeout replay cause no unauthorized or duplicate side effect; preserve segregation of duties.
   - Required evidence: Concurrent-change, cancel/reject and no-duplicate commit assertions.
-  - Current result: Not run.
+  - Current result: S2 covers human-only approve/reject/cancel, stale version, changed-facts and expiry rejection. S3 covers duplicate execution serialization plus concurrent edit/insert outcomes with exact Pack-or-no-Pack assertions. S4 covers pre-commit cancel/reject, changed approval replay, expired grant denial, changed-payload conflict and governed correction; S5 confirms P06-P12 with zero unauthorized or duplicate business writes.
 - **G06.4:** Show the resulting document/version and before/after business impact; route corrections of governed records through existing reversal or append-only mechanisms.
   - Required evidence: Replay result and governed correction evidence.
-  - Current result: Not run.
+  - Current result: S3 persists the exact reviewed receipt/document identities and replays the immutable Pack after a source correction; S4 records the governed correction before/after and append-only audit outcome; S5 verifies the authenticated Preview/PDF/Print artifact path and the complete persisted result.
 
 ## Existing regression commands
 

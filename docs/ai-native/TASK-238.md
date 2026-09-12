@@ -33,13 +33,13 @@ Existing bankReceipt and paymentVoucher support bounded settlement paths. Ordina
 
 ## Execute in this order
 
-- [ ] **S1 — Inventory included and missing journeys.**
+- [x] **S1 — Inventory included and missing journeys.**
 
   Action: Map order-to-cash, procure-to-pay, record-to-report, inventory, HR/leave/payroll and receipt evidence to source, tests and unverified stages. Label implemented/local-only/production-proven/excluded explicitly.
 
   Checkpoint exit: Every claimed release journey has an owner and source/test evidence rather than a screen count.
 
-  Evidence: Not run.
+  Evidence: [TASK-238/S1 source-backed capability matrix](evidence/TASK-238-2026-09-09.md#cross-module-capability-matrix).
 
 - [ ] **S2 — Obtain the minimum product decisions.**
 
@@ -47,7 +47,7 @@ Existing bankReceipt and paymentVoucher support bounded settlement paths. Ordina
 
   Checkpoint exit: Owner-approved scope and accounting examples exist before monetary implementation; no fabricated sign-off.
 
-  Evidence: Not run.
+  Evidence: [TASK-238/S2 proposed settlement/applicability decisions](evidence/TASK-238-2026-09-09.md#s2--proposed-settlement-and-market-applicability-decisions-not-approved). Owner approval and qualified tax-owner applicability are still required.
 
 - [ ] **S3 — Implement approved settlement slice.**
 
@@ -81,7 +81,8 @@ is needed. Do not mark the task Done merely because all five checkpoints are che
 
 - **G11.1:** Publish an owner-reviewed capability matrix for order-to-cash, procure-to-pay, record-to-report, inventory, HR/leave/payroll and receipt/evidence flows with explicit exclusions.
   - Required evidence: Owner-reviewed cross-module capability matrix.
-  - Current result: Not run.
+  - Current result: Source-backed matrix published in S1; engineering owner roles and exclusions are recorded, but product-owner/qualified-tax-owner review is not yet recorded.
+  - Evidence: [TASK-238/S1 matrix](evidence/TASK-238-2026-09-09.md#cross-module-capability-matrix).
 - **G11.2:** Define and implement the approved v1 settlement scope, including ordinary sales receipt allocation and partial-payment behavior, with stock/AR/AP/GL reconciliation and reversal tests.
   - Required evidence: Implemented approved settlement with reconciled accounting.
   - Current result: Not run.

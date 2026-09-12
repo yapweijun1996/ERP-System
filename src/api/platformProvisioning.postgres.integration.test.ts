@@ -140,7 +140,11 @@ suite('Platform provisioning PostgreSQL FORCE RLS proof', () => {
     const masterResponse = await fetch(`${baseUrl}/api/platform/masters`, {
       method: 'POST',
       headers: { ...headers, 'idempotency-key': 'pg-master-1' },
-      body: JSON.stringify({ name: 'PostgreSQL Group', loginCode: 'PGROUP' }),
+      body: JSON.stringify({
+        name: 'PostgreSQL Group',
+        loginCode: 'PGROUP',
+        modules: [{ moduleKey: 'finance', enabled: true, defaultCompanyAllocated: true }],
+      }),
     });
     expect(masterResponse.status).toBe(201);
     const master = (await masterResponse.json()).data as { masterFn: string };

@@ -1,5 +1,243 @@
 # ERP-System Project Logic
 
+TASK-205 Vision readiness recheck — 2026-09-11: source-level Vision failure,
+revocation, retry and same-chain recovery tests pass. Configured
+`document-vision` health checks remain `warning` with
+`provider_health_unverified` and do not advance `lastSuccessAt` without a live
+probe. The hosted Demo endpoint
+is a bounded receipt-search proposal service and does not receive receipt files
+or stand in for `DOCUMENT_VISION_GATEWAY_URL`; Codex OCR review is therefore
+synthetic evidence only. Production provider/account/region/retention/health
+and live alert/recovery evidence remains an external gate. See the
+[dated TASK-205 record](ai-native/evidence/TASK-205-2026-09-11-source-review.md).
+
+The tenant-scoped `GET /api/integration/document-processing-readiness` projection
+derives `masterFn` and `companyFn` from the authenticated session and ignores
+client-supplied tenant query parameters. It keeps source capability, Company configuration and live provider evidence as
+separate facts. It is secret-free and returns `externalProviderReady` only for a
+BYOK Vision policy whose enabled connected connector has credentials, endpoint,
+region, retention and healthy `lastCheckedAt` + `lastSuccessAt` evidence; a
+historical success without its health-check timestamp remains unverified; pausing the connector
+invalidates readiness even when that timestamp remains as historical metadata. A credential-only fixture
+therefore remains `configured-provider-unverified`. Persisted connector credential
+state is revalidated as encrypted envelopes at readiness, enable and health-check
+boundaries, including connectors whose policy does not require a credential, so a
+malformed non-empty stored value is invalid and cannot be enabled, reported healthy
+or promoted to ready. The policy-selection command and worker extraction boundary
+apply the same envelope check, so malformed persisted credentials fail closed
+before any Vision or local-OCR call. A null envelope remains valid for an explicitly
+credential-free OpenAI-compatible policy. Local OCR remains the safe
+source capability and the Demo endpoint/Codex review does not become production
+provider evidence. The readiness projection is scoped by both `masterFn` and
+`companyFn`; a same-named Company under another Master receives its own default
+state and cannot observe the configured connector endpoint or credential.
+
+The shared document worker may claim queued scan/extraction jobs before a tenant
+is known, but it derives the composite `masterFn` + `companyFn` scope from each
+claimed job before reading bytes, calling Local OCR/Vision or persisting results.
+The cross-tenant regression covers simultaneous `M1/C-SG` and `M1/C-MY` jobs and
+asserts exact source-hash/byte correspondence and scope-preserving persistence.
+When policies differ, the same boundary resolves the provider, region, model,
+base URL and credential from that job's Company scope; a Local OCR job receives
+no Vision credential, and a BYOK Vision job receives only its own connector data.
+
+TASK-234 Agent provider configuration follows the same fail-closed credential rule:
+`publicRow` reports `credentialConfigured` only for a valid encrypted-token envelope,
+derives `enabled` from that validity for non-deterministic providers, and never returns
+the stored label for a malformed value. The update command rejects a malformed
+persisted envelope until the caller clears it or supplies a valid replacement; runtime
+resolution retains its independent encrypted-envelope check.
+
+Document worker retry and dead-letter persistence maps arbitrary scanner/provider
+exceptions to bounded application-owned messages; raw provider URLs, credentials and
+response bodies are not stored in document job or processing outbox error fields. The
+three HTTP drivers pass `redirect: 'error'` so document requests fail closed on redirects.
+Their successful responses are streamed and capped at 8 MiB before JSON parsing;
+runtimes that expose only `text()` receive the same byte check before parsing;
+failed responses and invalid or advertised oversized responses cancel their
+unconsumed bodies before the fixed status, metadata or bounded-size error is
+returned. Successful responses must parse as a non-array JSON object; syntax or
+shape failures return one bounded application-owned error before field access. If a
+streamed read fails, the reader is cancelled before the original transport error
+is rethrown and its lock is released. The HTTP Vision driver preserves a
+provider-supplied 64-character
+hexadecimal visual fingerprint for worker validation and persistence; it never
+derives that evidence from OCR text.
+
+TASK-204 official-source recheck — 2026-09-11: IRAS and Royal Malaysian Customs/MOF
+material was compared with the current effective-dated `tax_rule` seed and resolver.
+The source-backed record keeps SG rate/registration/transition facts and surfaces the
+Malaysia rental/leasing rate and exemption conflict for qualified-owner resolution.
+No production tax rule or compliance claim changed. See the
+[dated recheck](ai-native/evidence/TASK-204-2026-09-11-source-review.md).
+
+
+Receipt upload and authorized Demo review — 2026-09-11: My Receipts must unwrap
+`my.context().data` before reading `capabilities.receipts.writable`, matching the
+existing Demo/API response envelope. The screen now does so; 3 focused regressions
+and desktop/375px browser upload checks pass. No business permission or scanner
+contract changed. The user selected the existing Demo gateway and delegated
+OCR/receipt/PDF review to Codex. One synthetic receipt produced one persisted Pack;
+authorized PDF bytes/hash remained identical after reload and both pages were
+independently rendered/read. The local source repair is not deployed; the hosted
+run used an explicitly temporary screen override and module/scan fixtures.
+[Evidence and remaining boundaries](ai-native/evidence/TASK-234-2026-09-11-codex-demo.md).
+The latest no-override Pages check at 1440px still shows zero upload controls
+because the published bundle reads the work-context envelope before `.data`; the
+local repair passes focused screen tests plus desktop/mobile Demo E2E. Release-owner
+authorization to publish the candidate remains the next measurable exit.
+
+The browser Demo gateway cancels an unconsumed body for rejected 403/503/redirect
+responses before returning a bounded application error, and a denied session still
+dispatches no inference request. This preserves the Demo transport boundary and
+does not establish real-provider or production evidence. See the
+[cleanup record](ai-native/evidence/TASK-234-2026-09-09.md#demo-gateway-rejected-response-cleanup--2026-09-11t103256z).
+
+Upload repair release candidate — 2026-09-11: detached commit
+`02f28fe5a3aaa69b1d6f63c09cf00a1415a8dca4` is based on the deployed Demo source
+`ae7a3cfabde0e03a704d943dc1d99cc3bb672e2a` and contains only the My Receipts
+response-envelope fix. Candidate lint, both typechecks, PGlite proof and a
+temporary 3-test capability-envelope regression passed. The clean Demo build
+and a fresh setup browser session
+verified the three writable upload controls without a screen override. This is
+a local release candidate; push, Pages deployment and production acceptance
+remain separate.
+
+Public Tunnel recovery — 2026-09-11: `https://gmb01.xyz/erp/` is available.
+The system Tunnel now routes ERP to `127.0.0.1:18791`; public health returns 200
+and the complete release verifier matches revision
+`03487b13ce838407d97cd00697bd2b54b4a7c918` and all 126 asset hashes.
+A narrowly scoped Cloudflare rule prevents email and performance-beacon HTML
+injection on the ERP shell URLs. Chrome renders the Production sign-in page;
+unauthenticated Employee, Company Receipt and Platform session APIs return 401.
+This supersedes earlier public-502/pending-cutover checkpoints below. TASK-199
+remains open for operational alerting/ownership and exercised rollback; OCR,
+real-provider and business acceptance are separate. No database or application
+release was changed. Evidence: [public recovery](ai-native/evidence/TASK-199-2026-09-11.md).
+
+Application rollback remains a separate, explicit boundary. The source-controlled
+`deploy/rollback-release.sh` accepts only reviewed immutable `@sha256:<64-hex>` image references, requires
+`CONFIRM_RELEASE_ROLLBACK=YES`, recreates `api`, `web` and `calendar-worker` through a
+temporary mode-0600 Compose override, preserves PostgreSQL/document volumes and checks
+the private web-to-API health path. Local plan/guard tests do not prove production
+rollback or alert ownership.
+
+The release verifier cancels response bodies when URL or bounded-size prechecks fail,
+cancels a stream reader when reading fails, and releases its reader lock after stream
+errors. This prevents an operational probe from retaining an unconsumed body while
+keeping its application-owned failure code.
+
+Availability alerting remains an operations-owned boundary. `check-availability.mjs`
+builds fixed-message degraded/recovered events and only delivers them through an
+explicit HTTPS host allowlist with credential/query/fragment and redirect rejection,
+bounded timeout and response-body cleanup. Each event carries a deterministic,
+secret-free SHA-256 `dedupeKey` based on its release identity or bounded degraded
+code, and the adapter forwards that value as `idempotency-key` for scheduler retry
+deduplication. The source adapter is locally tested but does not select an alert sink,
+assign a responder or send a production notification.
+
+Availability handoff now also has a source-controlled `check:availability` wrapper
+around the release verifier. It applies a bounded per-request timeout and emits one
+sanitized `healthy` or `degraded` JSON event with stable exit codes, without sending
+alerts or exposing response bodies. The focused fixture covers success, revision
+mismatch and timeout; an approved sink, responder and exercised production alert are
+still operational acceptance evidence.
+
+The canonical `check:availability-alert` command consumes that same event and remains
+dry-run by default. It calls the default-deny delivery adapter only when an explicit
+HTTPS endpoint and matching host allowlist are supplied through environment
+configuration; optional authorization and timeout values remain process-local. Missing
+or rejected delivery configuration returns a bounded failure without printing
+credentials or sink responses. This makes scheduler integration reviewable while
+preserving the separate production sink, responder and delivered-alert gate.
+
+Production Receipt-to-Pack checkpoint — 2026-09-10: the fresh local production
+API/Web revision `9ec8c0e5c1361dfe77c8a3e8cdca4730e0b56e05` now has the new Master
+`M-47F82ACB0A19`, SG Company `C-SG-136B3C173074` and MY Company
+`C-MY-B2796BF9D340`. Real employee sessions completed clean-evidence inspection,
+human metadata confirmation, Receipt creation, exact preview, immutable Pack
+persistence/readback and PDF export for both countries. ClamAV marked both source
+versions clean; OCR is not configured in this production Compose stack, so the
+extraction jobs are currently dead-lettered after scanning and the manual clean
+evidence path remains the supported fallback. Public Tunnel cutover, OCR worker
+readiness and human visual PDF review remain open. See the
+[production evidence](ai-native/evidence/TASK-234-2026-09-09.md#production-receipt-to-pack-pilot--2026-09-10).
+
+Current TASK-234 checkpoint — 2026-09-10: shared G06 intent and Pack persistence
+commands are now browser-compatible factories. Server facades preserve their
+existing APIs; Demo runtime binds both factories with Web Crypto and shared audit.
+The Demo Pack path uses shared creation/replay commands and enforces the reviewed
+selection digest. Demo preparation, persisted approval and execution now use shared
+G06 commands with actor/Company ownership and transactional audit. Local integration
+and Company Receipts browser regression pass; authentication remains synthetic.
+Real operator acceptance remains open. Pages release
+`eaf7f6ebe9527fb895080201b71bfec9494751ce` is deployed by run 34423634266.
+All 135 served assets match the clean committed build; the remaining manifest
+entry is the unserved empty `.nojekyll` marker. The previous release has a
+hash-verified local rollback copy. Full-suite local regression passed: 895 tests,
+with 3 PostgreSQL tests skipped. Remote CI run 34423634351 was observed after the
+prior run was superseded and has now been rechecked as terminal `cancelled`: all
+four Vitest shards passed, while the combined typecheck/transaction/Demo-build job
+was cancelled during the browser matrix. A later read-only recheck found CI run
+34539106998 green for the published pre-repair revision
+`3e93249e34ff607fc693c1ad7b72e020df25825c`, including the browser and layout
+audits. That result is separate from the dirty root and detached upload-repair
+candidate; no current-root CI success is claimed.
+Browser access resumed. The real existing-Master setup path exposed a static
+catalog/entitlement mismatch. The local repair projects actual Master availability,
+disables unavailable modules/dependencies and preserves the shared write guard.
+Eight focused tests, four browser viewports and common local gates pass. The
+repair is deployed; full human pilot acceptance remains open. Chrome control
+again requires Mac unlock. Continue in an isolated fresh Demo session or an
+already authorized workspace; do not overwrite the old Master's disabled modules.
+The assistant success view now opens its existing Pack PDF after rechecking the
+completion artifact hash; opening does not execute another creation command.
+Selected rows are now progressively expandable beyond 20 with amount, currency,
+purpose, version and evidence facts. Original evidence can now be opened through
+the governed document-content boundary after exact-version and byte-hash checks.
+Actual human inspection and the same-run real gateway pilot remain open.
+
+The default browser gateway is `https://gpt.yapweijun1996.com/demo` / `demo-auto`.
+One synthetic query on the registered GitHub Pages origin succeeded (117 reported
+tokens); tested localhost origins were rejected. This is protocol evidence only,
+not full Receipt-to-Pack/operator acceptance. Requests send user query text, not
+receipt files, and do not occur at startup. See [AI_PROVIDERS.md](AI_PROVIDERS.md).
+
+The reproducible Receipt pilot runner now passes SG/MY local fixture journeys,
+exact-confirmation cancellation and persisted Pack/PDF verification after database
+reopen. Each preview row must match a successful receipt detail read, and exact
+source files are retrieved through document permissions and hash-verified before
+confirmation. File retrieval does not establish human viewing. Fixture usage is explicitly synthetic; interactive live mode remains gated
+by account/data-policy/spend authorization. See [pilot execution evidence](ai-native/evidence/TASK-234-2026-09-09.md#reproducible-pilot-runner--local-fixture-evidence).
+
+The active milestone is Phase 2 of [GOAL.md](../GOAL.md), the real Receipt-to-Pack
+pilot. [GOAL_EXECUTION_PLAN.md](GOAL_EXECUTION_PLAN.md) owns the current continuation.
+TASK-234 now connects `openAiProvider.ts` through `receiptAssistantProvider.ts`
+and `receiptAssistantBootstrap.ts` to `src/server.ts` with explicit activation.
+The session-derived Company supplies encrypted credentials and limits; only the
+pinned OpenAI GPT-4.1 mini global/no-training pilot is supported. Every egress
+rechecks configuration and resolved grants against the run snapshot. Changes
+require a fresh run; only granted tools are advertised and no transaction spans
+network IO. Tool-call metadata and result IDs survive the whole transcript.
+Fixed HTTPS, redirect denial, byte/token/output bounds and sanitized errors apply.
+A saved credential alone does not enable calls. HTTP disconnect still propagates
+through provider setup/runtime to fetch and body reads; cancellation is cooperative,
+not rollback of committed work. Local injected responses prove protocol wiring,
+not real-model or production acceptance. See [AI_PROVIDERS.md](AI_PROVIDERS.md)
+for explicit activation, pricing and external data-policy constraints.
+
+
+Provider budget custody (`aiRuntime.ts`, `receiptAssistant.ts`): once `complete`
+is dispatched, failure is not evidence of zero charge. `reservedCostMicros` is
+known reported spend plus retained maximum reservations for calls with unknown
+cost; `spentCostMicros` includes only valid provider reports. A valid response
+reconciles its own reservation even when output is too large; a report exceeding
+the adapter's per-call maximum fails closed. The conversation carries charged
+exposure and consumed retries across tool turns. Runtime pre-dispatch budget/input rejections consume
+no call or retry; failures after dispatch to the adapter retain reservations. This is conservative local accounting, not a provider invoice
+or proof of live pricing; the adapter must supply a defensible maximum.
+
+
 TASK-240 adds [source-backed execution packets](AI_NATIVE_EXECUTION.md) and
 [receipt pilot contracts/cases](ai-native/PILOT_TEST_MATRIX.md). G01 adapter
 contract fixtures precede the real G02/G03 transports; G06 must bind the complete
@@ -7,11 +245,96 @@ reviewed receipt selection atomically, including newly matching rows. These are
 implementation requirements, not changes to the existing Pack command or domain
 contract. Existing key replay and current-visibility checks remain authoritative.
 
-## AI Native target and implementation boundary — 2026-09-08
+## AI Native target and implementation boundary — 2026-09-09
 
 [GOAL.md](../GOAL.md) is the target/DoD owner for EPIC-068. TASK-227 delivers
-planning; TASK-228–239 remain Todo (0/12 workstreams, 0/48 criteria).
-Web UI, future WebMCP tools, inbound MCP and internal AI must converge on the
+planning; TASK-228 and TASK-232 are now Done with G01.1-G01.4 and G05.1-G05.4
+accepted; TASK-232/S1-S5 implements and verifies the least-privilege Agent identity,
+authenticated transport, lifecycle and database-isolation boundary. TASK-233/S1
+defines the server-owned read/draft/confirmed/approval-required policy classes, S2
+persists exact reviewed intent with human-only decisions and server expiry, and S3
+executes only the approved exact Pack selection with source locking and replay
+evidence; S4 proves approval-change replay, current-grant expiry denial,
+changed-payload conflict and governed correction; S5 verifies P06-P12, persisted
+Pack/artifact postconditions, disposable PostgreSQL isolation, authenticated
+desktop/mobile browser behavior and the full local suite. TASK-230/S1 now selects
+and pins the MCP transport/auth topology and adds an executable local authorization
+fixture; TASK-230/S2 adds the versioned SDK Streamable HTTP endpoint, RFC 9728
+discovery, six governed G01 tools and bounded structured results; TASK-230/S3 adds
+per-call issuer/audience/scope revalidation and no-write authorization/approval
+negative paths; S4 proves the same reviewed Receipt Pack intent through official
+TypeScript `@modelcontextprotocol/sdk@1.30.0` and Python `mcp==1.27.2` clients,
+including dropped-response replay and export artifact/source hash separation.
+TASK-229/S1 verifies the completed prerequisites, the current W3C/Chrome WebMCP
+surface and the ordinary Company Receipts browser journey. S2 adds a feature-detected
+six-tool page adapter with live actor/Company/permission fingerprints, AbortSignal and
+generation retirement, lifecycle hooks, shared API/Demo detail and read-only Pack
+preparation. S3 adds the visible evidence, exact totals, cancellation/no-write path,
+selection-digest recheck and confirmation bridge for Pack creation. S4 exercises the
+fallback invalid-input, denied Company-switch, permission-revocation/recovery and
+changed-selection retry paths at desktop/375px. Playwright Chromium
+149 has no native `document.modelContext`. A later unlocked in-app browser recheck
+completed local Demo setup, loaded `erp-webmcp-adapter.js` and returned
+`document.modelContext === undefined`, `registerTool === undefined`,
+`crossOriginIsolated === false` and no Permissions Policy API. S5 passes the current
+full Vitest, Demo/build, theme, locale, mobile and repository gates with temporary
+screenshot inspection. The post-S5 isolated Chrome 152 run with the official local
+`WebMCPTesting` flag registers and invokes all six tools and proves visible
+cancellation/confirmation, persisted Pack/PDF read-back, permission/Company/navigation
+retirement and 375px bounds; G02.1-G02.4 are accepted for local/repository scope.
+Bundled Chromium 149 and the in-app browser remain ordinary-UI fallbacks, while
+production browser rollout/release evidence remains separate. See the
+[post-S5 native acceptance evidence](ai-native/evidence/TASK-229-2026-09-09.md#post-s5-native-webmcp-acceptance--2026-09-09).
+TASK-234/S1 defines the server-owned AI provider request/
+response/tool-call contract, explicit draft/waiting/running/succeeded/failed/cancelled
+states, whole-run deadline/cancellation and input/output/call/retry/cost limits with
+actionable fail-closed errors; S2 adds Company-scoped provider/model/data-policy
+configuration, AES-GCM credential storage, explicit rotation/provider-change decisions,
+bounded model/egress/runtime limits and secret-free API/audit views. S3 adds the
+server-owned bounded Receipt conversation loop, six allowlisted tools, cited facts,
+exact Pack preview, G06 confirmation wait/resume, governed execution, persisted
+Pack read-back and artifact/source hash verification. S4 adds the contextual vanilla-JS
+workspace with visible cited sources, exact preview/confirmation, progress,
+cancellation/recovery, Company/draft isolation, five locales, both themes and
+desktop/375px focus/touch evidence. S5 passes the actual Demo/PGlite Pack/artifact
+assertions and local gates. G07.1-G07.4 are accepted for local/repository scope;
+the deterministic zero-spend provider is local test evidence only and no approved
+real-provider account/spend is available. TASK-238/S1 now publishes a source-backed
+matrix for order-to-cash, procure-to-pay, record-to-report, inventory, HR/leave/payroll
+and receipt/evidence. It assigns engineering owner roles, links source/test evidence
+and marks production-unproven and excluded stages explicitly; owner approval and
+settlement/statutory implementation remain open. Evidence is in
+[TASK-238/S1](ai-native/evidence/TASK-238-2026-09-09.md#cross-module-capability-matrix).
+TASK-235/S1 now defines the versioned Company Receipt semantic
+contract: server-derived Master/Company scope, own/company visibility, inclusive
+date-only range, Company timezone, ready-only status, currency-separated Decimal
+totals, as-of timestamp and receipt/document/version source IDs. Its five golden
+fixtures pass. S2 reuses the authenticated G01 `receipt.search` selection boundary
+with fixed field projection, server Company timezone, keyset pages and a 5,000-row
+fail-closed bound; API/PGlite fixtures reconcile own/company/mixed-currency totals
+and source IDs while rejecting tenant tampering, invalid ranges and revoked access.
+S3 registers approved current managed-document versions in a Company-scoped governed
+SOP corpus and exposes authenticated bounded retrieval after live permission, effective
+date, retention, scan, extraction and field-allowlist checks; embedded instructions
+remain untrusted data. S4 adds resolvable citations with source version/hash/effective
+date/as-of metadata, grounded policy versus explicit unknown/conflict evidence,
+transaction-fact labels and actor/Company/authorization-version scoped cache
+invalidation. S5 verifies cache warm/cold, cross-Company and live permission-downgrade
+isolation, stale/revoked citation rejection, the full local suite, Demo/build and
+repository gates; PostgreSQL/provider/production work remains a separate release gate.
+Source/test evidence:
+[TASK-229/S5](ai-native/evidence/TASK-229-2026-09-09.md#s5--run-browser-regressions-and-close-the-local-checkpoint),
+[TASK-234/S1](ai-native/evidence/TASK-234-2026-09-09.md#s1--define-runtime-states-and-limits),
+[TASK-234/S2](ai-native/evidence/TASK-234-2026-09-09.md#s2--implement-secret-safe-server-configuration),
+[TASK-234/S3](ai-native/evidence/TASK-234-2026-09-09.md#s3--implement-the-receipt-conversation-loop),
+[TASK-234/S4](ai-native/evidence/TASK-234-2026-09-09.md#s4--build-the-contextual-workspace),
+[TASK-234/S5](ai-native/evidence/TASK-234-2026-09-09.md#s5--validate-fixture-and-real-model-journeys),
+[TASK-235/S1](ai-native/evidence/TASK-235-2026-09-09.md#s1-define-the-semantic-contract) and
+[TASK-235/S2](ai-native/evidence/TASK-235-2026-09-09.md#s2-implement-bounded-factual-reads) and
+[TASK-235/S3](ai-native/evidence/TASK-235-2026-09-09.md#s3--implement-scoped-sop-retrieval) and
+[TASK-235/S4](ai-native/evidence/TASK-235-2026-09-09.md#s4--add-citations-and-freshness-rules) and
+[TASK-235/S5](ai-native/evidence/TASK-235-2026-09-09.md#s5--verify-accuracy-and-isolation).
+Web UI, future WebMCP tools, the inbound MCP adapter and internal AI must converge on the
 same authenticated action contracts and existing domain commands. Outbound MCP
 is a separate external-service trust boundary. AI does not own tenant selection,
 financial calculations, approval authority or final transaction facts.
@@ -19,13 +342,107 @@ financial calculations, approval authority or final transaction facts.
 The first pilot reuses Company Receipt/Pack commands and verifies persisted Pack
 and artifact identity after confirmation. It remains Company-owned and independent
 of Expense Claims, reimbursement, GL and tax filing; upstream My Receipts upload
-retains its Employee boundary. No domain contract changes in this documentation task.
+retains its Employee boundary. No receipt/Pack domain contract was replaced. TASK-228
+adds the versioned contract catalogue in `src/modules/agent/actionContracts.ts`, the
+session-bound dispatcher in `src/api/agentActions.ts` and shared Pack selection in
+`src/modules/expenses/companyReceiptPack.ts`; `receipt_pack.prepare` is read-only and
+`receipt_pack.create` remains confirmation-gated under TASK-233: the authenticated
+Agent route requires an approved exact intent, while the human route remains the
+original governed command. The dated contract,
+negative-case, replay and adapter evidence is in
+`docs/ai-native/evidence/TASK-228-2026-09-08.md`.
 Current source references: [API resources](../src/api/resources.ts),
 [Company Receipt commands](../src/modules/expenses/companyReceipt.ts),
 [Pack commands](../src/modules/expenses/companyReceiptPack.ts),
 [Pack governance](../src/modules/expenses/companyReceiptPackGovernance.ts),
 [receipt API](../src/api/routes/companyReceipts.ts), and
 [AI provider boundary](AI_PROVIDERS.md).
+
+TASK-232/S2 adds [agentPrincipal and agentGrant](../src/data/schema/agent.ts) and the
+admin-gated [Agent identity resolver](../src/modules/agent/agentIdentity.ts). A
+delegated Agent or service automation gets a distinct non-login `app_user` bridge,
+accountable human owner, tenant-scoped grant, action/resource/field allowlist, scope,
+time window, version and optional Decimal amount ceiling. Resolution rechecks bridge
+status, owner activity/membership and the central owner's current `authorizeWithin`
+decision; a grant is not a role and does not inherit Platform or administrator
+authority. S3 adds the issuer-separated `/api/agent/actions` boundary in
+`src/api/routes/agent.ts` and `dispatchAuthenticatedAgentAction`; body actor/tenant
+overrides are rejected, Agent results are field-projected and Pack export requires a
+complete Pack field grant. `audit_log.agent_principal_id` and
+`audit_log.delegator_user_id` preserve true Agent/service bridge plus accountable-owner
+attribution under an append-only consistency check. S4 adds the hash-only
+`agentCredential` table, one-time rotation, review, grant revoke and principal
+pause/resume/disable/revoke APIs/UI. S5 keeps issuer lookup inside an explicit
+`app.agent_issuer` RLS transaction and proves migration replay, expiry, revocation,
+Company isolation, permission downgrade and audit attribution with a non-superuser
+PostgreSQL FORCE-RLS role. Migrations 0104–0108 and generated RLS/schema checks cover
+the boundary. Evidence:
+[TASK-232/S2-S5](ai-native/evidence/TASK-232-2026-09-09.md#s5-database-isolation-and-close).
+
+TASK-233/S2 adds `agent_execution_intent` and
+`src/modules/agent/agentExecutionIntent.ts`. Preparation reuses the exact governed
+Receipt Pack selection, persists actor/Company/action identity, complete receipt and
+document version facts, selection/resource/payload digests and a server-owned 15-minute
+expiry. The separately supplied execution intent key is stored only as a SHA-256 hash;
+the module rejects key reuse with changed facts and rejects request identifiers that
+would log the raw key. Approve/reject/cancel require the expected intent version, an
+active human Company member and current Receipt Pack read authority; the non-login
+Agent actor cannot decide. Verification re-runs the governed selection and rejects a
+changed filter, record/version, newly eligible row, digest or expiry. This is a
+confirmation record, not an approval workflow or financial authority; S3 supplies
+the guarded Agent execution boundary. Source/test evidence:
+[TASK-233/S2](ai-native/evidence/TASK-233-2026-09-09.md#s2-exact-intent-persistence-and-expiry-binding).
+
+TASK-233/S3 adds `executeAgentReceiptPackWithin` to the authenticated Agent
+dispatcher. It rechecks the active principal/grant and approved intent inside a
+serializable tenant transaction, locks the matching Company Receipt rows, compares
+the live selection and resource-version/payload digests, and inserts the Pack from
+that locked selection without a second unconstrained query. A committed Pack is
+checked before live-source revalidation for same-intent replay after source
+correction; changed payloads still conflict. Concurrent edit/insert tests prove an
+exact approved Pack or no Pack, and duplicate execution retains one Pack. Pack and
+intent audit events retain Agent/owner attribution and only digest facts. Source/test
+evidence: [TASK-233/S3](ai-native/evidence/TASK-233-2026-09-09.md#s3--execute-once-with-consistent-facts).
+
+TASK-233/S4 keeps replay inside the current Agent authorization boundary. Supplied
+selection/payload digests are checked before replay; a cancelled intent may replay
+only when its own append-only intent audit already proves a committed Agent result,
+while a pre-commit cancel/reject remains blocked. Grant expiry is rechecked before
+the action transaction, and a governed source correction uses the existing
+optimistic-version Company Receipt command plus append-only audit; the immutable
+Pack retains its reviewed version-1 rows. Source/test evidence:
+[TASK-233/S4](ai-native/evidence/TASK-233-2026-09-09.md#s4--handle-replay-and-human-corrections).
+
+TASK-233/S5 closes the receipt-pilot negative-path matrix P06-P12. Focused
+authenticated PGlite/API tests and disposable PostgreSQL tests verify no
+unauthorized or duplicate business write across first execution, same-intent
+replay, changed payload, grant expiry/revocation, Company isolation, concurrent
+edit/insert, reject/cancel and scan/quarantine cases. The existing authenticated
+browser flow verifies confirmation, refresh/search/range and immutable Pack
+Preview/PDF/Print artifacts at desktop and 375px mobile sizes. This is local and
+disposable-environment evidence; it does not certify production, remote MCP,
+WebMCP, provider or physical-device behavior. Source/test evidence:
+[TASK-233/S5](ai-native/evidence/TASK-233-2026-09-09.md#s5--verify-all-negative-paths).
+
+TASK-230/S1 selects MCP `2025-11-25` Streamable HTTP at the versioned
+`/api/mcp/v1` resource and pins `@modelcontextprotocol/sdk@1.30.0` with
+`zod@4.5.4`. Production is an OAuth 2.1/OIDC protected-resource deployment:
+the configured issuer must advertise RFC 9728 metadata and the resource server
+must validate issuer, resource/audience, expiry, revocation and least-privilege
+receipt scopes before mapping the subject to the existing tenant-scoped Agent
+principal/grant. The local `mcpAuthorization` fixture exercises that contract
+without claiming an issuer or accepting client-supplied tenant identity. TASK-230/S2
+mounts the official stateless Streamable HTTP SDK lifecycle before the human module
+gate, exposes only the six G01 tools through `dispatchAuthenticatedAgentAction`,
+serves path-specific RFC 9728 metadata and returns structured action envelopes with
+bounded input/result/time budgets (1 MB input, 50 MB default result and 100 MB hard
+cap). TASK-230/S3 rechecks configured issuer/audience
+and delegated scopes on every request, handles JSON-RPC batch scope unions, and
+preserves the shared dispatcher for guessed-Company and changed-approval denials.
+Evidence:
+[TASK-230/S3](ai-native/evidence/TASK-230-2026-09-09.md#s3--enforce-authorization-on-every-call) and
+[TASK-230/S4](ai-native/evidence/TASK-230-2026-09-09.md#s4--prove-two-client-interoperability) and
+[TASK-230/S5](ai-native/evidence/TASK-230-2026-09-09.md#s5--verify-and-document-operations).
 
 TASK-216 fixture repair, TASK-217 date-only repair, TASK-218 invoice presentation repair,
 TASK-219 sales-invoice i18n repair, TASK-220 filled-action contrast repair, TASK-221
@@ -37,8 +454,10 @@ posting status. Shared posting rejection remains authoritative.
 [TEST_COVERAGE.md](TEST_COVERAGE.md) records every current module and evidence gaps;
 TASK-216–223 own the eight specialist findings; TASK-216 through TASK-223 are complete
 locally. Fresh schema/RLS checks prove
-104 migrations, 255 tables, 225 generic policy tables and 10 explicit exemptions,
-not production isolation. Domain fixes must update this mirror and the KB together.
+109 migrations, 259 tables, 229 generic policy tables and 10 explicit exemptions,
+including the narrow transaction-local `app.agent_issuer` lookup boundary; the
+disposable PostgreSQL proof used a non-superuser/NOBYPASSRLS API role and does not
+claim production isolation. Domain fixes must update this mirror and the KB together.
 
 > Main project knowledge base: `KBID: erp-system-project-logic`
 > KB UUID: `ef47bf4b-83e1-42b2-a412-66912d04ea24`
@@ -61,6 +480,12 @@ command proof completes exactly one balanced supplier invoice; production rows t
 still unclassified or regime-incompatible remain rejected. No posting contract was
 weakened. Production/scale/physical-device evidence remains separate from local PGlite
 and screen checks.
+
+The 2026-09-09 TASK-232 follow-up closes the remaining local UI-resource gap:
+Agent Governance module-local packs, Admin route labels and purchase-wizard labels
+now pass the static 1,773-key / 74-pack audit and the full built-Demo matrix of 130
+routes × five languages × desktop/mobile. This is presentation evidence only; it does
+not change tenant authorization, business commands or persisted domain facts.
 
 TASK-217 establishes the browser date-only contract: `screens-common.js` owns
 `addCalendarDays`, which parses an ISO calendar date at a fixed UTC calendar origin,
@@ -100,7 +525,7 @@ TASK-223 establishes the screen-audit recovery contract: payment-voucher Retry i
 recovered only after the actual route `navigate()` Promise completes with no visible posting
 error. The audit uses a bounded 10-second timeout, records the measured recovery milestone,
 and retains rejected-navigation, visible-error and timeout failures. The current full
-129-route desktop/mobile built-Demo audit measured approximately 1333ms/949ms and passed;
+130-route desktop/mobile built-Demo audit measured approximately 1333ms/949ms and passed;
 this is local browser evidence, not production or remote CI evidence.
 
 ## 1. System boundary and execution contract
@@ -181,20 +606,33 @@ Source: `src/modules/hr/employee.ts:290-352, 454-572`.
 
 ### 2.4 Staff onboarding and account lifecycle
 
-Staff onboarding is a separate draft-to-activation path:
+Staff onboarding is a draft-to-account creation path. The historical command
+name activateStaffOnboardingWithin means committing the draft atomically, not a
+user activation step. It validates roles, creates/links identity and Company
+membership, creates the employee and leave opening, and appends audit evidence.
+New accounts are active immediately with no forced first-login password change.
+API/Demo adapters now generate a 192-bit random credential automatically. The shared
+transaction stores its hash and encrypted seven-day handoff together. Existing
+identity links preserve credentials. The employee record exposes an HR-write-guarded
+password/email handoff dialog; each copy rechecks the reveal boundary and plaintext
+is never stored in drafts, ordinary responses, audit or browser persistent state.
+Templates include the organization login code from the scoped Master. No email is
+sent automatically; the operator reviews, copies and delivers it manually.
+The canonical Employee role has nine grants, including the own-receipt mutations
+established by migration 0097. Provisioning also accepts the exact legacy six-grant
+role without rewriting it; any extra grant or broader resource scope is rejected.
 
-- `createStaffOnboardingDraftWithin` and
-  `updateStaffOnboardingDraftWithin` maintain the pre-activation draft.
-- `activateStaffOnboardingWithin` validates the selected roles, allocates/checks the
-  employee number, creates or links the active application user, creates the
-  employee, links the user, assigns company roles and emits audit evidence.
-- `employeeAccount.ts` models `preactivated`, `active` and `offboarded`. Activation
-  and password reset use expiring encrypted activation secrets. Offboarding
-  deactivates the employee/account and records responsibility handoff; historical
-  document attribution is not rewritten.
+employeeAccount.ts creates and resets immediately usable accounts. Reset still
+revokes old sessions. Generated-password handoff uses an expiring encrypted
+employeeActivationSecret envelope (legacy table name), with audited reveal; its
+expiry does not expire the password or block login. Offboarding disables access,
+clears recoverable secrets and retains historical evidence. Migration 0111 clears
+legacy preactivated flags with per-user audit without changing password hashes,
+role grants or isActive. The retired activation API returns 410 and never changes
+credentials. Demo and API adapters no longer show a first-login activation form.
 
-Sources: `src/modules/hr/staffOnboarding.ts:1-330`,
-`src/modules/hr/employeeAccount.ts:1-630`, and `src/data/schema/hr.ts:141-198`.
+Source: src/modules/hr/staffOnboarding.ts, src/modules/hr/employeeAccount.ts,
+src/api/routes/auth.ts, src/api/http.ts, drizzle/0111_immediate_account_access.sql.
 
 ### 2.5 Employee access boundary
 
@@ -342,6 +780,33 @@ worker leases, retryable `pending/failed` states, `delivered` and `superseded` s
 and provider drivers (generic/Google/Microsoft). A failed external delivery must not
 change the internal Leave or appointment fact.
 
+Tenant email recovery is implemented by `src/auth/lifecycle.ts`, the public
+request/confirm routes in `src/api/routes/auth.ts`, and
+`web/public/assets/auth-recovery.js` at `/reset-password` beneath the configured
+public mount. Company Owner and Master Admin reuse human `app_user` identity;
+non-human and Employee-linked identities remain excluded, and an ambiguous email
+across Masters fails closed. Confirmation locks the token/user and rechecks active,
+login-enabled human status before changing the password and revoking sessions.
+Request throttling normalizes email before hashing and counts attempts before
+issuance, including issuance failures. Tokens remain hashed in the token table,
+encrypted in the pending outbox, and in a URL fragment during email navigation.
+The recovery page immediately removes the fragment and retains the token only in
+memory; both document navigation and fragment-only navigation are supported.
+Platform Superadmin is a separate `platform_principal` authority and has no email
+recovery implementation in this release; the tenant endpoint cannot recover it.
+Employee account creation and HR reset accept only the server-side encrypted
+credential envelope before opening their transaction. Active-secret reads validate
+the persisted envelope, and temporary-password reveal maps malformed or
+cryptographically tampered values to the bounded unavailable response without
+returning crypto details. This protects the write, read and decrypt boundaries even
+when persisted JSON no longer matches the TypeScript input contract.
+See [TASK-193 local evidence](ai-native/evidence/TASK-193-2026-09-09.md).
+
+Authentication mail failure records store application-owned phase codes only
+(`auth_mail_payload_invalid`, `auth_mail_token_unavailable`,
+`auth_mail_delivery_failed`, `auth_mail_delivery_record_failed`). Raw provider
+exceptions, which can contain credentials or bearer links, are never persisted.
+
 Authentication invitation and password-reset messages use the leased `outbox_event`
 worker boundary as well. Automatic delivery is capped at five attempts by default;
 `OUTBOX_MAX_ATTEMPTS` may tune the cap within the worker's safe 1–20 range. A terminal
@@ -352,16 +817,38 @@ TASK-193 release evidence.
 
 Both worker entry points also emit an aggregate-only `erp.worker.telemetry` snapshot
 every 60 seconds by default. `src/worker/telemetry.ts` reports pending/ready/in-flight/
-retrying/failed/dead-letter counts and oldest pending age for the outbox, document,
+retrying/failed/dead-letter counts, oldest pending age and the measured aggregate
+`queryDurationMs` for the outbox, document,
 reporting, tax-evidence and calendar queues under their existing worker RLS flags. It
 does not include tenant identifiers, payloads, credentials, lock owners or raw errors.
 `createWorkerTelemetryEmitter` dispatches the snapshot single-flight without delaying the
 business tick. Queue-specific `ready` and active `inFlight` counts now mirror the worker
-claim boundaries for leases, report attempts, enabled calendar connections and reminder
-due time; focused tests cover the outbox lease and calendar-connection cases. The
-aggregate queries are still whole-table reads, so representative query budgets/plans,
+claim boundaries for leases, document processing statuses, report attempts, enabled
+calendar connections and reminder due time; focused tests cover outbox and document
+lease cases plus calendar-connection behavior. The
+aggregate queries are still whole-table queue reads, while calendar leave and
+appointment readiness uses a tenant-scoped derived enabled-connection `LEFT JOIN`
+to avoid a repeated per-row connection lookup; disabled connections remain counted in
+`pending`. The duration field is measurement only. An optional
+`WORKER_TELEMETRY_QUERY_TIMEOUT_MS` applies a bounded
+transaction-local PostgreSQL statement timeout to each telemetry aggregate when an
+owner supplies a budget; unset keeps the existing behavior. Representative query
+budgets/plans,
 the operational sink, thresholds, production SLOs and recovery ownership remain
 TASK-201 evidence. No queue business rule changes in TASK-215.
+
+A disposable PostgreSQL 16 pre-join baseline with 25,000 synthetic rows per monitored
+queue returned all eight queues in 49ms under a 250ms local budget; its
+calendar-leave plan was 169.348ms. A follow-up 25,000-row comparison measured
+14.176–15.116ms for the correlated `EXISTS` and 8.856–9.252ms for the joined form;
+the current source calendar-only read returned 25,000 ready leave events in 32ms.
+The 122MiB fixture is local evidence only and does not establish the required
+representative production volume or SLO.
+
+`scripts/validate-worker-telemetry.mjs` is the source-controlled, read-only handoff
+checker for captured telemetry. It validates the aggregate-only shape and only applies
+a performance verdict when an Operations/database owner supplies `--max-query-ms`; it
+has no default threshold and never connects to a tenant database.
 
 Sources: `src/worker/outbox.ts`, `src/worker/telemetry.ts`, `src/worker.ts`, and
 `src/modules/integration/eventLog.ts`.
@@ -607,16 +1094,27 @@ hold changes use optimistic versions and append-only events; purge requires a di
 reviewer, rechecks retention/hold/frozen hashes, leaves an immutable tombstone and blocks
 Pack-key reuse. Company IANA timezone defaults are returned through API/Demo company
 context and drive local calendar presets. Local unit/API/Demo/browser proof passes;
-disposable PostgreSQL same-key concurrency passes on a fresh PostgreSQL 16 database;
-production release/download/Print evidence remains open.
+disposable PostgreSQL same-key concurrency passes on a fresh PostgreSQL 16 database.
+The local production release/download/Print path now has dated SG/MY Receipt-to-Pack
+evidence; public HTTPS, OCR worker readiness and human visual PDF review remain
+separate release gates.
 The source/UI paths for Pack permission downgrade and Company Receipt correction/edit/void/date
 correction exist, and local unit/API/Demo/browser evidence covers them. Their authenticated
 browser/production UAT remains a P0 release-evidence follow-up until the dated ERP excellence
 review is reconciled; source completion must not be mistaken for live release proof.
 Rendering otherwise rechecks document-version/hash identity, scan-clean state, content
 integrity and the 250 MB source limit. `companyReceiptPackPdf.ts` builds an A4 landscape
-register, then `documents/evidencePdf.ts` copies all PDF pages, embeds JPEG/PNG or emits
-an explicit unsupported/corrupt evidence placeholder. Preview, download and Print use
+register with measured-width cell wrapping and repeated headers; it no longer
+silently truncates merchant/purpose/uploader text. `documents/pdfFont.ts` corrects
+only renderer-owned OpenType font stream declarations after flush, and disables
+unmapped localized alternate digits/ligatures so dates/amounts remain extractable.
+Existing imported evidence font streams are untouched. The full font remains embedded
+(about 14 MB for a small Pack); subsetting was rejected after reader validation failed.
+PDF artifact hashes can change with renderer revisions; stored selection/source
+digests and source documents do not. Then `documents/evidencePdf.ts` copies all PDF pages, embeds JPEG/PNG or emits
+an explicit identity placeholder for sub-2×2 PNG/JPEG sources or unsupported/corrupt
+evidence. The governed source bytes remain unchanged and the identity page records the
+original file name, MIME type and SHA-256. Preview, download and Print use
 the same private no-store artifact and are audited without changing receipt state.
 The shared PDF primitive is technical reuse only: Tax Evidence still joins
 `expensePosting`, `expenseClaimLine` and `receiptInboxItem` and is not this business query.
@@ -647,20 +1145,40 @@ encrypted credential material. Pausing the connector sets it to `paused`/disable
 worker refuses to decrypt or call the provider while retaining the append-only audit
 history.
 
+The shared HTTP scanner/OCR/Vision driver boundary rejects gateway URLs containing
+embedded credentials, query parameters or fragments before document bytes are sent.
+Each driver also passes `redirect: 'error'`, preventing an HTTP redirect from forwarding
+document bytes or provider authorization to another host. Successful responses are
+streamed and capped at 8 MiB before parsing, while failed, invalid-content-length
+and advertised oversized responses cancel their unconsumed bodies before the fixed
+status, metadata or bounded-size error is returned. Malformed or non-object JSON is
+rejected before service-specific fields are read.
+The processing worker integration keeps a non-success HTTP Vision response in the
+failed extraction state with no raw text or upstream detail, and it never silently
+switches to local OCR; the 401/500 boundary is covered by the actual HTTP driver in
+the source regression.
+
 Provider failures remain failed/unavailable and are retried through the bounded worker
 lease; after five automatic attempts the job is `dead_letter` and only an explicit
 `retryDocumentProcessing` requeues the same document/version/extraction chain. The
-worker never silently falls back from a requested Vision provider to local OCR.
+authenticated `POST /api/documents/:documentId/actions/retry-processing` action is
+governance-permissioned, tenant/version-bound and idempotently audited before calling
+the same command. The worker never silently falls back from a requested Vision provider
+to local OCR.
 
 Sources: `src/auth/tokenCrypto.ts`, `src/modules/integration/connector.ts`,
-`src/modules/documents/processing.ts`, `src/modules/documents/processingDrivers.ts` and
-`src/modules/integration/connector.test.ts` / `src/modules/documents/processing.test.ts`.
+`src/modules/documents/processing.ts`, `src/modules/documents/processingDrivers.ts`,
+`src/api/routes/documents.ts` and `src/modules/integration/connector.test.ts` /
+`src/modules/documents/processing.test.ts` / `src/api/documentGovernance.integration.test.ts`.
 
 ## 7. GST/SST effective-date and posting contract (TASK-204)
 
 `tax_rule` is an effective-dated Company fact. `getEffectiveTaxRate()` in
 `src/data/repo.ts` selects the Company regime and applies the single
 `[valid_from, valid_to)` interval: `valid_from` is inclusive and `valid_to` is exclusive.
+If multiple rules match the same Company, tax code and document date, the lookup returns
+no rule so downstream posting fails closed instead of silently choosing an overlapping
+version.
 `expense_policy_version` follows the same interval and rejects zero-length ranges.
 
 Each configured rule now carries an explicit `tax_classification`,
@@ -920,3 +1438,15 @@ by the source audit in [ERP_EXCELLENCE_REVIEW.md](ERP_EXCELLENCE_REVIEW.md):
 7. tax-rule ranges use one `[valid_from, valid_to)` contract and GL tax posting must
    dispatch by governed SG GST/MY SST classification, while AI/Vision source capability
    remains separate from provider-failure and production-configuration proof.
+
+
+## Demo workspace identity restoration — 2026-09-10
+
+`erp-system-data-adapter.js` resolves a selected human account's same-Master
+Company role membership before `readPayload` constructs the scoped projection.
+A browser Company preference cannot grant access. `applyData` only chooses a
+showcase owner when no identity has been selected; a missing selected identity
+has no owner flag or permissions. Invalid membership clears the local session.
+This is Demo workspace restoration, not production authentication. The setup
+browser regression covers new-Company login, reload, stale preference, denied
+cross-Company switching and revocation. Shared business commands retain authority.

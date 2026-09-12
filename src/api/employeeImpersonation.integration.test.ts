@@ -124,7 +124,7 @@ describe('Superadmin employee workspace session', () => {
     );
   });
 
-  it('allows Superadmin to inspect a preactivated employee account without activating it', async () => {
+  it('allows Superadmin to inspect an immediately available employee account', async () => {
     const admin = await login('admin', 'demo1234');
     const [unlinkedEmployee] = await db.select({ id: employee.id }).from(employee).where(and(
       eq(employee.masterFn, 'M1'),
@@ -150,7 +150,7 @@ describe('Superadmin employee workspace session', () => {
       headers: { cookie: admin.header },
     })).json() as { userId: number; passwordChangeRequired: boolean; impersonatorUserId: number };
     expect(session.userId).toBe(createdBody.data.userId);
-    expect(session.passwordChangeRequired).toBe(true);
+    expect(session.passwordChangeRequired).toBe(false);
     expect(session.impersonatorUserId).toBeGreaterThan(0);
 
     const activation = await fetch(`${baseUrl}/api/auth/activation/actions/complete`, {
@@ -162,8 +162,8 @@ describe('Superadmin employee workspace session', () => {
         confirmPassword: 'NewPassword123!',
       }),
     });
-    expect(activation.status).toBe(403);
-    expect((await activation.json()).error.code).toBe('impersonation_action_not_allowed');
+    expect(activation.status).toBe(410);
+    expect((await activation.json()).error.code).toBe('activation_removed');
 
     const myContext = await fetch(`${baseUrl}/api/my/context`, { headers: { cookie: admin.header } });
     expect(myContext.status).toBe(200);

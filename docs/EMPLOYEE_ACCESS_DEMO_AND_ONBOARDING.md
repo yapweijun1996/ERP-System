@@ -52,16 +52,27 @@ state; new companies start with only the setup-safe Admin module enabled.
 ## 2. Staff onboarding and account lifecycle
 
 The Add Staff wizard captures employee details, manager, login identity,
-active company, one or more roles, leave opening and an initial password. HR may
-save a non-secret `staff_onboarding_draft`; only activation accepts a password.
-Activation is one transaction that creates or links the organization identity,
+active company, one or more roles and leave opening. HR may save a non-secret
+`staff_onboarding_draft`. Creation automatically generates a cryptographically secure
+password; no manual password input is required.
+Creation is one transaction that creates or links the organization identity,
 creates the company membership and role grants, links the employee, initializes
 leave balance and appends audit evidence. Any failure rolls back every write.
 
 Usernames are unique inside the organization. If the username already exists, the
 workflow links that identity to the active company instead of creating a duplicate.
-Initial passwords are hashed immediately, never returned or logged, expire at first
-use or after seven days, and force a password change. Reset revokes active sessions;
+Passwords use 24 random bytes (192 bits) from Node crypto or browser Web Crypto.
+The login hash and seven-day encrypted handoff are persisted atomically; Add Staff
+returns no plaintext. HR-write-authorized operators can copy the password and generate
+a complete English email template from the employee account handoff dialog. Each
+copy rechecks the audited reveal API. The template includes employee name, email,
+Company, login URL, organization code, username and password. It is held only in the
+open dialog, never sent automatically or persisted; clipboard errors are explicit.
+Existing organization identities keep their password when linked to another Company.
+Creation remains on the employee record so HR can finish handoff before entering
+an employee workspace.
+Accounts are immediately active, without first-login activation. Generated-password
+handoff expires separately from login validity. Reset revokes active sessions;
 offboarding disables the identity while preserving historical ownership. Setup-stage
 employees cannot establish a session before the company is live.
 

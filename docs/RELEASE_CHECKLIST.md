@@ -1,10 +1,11 @@
 # Release Checklist
 
 AI Native release is a separate future gate in [GOAL.md](../GOAL.md), EPIC-068.
-All 48 goal criteria are currently open. Historical checked items below retain
-their recorded evidence scope; they do not certify TASK-228–239.
+The current local/repository baseline accepts 28/48 goal criteria; 20 criteria and
+the production release gate remain open. Historical checked items below retain their
+recorded evidence scope; they do not certify a production release for TASK-228–239.
 
-Latest release boundary (2026-09-08): see [TEST_COVERAGE.md](TEST_COVERAGE.md).
+Latest release boundary (2026-09-09): see [TEST_COVERAGE.md](TEST_COVERAGE.md).
 Checked entries below retain named historical/local evidence only; rerun required
 gates for the selected release revision. TASK-214 found open runtime failures, so
 this checklist does not authorize or certify a production release.
@@ -79,7 +80,7 @@ For the current source-backed action backlog and evidence boundaries, see
       the primary/calendar entry points emit aggregate-only queue snapshots. This proves
       shape/redaction only: bounded non-blocking collection, claim-predicate parity,
       production metrics/alerts, ownership and recovery exercise remain TASK-201.
-- [x] `tasks/tasks.jsonl` statuses current: 220 Done / 4 In Progress / 13 Todo / 3 Blocked / 240 Total. Blockers are TASK-017, TASK-193 and TASK-209;
+- [x] `tasks/tasks.jsonl` statuses current: 226 Done / 6 In Progress / 5 Todo / 3 Blocked / 240 Total. Blockers are TASK-017, TASK-193 and TASK-209;
       TASK-203 is Done with current-HEAD remote CI evidence, TASK-204 remains In progress until tax-owner production review and TASK-205 remains
       In progress until production Vision configuration and live dead-letter alert/recovery
       evidence is recorded.
@@ -147,10 +148,12 @@ were not checked in TASK-215.
       Master/Company/tenant admin and the Platform registration page was visible.
 - [ ] One write-path probe in api mode (e.g. confirm a draft sales order) succeeds
       and posts balanced GL — stock/money writes never execute client-side
-- [ ] Rollback plan confirmed before you walk away: previous image tags still
-      available; restore = `make down` → restore volume/backup → start previous
-      images. `make reset` is DESTRUCTIVE (wipes the volume) — never run it on a
-      host with real data
+- [ ] Rollback plan confirmed before you walk away: previous image references are
+      available and the no-Docker plan passes with `./deploy/rollback-release.sh
+      --plan`; execute only after backup and incident approval with
+      `CONFIRM_RELEASE_ROLLBACK=YES`. The helper restores only application images and
+      preserves database/document volumes. `make reset` is DESTRUCTIVE (wipes the
+      volume) — never run it on a host with real data
 
 ## 3. After either release
 

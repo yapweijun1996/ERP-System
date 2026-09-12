@@ -9,6 +9,7 @@ import {
 import { sql } from 'drizzle-orm';
 import { tenant, timestamps } from './_shared';
 import { appUser, company, master, role } from './tenancy';
+import { agentPrincipal } from './agent';
 
 export const appSession = pgTable('app_session', {
   tokenHash: text('token_hash').primaryKey(),
@@ -333,6 +334,12 @@ export const auditLog = pgTable('audit_log', {
   actorUserId: bigint('actor_user_id', { mode: 'number' }).references(() => appUser.userId),
   platformPrincipalId: bigint('platform_principal_id', { mode: 'number' })
     .references(() => platformPrincipal.principalId),
+  /** True Agent/service identity when a non-human principal initiated the event. */
+  agentPrincipalId: bigint('agent_principal_id', { mode: 'number' })
+    .references(() => agentPrincipal.id),
+  /** Accountable human owner whose current ERP authority was intersected. */
+  delegatorUserId: bigint('delegator_user_id', { mode: 'number' })
+    .references(() => appUser.userId),
   requestId: text('request_id').notNull(),
   entity: text('entity').notNull(),
   entityId: text('entity_id'),
@@ -344,8 +351,15 @@ export const auditLog = pgTable('audit_log', {
   index('idx_audit_tenant_time').on(t.masterFn, t.companyFn, t.occurredAt, t.id),
   index('idx_audit_actor_activity').on(t.masterFn, t.companyFn, t.actorUserId, t.id),
   index('idx_audit_platform_activity').on(t.platformPrincipalId, t.occurredAt, t.id),
+  index('idx_audit_agent_activity').on(t.agentPrincipalId, t.occurredAt, t.id),
+  index('idx_audit_delegator_activity').on(t.delegatorUserId, t.occurredAt, t.id),
   index('idx_audit_entity').on(t.masterFn, t.companyFn, t.entity, t.entityId, t.occurredAt),
   index('idx_audit_request').on(t.requestId),
+  check(
+    'ck_audit_agent_attribution',
+    sql`(${t.agentPrincipalId} is null and ${t.delegatorUserId} is null)
+      or (${t.agentPrincipalId} is not null and ${t.actorUserId} is not null and ${t.delegatorUserId} is not null)`,
+  ),
 ]);
 
 export const authRateLimit = pgTable('auth_rate_limit', {

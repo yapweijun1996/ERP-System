@@ -2,9 +2,9 @@ import { Router } from 'express';
 import { and, eq } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import { normalizeUsername, isValidUsername } from '../../auth/identifiers';
-import { hashPassword } from '../../auth/password';
 import {
   provisionEmployeeAccount,
+  generateEmployeeCredential,
   resetEmployeeTemporaryPassword,
   revealEmployeeTemporaryPassword,
 } from '../../auth/employeeAccountLifecycle';
@@ -181,11 +181,18 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
       apiError(res, 400, 'idempotency_key_required', 'A valid Idempotency-Key is required.');
       return;
     }
-    const begun = await beginIdempotentRequest(db, {
+    const scope = {
       masterFn: session.masterFn,
       companyFn: session.activeCompanyFn,
-      actorUserId: session.userId,
-    }, key, operation, payload);
+    };
+    // api_idempotency is FORCE RLS in PostgreSQL. Establish the tenant
+    // settings before claiming the key so Platform tenant actors follow the
+    // same governed path as human sessions.
+    const begun = await withTenantTransaction(db, scope, (tx) =>
+      beginIdempotentRequest(tx, {
+        ...scope,
+        actorUserId: session.userId,
+      }, key, operation, payload));
     if (begun.kind === 'replay') {
       res.setHeader('Idempotency-Replayed', 'true');
       res.status(begun.status).json(begun.body);
@@ -204,7 +211,8 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
     }
     const result = await execute();
     const body = { data: result.data, meta: {} };
-    await completeIdempotentRequest(db, begun.recordId, result.status, body);
+    await withTenantTransaction(db, scope, (tx) =>
+      completeIdempotentRequest(tx, begun.recordId, result.status, body));
     res.status(result.status).json(body);
   }
 
@@ -864,15 +872,12 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
     if (!session) return;
     const draftId = employeeIdParam(req.params.draftId);
     const expectedVersion = Number(req.body?.expectedVersion);
-    const initialPassword = typeof req.body?.initialPassword === 'string'
-      ? req.body.initialPassword
-      : '';
-    if (!draftId || !Number.isSafeInteger(expectedVersion) || expectedVersion <= 0
-      || (initialPassword.length > 0 && initialPassword.length < 8)) {
-      apiError(res, 400, 'invalid_request', 'Draft version and a valid optional initial password are required.', {
-        ...(initialPassword.length > 0 && initialPassword.length < 8
-          ? { initialPassword: 'Use at least 8 characters.' } : {}),
-      });
+    if (!draftId || !Number.isSafeInteger(expectedVersion) || expectedVersion <= 0) {
+      apiError(res, 400, 'invalid_request', 'Draft version is required.');
+      return;
+    }
+    if (!options.tokenEncryptionKey) {
+      apiError(res, 503, 'credential_encryption_unavailable', 'Credential encryption is not configured.');
       return;
     }
     try {
@@ -889,7 +894,7 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
             session,
             draftId,
             expectedVersion,
-            initialPassword ? hashPassword(initialPassword) : null,
+            generateEmployeeCredential(options.tokenEncryptionKey!),
             context(res).requestId,
           ),
         }),
@@ -978,6 +983,7 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
   });
 
   router.post('/employee-accounts/:employeeId/actions/reveal-temporary-password', async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
     const session = await requireHr(req, res, PERMISSIONS.hrWrite);
     if (!session) return;
     if (!options.tokenEncryptionKey) {

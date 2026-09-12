@@ -42,7 +42,8 @@ export const company = pgTable('company', {
 ]);
 
 /** A tenant identity belonging to exactly one Master. Human rows may log in;
- * hidden platform_actor rows are non-login FK/RBAC bridges only. `language` = UI i18n preference.
+ * hidden platform_actor, agent and service_automation rows are non-login
+ * FK/audit bridges only. `language` = UI i18n preference.
  *  `password_hash` format: "pbkdf2$<iterations>$<saltHex>$<hashHex>" — see src/auth/password.ts
  *  (TASK-024). Never store or compare plaintext passwords. */
 export const appUser = pgTable('app_user', {
@@ -73,11 +74,11 @@ export const appUser = pgTable('app_user', {
   ),
   check(
     'ck_app_user_identity_kind',
-    sql`${t.identityKind} in ('human', 'platform_actor')`,
+    sql`${t.identityKind} in ('human', 'platform_actor', 'agent', 'service_automation')`,
   ),
   check(
-    'ck_app_user_platform_actor_login',
-    sql`${t.identityKind} <> 'platform_actor' or ${t.loginEnabled} = false`,
+    'ck_app_user_non_human_login',
+    sql`${t.identityKind} = 'human' or ${t.loginEnabled} = false`,
   ),
 ]);
 

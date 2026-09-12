@@ -1,12 +1,59 @@
 # AI and Vision Provider Boundary
 
-Target design: [GOAL.md](../GOAL.md), especially G07/TASK-234, tracks the future
-server AI runtime and contextual workspace. G03 provides the inbound ERP MCP
-server; G04 provides outbound external MCP connections. These are planned
-capabilities and do not change the implemented Vision boundary below.
+Target design: [GOAL.md](../GOAL.md), especially G07/TASK-234, tracks the locally implemented
+server AI contract/workspace and the remaining real-provider integration. G03 provides the inbound ERP MCP
+server; G04 provides outbound external MCP connections. Inbound MCP is locally evidenced; outbound MCP remains planned. These boundaries
+do not replace the governed Vision pipeline below.
 
-Reviewed: **2026-09-07**. This document separates the implemented governed document
-Vision path from the still-unimplemented general ERP assistant.
+Reviewed: **2026-09-11**. This document separates the implemented governed document
+Vision path from the local Receipt assistant and its locally connected provider runtime and open live-account gate.
+
+## Default browser Demo gateway — 2026-09-10
+
+The user selected `https://gpt.yapweijun1996.com/demo` as the default for the
+browser Demo Receipt assistant. `receipt-demo-gateway.js` requests an ephemeral
+session for `github-pages` on submission, then calls `/demo/v1/responses` with
+`demo-auto`. The registered origin must permit the ERP site. Live preflight verified the
+published `https://yapweijun1996.github.io` origin (session 201 and synthetic
+query 200); `http://127.0.0.1:4397` was rejected with 403. This is protocol
+evidence, not deployment or end-to-end Pack acceptance. No provider/private
+key is used; session tokens are never saved or logged. No startup inference occurs.
+
+The supplied gateway guide disables native tools. The model therefore proposes
+only a validated search string from the user's request. Explicit date fields and
+existing search filters remain authoritative; ERP selects the exact records and
+runs its existing preview/confirmation/creation commands. No receipt files or
+Company records are sent. Transport and invalid output fail visibly without a
+silent fallback. The response is bounded to 64 KiB and the run to 60 seconds;
+cancellation aborts HTTP. Monetary cost is unavailable, not zero.
+
+Live protocol recheck — 2026-09-10: the registered Pages origin received HTTP 201
+for the `github-pages` session and HTTP 200 for a bounded `demo-auto` response whose
+sanitized proposal was `{"search":"Cafe"}`. The unregistered local preview origin
+still receives HTTP 403. No session token, credential, receipt file or Company data
+was saved or logged. This verifies the browser Demo gateway protocol only; it does
+not activate the production server assistant or document OCR.
+
+This browser path does not reconfigure API-mode Company providers or document
+OCR, and does not establish the original server six-tool live pilot as complete.
+
+Readiness recheck — 2026-09-11: a fresh registered-origin probe again returned a
+valid ephemeral `dmo_*` session and a completed bounded search proposal. The
+endpoint accepts query text only; it does not accept receipt bytes and is not
+`DOCUMENT_VISION_GATEWAY_URL`. Demo/Codex OCR review therefore remains synthetic
+protocol evidence, separate from production gateway/account/model/region/retention,
+health, alert and recovery evidence tracked by TASK-205. The source connector
+health check records configured `document-vision` as `warning` with
+`provider_health_unverified` and leaves `lastSuccessAt` unchanged until a live
+provider probe is implemented and observed. Readiness also requires both the
+health-check timestamp (`lastCheckedAt`) and the successful-probe timestamp
+(`lastSuccessAt`); a historical success without its corresponding health check
+cannot promote a provider to ready. Persisted connector credential state is
+revalidated as AES-GCM envelopes at readiness, enable and health-check boundaries,
+including connectors whose policy does not require a credential; a non-empty
+malformed value is classified as invalid and cannot enable, report healthy or
+promote the provider to ready. A null envelope remains valid only for an explicitly
+credential-free OpenAI-compatible policy.
 
 ## 1. Current implementation truth
 
@@ -15,11 +62,58 @@ Vision path from the still-unimplemented general ERP assistant.
 | Setup-wizard AI choice | Preview only | The static local wizard lists OpenAI, Gemini, DeepSeek and LM Studio, but the provider/key stay in in-memory form state and are discarded on Finish/Back. They do not configure an adapter. |
 | Local document OCR | Implemented worker boundary | Local OCR is the default document-processing policy. The worker calls the deployment-owned `DOCUMENT_LOCAL_OCR_URL`; unavailable/indeterminate extraction never makes an unsafe document clean. |
 | BYOK document Vision | Implemented governed boundary | A Company may select `openai`, `google` or `openai_compatible` plus region and 0–365-day provider retention. The worker sends the document to the deployment-owned `DOCUMENT_VISION_GATEWAY_URL`. |
-| General chat/reporting/NL-query assistant | Not implemented | No shared `LLMProvider.chat()` adapter, conversational route, browser direct-call runtime or permission-safe ERP tool layer exists in current source. |
+| Server AI provider configuration | Local foundation implemented | TASK-234/S1-S2 define the server provider request/response/tool-call contract, bounded run policy and Company-scoped `agent_provider_config` with AES-GCM credentials, allowlisted models/exact HTTPS egress and secret-free browser/audit views. Public views and updates revalidate persisted credential envelopes; malformed stored values are shown as unconfigured/disabled and cannot be retained without a valid replacement. No real provider account or network model call is claimed. |
+| Contextual Receipt assistant | Local workspace implemented; live provider gate open | TASK-234/S3 adds the server-owned bounded six-tool conversation loop, cited facts, exact Pack preview, G06 confirmation bridge, governed execution and persisted/artifact verification. S4 adds the contextual vanilla-JS workspace with Company/draft isolation, visible sources, progress/cancel/recovery, five locales, both themes and desktop/375px focus/touch evidence; S5 passes Demo/PGlite and local gates. It uses an injected deterministic zero-spend fixture locally; no approved real-provider account or network model call is available. |
 
 Do not describe the setup-wizard preview as a working OpenAI/Gemini/DeepSeek/LM Studio
 assistant. Do not describe PGlite or API builds as sending a wizard-entered key to a
 provider.
+
+## Receipt assistant runtime connection — 2026-09-09
+
+`openAiProvider.ts` implements the fixed `https://api.openai.com/v1/responses`
+endpoint, mapping configured `gpt-4.1-mini` to pinned snapshot
+`gpt-4.1-mini-2025-04-14`. It supports text and custom ERP functions only. Wire
+function names map bijectively to canonical actions; assistant calls and tool
+results preserve call IDs. Non-strict function schemas preserve optional ERP
+fields; the existing ERP parser/dispatcher still validates every invocation.
+Responses are bounded by bytes, output characters and token usage; malformed,
+incomplete, unknown-tool, wrong-model, redirect and credential-echo output fails
+closed. Network exceptions and provider error bodies are never returned verbatim.
+
+`receiptAssistantProvider.ts` resolves the session Company inside tenant
+transactions, decrypts its credential server-side and returns its runtime limits.
+Only enabled OpenAI/GPT-4.1 mini, `dataRegion=global` and
+`dataPolicy=tenant_no_training` are supported. Tenant-local/tenant-only policies and
+other providers/models are rejected, never silently replaced. Before every egress,
+configuration and resolved Agent grants are rechecked; changes require a fresh run.
+Only granted pilot tools are advertised. No transaction spans the network call.
+The Agent configuration projection also treats credential presence as valid only when
+the persisted value matches the server encrypted-token envelope. A malformed non-empty
+value is secret-free, unconfigured and disabled in public views, and an update fails
+closed until a valid replacement or an explicit clear is supplied.
+
+`receiptAssistantBootstrap.ts`, `src/server.ts` and Compose now connect the resolver.
+Activation requires `ERP_RECEIPT_ASSISTANT_ENABLED=true`, an explicit
+`ERP_RECEIPT_ASSISTANT_AGENT_KEY`, `ERP_TOKEN_ENCRYPTION_KEY` and all three settings:
+`ERP_RECEIPT_ASSISTANT_INPUT_MICROS_PER_MILLION`,
+`ERP_RECEIPT_ASSISTANT_OUTPUT_MICROS_PER_MILLION`,
+`ERP_RECEIPT_ASSISTANT_MAX_OUTPUT_TOKENS`. Rates must be reviewed positive integer
+micro-USD per million tokens; no default price or spend approval is inferred.
+The Company run budget must cover a reservation for the full 1,047,576-token model
+context plus configured maximum output (16–32,768 tokens). This intentionally
+conservative reservation is reconciled after valid usage; cached input uses the
+full configured input rate, so the result is an upper-bound estimate, not an invoice.
+
+`store:false`, foreground execution and no hosted tools limit application-state
+retention; they do not assert zero abuse-monitoring retention or regional residency.
+The approved provider account/data policy is still an external acceptance gate.
+See official [function calling](https://developers.openai.com/api/docs/guides/function-calling),
+[model bounds](https://developers.openai.com/api/docs/models/gpt-4.1-mini) and
+[data controls](https://developers.openai.com/api/docs/guides/your-data), reviewed
+2026-09-09. Local injected HTTP fixtures exercise this connection; no live provider
+call, deployment or production evidence is claimed. A credential alone cannot
+activate the assistant. See [the active plan](GOAL_EXECUTION_PLAN.md).
 
 ## 2. Governed document Vision flow
 
@@ -41,17 +135,35 @@ The current contract is intentionally server/worker mediated:
 - the `document-vision` integration connector accepts only a validated AES-GCM envelope,
   requires server token-encryption configuration and never returns plaintext; configuring
   it again replaces the prior envelope, while pausing it revokes worker use without
-  deleting the audit/history boundary;
+  deleting the audit/history boundary. Readiness, enable and health-check paths
+  revalidate the persisted envelope, so presence alone never counts as configured;
+  malformed stored values fail closed without exposing their contents;
 - `src/modules/documents/processing.ts` decrypts only inside the worker call boundary;
 - `src/modules/documents/processingDrivers.ts` calls the deployment-owned gateway with
-  bounded timeouts and provider policy headers;
+  bounded timeouts and provider policy headers; its shared URL guard accepts only
+  absolute HTTP(S) destinations without embedded credentials, query parameters or
+  fragments, so all scanner/OCR/Vision drivers fail before document egress when a
+  deployment URL is unsafe. Failed HTTP responses, malformed/unsafe `Content-Length`
+  declarations and advertised responses above the 8 MiB bound cancel their
+  unconsumed bodies before the fixed status, metadata or bounded-size error is
+  returned. Successful bodies, including runtimes that expose only `text()`, are
+  byte-bounded before parsing and must parse as non-array JSON objects; syntax or
+  shape failures return one bounded invalid-response error before field access. If
+  a streamed read fails, the reader is cancelled before the original transport
+  error is rethrown and its lock is always released. A provider-supplied visual fingerprint
+  is preserved only when it is a valid 64-character hexadecimal value; the worker
+  validates and persists that provider evidence without deriving one from OCR text;
 - scan-clean state, immutable version/hash identity, extraction provenance and manual
   review remain authoritative even when a provider fails;
 - provider HTTP failures, malformed/empty responses and transport timeouts remain a
   failed or unavailable extraction and are retried explicitly by the worker lease. The
   worker allows five automatic attempts by default, then records `dead_letter` on the
   scan/extraction job and document signal; `retryDocumentProcessing` is the explicit
-  operator requeue boundary and preserves the same document/version/extraction identity;
+  operator requeue boundary and preserves the same document/version/extraction identity.
+  The authenticated `POST /api/documents/:documentId/actions/retry-processing` action
+  exposes that boundary only to `documents.governance.manage`, validates that the
+  supplied version belongs to the active tenant/document, and records an idempotent
+  audit event;
 - the selected fallback policy is **manual retry/review**. A Vision failure never silently
   invokes local OCR, so a local OCR result cannot be mistaken for the requested provider's
   provenance or policy boundary;
@@ -61,12 +173,15 @@ The current contract is intentionally server/worker mediated:
   network path.
 
 Tests cover encrypted connector storage, credential non-disclosure, envelope validation,
+malformed stored-envelope rejection at enable/health/readiness boundaries,
 credential rotation and pause/revocation behavior, policy validation,
 credential-required and credential-free OpenAI-compatible paths, direct gateway 4xx/5xx,
 malformed/empty output and transport timeout, paused/revoked connector denial, and
 retry/manual-review behavior that preserves one document/version extraction without
-automatic local-OCR fallback, including bounded dead-letter and same-chain manual requeue
-behavior. They do not prove a particular third-party account, a region promise, live
+automatic local-OCR fallback, including bounded dead-letter, same-chain manual requeue
+and authenticated API recovery behavior. Worker retry/dead-letter persistence maps arbitrary provider and transport
+exceptions to bounded application-owned messages; raw provider error bodies do not enter
+document job or processing outbox records. They do not prove a particular third-party account, a region promise, live
 dead-letter alert/recovery operations or a configured production gateway. Those remain
 TASK-205 production-readiness evidence.
 
@@ -85,12 +200,14 @@ TASK-205 production-readiness evidence.
 - No AI/Vision result may silently post stock, money, tax, payroll, payment or approval
   decisions. OCR/Vision output is a suggestion until the governed workflow confirms it.
 
-## 4. General ERP assistant target (not current functionality)
+## 4. General ERP assistant target (beyond the Receipt pilot)
 
-A future reporting or natural-language assistant must be a separate epic/task. Before it
-is called Canonical it needs:
+A future reporting or broader natural-language assistant must extend the TASK-234
+server boundary; the S3 Receipt pilot is not an unrestricted reporting or SQL gateway.
+Before a broader assistant is called canonical it needs:
 
-- a registered provider interface and server-side tenant authorization boundary;
+- a registered provider interface and server-side tenant authorization boundary (the
+  provider/configuration foundation and bounded Receipt loop are present; the OpenAI pilot adapter is connected locally; the broader assistant is not);
 - explicit read-only tools first, with bounded queries and field-level redaction;
 - prompt-injection and document-content isolation, output validation and audit;
 - per-tenant model/region/retention/cost policy, quotas and cancellation/timeouts;
@@ -100,7 +217,69 @@ is called Canonical it needs:
 - provider-specific integration and failure tests plus an honest production configuration
   check.
 
-Until that work is registered and implemented, the supported AI surface is governed
-document extraction only. See [SECURITY.md](SECURITY.md),
+The implemented surfaces are governed document extraction and the local
+Receipt-pilot runtime/workspace. A real-provider or broader ERP assistant is not
+proven by the local fixture. See [SECURITY.md](SECURITY.md),
 [PROJECT_LOGIC.md](PROJECT_LOGIC.md) and [STATUS.md](STATUS.md) for the surrounding
 document, credential and release boundaries.
+
+## Receipt runtime cost custody — 2026-09-09
+
+Dispatched failures retain their maximum cost reservation because transport failure
+cannot prove that the provider did not bill. Valid reported costs reconcile only
+their own call and remain recorded if the output is rejected. Costs above the
+adapter's declared per-call maximum fail closed. Assistant results expose
+`reservedCostMicros` (known spend plus unknown exposure) separately from
+`spentCostMicros` (valid reported spend); the next tool turn deducts charged
+exposure and previously consumed retries. No invoice, live pricing or external
+provider activation is established by this local budget contract.
+
+## Reproducible Receipt pilot runner
+
+From the repository root, use `npx tsx scripts/receipt-assistant-pilot.ts --fixture`
+for SG, or append `--my` for MY. Omitting the mode also selects fixture. These runs
+use synthetic receipts, synthetic scan-clean evidence and injected Responses; they
+never use an inherited provider key or invoke a paid model. They exercise ordinary
+login, Company scope, individual governed receipt detail reads, authenticated source
+file retrieval/hash verification, assistant preview, simulated exact confirmation, governed
+execution, database reopen and saved PDF hash verification. This is not scanner,
+OCR, live-provider, production or business-owner acceptance.
+
+Before confirmation, every preview row must match a successful `receipt.get` result
+by receipt version, document identity/version and source hash. Missing or stale details
+stop the pilot. Exact source versions are retrieved through the authenticated document
+API and saved as `source-receipt-<id>.pdf` with verified byte hashes; the operator
+review includes their local paths. This proves source retrieval, not that a model
+understood an image or a human viewed it. `humanViewedSources` stays false.
+
+Each run creates a new private directory under the OS temporary directory and
+prints its path. `evidence.json` and `receipt-pack.pdf` use atomic private writes;
+the private `database/` holds the persisted synthetic records. Keep this directory
+private and retain it only as long as required. The ephemeral encryption key is
+not saved, so a live credential cannot be reused from the saved database. Reports
+exclude credentials, envelopes, cookies, model text and execution intent keys.
+A failed run retains a sanitized failure report; missing usage is marked unavailable,
+not zero. Successful fixture cost fields are synthetic estimates, not actual spend.
+
+Only after separate account, pinned-model, global/no-training data-policy and spend
+approval may an interactive operator run `npx tsx scripts/receipt-assistant-pilot.ts
+--live` (append `--my` for MY). Supply these via the approved secret/environment
+mechanism, never committed files or pasted command-line credentials:
+
+| Variable | Required meaning |
+| --- | --- |
+| `TASK234_LIVE_APPROVED` | Exactly `true`, only after actual authorization |
+| `TASK234_APPROVAL_REFERENCE` | Non-secret approval reference; letters/digits and `._:-`, 3–101 characters |
+| `TASK234_OPENAI_API_KEY` | Approved account credential, server-only |
+| `TASK234_MAX_COST_MICROS` | Positive per-run ceiling, at most 1,000,000 (USD 1) |
+| `TASK234_INPUT_MICROS_PER_MILLION` | Reviewed USD micro-units per million input tokens |
+| `TASK234_OUTPUT_MICROS_PER_MILLION` | Reviewed USD micro-units per million output tokens |
+| `TASK234_MAX_OUTPUT_TOKENS` | Reviewed output bound, 16–32,768 |
+
+The approval flag records prior authorization; setting it does not grant permission.
+Both stdin/stdout must be interactive. Review the exact preview and type its complete
+selection digest to approve; any different answer cancels without Pack creation.
+The fixed endpoint/model and existing conservative reservation/retry rules apply.
+There is no automatic rerun after failure. Usage cost remains a configured-rate
+estimate rather than a provider invoice. Inspect the PDF separately: the report
+keeps `humanViewedPdf: false`, even after saving and hash verification.

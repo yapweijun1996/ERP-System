@@ -48,6 +48,13 @@ The steps below do not add to the 60 AI execution checkpoints.
 - With authorized origin access, diagnose actual container/tunnel/network/database
   health and prepare the smallest incident repair, backup and rollback plan.
   Perform production mutations only with applicable authorization.
+- The source-controlled `deploy/rollback-release.sh` provides a confirmation-gated,
+  application-only rollback handoff and a no-Docker `--plan`; use explicit previous
+  immutable `@sha256:<64-hex>` image references and keep the production rollback/
+  alert drill evidence separate.
+- `npm run check:availability` wraps the release verifier with a bounded request
+  timeout and emits a sanitized `healthy`/`degraded` JSON event for an approved
+  scheduler or alert sink; it never sends alerts or replaces owner evidence.
 - Done requires task acceptance including current health/revision, incident cause,
   storage/Compose/tunnel verification, monitoring and rollback evidence. If access
   is missing, record the exact unmet prerequisite and move to independent work.
@@ -56,8 +63,10 @@ The steps below do not add to the 60 AI execution checkpoints.
 
 - Read [SCALABILITY.md](../SCALABILITY.md),
   [worker telemetry](../../src/worker/telemetry.ts) and task acceptance.
-  Non-blocking emission is implemented; whole-table aggregate query cost still
-  requires representative-volume measurement.
+  Non-blocking emission and an optional bounded transaction-local query timeout are
+  implemented. Calendar leave and appointment readiness use a tenant-scoped derived
+  enabled-connection `LEFT JOIN`; whole-table queue aggregate cost still requires
+  representative-volume measurement.
 - After TASK-199, define numerical SLO/query/load/restore budgets and accountable
   owners. Connect the actual metric/alert sink; measure query plans, queue age,
   retry/dead-letter behavior and representative data/concurrency.

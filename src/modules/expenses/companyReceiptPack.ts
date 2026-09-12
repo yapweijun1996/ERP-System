@@ -1,429 +1,46 @@
 import { createHash } from 'node:crypto';
-import Decimal from 'decimal.js';
-import {
-  and,
-  asc,
-  eq,
-  gte,
-  ilike,
-  inArray,
-  lt,
-  lte,
-  or,
-  desc,
-} from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
-import {
-  appUser,
-  companyReceipt,
-  companyReceiptPack,
-  companyReceiptPackTombstone,
-  documentVersion,
-  managedDocument,
-} from '../../data/schema';
+import { documentVersion } from '../../data/schema';
 import { assertDocumentScanClean } from '../documents/processing';
 import {
   createDocumentStorageRegistry,
-  type DocumentStorageBackend,
-  type DocumentStorageRegistry,
-  type StoredDocumentVersion,
+  type DocumentStorageBackend, type DocumentStorageRegistry, type StoredDocumentVersion,
 } from '../documents/storage';
 import type { EvidencePdfDocument } from '../documents/evidencePdf';
-import {
-  renderCompanyReceiptPackPdf,
-  type CompanyReceiptPackFacts,
-  type CompanyReceiptPackFilters,
-  type CompanyReceiptPackLineFacts,
-  type CompanyReceiptPackTotal,
-} from './companyReceiptPackPdf';
+import { renderCompanyReceiptPackPdf } from './companyReceiptPackPdf';
 import type { CompanyReceiptReadVisibility } from './companyReceipt';
+import {
+  createCompanyReceiptPackCommands, CompanyReceiptPackError,
+  type CompanyReceiptPackAction, type CompanyReceiptPackAccessPurpose,
+} from './companyReceiptPackCommands';
+export * from './companyReceiptPackCommands';
 
-const MAX_PACK_RECEIPTS = 5000;
 const MAX_PACK_SOURCE_BYTES = 250 * 1024 * 1024;
-
-export type CompanyReceiptPackAction = 'view' | 'download' | 'print';
-export type CompanyReceiptPackAccessPurpose =
-  | 'receipt_pack_preview'
-  | 'receipt_pack_original_evidence_export';
-
-export class CompanyReceiptPackError extends Error {
-  constructor(
-    public readonly code: string,
-    message: string,
-    public readonly status = 422,
-  ) {
-    super(message);
-    this.name = 'CompanyReceiptPackError';
-  }
+function sha256(value: string | Uint8Array): string {
+  return createHash('sha256').update(value).digest('hex');
 }
-
-export interface CreateCompanyReceiptPackInput {
-  packKey: unknown;
-  search?: unknown;
-  dateFrom?: unknown;
-  dateTo?: unknown;
-  locale?: unknown;
-}
-
 function fail(code: string, message: string, status = 422): never {
   throw new CompanyReceiptPackError(code, message, status);
 }
 
-function safeKey(value: unknown): string {
-  const key = typeof value === 'string' ? value.trim() : '';
-  if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(key)) {
-    return fail(
-      'company_receipt_pack_key_invalid',
-      'A stable Receipt Pack key of 8–128 safe characters is required.',
-    );
-  }
-  return key;
-}
-
-function date(value: unknown, label: string): string {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return fail('company_receipt_pack_date_invalid', `${label} must be a valid date.`);
-  }
-  const parsed = new Date(`${value}T00:00:00.000Z`);
-  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) {
-    return fail('company_receipt_pack_date_invalid', `${label} must be a valid date.`);
-  }
-  return value;
-}
-
-function normalizeFilters(input: CreateCompanyReceiptPackInput): CompanyReceiptPackFilters {
-  const search = typeof input.search === 'string' ? input.search.trim() : '';
-  if (search.length > 200) {
-    return fail(
-      'company_receipt_pack_search_invalid',
-      'Receipt Pack search must be 200 characters or fewer.',
-    );
-  }
-  const dateFrom = date(input.dateFrom, 'Date From');
-  const dateTo = date(input.dateTo, 'Date To');
-  if (dateFrom > dateTo) {
-    return fail(
-      'company_receipt_pack_range_invalid',
-      'Date From must be on or before Date To.',
-    );
-  }
-  return { search, dateFrom, dateTo };
-}
-
-function normalizedLocale(value: unknown): 'en' | 'ms' | 'zh' | 'ja' | 'vi' {
-  return ['en', 'ms', 'zh', 'ja', 'vi'].includes(String(value))
-    ? String(value) as 'en' | 'ms' | 'zh' | 'ja' | 'vi'
-    : 'en';
-}
-
-function sha256(value: string | Uint8Array): string {
-  return createHash('sha256').update(value).digest('hex');
-}
-
-function packProjection(row: typeof companyReceiptPack.$inferSelect): CompanyReceiptPackFacts & {
-  visibility: CompanyReceiptReadVisibility;
-  createdByUserId: number;
-  retentionUntil: Date;
-  legalHold: boolean;
-  recordVersion: number;
-} {
-  return {
-    id: row.id,
-    packKey: row.packKey,
-    visibility: row.visibility as CompanyReceiptReadVisibility,
-    locale: row.locale,
-    filters: row.filters as CompanyReceiptPackFilters,
-    rows: row.rows as CompanyReceiptPackLineFacts[],
-    totals: row.totals as CompanyReceiptPackTotal[],
-    sourceSha256: row.sourceSha256,
-    rowCount: row.rowCount,
-    documentCount: row.documentCount,
-    retentionUntil: row.retentionUntil,
-    legalHold: row.legalHold,
-    recordVersion: row.recordVersion,
-    createdByUserId: row.createdByUserId,
-    createdAt: row.createdAt,
-  };
-}
-
-function sameFilters(value: unknown, expected: CompanyReceiptPackFilters): boolean {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-  const stored = value as Partial<CompanyReceiptPackFilters>;
-  return stored.search === expected.search
-    && stored.dateFrom === expected.dateFrom
-    && stored.dateTo === expected.dateTo;
-}
+export const {
+  normalizeCompanyReceiptPackKey,
+  normalizeCompanyReceiptPackFilters,
+  normalizeCompanyReceiptPackLocale,
+  selectCompanyReceiptPackWithin,
+  readCompanyReceiptPackByKeyWithin,
+  createCompanyReceiptPackFromSelectionWithin,
+  createCompanyReceiptPackWithin,
+  listCompanyReceiptPacksWithin,
+  readCompanyReceiptPackWithin,
+} = createCompanyReceiptPackCommands(sha256);
 
 function accessPurpose(action: CompanyReceiptPackAction): CompanyReceiptPackAccessPurpose {
   return action === 'view'
     ? 'receipt_pack_preview'
     : 'receipt_pack_original_evidence_export';
-}
-
-async function findCompanyReceiptPackWithin(
-  tx: DB,
-  scope: Scope,
-  packKey: string,
-) {
-  const [row] = await tx.select().from(companyReceiptPack).where(and(
-    eq(companyReceiptPack.masterFn, scope.masterFn),
-    eq(companyReceiptPack.companyFn, scope.companyFn),
-    eq(companyReceiptPack.packKey, packKey),
-  )).limit(1);
-  return row;
-}
-
-function replayOrConflict(
-  row: typeof companyReceiptPack.$inferSelect,
-  actorUserId: number,
-  visibility: CompanyReceiptReadVisibility,
-  locale: 'en' | 'ms' | 'zh' | 'ja' | 'vi',
-  filters: CompanyReceiptPackFilters,
-) {
-  const same = row.createdByUserId === actorUserId
-    && row.visibility === visibility
-    && row.locale === locale
-    && sameFilters(row.filters, filters);
-  if (!same) {
-    return fail(
-      'company_receipt_pack_key_conflict',
-      'This Receipt Pack key was already used for different selection facts.',
-      409,
-    );
-  }
-  return { pack: packProjection(row), replayed: true };
-}
-
-/**
- * A Pack is an immutable snapshot, but its frozen visibility is not a
- * permanent authorization grant. Company snapshots require a current
- * read_company decision; own snapshots may be read by either own or company
- * visibility. This same decision controls original-evidence export.
- */
-function canAccessSnapshot(
-  snapshotVisibility: CompanyReceiptReadVisibility,
-  currentVisibility: CompanyReceiptReadVisibility,
-): boolean {
-  return snapshotVisibility === 'own' || currentVisibility === 'company';
-}
-
-export async function createCompanyReceiptPackWithin(
-  tx: DB,
-  scope: Scope,
-  actorUserId: number,
-  visibility: CompanyReceiptReadVisibility,
-  input: CreateCompanyReceiptPackInput,
-  now = new Date(),
-) {
-  const packKey = safeKey(input.packKey);
-  const filters = normalizeFilters(input);
-  const locale = normalizedLocale(input.locale);
-  const [purgedKey] = await tx.select({ id: companyReceiptPackTombstone.id })
-    .from(companyReceiptPackTombstone)
-    .where(and(
-      eq(companyReceiptPackTombstone.masterFn, scope.masterFn),
-      eq(companyReceiptPackTombstone.companyFn, scope.companyFn),
-      eq(companyReceiptPackTombstone.packKeyHash, sha256(packKey)),
-    ))
-    .limit(1);
-  if (purgedKey) {
-    return fail(
-      'company_receipt_pack_key_purged',
-      'This Receipt Pack key was permanently purged and cannot be reused.',
-      410,
-    );
-  }
-  const existing = await findCompanyReceiptPackWithin(tx, scope, packKey);
-  if (existing) {
-    return replayOrConflict(existing, actorUserId, visibility, locale, filters);
-  }
-
-  const predicates = [
-    eq(companyReceipt.masterFn, scope.masterFn),
-    eq(companyReceipt.companyFn, scope.companyFn),
-    eq(companyReceipt.status, 'ready'),
-    gte(companyReceipt.transactionDate, filters.dateFrom),
-    lte(companyReceipt.transactionDate, filters.dateTo),
-  ];
-  if (visibility === 'own') predicates.push(eq(companyReceipt.uploaderUserId, actorUserId));
-  if (filters.search) {
-    const pattern = `%${filters.search}%`;
-    predicates.push(or(
-      ilike(companyReceipt.merchant, pattern),
-      ilike(companyReceipt.receiptNumber, pattern),
-      ilike(companyReceipt.notes, pattern),
-      ilike(companyReceipt.category, pattern),
-    )!);
-  }
-  const selected = await tx.select({
-    receiptId: companyReceipt.id,
-    receiptVersion: companyReceipt.version,
-    transactionDate: companyReceipt.transactionDate,
-    merchant: companyReceipt.merchant,
-    receiptNumber: companyReceipt.receiptNumber,
-    category: companyReceipt.category,
-    businessPurpose: companyReceipt.businessPurpose,
-    notes: companyReceipt.notes,
-    amount: companyReceipt.amount,
-    currency: companyReceipt.currencyCode,
-    uploaderUserId: companyReceipt.uploaderUserId,
-    uploaderName: appUser.fullName,
-    documentId: companyReceipt.documentId,
-    documentVersionId: companyReceipt.documentVersionId,
-    documentSha256: companyReceipt.evidenceSha256,
-    originalFileName: managedDocument.originalFileName,
-    retentionUntil: managedDocument.retentionUntil,
-  }).from(companyReceipt)
-    .innerJoin(appUser, and(
-      eq(appUser.masterFn, companyReceipt.masterFn),
-      eq(appUser.userId, companyReceipt.uploaderUserId),
-    ))
-    .innerJoin(managedDocument, and(
-      eq(managedDocument.masterFn, companyReceipt.masterFn),
-      eq(managedDocument.companyFn, companyReceipt.companyFn),
-      eq(managedDocument.id, companyReceipt.documentId),
-    ))
-    .where(and(...predicates))
-    .orderBy(asc(companyReceipt.transactionDate), asc(companyReceipt.id))
-    .limit(MAX_PACK_RECEIPTS + 1);
-  if (!selected.length) {
-    return fail(
-      'company_receipt_pack_empty',
-      'No ready, dated Company Receipts match the selected range.',
-      404,
-    );
-  }
-  if (selected.length > MAX_PACK_RECEIPTS) {
-    return fail(
-      'company_receipt_pack_limit_exceeded',
-      `A Receipt Pack may contain at most ${MAX_PACK_RECEIPTS} receipts. Narrow the filters.`,
-      413,
-    );
-  }
-  const rows = selected.map((row) => ({
-    receiptId: row.receiptId,
-    receiptVersion: row.receiptVersion,
-    transactionDate: row.transactionDate,
-    merchant: row.merchant,
-    receiptNumber: row.receiptNumber,
-    category: row.category,
-    businessPurpose: row.businessPurpose,
-    notes: row.notes,
-    amount: row.amount,
-    currency: row.currency,
-    uploaderUserId: row.uploaderUserId,
-    uploaderName: row.uploaderName,
-    documentId: row.documentId,
-    documentVersionId: row.documentVersionId,
-    documentSha256: row.documentSha256,
-    originalFileName: row.originalFileName,
-  })) as CompanyReceiptPackLineFacts[];
-  const totalMap = new Map<string, { amount: Decimal; receiptCount: number }>();
-  for (const row of rows) {
-    const current = totalMap.get(row.currency) ?? { amount: new Decimal(0), receiptCount: 0 };
-    current.amount = current.amount.plus(row.amount);
-    current.receiptCount += 1;
-    totalMap.set(row.currency, current);
-  }
-  const totals = [...totalMap.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([currency, total]) => ({
-      currency,
-      amount: total.amount.toFixed(4),
-      receiptCount: total.receiptCount,
-    }));
-  const sourceSha256 = sha256(JSON.stringify({ filters, visibility, rows, totals }));
-  const retentionUntil = selected.reduce((latest, row) => (
-    row.retentionUntil.getTime() > latest.getTime() ? row.retentionUntil : latest
-  ), new Date(0));
-  const [created] = await tx.insert(companyReceiptPack).values({
-    ...scope,
-    packKey,
-    visibility,
-    locale,
-    filters,
-    rows,
-    totals,
-    sourceSha256,
-    rowCount: rows.length,
-    documentCount: rows.length,
-    retentionUntil,
-    createdByUserId: actorUserId,
-    createdAt: now,
-  }).onConflictDoNothing({
-    target: [companyReceiptPack.masterFn, companyReceiptPack.companyFn, companyReceiptPack.packKey],
-  }).returning();
-  if (!created) {
-    // The initial read and the insert are intentionally separate because the
-    // selected receipt rows must be frozen in the same transaction. A second
-    // request can win the unique-key race after the initial read; turn that
-    // race into the same deterministic replay/conflict contract as a normal
-    // retry instead of leaking a database unique-violation response.
-    const raced = await findCompanyReceiptPackWithin(tx, scope, packKey);
-    if (!raced) {
-      return fail(
-        'company_receipt_pack_conflict_unresolved',
-        'The Receipt Pack key was claimed concurrently but its snapshot is unavailable.',
-        409,
-      );
-    }
-    return replayOrConflict(raced, actorUserId, visibility, locale, filters);
-  }
-  return { pack: packProjection(created), replayed: false };
-}
-
-export async function listCompanyReceiptPacksWithin(
-  tx: DB,
-  scope: Scope,
-  actorUserId: number,
-  currentVisibility: CompanyReceiptReadVisibility,
-  input: { limit: number; afterId?: number | null },
-) {
-  const predicates = [
-    eq(companyReceiptPack.masterFn, scope.masterFn),
-    eq(companyReceiptPack.companyFn, scope.companyFn),
-    eq(companyReceiptPack.createdByUserId, actorUserId),
-    currentVisibility === 'company'
-      ? or(eq(companyReceiptPack.visibility, 'own'), eq(companyReceiptPack.visibility, 'company'))!
-      : eq(companyReceiptPack.visibility, 'own'),
-  ];
-  if (input.afterId != null) predicates.push(lt(companyReceiptPack.id, input.afterId));
-  const rows = await tx.select().from(companyReceiptPack)
-    .where(and(...predicates))
-    .orderBy(desc(companyReceiptPack.createdAt), desc(companyReceiptPack.id))
-    .limit(input.limit + 1);
-  return rows.map(packProjection);
-}
-
-export async function readCompanyReceiptPackWithin(
-  tx: DB,
-  scope: Scope,
-  actorUserId: number,
-  currentVisibility: CompanyReceiptReadVisibility,
-  packId: number,
-) {
-  const [row] = await tx.select().from(companyReceiptPack).where(and(
-    eq(companyReceiptPack.masterFn, scope.masterFn),
-    eq(companyReceiptPack.companyFn, scope.companyFn),
-    eq(companyReceiptPack.id, packId),
-    eq(companyReceiptPack.createdByUserId, actorUserId),
-  )).limit(1);
-  if (!row) {
-    return fail(
-      'company_receipt_pack_not_found',
-      'Receipt Pack is unavailable for the signed-in user and active Company.',
-      404,
-    );
-  }
-  if (!canAccessSnapshot(row.visibility as CompanyReceiptReadVisibility, currentVisibility)) {
-    return fail(
-      'company_receipt_pack_not_found',
-      'Receipt Pack is unavailable for the signed-in user and active Company.',
-      404,
-    );
-  }
-  return packProjection(row);
 }
 
 export async function renderCompanyReceiptPackWithin(

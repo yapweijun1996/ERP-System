@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 45000;
-  var DEMO_SCHEMA_VERSION = 103;
+  var DEMO_SCHEMA_VERSION = 111;
   var DEMO_PACK_VERSION = '16';
   var DEMO_IMPERSONATOR_KEY = 'aria-demo-impersonator-email';
 
@@ -124,7 +124,7 @@
     return new TextDecoder().decode(plain);
   }
   function newDemoTemporaryPassword(){
-    return 'Aria-'+demoBase64Url(crypto.getRandomValues(new Uint8Array(12)))+'!';
+    return 'Aria-'+demoBase64Url(crypto.getRandomValues(new Uint8Array(24)))+'!';
   }
   var SCOPE = { masterFn: 'M1', companyFn: 'C-SG' };
 
@@ -137,7 +137,8 @@
 
   var state = {
     db: null, orm: null, runtime: null, mode: 'pending', activeUserId: null,
-    activationRequired: false, demoPack: null, demoPackAvailable: null,
+    setupModuleCatalog: [],
+    demoPack: null, demoPackAvailable: null,
   };
 
   /* The sign-in shell starts before PGlite resolves. Keep the current stage in
@@ -460,8 +461,36 @@
     await db.exec(await fetchSql('erp-system-demo-sales-credit.sql'));
   }
 
+  async function demoWorkspaceCompanies(db,email){
+    return (await db.query(
+      'select distinct c.company_fn from app_user u '+
+      'join user_company_role membership on membership.user_id=u.user_id '+
+      'join company c on c.company_fn=membership.company_fn and c.master_fn=u.master_fn '+
+      'where u.master_fn=$1 and lower(u.email)=$2 and u.is_active=true '+
+      "and u.identity_kind='human' and u.login_enabled=true and u.account_state<>'offboarded' "+
+      'order by c.company_fn',[SCOPE.masterFn,email])).rows.map(function(row){ return row.company_fn; });
+  }
+
+  async function restoreDemoWorkspace(db){
+    var email='',preferredCompany='';
+    try{
+      email=String(localStorage.getItem('aria-active-user-email')||'').trim().toLowerCase();
+      preferredCompany=localStorage.getItem('aria-active-company-fn')||'';
+    }catch{}
+    if(!email) return;
+    var companies=await demoWorkspaceCompanies(db,email);
+    if(!companies.length){
+      try{ localStorage.removeItem('aria-demo-auth'); }catch{}
+      return;
+    }
+    SCOPE.companyFn=companies.includes(preferredCompany)?preferredCompany
+      :(companies.includes(SCOPE.companyFn)?SCOPE.companyFn:companies[0]);
+    try{ localStorage.setItem('aria-active-company-fn',SCOPE.companyFn); }catch{}
+  }
+
   /* Read everything the Aria screens need, tenant-scoped, numbers cast in SQL. */
   async function readPayload(db){
+    await restoreDemoWorkspace(db);
     async function rows(sql){ return (await db.query(sql)).rows; }
     /* alias-qualified tenant scope, safe inside joins */
     function w(a){ return a + ".master_fn='" + SCOPE.masterFn + "'"; }
@@ -472,8 +501,8 @@
       "select company_fn, master_fn, name, country, currency, tax_regime, locale, time_zone " +
       "from company where " + w('company') + " order by company_fn");
     /* Password hashes stay inside the login query and are never copied into the
-       screen payload. Account lifecycle flags are safe session metadata needed
-       to enforce first-login activation in Demo exactly as API mode does. */
+       screen payload. Account lifecycle flags remain session metadata for
+       compatibility and credential-handoff policy; new accounts are active immediately. */
     var users = await rows(
       "select u.user_id, u.username, u.email, u.full_name, u.language, " +
       "u.password_change_required, u.initial_password_expires_at, u.account_state, " +
@@ -485,7 +514,7 @@
       "from app_user u join user_company_role ucr on ucr.user_id = u.user_id and ucr.company_fn='" + SCOPE.companyFn + "' " +
       "left join role r on r.role_id = ucr.role_id " +
       "left join role_permission rp on rp.role_id = r.role_id " +
-      "where " + w('u') + " and u.is_active " +
+      "where " + w('u') + " and u.is_active and u.identity_kind='human' and u.login_enabled=true and u.account_state<>'offboarded' " +
       "group by u.user_id, u.username, u.email, u.full_name, u.language, " +
       "u.password_change_required, u.initial_password_expires_at, u.account_state order by u.user_id");
     var products = await rows(
@@ -624,7 +653,9 @@
       "on entitlement.master_fn=allocation.master_fn and entitlement.module_key=allocation.module_key " +
       "where " + wc('allocation') + " order by allocation.module_key");
 
-    return { master: master, companies: companies, users: users, products: products,
+    var setupModuleCatalog = await state.runtime.commands.readSetupModuleCatalogWithin(
+      state.runtime.createOrm(db), SCOPE.masterFn);
+    return { setupModuleCatalog: setupModuleCatalog, master: master, companies: companies, users: users, products: products,
              warehouses: warehouses, stockLevels: stockLevels, bins: bins, lots: lots,
              serials: serials, locationBalances: locationBalances, customers: customers,
              accounts: accounts, taxRules: taxRules, orders: orders, orderLines: orderLines,
@@ -720,6 +751,7 @@
   /* ---------------- payload → Aria DB mapping ---------------- */
 
   function applyData(d, mode){
+    state.setupModuleCatalog = Array.isArray(d.setupModuleCatalog) ? d.setupModuleCatalog : [];
     state.mode = mode;
     var activeCompany = d.companies.filter(function(c){ return c.company_fn === SCOPE.companyFn; })[0] || d.companies[0];
     /* fallback keeps applyData() safe for a freshly wizard-created company that
@@ -771,21 +803,19 @@
       env: 'DEMO',
     };
 
-    /* TASK-024: real seeded user (was hardcoded "Admin" before), with a
-       browser-persisted "switch demo user" selection. Defaults to whichever
-       seeded user is Company Owner, preserving the pre-TASK-024 default
-       experience for anyone who never switches. */
+    /* Default to a showcase owner only before an identity has been selected.
+       An unavailable selected account must never inherit another user's role. */
     var activeUserEmail = null;
     try { activeUserEmail = localStorage.getItem('aria-active-user-email'); } catch {}
-    var activeUser = (d.users || []).filter(function(u){ return u.email === activeUserEmail; })[0]
-      || (d.users || []).filter(function(u){ return u.is_company_owner; })[0]
-      || (d.users || [])[0]
-      || { email: 'admin@acme.co', full_name: 'Admin', is_superadmin: false, is_company_owner: true, permissions: [] };
+    var activeUser = (activeUserEmail
+      ? (d.users || []).find(function(u){ return String(u.email||'').toLowerCase() === activeUserEmail.toLowerCase(); })
+      : (d.users || []).find(function(u){ return u.is_company_owner; }) || (d.users || [])[0])
+      || { email: activeUserEmail || 'admin@acme.co', full_name: activeUserEmail || 'Admin',
+        is_superadmin: false, is_company_owner: false, permissions: [] };
     var userDisplayName = activeUser.full_name || activeUser.email;
     state.activeUserId = activeUser.user_id || null;
     var impersonatorEmail = null;
     try { impersonatorEmail = localStorage.getItem(DEMO_IMPERSONATOR_KEY); } catch {}
-    state.activationRequired = !!activeUser.password_change_required && !impersonatorEmail;
     DB.user = {
       name: userDisplayName,
       email: activeUser.email,
@@ -1504,10 +1534,11 @@
     var active=(DB.erpSystem&&DB.erpSystem.users||[]).find(function(user){
       return Number(user.user_id)===Number(state.activeUserId);
     });
-    if(active&&!active.is_company_owner&&!(active.companies||[]).includes(companyFn)){
+    if(!active||!(active.companies||[]).includes(companyFn)){
       return Promise.reject(new Error('This Demo persona has no role in the selected company.'));
     }
     SCOPE.companyFn = companyFn;
+    try{ localStorage.setItem('aria-active-company-fn',companyFn); }catch{}
     return refresh();
   }
 
@@ -1522,7 +1553,7 @@
      Password hashing stays in Web Crypto, while all database rules execute in
      completeDemoSetupWithin. Any failure rolls the whole setup back. */
   function setupModuleCatalog(){
-    var catalog=state.runtime&&state.runtime.setupModuleCatalog;
+    var catalog=state.setupModuleCatalog;
     if(!Array.isArray(catalog)) return [];
     return catalog.map(function(item){
       return {
@@ -1530,6 +1561,7 @@
         name:item.name,
         dependencies:Array.isArray(item.dependencies)?item.dependencies.slice():[],
         defaultCompanyAllocated:item.defaultCompanyAllocated===true,
+        available:item.available!==false,
       };
     });
   }
@@ -1580,9 +1612,11 @@
   async function createStaffAccount(input){
     if(!state.db) throw new Error('Demo database unavailable — Staff onboarding needs PGlite.');
     input=input||{};
-    var initialPassword=String(input.initialPassword||'');
-    if(initialPassword.length<8) throw new Error('Initial password must be at least 8 characters.');
-    var passwordHash=await hashPasswordBrowser(initialPassword);
+    if(!await state.runtime.commands.hasPermissionWithin(state.orm,SCOPE,Number(state.activeUserId),'hr.write')) throw new Error('HR write permission is required.');
+    var initialPassword=newDemoTemporaryPassword();
+    var credential={passwordHash:await hashPasswordBrowser(initialPassword),
+      credentialEnvelope:await encryptDemoCredential(initialPassword),
+      expiresAt:new Date(Date.now()+7*24*60*60*1000)};
     var result=await state.db.transaction(async function(tx){
       var orm=state.runtime.createOrm(tx);
       var draft=await state.runtime.commands.createStaffOnboardingDraftWithin(
@@ -1593,7 +1627,7 @@
           roleIds:(input.roleIds||[]).map(Number),
         });
       return state.runtime.commands.activateStaffOnboardingWithin(
-        orm,SCOPE,Number(state.activeUserId),Number(draft.id),Number(draft.version),passwordHash);
+        orm,SCOPE,Number(state.activeUserId),Number(draft.id),Number(draft.version),credential);
     });
     await refresh();
     return result;
@@ -1658,7 +1692,7 @@
       }
     }
     try{
-      ['aria-demo-auth','aria-active-user-email',DEMO_IMPERSONATOR_KEY,
+      ['aria-demo-auth','aria-active-user-email','aria-active-company-fn',DEMO_IMPERSONATOR_KEY,
        'aria-period','aria-demo-employee-credential-key']
         .forEach(function(key){ localStorage.removeItem(key); });
       /* A static demo reset should return to the first-run wizard so the
@@ -1673,8 +1707,7 @@
 
   /* Demo-mode auth keeps one-click switching for the twelve deterministic
      showcase personas. User-created staff identities use the same PBKDF2
-     password and first-login activation flags as production so the onboarding
-     journey cannot claim success while silently bypassing its controls. */
+     password authentication as production; accounts are usable on creation. */
   async function needsSetup(){
     return (typeof needsSetupWizard === 'function') ? needsSetupWizard() : false;
   }
@@ -1686,7 +1719,7 @@
     if(!trimmed) throw new Error('Enter your account email.');
     var result=await requireDemoDb().query(
       'select user_id,email,password_hash,password_change_required,initial_password_expires_at,account_state '+
-      'from app_user where master_fn=$1 and lower(email)=$2 and is_active=true limit 1',
+      "from app_user where master_fn=$1 and lower(email)=$2 and is_active=true and identity_kind='human' and login_enabled=true limit 1",
       [SCOPE.masterFn,trimmed]);
     var user=result.rows[0];
     if(!user||user.account_state==='offboarded') throw new Error('Invalid email or password.');
@@ -1695,32 +1728,21 @@
     }else if(!await verifyPasswordBrowser(String(password),user.password_hash)){
       throw new Error('Invalid email or password.');
     }
-    if(user.password_change_required&&user.initial_password_expires_at
-      &&new Date(user.initial_password_expires_at)<=new Date()){
-      throw new Error('The temporary password has expired. Ask HR to reset it.');
+    if(!(await demoWorkspaceCompanies(requireDemoDb(),trimmed)).length){
+      throw new Error('This account has no active Company role.');
     }
     try {
+      localStorage.removeItem(DEMO_IMPERSONATOR_KEY);
       if (trimmed) localStorage.setItem('aria-active-user-email', trimmed);
       localStorage.setItem('aria-demo-auth', JSON.stringify({ signedIn: true, email: trimmed || 'admin@acme.co', at: new Date().toISOString() }));
     } catch {}
     return { email: trimmed, passwordChangeRequired:!!user.password_change_required };
   }
-  async function completeActivation(input){
-    input=input||{};
-    var email=String(input.email||'').trim().toLowerCase();
-    var password=String(input.password||'');
-    if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Enter a valid email address.');
-    if(password.length<8||password!==String(input.confirmPassword||'')) throw new Error('Use matching passwords of at least 8 characters.');
-    var passwordHash=await hashPasswordBrowser(password);
-    var data=await state.runtime.commands.completeEmployeeActivation(
-      state.orm,Number(state.activeUserId),email,passwordHash);
-    state.activationRequired=false;
-    try{ localStorage.removeItem('aria-demo-auth'); }catch{}
-    await refresh();
-    return data;
-  }
   async function logout(){
-    try { localStorage.removeItem('aria-demo-auth'); } catch {}
+    try {
+      localStorage.removeItem('aria-demo-auth');
+      localStorage.removeItem(DEMO_IMPERSONATOR_KEY);
+    } catch {}
   }
   async function switchUser(email){
     var trimmed = String(email || '').trim().toLowerCase();
@@ -2723,6 +2745,7 @@
     requireEffectiveModuleForResource(key);
     if(key==='hr/employee-accounts'){
       var employeeId=Number(id), actorUserId=Number(state.activeUserId);
+      if(!await state.runtime.commands.hasPermissionWithin(state.orm,SCOPE,actorUserId,'hr.write')) throw new Error('HR write permission is required.');
       if(name==='create'){
         var initialPassword=newDemoTemporaryPassword();
         var createdAccount=await state.runtime.commands.createEmployeeAccount(state.orm,SCOPE,{
@@ -3612,6 +3635,36 @@
         filters:{search:search}}};
     });
   }
+  async function documentContent(documentId,versionNo){
+    if(!Number.isSafeInteger(documentId)||documentId<=0||!Number.isSafeInteger(versionNo)||versionNo<=0) throw new Error('Document identity is invalid.');
+    var scope={masterFn:SCOPE.masterFn,companyFn:SCOPE.companyFn},actorId=myActorUserId();
+    var stored=await requireDemoDb().transaction(async function(tx){
+      var orm=state.runtime.createOrm(tx);
+      var canManage=await state.runtime.commands.hasPermissionWithin(orm,scope,actorId,'documents.governance.manage');
+      if(!canManage&&!await state.runtime.commands.hasPermissionWithin(orm,scope,actorId,'employee.self.read')) throw new Error('You cannot access document content.');
+      var result=await state.runtime.commands.accessDemoDocument(orm,scope,{userId:actorId,canManage:canManage},documentId,versionNo);
+      if(SCOPE.masterFn!==scope.masterFn||SCOPE.companyFn!==scope.companyFn||myActorUserId()!==actorId) throw new Error('The active document context changed.');
+      return result;
+    });
+    return {data:{content:stored.content,contentType:stored.version.mimeType,versionNo:stored.version.versionNo,sha256:stored.version.sha256}};
+  }
+  async function companyReceipt(receiptId){
+    requireEffectiveModuleForResource('expenses/company-receipts');
+    var id=Number(receiptId);
+    if(!Number.isSafeInteger(id)||id<=0) throw new Error('Company Receipt id is invalid.');
+    return requireDemoDb().transaction(async function(tx){
+      var orm=state.runtime.createOrm(tx),actorId=myActorUserId();
+      var canReadCompany=await state.runtime.commands.hasPermissionWithin(
+        orm,SCOPE,actorId,'expenses.company_receipts.read_company');
+      var canReadOwn=canReadCompany||await state.runtime.commands.hasPermissionWithin(
+        orm,SCOPE,actorId,'expenses.company_receipts.read_own');
+      if(!canReadOwn) throw new Error('You cannot read Company Receipts.');
+      var visibility=canReadCompany?'company':'own';
+      var data=await state.runtime.commands.readCompanyReceiptWithin(
+        orm,SCOPE,actorId,id,visibility);
+      return {data:data,meta:{scope:visibility}};
+    });
+  }
   async function companyReceiptConfirmation(documentVersionId){
     requireEffectiveModuleForResource('expenses/company-receipts');
     var versionId=Number(documentVersionId);
@@ -3670,18 +3723,14 @@
     await recordDemoAudit('company_receipt',id,'voided',changed.before,changed.after);
     return {data:changed.after,meta:{scope:'uploader',tombstone:true}};
   }
-  function scaledReceiptAmount(value){
-    var text=String(value||'0');
-    var parts=text.split('.');
-    return BigInt(parts[0]||'0')*10000n+BigInt(String(parts[1]||'').padEnd(4,'0').slice(0,4));
-  }
-  function receiptAmountText(value){
-    var negative=value<0n,absolute=negative?-value:value,text=absolute.toString().padStart(5,'0');
-    return (negative?'-':'')+text.slice(0,-4)+'.'+text.slice(-4);
-  }
   async function companyReceiptPack(payload){
     requireEffectiveModuleForResource('expenses/company-receipts');
     payload=payload||{};
+    var expectedDigest=payload.selectionDigest;
+    if(expectedDigest!==undefined&&(typeof expectedDigest!=='string'||!/^[a-f0-9]{64}$/.test(expectedDigest))) throw new Error('A valid reviewed selection digest is required.');
+    function verifyReviewedDigest(actual){
+      if(expectedDigest!==undefined&&expectedDigest!==actual) throw Object.assign(new Error('The Receipt Pack selection changed. Review the latest preview before confirming.'),{code:'company_receipt_pack_selection_changed'});
+    }
     var packKey=String(payload.packKey||'').trim();
     if(!/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(packKey)) throw new Error('A valid Receipt Pack key is required.');
     var search=String(payload.search||'').trim();
@@ -3705,69 +3754,21 @@
       if(!canReadOwn) throw new Error('You cannot create a Company Receipt Pack.');
       var visibility=canReadCompany?'company':'own';
       var filters={search:search,dateFrom:dateFrom,dateTo:dateTo};
-      var packKeyHash=await state.runtime.sha256Hex(packKey);
-      var purgedKey=(await tx.query(
-        'select id from company_receipt_pack_tombstone where master_fn=$1 and company_fn=$2 and pack_key_hash=$3 limit 1',
-        [SCOPE.masterFn,SCOPE.companyFn,packKeyHash])).rows[0];
-      if(purgedKey) throw new Error('This Receipt Pack key was permanently purged and cannot be reused.');
-      var existing=(await tx.query(
-        'select * from company_receipt_pack where master_fn=$1 and company_fn=$2 and pack_key=$3 limit 1',
-        [SCOPE.masterFn,SCOPE.companyFn,packKey])).rows[0];
+      var packCommands=state.runtime.commands.companyReceiptPackCommands;
+      var existing=await packCommands.readCompanyReceiptPackByKeyWithin(
+        orm,SCOPE,actorId,visibility,{packKey:packKey,locale:locale,filters:filters});
+      var result;
       if(existing){
-        var existingFilters=existing.filters||{};
-        if(Number(existing.created_by_user_id)!==actorId||existing.visibility!==visibility||
-          existing.locale!==locale||existingFilters.search!==filters.search||
-          existingFilters.dateFrom!==filters.dateFrom||existingFilters.dateTo!==filters.dateTo){
-          throw new Error('This Receipt Pack key was already used for different selection facts.');
-        }
-        return {data:{pack:{
-          id:Number(existing.id),packKey:existing.pack_key,visibility:existing.visibility,
-          locale:existing.locale,filters:existing.filters,rows:existing.rows,totals:existing.totals,
-          sourceSha256:existing.source_sha256,rowCount:Number(existing.row_count),
-          documentCount:Number(existing.document_count),createdByUserId:Number(existing.created_by_user_id),
-          retentionUntil:existing.retention_until,legalHold:Boolean(existing.legal_hold),
-          recordVersion:Number(existing.record_version),createdAt:existing.created_at,
-        },replayed:true},meta:{immutableSnapshot:true,completeResult:true,missingDatesExcluded:true,currencyTotalsSeparated:true}};
+        verifyReviewedDigest(existing.pack.sourceSha256);
+        result=existing;
+      }else{
+        var selection=await packCommands.selectCompanyReceiptPackWithin(
+          orm,SCOPE,actorId,visibility,filters);
+        verifyReviewedDigest(selection.sourceSha256);
+        result=await packCommands.createCompanyReceiptPackFromSelectionWithin(
+          orm,SCOPE,actorId,visibility,{packKey:packKey,locale:locale,selection:selection});
       }
-      var params=[SCOPE.masterFn,SCOPE.companyFn,dateFrom,dateTo];
-      var predicates=["r.master_fn=$1","r.company_fn=$2","r.status='ready'",'r.transaction_date>=$3','r.transaction_date<=$4'];
-      if(!canReadCompany){params.push(actorId);predicates.push('r.uploader_user_id=$'+params.length);}
-      if(search){params.push('%'+search+'%');predicates.push(`(r.merchant ilike $${params.length} or r.receipt_number ilike $${params.length} or r.notes ilike $${params.length} or r.category ilike $${params.length})`);}
-      var result=await tx.query(
-        `select r.id,r.version,r.transaction_date,r.merchant,r.receipt_number,r.category,
-                r.business_purpose,r.notes,r.amount,r.currency_code,r.uploader_user_id,
-                r.document_id,r.document_version_id,r.evidence_sha256,u.full_name as uploader_name,
-                d.original_file_name,d.retention_until
-         from company_receipt r
-         join app_user u on u.master_fn=r.master_fn and u.user_id=r.uploader_user_id
-         join managed_document d on d.master_fn=r.master_fn and d.company_fn=r.company_fn and d.id=r.document_id
-         where ${predicates.join(' and ')} order by r.transaction_date asc,r.id asc limit 5001`,params);
-      if(!result.rows.length) throw new Error('No ready, dated Company Receipts match the selected range.');
-      if(result.rows.length>5000) throw new Error('A Receipt Pack may contain at most 5000 receipts. Narrow the filters.');
-      var rows=result.rows.map(function(row){return {
-        receiptId:Number(row.id),receiptVersion:Number(row.version),transactionDate:row.transaction_date,
-        merchant:row.merchant,receiptNumber:row.receipt_number,category:row.category,
-        businessPurpose:row.business_purpose,notes:row.notes,amount:String(row.amount),
-        currency:row.currency_code,uploaderUserId:Number(row.uploader_user_id),uploaderName:row.uploader_name,
-        documentId:Number(row.document_id),documentVersionId:Number(row.document_version_id),
-        documentSha256:row.evidence_sha256,originalFileName:row.original_file_name,
-      };});
-      var totalMap=new Map();
-      rows.forEach(function(row){var current=totalMap.get(row.currency)||{amount:0n,receiptCount:0};current.amount+=scaledReceiptAmount(row.amount);current.receiptCount+=1;totalMap.set(row.currency,current);});
-      var totals=Array.from(totalMap.entries()).sort(function(a,b){return a[0].localeCompare(b[0]);}).map(function(entry){return {currency:entry[0],amount:receiptAmountText(entry[1].amount),receiptCount:entry[1].receiptCount};});
-      var sourceSha256=await state.runtime.sha256Hex(JSON.stringify({filters:filters,visibility:visibility,rows:rows,totals:totals}));
-      var retentionUntil=result.rows.reduce(function(latest,row){
-        return new Date(row.retention_until).getTime()>new Date(latest).getTime()?row.retention_until:latest;
-      },'1970-01-01T00:00:00.000Z');
-      var inserted=(await tx.query(
-        `insert into company_receipt_pack(master_fn,company_fn,pack_key,visibility,locale,filters,rows,totals,source_sha256,row_count,document_count,retention_until,created_by_user_id)
-         values($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::jsonb,$9,$10,$10,$11,$12) returning *`,
-        [SCOPE.masterFn,SCOPE.companyFn,packKey,visibility,locale,JSON.stringify(filters),JSON.stringify(rows),JSON.stringify(totals),sourceSha256,rows.length,retentionUntil,actorId])).rows[0];
-      var pack={id:Number(inserted.id),packKey:packKey,visibility:visibility,locale:locale,filters:filters,
-        rows:rows,totals:totals,sourceSha256:sourceSha256,rowCount:rows.length,documentCount:rows.length,
-        retentionUntil:inserted.retention_until,legalHold:Boolean(inserted.legal_hold),recordVersion:Number(inserted.record_version),
-        createdByUserId:actorId,createdAt:inserted.created_at};
-      return {data:{pack:pack,replayed:false},meta:{immutableSnapshot:true,completeResult:true,missingDatesExcluded:true,currencyTotalsSeparated:true}};
+      return {data:result,meta:{immutableSnapshot:true,completeResult:true,missingDatesExcluded:true,currencyTotalsSeparated:true}};
     });
     if(!response.data.replayed){
       var createdPack=response.data.pack;
@@ -3778,6 +3779,138 @@
       });
     }
     return response;
+  }
+  async function companyReceiptPackPrepare(payload){
+    requireEffectiveModuleForResource('expenses/company-receipts');
+    payload=payload||{};
+    return requireDemoDb().transaction(async function(tx){
+      var orm=state.runtime.createOrm(tx),actorId=myActorUserId();
+      var canReadCompany=await state.runtime.commands.hasPermissionWithin(
+        orm,SCOPE,actorId,'expenses.company_receipts.read_company');
+      var canReadOwn=canReadCompany||await state.runtime.commands.hasPermissionWithin(
+        orm,SCOPE,actorId,'expenses.company_receipts.read_own');
+      if(!canReadOwn) throw new Error('You cannot prepare a Company Receipt Pack.');
+      var visibility=canReadCompany?'company':'own';
+      var selection=await state.runtime.commands.selectCompanyReceiptPackWithin(
+        orm,SCOPE,actorId,visibility,payload);
+      return {data:{selectionDigest:selection.sourceSha256,visibility:visibility,
+        filters:selection.filters,rows:selection.rows,totals:selection.totals,
+        rowCount:selection.rowCount,documentCount:selection.documentCount,
+        preparedAt:new Date().toISOString()},meta:{preparationOnly:true,
+        authorizationRequired:true,completeResult:true}};
+    });
+  }
+  function assistantAbortError(){
+    var error=new Error('The Receipt assistant run was cancelled.');
+    error.code='assistant_cancelled';
+    return error;
+  }
+  function assertAssistantActive(signal){
+    if(signal&&signal.aborted) throw assistantAbortError();
+  }
+  function assistantSources(rows){
+    return (Array.isArray(rows)?rows:[]).slice(0,50).map(function(row){return {
+      sourceType:'receipt',
+      sourceId:'company-receipt:'+String(row.receiptId||row.id||'unknown')+':v'+String(row.receiptVersion||row.version||'unknown'),
+      recordId:Number(row.receiptId||row.id)||null,
+      recordVersion:Number(row.receiptVersion||row.version)||null,
+      sourceSha256:row.documentSha256||row.evidenceSha256||null,
+      artifactSha256:null,
+      asOf:new Date().toISOString(),
+    };});
+  }
+  async function withDemoReceiptAssistant(callback){
+    requireEffectiveModuleForResource('expenses/company-receipts');
+    var scope={masterFn:SCOPE.masterFn,companyFn:SCOPE.companyFn},actorId=myActorUserId();
+    function assertContext(){
+      if(scope.masterFn!==SCOPE.masterFn||scope.companyFn!==SCOPE.companyFn||actorId!==myActorUserId()) throw Object.assign(new Error('The active Company or user changed.'),{code:'assistant_scope_changed'});
+    }
+    return requireDemoDb().transaction(async function(tx){
+      var orm=state.runtime.createOrm(tx);
+      var canReadCompany=await state.runtime.commands.hasPermissionWithin(orm,scope,actorId,'expenses.company_receipts.read_company');
+      var canReadOwn=canReadCompany||await state.runtime.commands.hasPermissionWithin(orm,scope,actorId,'expenses.company_receipts.read_own');
+      if(!canReadOwn) throw new Error('You cannot use the Receipt assistant.');
+      assertContext();
+      var result=await callback(state.runtime.commands.receiptAssistantCommands,orm,scope,actorId,canReadCompany?'company':'own');
+      assertContext();
+      return result;
+    });
+  }
+  async function receiptAssistant(payload,options){
+    requireEffectiveModuleForResource('expenses/company-receipts');
+    payload=payload||{};options=options||{};
+    var message=String(payload.message||'').trim();
+    if(!message) throw new Error('Describe the Receipt Pack you want to review.');
+    var dateFrom=String(payload.dateFrom||''),dateTo=String(payload.dateTo||'');
+    if(!dateFrom||!dateTo||dateFrom>dateTo) throw new Error('Select a valid inclusive Receipt Pack date range.');
+    assertAssistantActive(options.signal);
+    if(!globalThis.ReceiptDemoGateway) throw new Error('The Demo AI gateway is unavailable.');
+    var initialScope=SCOPE.masterFn+'|'+SCOPE.companyFn+'|'+myActorUserId();
+    var proposal=await globalThis.ReceiptDemoGateway.propose(payload,options);
+    if(initialScope!==SCOPE.masterFn+'|'+SCOPE.companyFn+'|'+myActorUserId()) throw Object.assign(new Error('The active Company or user changed.'),{code:'assistant_scope_changed'});
+    assertAssistantActive(options.signal);
+    var search=String(payload.search||'').trim()||proposal.search;
+    var packKey='assistant-demo-'+crypto.randomUUID().replace(/-/g,'');
+    var intentKey='intent-demo-'+crypto.randomUUID().replace(/-/g,'');
+    var locale=['en','ms','zh','ja','vi'].includes(String(payload.locale))?String(payload.locale):'en';
+    var prepared=await withDemoReceiptAssistant(async function(commands,orm,scope,actorId,visibility){
+      assertAssistantActive(options.signal);
+      var result=await commands.prepare(orm,scope,actorId,visibility,{packKey:packKey,intentKey:intentKey,search:search,dateFrom:dateFrom,dateTo:dateTo,locale:locale});
+      assertAssistantActive(options.signal);
+      return result;
+    });
+    var intent=prepared.intent;
+    var preview={selectionDigest:intent.selectionDigest,visibility:intent.visibility,
+      filters:intent.filters,rows:intent.reviewedFacts.rows,totals:intent.reviewedFacts.totals,
+      rowCount:intent.reviewedFacts.rowCount,documentCount:intent.reviewedFacts.documentCount,
+      preparedAt:intent.createdAt.toISOString()};
+    return {data:{
+      runId:'assistant-demo-'+crypto.randomUUID(),state:'waiting',
+      stateHistory:['draft','running','waiting'],provider:proposal.provider,model:proposal.model,
+      providerCalls:proposal.providerCalls,retries:0,spentCostMicros:null,
+      message:'The exact Receipt Pack contents are ready for your confirmation.',
+      authoritativeCompletion:false,sources:assistantSources(preview.rows),toolResults:[],preview:preview,
+      confirmation:{required:true,available:true,reason:'human_confirmation_required',intentId:intent.id,intentVersion:intent.version,
+        intentKey:intentKey,packKey:packKey,filters:{search:search,dateFrom:dateFrom,dateTo:dateTo},
+        locale:['en','ms','zh','ja','vi'].includes(String(payload.locale))?String(payload.locale):'en',
+        visibility:preview.visibility||null,selectionDigest:preview.selectionDigest,payloadDigest:intent.payloadDigest,
+        expiresAt:intent.expiresAt.toISOString()},
+    },meta:{fixture:false,demo:true,costAvailable:false,tenantScope:'demo_adapter_derived',confirmationIsSeparate:true}};
+  }
+  async function receiptAssistantDecision(decision,payload){
+    var data=await withDemoReceiptAssistant(function(commands,orm,scope,actorId){
+      return commands.decide(orm,scope,actorId,String(decision||''),payload||{});
+    });
+    return {data:data,meta:{demo:true,persistedDecision:true}};
+  }
+  async function receiptAssistantExecute(payload,options){
+    requireEffectiveModuleForResource('expenses/company-receipts');
+    payload=payload||{};options=options||{};
+    assertAssistantActive(options.signal);
+    if(typeof payload.selectionDigest!=='string'||!/^[a-f0-9]{64}$/.test(payload.selectionDigest)) throw new Error('A valid reviewed selection digest is required.');
+    var executed=await withDemoReceiptAssistant(async function(commands,orm,scope,actorId,visibility){
+      assertAssistantActive(options.signal);
+      var result=await commands.execute(orm,scope,actorId,visibility,payload);
+      assertAssistantActive(options.signal);
+      return result;
+    });
+    var response={data:executed};
+    assertAssistantActive(options.signal);
+    var pack=response&&response.data&&response.data.pack;
+    if(!pack) throw new Error('The Receipt assistant did not receive a persisted Pack.');
+    var pdf=await companyReceiptPackPdf(pack.id,'view');
+    assertAssistantActive(options.signal);
+    var content=pdf&&pdf.data&&pdf.data.content;
+    var artifactSha256=null;
+    if(content&&typeof crypto!=='undefined'&&crypto.subtle){
+      var digest=await crypto.subtle.digest('SHA-256',content);
+      artifactSha256=Array.from(new Uint8Array(digest)).map(function(byte){return byte.toString(16).padStart(2,'0');}).join('');
+    }
+    if(!artifactSha256) throw new Error('The Receipt assistant could not verify the PDF artifact.');
+    return {data:{state:'succeeded',action:'receipt_pack.create',pack:pack,replayed:Boolean(response.data.replayed),verification:{
+      pack:pack,artifact:{contentType:'application/pdf',byteLength:content.byteLength,artifactSha256:artifactSha256,
+        sourceSha256:pack.sourceSha256,accessPurpose:'assistant_verified_receipt_pack'},
+    }},meta:{demo:true,governedExecutor:'shared_g06_commands',persistedPackReadBack:true,artifactHashVerified:true}};
   }
   async function companyReceiptPacks(params){
     requireEffectiveModuleForResource('expenses/company-receipts');
@@ -3818,6 +3951,16 @@
     });
     response.data=response.data.slice(0,limit);
     return response;
+  }
+  async function companyReceiptPackGet(packId){
+    requireEffectiveModuleForResource('expenses/company-receipts');
+    var id=Number(packId);
+    if(!Number.isSafeInteger(id)||id<=0) throw new Error('Receipt Pack id is invalid.');
+    var response=await companyReceiptPacks({limit:100});
+    var pack=(response.data||[]).find(function(row){return Number(row.id)===id;});
+    if(!pack) throw new Error('Receipt Pack is unavailable for the signed-in user and active Company.');
+    return {data:pack,meta:{immutableSnapshot:true,completeResult:true,
+      accessVisibility:response.meta&&response.meta.accessVisibility||'own'}};
   }
   async function companyReceiptPackLegalHold(packId,payload){
     requireEffectiveModuleForResource('expenses/company-receipts');
@@ -5027,13 +5170,20 @@
     session: session,
     financeReports:financeReports,
     companyReceipts:companyReceipts,
+    documentContent:documentContent,
+    companyReceipt:companyReceipt,
     companyReceiptEvidence:companyReceiptEvidence,
     companyReceiptConfirmation:companyReceiptConfirmation,
     createCompanyReceipt:createCompanyReceipt,
     updateCompanyReceipt:updateCompanyReceipt,
     voidCompanyReceipt:voidCompanyReceipt,
     companyReceiptPack:companyReceiptPack,
+    companyReceiptPackPrepare:companyReceiptPackPrepare,
+    receiptAssistant:receiptAssistant,
+    receiptAssistantDecision:receiptAssistantDecision,
+    receiptAssistantExecute:receiptAssistantExecute,
     companyReceiptPacks:companyReceiptPacks,
+    companyReceiptPackGet:companyReceiptPackGet,
     companyReceiptPackLegalHold:companyReceiptPackLegalHold,
     companyReceiptPackInitiatePurge:companyReceiptPackInitiatePurge,
     companyReceiptPackReviewPurge:companyReceiptPackReviewPurge,
@@ -5060,7 +5210,6 @@
     isSignedIn: isSignedIn,
     login: login,
     logout: logout,
-    completeActivation:completeActivation,
     switchUser: switchUser,
     auth: {
       needsSetup:needsSetup,
@@ -5068,7 +5217,6 @@
       login:login,
       logout:logout,
     },
-    get activationRequired(){ return !!state.activationRequired; },
     get demoOneClickAvailable(){ return DEMO_ONE_CLICK_EMAILS.has(String(DB.user&&DB.user.email||'').toLowerCase()); },
     get mode(){ return state.mode; },
     get db(){ return state.db; },

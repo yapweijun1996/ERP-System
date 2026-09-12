@@ -65,6 +65,7 @@
     }
     var response=await fetch(url,Object.assign({},options,{
       cache:'no-store',credentials:'same-origin',headers:headers,
+      signal:options.signal,
     }));
     if(response.status===409&&!state.authorizationRefreshPending){
       var staleBody=await jsonBody(response.clone());
@@ -166,6 +167,7 @@
       method:method,
       headers:headers,
       body:options.body==null?undefined:JSON.stringify(options.body),
+      signal:options.signal,
     });
     var body=await jsonBody(res);
     if(!res.ok){
@@ -848,7 +850,7 @@
     var activated=await apiRequest('hr/staff-onboarding-drafts/'+draft.id+'/actions/activate',{
       method:'POST',
       headers:{'Idempotency-Key':'staff-onboarding-'+draft.id+'-'+draft.version},
-      body:{expectedVersion:draft.version,initialPassword:input.initialPassword},
+      body:{expectedVersion:draft.version},
     });
     return activated.data;
   }
@@ -905,11 +907,6 @@
     try {
       var session=await fetchSession();
       if(!session) return false;
-      /* A preactivated employee must see activation when signing in directly,
-         but Superadmin employee-workspace impersonation is already audited and
-         must still load the real employee shell. Returning early here leaves
-         DB populated with the static demo defaults. */
-      if(session.passwordChangeRequired && session.impersonatorUserId == null) return true;
       await loadAuthenticatedShell();
       return true;
     } catch {
@@ -947,14 +944,6 @@
       throw new Error('Sign-in succeeded, but this browser did not retain the session cookie. Enable cookies for this ERP site and try again.');
     }
     return persisted;
-  }
-
-  async function completeActivation(input){
-    var response=await apiRequest('auth/activation/actions/complete',{
-      method:'POST',body:input||{},
-    });
-    state.session=null;
-    return response.data;
   }
 
   async function logout(){
@@ -996,7 +985,6 @@
     action:action,
     session:fetchSession,
     employeeWorkspaceTargets:employeeWorkspaceTargets,
-    completeActivation:completeActivation,
     financeReports:financeReports,
     companyReceipts:function(query){
       query=query||{};
@@ -1008,6 +996,17 @@
       if(query.dateTo) params.set('dateTo',String(query.dateTo));
       var suffix=params.toString();
       return apiRequest('company-receipts'+(suffix?'?'+suffix:''));
+    },
+    documentContent:async function(documentId,versionNo){
+      if(!Number.isSafeInteger(documentId)||documentId<=0||!Number.isSafeInteger(versionNo)||versionNo<=0) throw new Error('Document identity is invalid.');
+      var response=await apiFetch(API_BASE+'/documents/'+documentId+'/content?version='+versionNo+'&action=view',{
+        method:'GET',credentials:'same-origin',headers:{'X-Document-Access-Purpose':'receipt_assistant_evidence_review','Idempotency-Key':crypto.randomUUID()},
+      });
+      if(!response.ok) throw new Error('Document content is unavailable (HTTP '+response.status+').');
+      return {data:{content:new Uint8Array(await response.arrayBuffer()),contentType:response.headers.get('content-type'),versionNo:Number(response.headers.get('x-document-version')),sha256:response.headers.get('x-document-sha256')}};
+    },
+    companyReceipt:function(receiptId){
+      return apiRequest('company-receipts/'+encodeURIComponent(receiptId));
     },
     companyReceiptEvidence:function(query){
       query=query||{};
@@ -1033,6 +1032,9 @@
     companyReceiptPack:function(payload){
       return apiRequest('company-receipts/packs',{method:'POST',body:payload||{}});
     },
+    companyReceiptPackPrepare:function(payload){
+      return apiRequest('company-receipts/packs/prepare',{method:'POST',body:payload||{}});
+    },
     companyReceiptPacks:function(params){
       params=params||{};
       var query=new URLSearchParams();
@@ -1040,6 +1042,9 @@
       if(params.afterId!=null) query.set('afterId',String(params.afterId));
       var suffix=query.toString()?('?'+query.toString()):'';
       return apiRequest('company-receipts/packs'+suffix);
+    },
+    companyReceiptPackGet:function(packId){
+      return apiRequest('company-receipts/packs/'+encodeURIComponent(packId));
     },
     companyReceiptPackPdf:async function(packId,action){
       var response=await apiFetch(API_BASE+'/company-receipts/packs/'+
@@ -1059,6 +1064,28 @@
         sourceSha256:response.headers.get('x-receipt-pack-source-sha256'),
         contentDisposition:response.headers.get('content-disposition'),
       },meta:{immutableSnapshot:true,cacheControl:'no-store'}};
+    },
+    receiptAssistant:function(payload,options){
+      payload=payload||{};options=options||{};
+      var message=String(payload.message||'').trim();
+      var context=['UI selection context (not authorization):'];
+      if(payload.dateFrom||payload.dateTo){
+        context.push('Date from: '+String(payload.dateFrom||'')+'; Date to: '+String(payload.dateTo||''));
+      }
+      if(payload.search) context.push('Search text: '+String(payload.search));
+      return apiRequest('assistant/receipts',{
+        method:'POST',body:{message:message?message+'\n\n'+context.join('\n'):''},signal:options.signal,
+      });
+    },
+    receiptAssistantDecision:function(decision,payload,options){
+      payload=payload||{};options=options||{};
+      return apiRequest('assistant/receipts/actions/'+encodeURIComponent(String(decision||'')),{
+        method:'POST',body:payload,signal:options.signal,
+      });
+    },
+    receiptAssistantExecute:function(payload,options){
+      payload=payload||{};options=options||{};
+      return apiRequest('assistant/receipts/actions/execute',{method:'POST',body:payload,signal:options.signal});
     },
     my:my,
     confirmOrder: function(){ return notAvailable('confirmOrder'); },
@@ -1084,9 +1111,7 @@
       isSignedIn:isSignedIn,
       login:login,
       logout:logout,
-      completeActivation:completeActivation,
     },
-    get activationRequired(){ return Boolean(state.session&&state.session.passwordChangeRequired&&!state.session.impersonatorUserId); },
     get mode(){ return state.mode; },
     get db(){ return null; },
   };

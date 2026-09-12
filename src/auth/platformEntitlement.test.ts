@@ -66,13 +66,13 @@ describe('platform module entitlement', () => {
     const { db, session } = await seeded();
     const initial = (await listMasterEntitlements(db, session, 'M1'))
       .find((item) => item.moduleKey === 'expenses_tax')!;
-    expect(initial).toMatchObject({ masterEnabled: false, defaultCompanyAllocated: false, version: 1 });
+    expect(initial).toMatchObject({ masterEnabled: true, defaultCompanyAllocated: true, version: 1 });
 
     const allocated = await setCompanyAllocation(db, session, {
       masterFn: 'M1', companyFn: 'C-SG', moduleKey: 'expenses_tax', allocated: true,
       expectedVersion: 1,
     }, 'allocate-expenses');
-    expect(allocated).toMatchObject({ companyAllocated: true, effectiveEnabled: false, version: 2 });
+    expect(allocated).toMatchObject({ companyAllocated: true, effectiveEnabled: true, version: 2 });
 
     await setMasterEntitlement(db, session, {
       masterFn: 'M1', moduleKey: 'expenses_tax', enabled: true,

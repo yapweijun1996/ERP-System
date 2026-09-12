@@ -6,10 +6,17 @@ import {
 } from '../../data/schema';
 import { withTenantTransaction } from '../../data/tenantTransaction';
 import { appendAudit } from '../../api/audit';
+import type { EncryptedToken } from '../../auth/tokenCrypto';
 import type { SessionData } from '../../auth/session';
 import { isValidUsername, normalizeUsername } from '../../auth/identifiers';
 import { createEmployeeWithin, type CreateEmployeeInput } from './employee';
 import { ensureEmployeeRoleWithin } from './employeeAccount';
+
+export interface StaffOnboardingCredential {
+  passwordHash: string;
+  credentialEnvelope: EncryptedToken;
+  expiresAt: Date;
+}
 
 export interface StaffOnboardingDraftInput {
   employee: CreateEmployeeInput;
@@ -183,7 +190,7 @@ export async function activateStaffOnboardingWithin(
   session: SessionData,
   draftId: number,
   expectedVersion: number,
-  passwordHash: string | null,
+  credential: StaffOnboardingCredential | null,
   requestId: string,
   now = new Date(),
 ) {
@@ -224,7 +231,6 @@ export async function activateStaffOnboardingWithin(
   )).limit(1);
   let userId: number;
   let newCredential = false;
-  const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   if (existingUser) {
     if (existingUser.email?.toLowerCase() !== draft.email.toLowerCase() || !existingUser.isActive) {
       throw new StaffOnboardingError(409, 'identity_conflict', 'Username belongs to another or inactive identity.');
@@ -236,7 +242,7 @@ export async function activateStaffOnboardingWithin(
     if (membership) throw new StaffOnboardingError(409, 'company_membership_exists', 'This user already belongs to the company.');
     userId = existingUser.userId;
   } else {
-    if (!passwordHash?.startsWith('pbkdf2$')) {
+    if (!credential?.passwordHash.startsWith('pbkdf2$')) {
       throw new StaffOnboardingError(
         400,
         'initial_password_required',
@@ -249,12 +255,13 @@ export async function activateStaffOnboardingWithin(
       username: draft.username,
       email: draft.email,
       fullName: employeeInput.fullName.trim(),
-      passwordHash,
+      passwordHash: credential.passwordHash,
       language: 'en',
       isActive: true,
-      accountState: 'preactivated',
-      passwordChangeRequired: true,
-      initialPasswordExpiresAt: expiresAt,
+      accountState: 'active',
+      passwordChangeRequired: false,
+      initialPasswordExpiresAt: null,
+      activatedAt: now,
     }).returning({ id: appUser.userId });
     userId = createdUser.id;
     newCredential = true;
@@ -277,16 +284,12 @@ export async function activateStaffOnboardingWithin(
     assignedByUserId: session.userId,
     assignmentSource: roleId === employeeBaseRole.roleId ? 'system' as const : 'onboarding' as const,
   })));
-  if (newCredential) {
+
+  if (newCredential && credential) {
     await exec.insert(employeeActivationSecret).values({
-      masterFn: session.masterFn,
-      companyFn: session.activeCompanyFn,
-      employeeId: createdEmployee.id,
-      userId,
-      purpose: 'activation',
-      generation: 1,
-      credentialEnvelope: null,
-      expiresAt,
+      masterFn: session.masterFn, companyFn: session.activeCompanyFn,
+      employeeId: createdEmployee.id, userId, purpose: 'activation', generation: 1,
+      credentialEnvelope: credential.credentialEnvelope, expiresAt: credential.expiresAt,
       createdByUserId: session.userId,
     });
   }
@@ -311,8 +314,8 @@ export async function activateStaffOnboardingWithin(
     userId,
     username: draft.username,
     roleIds: allRoleIds,
-    passwordExpiresAt: newCredential ? expiresAt : null,
-    passwordChangeRequired: newCredential,
+    passwordExpiresAt: null,
+    passwordChangeRequired: false,
   };
 }
 
@@ -321,12 +324,12 @@ export function activateStaffOnboarding(
   session: SessionData,
   draftId: number,
   expectedVersion: number,
-  passwordHash: string | null,
+  credential: StaffOnboardingCredential | null,
   requestId: string,
 ) {
   return withTenantTransaction(db, {
     masterFn: session.masterFn, companyFn: session.activeCompanyFn,
   }, (tx) => activateStaffOnboardingWithin(
-    tx, session, draftId, expectedVersion, passwordHash, requestId,
+    tx, session, draftId, expectedVersion, credential, requestId,
   ));
 }
