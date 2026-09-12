@@ -9,6 +9,7 @@ import {
 import {
   activeEmployeeSecret,
   createEmployeeAccount,
+  EmployeeAccountError,
   resetEmployeeAccount,
   type EmployeeAccountScope,
 } from '../modules/hr/employeeAccount';
@@ -59,8 +60,18 @@ export async function revealEmployeeTemporaryPassword(
   encryptionKey: Buffer,
 ) {
   const secret = await activeEmployeeSecret(db, scope, employeeId);
+  let temporaryPassword: string;
+  try {
+    temporaryPassword = decryptToken(secret.credentialEnvelope as EncryptedToken, encryptionKey);
+  } catch {
+    throw new EmployeeAccountError(
+      'temporary_credential_unavailable',
+      'No recoverable temporary credential exists.',
+      404,
+    );
+  }
   return {
-    temporaryPassword: decryptToken(secret.credentialEnvelope as EncryptedToken, encryptionKey),
+    temporaryPassword,
     purpose: secret.purpose,
     generation: secret.generation,
     expiresAt: secret.expiresAt,

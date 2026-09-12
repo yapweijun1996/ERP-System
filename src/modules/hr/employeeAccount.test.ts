@@ -21,6 +21,7 @@ import {
 import { hashPassword, verifyPassword } from '../../auth/password';
 import { encryptToken } from '../../auth/tokenCrypto';
 import { createSession, getSession } from '../../auth/session';
+import { revealEmployeeTemporaryPassword } from '../../auth/employeeAccountLifecycle';
 import {
   activeEmployeeSecret,
   createEmployeeAccount,
@@ -84,6 +85,59 @@ describe('employee account lifecycle', () => {
     expect(JSON.stringify(secret.credentialEnvelope)).not.toContain('Temp-employee-123!');
     await expect(provision(data, data.source.id, 'other.name'))
       .rejects.toMatchObject({ code: 'employee_account_exists' });
+  });
+
+  it('fails closed on malformed persisted credentials and cryptographic tampering', async () => {
+    const data = await fixture();
+    const account = await provision(data, data.source.id, 'employee.corrupt');
+    await data.db.update(employeeActivationSecret).set({
+      credentialEnvelope: { secret: 'plaintext' },
+    }).where(eq(employeeActivationSecret.userId, account.userId));
+
+    await expect(activeEmployeeSecret(data.db, scope, data.source.id))
+      .rejects.toMatchObject({ code: 'temporary_credential_unavailable', status: 404 });
+    await expect(revealEmployeeTemporaryPassword(data.db, scope, data.source.id, encryptionKey))
+      .rejects.toMatchObject({ code: 'temporary_credential_unavailable', status: 404 });
+
+    const repaired = encryptToken('repaired-temporary-password', encryptionKey);
+    await data.db.update(employeeActivationSecret).set({ credentialEnvelope: repaired })
+      .where(eq(employeeActivationSecret.userId, account.userId));
+    await data.db.update(employeeActivationSecret).set({
+      credentialEnvelope: {
+        ...repaired,
+        ciphertext: `${repaired.ciphertext.slice(0, -1)}${repaired.ciphertext.endsWith('A') ? 'B' : 'A'}`,
+      },
+    }).where(eq(employeeActivationSecret.userId, account.userId));
+    await expect(revealEmployeeTemporaryPassword(data.db, scope, data.source.id, encryptionKey))
+      .rejects.toMatchObject({ code: 'temporary_credential_unavailable', status: 404 });
+  });
+
+  it('rejects malformed credentials before creating or resetting an account', async () => {
+    const data = await fixture();
+    await expect(createEmployeeAccount(data.db, scope, {
+      employeeId: data.source.id,
+      username: 'employee.invalid-envelope',
+      passwordHash: hashPassword('unused-password'),
+      credentialEnvelope: { secret: 'plaintext' } as never,
+      expiresAt: new Date(Date.now() + 60_000),
+      actorUserId: data.actor.userId,
+    })).rejects.toMatchObject({ code: 'invalid_credential_envelope', status: 400 });
+    const [unlinked] = await data.db.select({ userId: employee.userId }).from(employee)
+      .where(eq(employee.id, data.source.id));
+    expect(unlinked.userId).toBeNull();
+
+    const account = await provision(data, data.source.id, 'employee.valid-before-reset');
+    await expect(resetEmployeeAccount(data.db, scope, {
+      employeeId: data.source.id,
+      passwordHash: hashPassword('unused-reset-password'),
+      credentialEnvelope: { secret: 'plaintext' } as never,
+      expiresAt: new Date(Date.now() + 60_000),
+      actorUserId: data.actor.userId,
+    })).rejects.toMatchObject({ code: 'invalid_credential_envelope', status: 400 });
+    const secrets = await data.db.select().from(employeeActivationSecret)
+      .where(eq(employeeActivationSecret.userId, account.userId));
+    expect(secrets).toHaveLength(1);
+    expect(secrets[0].purpose).toBe('activation');
   });
 
   it('creates the missing company Employee role before provisioning the first account', async () => {

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Server } from 'node:http';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import {
   appUser,
@@ -111,6 +111,36 @@ describe('employee account API lifecycle', () => {
 
     const evidence = await db.select().from(auditLog);
     expect(JSON.stringify(evidence).includes(revealed.temporaryPassword)).toBe(false);
+  });
+
+  it('returns a bounded unavailable response for a malformed persisted credential', async () => {
+    const admin = cookies(await login('admin', 'demo1234'));
+    const headers = { cookie: admin.header, 'x-csrf-token': admin.csrf, 'content-type': 'application/json' };
+    const [subject] = await db.select().from(employee).where(and(
+      eq(employee.masterFn, 'M1'),
+      eq(employee.companyFn, 'C-SG'),
+      isNull(employee.userId),
+    )).limit(1);
+    const created = await fetch(`${baseUrl}/api/hr/employee-accounts/${subject.id}/actions/create`, {
+      method: 'POST',
+      headers: { ...headers, 'idempotency-key': 'malformed-credential-account' },
+      body: JSON.stringify({ username: 'malformed.credential' }),
+    });
+    expect(created.status).toBe(201);
+    const createdBody = await created.json() as { data: { userId: number; employeeId: number } };
+    await db.update(employeeActivationSecret).set({
+      credentialEnvelope: { secret: 'plaintext' },
+    }).where(eq(employeeActivationSecret.userId, createdBody.data.userId));
+
+    const response = await fetch(
+      `${baseUrl}/api/hr/employee-accounts/${createdBody.data.employeeId}/actions/reveal-temporary-password`,
+      { method: 'POST', headers, body: '{}' },
+    );
+    expect(response.status).toBe(404);
+    const body = await response.text();
+    expect(body).toContain('temporary_credential_unavailable');
+    expect(body).not.toContain('plaintext');
+    expect(body).not.toContain('Unsupported encrypted token envelope');
   });
 
   it('requires audited reveal and permits immediate login without activation', async () => {

@@ -19,7 +19,7 @@ import {
   userCompany,
   userCompanyRole,
 } from '../../data/schema';
-import type { EncryptedToken } from '../../auth/tokenCrypto';
+import { isEncryptedToken, type EncryptedToken } from '../../auth/tokenEnvelope';
 import { isCompanyOwnerRole } from '../../auth/accessCatalog';
 import { PERMISSIONS } from '../../auth/permissions';
 import { ensureManagerRoleWithin, syncManagerRolesWithin } from './managerRole';
@@ -36,6 +36,15 @@ export class EmployeeAccountError extends Error {
   ) {
     super(message);
     this.name = 'EmployeeAccountError';
+  }
+}
+
+function assertCredentialEnvelope(value: unknown): asserts value is EncryptedToken {
+  if (!isEncryptedToken(value)) {
+    throw new EmployeeAccountError(
+      'invalid_credential_envelope',
+      'Temporary credentials must use the server encrypted token envelope.',
+    );
   }
 }
 
@@ -256,6 +265,7 @@ export async function createEmployeeAccount(
   scope: EmployeeAccountScope,
   input: CreateEmployeeAccountInput,
 ) {
+  assertCredentialEnvelope(input.credentialEnvelope);
   return db.transaction(async (tx) => {
     const [employeeRow] = await tx.select().from(employee).where(and(
       eq(employee.masterFn, scope.masterFn),
@@ -374,7 +384,7 @@ export async function activeEmployeeSecret(
       isNull(employeeActivationSecret.clearedAt),
       eq(employee.userId, employeeActivationSecret.userId),
     )).limit(1);
-  if (!row || row.accountState === 'offboarded' || !row.credentialEnvelope) {
+  if (!row || row.accountState === 'offboarded' || !isEncryptedToken(row.credentialEnvelope)) {
     throw new EmployeeAccountError('temporary_credential_unavailable', 'No recoverable temporary credential exists.', 404);
   }
   if (row.expiresAt <= now) {
@@ -397,6 +407,7 @@ export async function resetEmployeeAccount(
   scope: EmployeeAccountScope,
   input: ResetEmployeeAccountInput,
 ) {
+  assertCredentialEnvelope(input.credentialEnvelope);
   return db.transaction(async (tx) => {
     const account = await readEmployeeAccount(tx as DB, scope, input.employeeId);
     if (!account.userId || account.accountState === 'offboarded' || !account.employeeActive) {
