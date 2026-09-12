@@ -71,3 +71,10 @@ source-controlled checker to the approved alert sink, record a sanitized test
 delivery and perform the separately authorized rollback drill with the exact
 immutable image reference. No alert endpoint, token or private configuration
 was recorded here.
+
+## Follow-up public probe — 2026-09-13T23:19:09.708Z UTC
+
+- **Actor / environment:** Codex on local macOS, read-only HTTPS probe against `https://gmb01.xyz/erp`; source HEAD `751fa273ce66368ec8495cf30284bb15874bf62f`. The repository had 34 preserved dirty paths, zero staged entries and zero unmerged paths; no reset, merge, deployment or credential use occurred.
+- **Expected result:** the public origin remains healthy for the approved immutable revision `03487b13ce838407d97cd00697bd2b54b4a7c918`, with all seven release checks and every manifest asset integrity check passing.
+- **Actual result:** `npm run check:availability -- https://gmb01.xyz/erp --expected-revision 03487b13ce838407d97cd00697bd2b54b4a7c918 --target erp-public` exited 0 and returned `status=healthy`, `target=erp-public`, `revision=03487b13ce838407d97cd00697bd2b54b4a7c918`, `fileCount=126`, and `root=true`, `health=true`, `setupStatus=true`, `releaseManifest=true`, `assetHashes=true`, `revisionMatch=true`, `finalUrlsReviewed=true`.
+- **Boundary:** this is a repeated read-only availability confirmation. It adds no alert delivery, incident ownership, rollback or production/provider acceptance evidence; TASK-199 remains `in_progress`.
