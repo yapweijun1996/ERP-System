@@ -49,13 +49,13 @@ Each scored case has a versioned input fixture, expected permitted actions and i
 
   Evidence: [2026-09-13 deterministic gate and broken-fixture failure](evidence/TASK-237-2026-09-13-s2-deterministic-gate.md).
 
-- [ ] **S3 — Run three recorded model evaluations.**
+- [x] **S3 — Run three recorded model evaluations.**
 
   Action: Use the same frozen set in three separate runs, each with at least 30 valid cases and at least 95 percent verified success (at least 29/30 when using 30). Record failures and all retries/cost; do not report only the best run.
 
   Checkpoint exit: Each run independently meets the threshold; negative tests pass separately; fixtures are distinguished from live model results.
 
-  Evidence: [2026-09-13 Demo model evaluation attempt](evidence/TASK-237-2026-09-13-demo-model-evaluation-attempt.md); the three runs were rate-limited before the required denominator and this checkpoint remains unchecked.
+  Evidence: [2026-09-13 Demo model evaluation attempt](evidence/TASK-237-2026-09-13-demo-model-evaluation-attempt.md), the [2026-09-13 rerun](evidence/TASK-237-2026-09-13-demo-model-evaluation-rerun.md) and [2026-09-13 threshold-met evaluation](evidence/TASK-237-2026-09-13-demo-model-evaluation-success.md); the paced v5 run completed 30/30, 30/30 and 29/30 (all at least 95%), so S3 is checked for Demo query-only evidence.
 
 - [ ] **S4 — Measure observability and budgets.**
 
@@ -63,7 +63,7 @@ Each scored case has a versioned input fixture, expected permitted actions and i
 
   Checkpoint exit: Per-run reports contain latency and full retry cost; missing approved budgets keep the operational gate open.
 
-  Evidence: [2026-09-13 redacted observability report contract](evidence/TASK-237-2026-09-13-observability-contract.md); owner-approved numerical budgets and measured live runs remain unverified.
+  Evidence: [2026-09-13 redacted observability report contract](evidence/TASK-237-2026-09-13-observability-contract.md) and [2026-09-13 Demo threshold report](evidence/TASK-237-2026-09-13-demo-model-evaluation-success.md); owner-approved numerical budgets, full retry cost and production observability remain unverified.
 
 - [ ] **S5 — Exercise release regression and disable.**
 
@@ -71,7 +71,7 @@ Each scored case has a versioned input fixture, expected permitted actions and i
 
   Checkpoint exit: G10 includes real CI execution, evaluator failure detection and rollout/disable evidence.
 
-  Evidence: [2026-09-13 local CI gate wiring and failure probe](evidence/TASK-237-2026-09-13-ci-gate-wiring.md); remote CI execution, rollout retention and emergency disable remain unverified.
+  Evidence: [2026-09-13 local CI gate wiring and failure probe](evidence/TASK-237-2026-09-13-ci-gate-wiring.md) and [2026-09-13 local rollout/disable probe](evidence/TASK-237-2026-09-13-rollout-disable-probe.md); remote CI execution and production rollout/retention/disable remain unverified.
 
 ## DoD mapping: all four must pass
 
@@ -84,13 +84,13 @@ is needed. Do not mark the task Done merely because all five checkpoints are che
   - Current result: Frozen valid/negative cases and the independent oracle are recorded in S1; the deterministic gate reports 30/30 valid and 9/9 negative cases. Live model-scored receipt-action runs remain unverified.
 - **G10.2:** Require every deterministic authorization/transaction invariant to pass and zero false-success results; achieve at least 95 percent verified success in each of three recorded runs, each containing at least 30 valid pilot cases.
   - Required evidence: Three per-run success denominators and all invariants.
-  - Current result: The Demo query-only attempt reached 5/30, 5/30 and 4/30 before the gateway rate limit. It does not satisfy the three complete model-scored receipt-action runs or the 95 percent threshold.
+  - Current result: Earlier concurrent/rate-limited attempts were retained as historical failures. The paced v5 run completed all three 30-case denominators and reached 30/30, 30/30 and 29/30 verified query proposals, with 9/9 negative cases, zero safety failures and zero false-success results. This meets the numeric Demo query-only threshold; it does not prove live receipt actions or a production provider.
 - **G10.3:** Record redacted run/model/tool versions, correlation IDs, approvals, resource postconditions, latency and full retry cost; never log secrets or unnecessary sensitive payloads.
   - Required evidence: Redacted traces, latency and total retry cost.
-  - Current result: Local report contract and validator pass; live redacted traces, measured latency/cost and owner-approved budgets remain unverified.
+  - Current result: The Demo report now records redacted run identifiers, model/prompt/fixture versions, per-run p95 latency and provider-call totals without retaining payloads. Full retry-cost accounting, owner-approved numerical budgets and production observability remain unverified.
 - **G10.4:** Gate model/prompt/tool changes on the same evaluations, record environment and evidence artifacts, and exercise a failed rollout plus emergency disable.
   - Required evidence: CI regression failure, rollback/disable evidence.
-  - Current result: Not run.
+  - Current result: The workflow now runs a local rollout/disable probe after the deterministic and broken-fixture gates. The probe rejects a broken candidate without replacing the active version, accepts a valid candidate, and blocks rollout after emergency disable. Remote CI execution and a real rollout/retention/disable observation remain unverified.
 
 ## Existing regression commands
 

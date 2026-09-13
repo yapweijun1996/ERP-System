@@ -13,6 +13,15 @@ import {
 
 export interface ReceiptPilotGateOptions {
   readonly broken?: boolean;
+  /** Optional candidate metadata evaluated by the same deterministic gate. */
+  readonly versions?: Partial<ReceiptPilotGateVersions>;
+}
+
+export interface ReceiptPilotGateVersions {
+  readonly fixtureVersion: string;
+  readonly modelVersion: string;
+  readonly promptVersion: string;
+  readonly toolVersion: string;
 }
 
 export interface ReceiptPilotGateResult {
@@ -28,6 +37,21 @@ export interface ReceiptPilotGateResult {
   readonly falseSuccessCount: number;
   readonly failedCaseIds: readonly string[];
   readonly evidenceClass: 'deterministic_fixture';
+}
+
+const VERSION = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
+
+function gateVersions(overrides: Partial<ReceiptPilotGateVersions> | undefined): ReceiptPilotGateVersions {
+  const versions: ReceiptPilotGateVersions = {
+    fixtureVersion: overrides?.fixtureVersion ?? RECEIPT_PILOT_EVALUATION_FIXTURE_VERSION,
+    modelVersion: overrides?.modelVersion ?? RECEIPT_PILOT_EVALUATION_MODEL_VERSION,
+    promptVersion: overrides?.promptVersion ?? RECEIPT_PILOT_EVALUATION_PROMPT_VERSION,
+    toolVersion: overrides?.toolVersion ?? RECEIPT_PILOT_EVALUATION_TOOL_VERSION,
+  };
+  if (Object.values(versions).some((value) => !VERSION.test(value))) {
+    throw new Error('receipt_pilot_evaluation_version_invalid');
+  }
+  return versions;
 }
 
 function baselineResult(testCase: ReceiptPilotEvaluationCase): ReceiptPilotObservedResult {
@@ -63,6 +87,7 @@ function negativeResult(kind: string): ReceiptPilotObservedResult {
 /** Run the local deterministic gate over the frozen set. */
 export function runReceiptPilotEvaluation(options: ReceiptPilotGateOptions = {}): ReceiptPilotGateResult {
   const summary = validateReceiptPilotCaseSet();
+  const versions = gateVersions(options.versions);
   const failures: string[] = [];
   let validPassed = 0;
   let falseSuccessCount = 0;
@@ -93,10 +118,10 @@ export function runReceiptPilotEvaluation(options: ReceiptPilotGateOptions = {})
     throw new Error(`receipt_pilot_evaluation_gate_failed:${[...failures, ...failedNegativeIds].join(',') || 'unknown'}`);
   }
   return {
-    fixtureVersion: RECEIPT_PILOT_EVALUATION_FIXTURE_VERSION,
-    modelVersion: RECEIPT_PILOT_EVALUATION_MODEL_VERSION,
-    promptVersion: RECEIPT_PILOT_EVALUATION_PROMPT_VERSION,
-    toolVersion: RECEIPT_PILOT_EVALUATION_TOOL_VERSION,
+    fixtureVersion: versions.fixtureVersion,
+    modelVersion: versions.modelVersion,
+    promptVersion: versions.promptVersion,
+    toolVersion: versions.toolVersion,
     validCases: summary.validCount,
     validPassed,
     negativeCases: summary.negativeCount,
