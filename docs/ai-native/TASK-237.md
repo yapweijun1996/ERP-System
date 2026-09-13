@@ -71,7 +71,7 @@ Each scored case has a versioned input fixture, expected permitted actions and i
 
   Checkpoint exit: G10 includes real CI execution, evaluator failure detection and rollout/disable evidence.
 
-  Evidence: [2026-09-13 local CI gate wiring and failure probe](evidence/TASK-237-2026-09-13-ci-gate-wiring.md) and [2026-09-13 local rollout/disable probe](evidence/TASK-237-2026-09-13-rollout-disable-probe.md); remote CI execution and production rollout/retention/disable remain unverified.
+  Evidence: [2026-09-13 local CI gate wiring and failure probe](evidence/TASK-237-2026-09-13-ci-gate-wiring.md), [2026-09-13 local rollout/disable probe](evidence/TASK-237-2026-09-13-rollout-disable-probe.md) and [2026-09-13 remote CI regression](evidence/TASK-237-2026-09-13-remote-ci.md); run `34740634873` passed for candidate revision `a4216346`, while production rollout/retention/disable remain unverified.
 
 ## DoD mapping: all four must pass
 
@@ -90,7 +90,7 @@ is needed. Do not mark the task Done merely because all five checkpoints are che
   - Current result: The Demo report now records redacted run identifiers, model/prompt/fixture versions, per-run p95 latency and provider-call totals without retaining payloads. Full retry-cost accounting, owner-approved numerical budgets and production observability remain unverified.
 - **G10.4:** Gate model/prompt/tool changes on the same evaluations, record environment and evidence artifacts, and exercise a failed rollout plus emergency disable.
   - Required evidence: CI regression failure, rollback/disable evidence.
-  - Current result: The workflow now runs a local rollout/disable probe after the deterministic and broken-fixture gates. The probe rejects a broken candidate without replacing the active version, accepts a valid candidate, and blocks rollout after emergency disable. Remote CI execution and a real rollout/retention/disable observation remain unverified.
+  - Current result: The workflow runs the deterministic gate, broken-fixture failure probe and rollout/disable probe in the actual CI path. Remote run `34740634873` passed all four Vitest shards plus source/generated, database, Demo, i18n, browser, layout and public-subpath checks; the probe rejected a broken candidate without replacing the active version, accepted a valid candidate and blocked rollout after emergency disable. A production rollout/retention/disable observation remains unverified.
 
 ## Existing regression commands
 
