@@ -31,7 +31,7 @@ revision. This closes the audit-recovery regression-safety boundary only;
 approved provider scope, real-provider OCR, production Pack release and human
 Finance/QA acceptance remain separate. See [hosted retry terminal evidence](ai-native/evidence/TASK-234-2026-09-13-ci-retry-terminal.md).
 
-The current Pages revision `e6fbc33f5dc5ad15234708bb8d6bbac7661df5cf` was
+The latest browser-tested Pages revision `07d2b08d34b6fe9aa52bf06fb50386befc7709c8` was
 also verified in a fresh normal Demo browser session: Company Receipts rendered
 the exact `Expenses & Tax unavailable` title without `&amp;`; My Receipts
 accepted the 5 KB PNG through Choose file and Sync all, reached

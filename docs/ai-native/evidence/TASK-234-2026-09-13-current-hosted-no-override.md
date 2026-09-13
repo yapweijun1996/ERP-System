@@ -4,8 +4,8 @@
 
 - **Observed:** 2026-09-13, Asia/Singapore, with hosted browser timestamps recorded by the Playwright session.
 - **Public URL:** `https://yapweijun1996.github.io/ERP-System/`
-- **Published revision:** `e6fbc33f5dc5ad15234708bb8d6bbac7661df5cf`.
-- **Pages workflow:** [Deploy GitHub Pages Demo run 34764165241](https://github.com/yapweijun1996/ERP-System/actions/runs/34764165241) completed successfully; public `release.json` returned `dataMode=demo`, `fileCount=136`, the same revision and workflow run.
+- **Latest browser-tested published revision:** `07d2b08d34b6fe9aa52bf06fb50386befc7709c8`.
+- **Pages workflow:** [Deploy GitHub Pages Demo run 34764665157](https://github.com/yapweijun1996/ERP-System/actions/runs/34764665157) completed successfully; public `release.json` returned `dataMode=demo`, `fileCount=136`, the same revision and workflow run.
 - **Actor / environment:** Codex using a fresh Playwright Chromium session, Demo mode, Company Owner persona, Company `C-SG`, English and the normal application setup/login/navigation controls.
 - **Working-tree boundary:** no source, response, network, module, permission or business-table override was used by the browser run; the uploaded fixture stayed within the browser's Demo storage boundary.
 - **Safety:** no provider key, credential, production endpoint or secret was used.

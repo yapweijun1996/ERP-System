@@ -146,7 +146,7 @@ for the repair; provider scope, real-provider OCR, production and human
 acceptance remain open. See the [fresh CI evidence](ai-native/evidence/TASK-234-2026-09-13-fresh-ci-failure.md)
 and [hosted retry terminal evidence](ai-native/evidence/TASK-234-2026-09-13-ci-retry-terminal.md).
 
-Current Pages revision `e6fbc33f5dc5ad15234708bb8d6bbac7661df5cf` was rechecked
+Latest browser-tested Pages revision `07d2b08d34b6fe9aa52bf06fb50386befc7709c8` was rechecked
 through the normal hosted Demo path: the restricted Company Receipts title was
 `Expenses & Tax unavailable` without literal `&amp;`, and a 5 KB PNG uploaded
 through My Receipts reached `Quarantined · scanner unavailable` and remained
