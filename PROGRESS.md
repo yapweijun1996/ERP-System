@@ -2,8 +2,9 @@
 
 Reviewed: **2026-09-13, Asia/Singapore**. Snapshot of the current root worktree,
 not an automated live monitor. Source baseline: `fa8781b16df0e61871074da2ccfdbe3dcef178a5`
-on `main`; current HEAD `b695a83` records the focused TASK-237 evaluation,
-rollout gates and shared-list audit readiness fix; the prior TASK-202 disposable PostgreSQL parity evidence remains
+on `main`; current HEAD `331a000` records the merged-CI failure boundary,
+the focused TASK-237 evaluation, rollout gates and shared-list audit readiness
+repair; the prior TASK-202 disposable PostgreSQL parity evidence remains
 in the preceding commit. Earlier commits record the TASK-234 public bundle alignment,
 the focused TASK-202 concurrent Pack conflict regression, the
 follow-up TASK-199 public availability probe, the module-access title escaping fix and the earlier
