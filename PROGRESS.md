@@ -2,7 +2,7 @@
 
 Reviewed: **2026-09-13, Asia/Singapore**. Snapshot of the current root worktree,
 not an automated live monitor. Source baseline: `fa8781b16df0e61871074da2ccfdbe3dcef178a5`
-on `main`; current HEAD `0264713` records the merged-CI failure boundary,
+on `main`; current HEAD `0f99edd` records the merged-CI failure boundary,
 the focused TASK-237 evaluation, rollout gates and shared-list audit readiness
 repair; the prior TASK-202 disposable PostgreSQL parity evidence remains
 in the preceding commit. Earlier commits record the TASK-234 public bundle alignment,
