@@ -63,3 +63,22 @@ link/fragment review passed 3 files / 175 local links / 0 missing. The exact GOA
 count validator remained 227 done, 6 in progress, 4 todo and 3 blocked across
 240 tasks, with 31/48 criteria, 41/60 checkpoints and no dependency-ready Todo.
 `git diff --check` and the conflict-marker scan passed.
+
+## Deployment summary reconciliation — 2026-09-13
+
+The current working-tree revision is `7bdefcc8f65814f2c382f328a1641d3e2222c877`
+on `main`. Before this reconciliation, 32 dirty paths were preserved with an
+empty index; after the documentation/evidence edits, 33 dirty paths remain and
+the index is still empty. The
+top of `docs/DEPLOYMENT.md` now contains one 2026-09-11 Tunnel recovery entry and
+the fresh 2026-09-13 public availability recheck; the duplicate recovery block
+was removed. This is documentation reconciliation only: no deployment, alert
+delivery, rollback, tenant write or registry/GOAL count change occurred.
+
+Actor/environment: Codex on local macOS, Asia/Singapore. Expected: the deployment
+summary links the current public revision evidence once and states the remaining
+alert/responder/rollback gates. Actual: the summary links
+`TASK-199-2026-09-13-public-availability.md` and keeps those gates open.
+`npm run docs:check` passed 92 Markdown files / 817 local links; the root
+`GOAL.md` / `PROGRESS.md` / `GOAL_PROMPT.md` review passed 183 local links / 0
+missing, `git diff --check` passed, and the conflict-marker scan was clean.

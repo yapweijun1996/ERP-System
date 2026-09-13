@@ -10,10 +10,66 @@ The five S-checkpoints are execution checkpoints, not five new task records.
 Check a checkpoint only after its listed exit is observed and recorded.
 All four G07 criteria plus common DoD remain required for task completion.
 
-Focused source regression evidence for the My Receipts `{data, meta}` capability
-envelope is recorded in [the dated test record](evidence/TASK-234-2026-09-13-my-receipts-capability-regression.md).
+## User-authorized Demo review and upload repair — 2026-09-11
+
+Use the existing Demo endpoint and let Codex perform OCR/receipt/PDF review;
+the user explicitly requires no manual action for this Demo run. Do not ask for
+a separate provider key or human-review action to repeat this approved scope.
+[New dated evidence](evidence/TASK-234-2026-09-11-codex-demo.md) records the real
+Demo gateway call, readable source, explicit delegated confirmation, one persisted
+Pack and matching authorized PDF hash after reload. This is Demo evidence with
+isolated module/scan fixtures, not production OCR or the separate server-provider gate.
+
+S4 supporting defect: My Receipts now unwraps `contextResponse.data` before
+reading capabilities, so authorized employees can select/upload receipt files.
+The focused source regression now preserves this envelope guard across future
+screen changes; see [dated regression evidence](evidence/TASK-234-2026-09-13-my-receipts-capability-regression.md).
 The browser-level authorized-control check is recorded in [the dated browser
 evidence](evidence/TASK-234-2026-09-13-my-receipts-browser-controls.md).
+The existing command authorization remains authoritative. Verify positive and
+negative capability rendering plus actual upload at desktop/375px. Before the
+authorized publication, the local fix was verified but not deployed. A 2026-09-11 public Pages recheck with the real
+Finance Preparer persona showed no upload controls and found the published bundle
+reading `d.capabilities` directly. The 2026-09-13 read-only `release.json` and
+bundle recheck still identifies revision `976a863eabcb8f1499308a64dac646146ed44b6e`
+with the same pre-repair application and screen assets; the wizard scroll CSS is
+present. See the [dated public bundle recheck](evidence/TASK-234-2026-09-13-public-bundle-recheck.md).
+That pre-publication record is superseded by the hosted verification below.
+The hosted run used a temporary equivalent override only for the earlier local
+Demo evidence.
+
+## Authorized Pages publication and hosted no-override verification — 2026-09-13
+
+The release owner authorized publication of the current candidate. The merged
+Pages workflow `34751369035` completed successfully and `release.json` reports
+the exact published revision `a67595d5b67d24d6dfcc02b0c04f89c0e6c391ae`, Demo
+mode and 136 files. A fresh hosted Chromium session then used the normal Demo
+setup/login and navigation paths. The restricted Company Receipts page rendered
+the exact visible title `Expenses & Tax unavailable` with no literal `&amp;`. My
+Work → My Receipts exposed `Take photo`, `Choose file` and `Sync all`; an actual
+5 KB PNG upload changed from `Offline draft 1` to `Stored securely 1` and
+remained after reload as `Quarantined · scanner unavailable`. No source,
+network, module/permission or business-table override was used. See the [merged
+hosted evidence](evidence/TASK-234-2026-09-13-merged-hosted-no-override.md) and
+the [prior hosted evidence](evidence/TASK-234-2026-09-13-hosted-no-override.md)
+for the earlier `d936a348` publication.
+
+This closes the hosted Demo publication/title/upload visibility gap. The scanner,
+real provider/OCR, production and human Finance/QA Pack/Print gates remain open,
+so TASK-234 stays In Progress and no G07 criterion or S-checkpoint count changes.
+S5 supporting exit: Codex checked both PDF pages and exact persisted identity.
+No existing S checkbox or full G07 criterion is newly promoted by this increment.
+
+The merged revision's remote CI run `34751368911` is separately tracked. It
+reached a terminal failure after all four Vitest shards, pre-browser source,
+generated, database, Demo and build gates, the i18n matrix/report upload and the
+desktop/mobile Browser smoke test succeeded. The Screen audit reported one
+failure, `LAYOUT [desktop:user-mgmt] transaction-list-v1 root missing`, and the
+job skipped later layout/public-subpath/cleanup steps. The local bounded
+recovery budget is now 30 seconds and the focused desktop/mobile list and full
+screen audits pass; a fresh candidate CI terminal run is still required. See
+the [merged CI failure evidence](evidence/TASK-234-2026-09-13-merged-ci-failure.md)
+and the earlier [merged CI progress record](evidence/TASK-234-2026-09-13-merged-ci-progress.md).
 
 ## Remove mandatory account activation — user decision 2026-09-10
 
@@ -161,16 +217,18 @@ acceptance remain open; browser automation cannot attest to human inspection.
 ## Review every selected receipt — 2026-09-10
 
 Outcome: every selected row is reachable before confirmation, with amount,
-currency, purpose, receipt/version and original-file facts. The current preview
-permanently truncates after 20 rows. Replace truncation with bounded progressive
-rendering using the existing localized Load more label. Keep selection/digests,
-approval commands and server authority unchanged. Source owner: the existing
-Company Receipts screen; regression owner: the assistant workspace E2E.
+currency, purpose, receipt/version and original-file facts. The Company Receipts
+screen renders the first 20 rows and exposes the existing localized Load more
+action in bounded batches of 20. The action is presentation-only: selection and
+digests, approval commands and server authority remain unchanged. Source owner:
+the existing Company Receipts screen; regression owner: the assistant workspace
+E2E. The current recheck is recorded in the [dated evidence](evidence/TASK-234-2026-09-13-progressive-preview.md).
 
-Verify a 21-row preview, expand and inspect the last row, preserve fields and
-confirmation payload, and check desktop/375px layout. Run common CLAUDE gates
-and affected browser regressions. This proves review availability only; original
-file inspection and real-provider human acceptance remain separate open gates.
+The 2026-09-13 Demo recheck verifies a 21-row preview, expands and inspects the
+last row, preserves its fields and confirmation payload, and checks desktop/375px
+layout. Common CLAUDE gates and the affected browser regression pass. This proves
+review availability only; original-file inspection and real-provider human
+acceptance remain separate open gates.
 
 The same assistant inspection path now accepts governed HEIC/HEIF originals after
 matching the receipt/document version and SHA-256. Browsers that cannot decode
@@ -294,6 +352,28 @@ tools, so the model proposes only a bounded search term from the user's message;
 explicit date inputs remain authoritative. Existing ERP selection, confirmation
 and Pack commands own every business action. This is a real model-assisted Demo
 query, not proof of the server six-tool autonomous pilot or production readiness.
+
+## Upload envelope repair release candidate — 2026-09-11
+
+The My Receipts screen now unwraps the `{data, meta}` context response before
+reading the writable receipt capability. A detached candidate based on the
+published Demo revision is `02f28fe5a3aaa69b1d6f63c09cf00a1415a8dca4`; it changes
+only `web/public/assets/screens-hr.js`. Candidate lint, typechecks, PGlite proof,
+Demo build and a fresh browser setup passed, and the three writable upload
+controls rendered without a screen override. The candidate is not pushed or
+deployed; release CI, Pages publication and the server-provider acceptance remain
+separate gates.
+
+## Demo gateway rejected-response cleanup — 2026-09-11
+
+The browser Demo gateway now cancels an unconsumed response body before returning
+the bounded `demo_gateway_session_denied` or `demo_gateway_unavailable` error for
+HTTP 403, other non-success responses and redirects. Session denial still stops
+before any inference request. The focused gateway regression covers 403 and 503
+body cancellation, and the existing assistant/browser regressions remain green.
+This is a local source/Demo resource-cleanup improvement; it does not promote a
+packet checkpoint or G07 criterion and does not claim a real provider, production
+deployment or release-owner acceptance. See the [dated evidence](evidence/TASK-234-2026-09-09.md#demo-gateway-rejected-response-cleanup--2026-09-11t103256z).
 
 Ownership: a dedicated classic-script gateway client owns HTTP/session/response
 validation; the Demo adapter owns integration; shared domain commands remain
@@ -558,7 +638,7 @@ is needed. Do not mark the task Done merely because all five checkpoints are che
   - Current result: S3 implements the server conversation/tool loop, cited Receipt facts, exact Pack preview, separate human confirmation/cancel endpoints and truthful draft/waiting/running/succeeded/failed/cancelled outcomes. S4 adds the contextual vanilla-JS workspace with visible sources, exact preview, confirmation, progress, cancellation and recovery states; the focused desktop/375px browser matrix passes without unexpected page errors.
 - **G07.3:** Complete the real receipt-to-Pack journey using governed tools and verified database/artifact postconditions; the assistant cannot announce success from model prose alone.
   - Required evidence: Persisted Pack/artifact evidence from assistant execution.
-  - Current result: S3 loopback/PGlite evidence and the S4 Demo E2E execute the approved intent through the existing governed dispatcher/command, read the persisted Pack, verify the PDF artifact/source hashes, and prove replay/no duplicate Pack. On 2026-09-10, the fresh local production PostgreSQL environment also completed authenticated SG/MY evidence inspection, human confirmation, Receipt creation, exact preview, Pack persistence/readback and PDF export; the dated hashes and container/revision proof are in the [production evidence](evidence/TASK-234-2026-09-09.md#production-receipt-to-pack-pilot--2026-09-10). This production pilot is API/operator evidence, not a live model call or public HTTPS acceptance.
+  - Current result: S3 loopback/PGlite evidence and the S4 Demo E2E execute the approved intent through the existing governed dispatcher/command, read the persisted Pack, verify the PDF artifact/source hashes, and prove replay/no duplicate Pack. On 2026-09-10, the fresh local production PostgreSQL environment also completed authenticated SG/MY evidence inspection, human confirmation, Receipt creation, exact preview, Pack persistence/readback and PDF export; the dated hashes and container/revision proof are in the [production evidence](evidence/TASK-234-2026-09-09.md#production-receipt-to-pack-pilot--2026-09-10). This is fixture/API/operator evidence only: it is not a live assistant-provider call or public hosted server/provider acceptance. G07.3 remains open pending an approved provider/model/data-policy/spend scope and same-run provider evidence.
 - **G07.4:** Prove provider failure/cancellation and zero credential leakage; test en/ms/zh/ja/vi, light/dark, desktop/mobile and accessible focus/keyboard behavior.
   - Required evidence: Failure/cancellation/secret checks and locale/theme/mobile matrix.
   - Current result: S1-S3 prove provider unavailability, cancellation, bounded failure and no-write paths; S2 proves encrypted credential non-disclosure. S4 covers en/ms/zh/ja/vi, light/dark, 1280px/375px, focus restoration, keyboard action flow, visible progress and mobile touch targets. The receipt-specific browser matrix passes, and the post-S5 TASK-232 locale follow-up now makes the full local i18n audit pass at 1,773 canonical keys / 74 local packs across 130 routes × five languages × desktop/mobile. Provider, production, remote-CI and physical-device evidence remain separate.
@@ -571,7 +651,7 @@ is needed. Do not mark the task Done merely because all five checkpoints are che
 | Exact preview and meaningful human confirmation | MY live employee session plus the earlier SG live employee confirmation; exact selection digest and totals | Human visual review record for the source/PDF |
 | Governed creation and persisted Pack/PDF | SG/MY production Receipt IDs 1/2, Pack IDs 1/2, readback and independently hashed two-page PDFs | A single same-run assistant-provider execution, if required by the G07.3 wording |
 | Open and review result | Agent-rendered PDF inspection; Codex open request queued | Actual operator opens and reviews the result; browser business-user acceptance |
-| Regression safety | Later local full run: 895 pass / 3 PostgreSQL skips. Revision eaf7f6 passed PostgreSQL 16 security lifecycle and cross-engine transaction/concurrency CI steps. Subsequent login/menu targeted gates pass | Latest CI run 34426075276 now passed for 6f06a883; this does not prove production or the real human pilot |
+| Regression safety | Later local full run: 895 pass / 3 PostgreSQL skips. Revision eaf7f6 passed PostgreSQL 16 security lifecycle and cross-engine transaction/concurrency CI steps. Subsequent login/menu targeted gates pass | Remote run [34730030719](https://github.com/yapweijun1996/ERP-System/actions/runs/34730030719) completed successfully for `d936a348`: all source/generated, Demo, i18n, desktop/mobile Browser smoke, Screen, transaction-list, operational-workspace, production public-subpath and cleanup steps passed. This closes the remote CI regression-safety gate; it remains separate from production/provider/OCR and human Pack/Print acceptance. See the [terminal CI evidence](evidence/TASK-234-2026-09-13-ci-terminal.md). |
 | Production readiness | Separate inherited release evidence | Approved PostgreSQL/deployment/operations and business-owner acceptance |
 
 A CLI service-route pilot and a separate browser fixture must not be reported as

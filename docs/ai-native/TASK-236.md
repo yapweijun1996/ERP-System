@@ -16,6 +16,23 @@ The five S-checkpoints are execution checkpoints, not five new task records.
 Check a checkpoint only after its listed exit is observed and recorded.
 All four G09 criteria plus common DoD remain required for task completion.
 
+## Candidate reconciliation — 2026-09-11
+
+The existing clean candidate now points to documentation tip `103e4ef` on
+`task-236-docs-final` (source scope boundary `bc726cc`),
+with implementation commit `fc64f34`, route/retry follow-up `7953efa`, process-boundary follow-up `702ccc6` and scope-boundary follow-up `77829ce`; its earlier implementation tip `3c508be`
+was compared with the current root.
+[Reconciliation evidence](evidence/TASK-236-2026-09-11-reconciliation.md) records
+reusable commits, the five divergent documentation/registry paths, matching
+migration history and the remaining root dependency/integration acceptance gaps. The
+candidate branch records repository CI acceptance; its follow-up now adds
+authenticated route, repeated retry-budget and child-process restart tests. The
+candidate process proof is repository evidence only; root acceptance and the root
+registry still have TASK-236 as Todo.
+TASK-234 remains a required open dependency. The unchecked steps below describe
+root acceptance; they do not mean the separate candidate must be rebuilt.
+No candidate checkpoint or prior test result is imported as root acceptance.
+
 ## Outcome and scope
 
 Persist and recover the approved receipt Agent workflow. Do not build a general orchestration platform or launch autonomous financial workflows.

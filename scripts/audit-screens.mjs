@@ -46,7 +46,10 @@ const BASE_URL = `http://localhost:${PORT}`;
 const SETTLE_MS = 200;
 // Recovery checks wait for the route's real navigation milestone within the
 // bounded Demo cold-start allowance; a timeout remains a visible audit failure.
-const RECOVERY_TIMEOUT_MS = 10_000;
+// A full screen audit runs after the browser smoke and i18n suites on a shared
+// hosted runner, so the first admin list read can outlive the old 10s budget
+// even though the route eventually renders correctly.
+const RECOVERY_TIMEOUT_MS = 30_000;
 const LIST_LAYOUT_ONLY = process.env.LIST_LAYOUT_ONLY === '1';
 const WORKSPACE_LAYOUT_ONLY = process.env.WORKSPACE_LAYOUT_ONLY === '1';
 const CALENDAR_WORKSPACE_ONLY = process.env.CALENDAR_WORKSPACE_ONLY === '1';

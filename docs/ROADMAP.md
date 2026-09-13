@@ -58,9 +58,9 @@ visible sources, exact preview/confirmation, progress/cancellation/recovery,
 Company-scope isolation, five locales, both themes and desktop/375px focus/touch
 evidence. S5 passes the fixture, actual Demo/PGlite Pack/artifact checks and local
 gates; no provider account or approved spend is available, so real-provider evidence
-remains an explicit gate. G07.1-G07.4 are accepted for local/repository scope. TASK-236/S1-S5
+remains an explicit gate. G07.1-G07.2 and G07.4 are accepted for local/repository scope; G07.3 remains open for the real server/provider journey. TASK-236/S1-S5
 and the repository common DoD are now accepted after disposable PostgreSQL and green
-remote CI evidence; the goal is 7/12 workstreams and 32/48 criteria, with 41/60
+remote CI evidence; the goal is 7/12 workstreams and 35/48 criteria, with 44/60
 checkpoints complete. TASK-238/S1
 then publishes a source-backed six-journey capability matrix with engineering owner
 roles, test/source references and explicit exclusions; product/tax owner review and
@@ -86,10 +86,9 @@ The current milestone and active checkpoint are maintained in
 
 
 [GOAL.md](../GOAL.md) owns the detailed checklist and DoD: **7/12** AI Native
-workstreams and **32/48** criteria accepted. Registry pending work is **13 tasks**
+workstreams and **35/48** criteria accepted. Registry pending work is **13 tasks**
  (8 inherited + 5 remaining AI tasks). TASK-227 is completed documentation only;
-TASK-228/G01, TASK-229/G02, TASK-230/G03, TASK-232/G05, TASK-233/G06 and TASK-236/G09 are now accepted for repository scope; TASK-234/G07.1-G07.4
-are accepted locally while its real-provider gate remains in progress after S5;
+TASK-228/G01, TASK-229/G02, TASK-230/G03, TASK-232/G05, TASK-233/G06 and TASK-236/G09 are now accepted for repository scope; TASK-234/G07.1-G07.2/G07.4 are accepted locally while G07.3 real-provider evidence remains open after S5;
 TASK-238/S1 is evidenced and remains in progress for owner decisions and selected journey closure.
 The registry dependency graph governs execution; no production action is authorized
 merely by adding it to this roadmap.
@@ -101,7 +100,7 @@ Use [TEST_COVERAGE.md](TEST_COVERAGE.md) for latest results and
 
 This roadmap keeps the ERP build focused on a working demo first, then production
 readiness. The order matters: prove the product shape in the browser, then harden the
-server and Docker path. Status reviewed **2026-09-09** (see [STATUS.md](STATUS.md)).
+server and Docker path. Status reviewed **2026-09-13** (see [STATUS.md](STATUS.md)).
 
 Status legend: ✅ complete · 🔶 in progress · ⬜ not started.
 

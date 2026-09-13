@@ -4,6 +4,12 @@ This packet prepares the qualified tax-owner review required by TASK-204. It is
 source evidence and a decision checklist, not tax advice, a filing determination or
 production approval.
 
+**Current-source recheck (2026-09-11):** official IRAS and Royal Malaysian Customs /
+MOF pages were reviewed again. The new [dated recheck](ai-native/evidence/TASK-204-2026-09-11-source-review.md)
+records the effective-date, threshold and transition facts and identifies a current
+Malaysia rental/leasing FAQ versus MOF/background conflict. It supersedes neither
+the required qualified-owner review nor the fail-closed production boundary.
+
 ## Current source mapping
 
 The current demo seed and tax resolver provide the following explicit facts:
