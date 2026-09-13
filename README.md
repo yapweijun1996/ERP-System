@@ -5,8 +5,10 @@ Implementation handoff: [execution guide](docs/AI_NATIVE_EXECUTION.md),
 [Agent follow-up prompt](docs/AGENT_FOLLOWUP_PROMPT.md).
 
 Product direction: [AI Native ERP goal, checklist and DoD](GOAL.md).
-Current goal acceptance: 0/12 workstreams and 0/48 criteria; planning completion
-does not imply an implemented AI assistant, WebMCP interface or MCP server.
+Current goal acceptance: **7/12 AI workstreams (58.3%)** and **35/48 criteria
+(72.9%)**; the separate execution-checkpoint projection is **44/60 (73.3%)**.
+Planning completion does not imply an implemented AI assistant, WebMCP interface or
+MCP server.
 
 ERP review status (2026-09-08): [module test coverage](docs/TEST_COVERAGE.md) lists verified
 workflows, known failures and untested production boundaries. All-route rendering

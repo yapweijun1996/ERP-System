@@ -212,12 +212,14 @@ cross the fulfilment/accounting boundary, preserving one authoritative posting p
   `erp.worker.telemetry` JSON record from `src/worker/telemetry.ts`. It aggregates queue
   depth, ready work, active leases, attempted/retrying rows, failures, dead letters and
   oldest pending age under the existing worker RLS flags. It intentionally omits tenant
-  identifiers, payloads, credentials, lock owners and raw errors. Current implementation
-  awaits telemetry before business processing and calculates each aggregate from the
-  whole queue table; `ready` is a coarse availability count rather than the exact claim
-  predicate (for example, lease eligibility and reminder time are not represented).
-  TASK-201 must move/limit this read path, prove indexed bounded plans and align every SLI
-  with its queue claim contract before production alert thresholds are trusted.
+  identifiers, payloads, credentials, lock owners and raw errors. The emitter is
+  single-flight and non-blocking, so telemetry does not delay business processing.
+  Each aggregate still reads its whole queue table; `ready` and `inFlight` use the
+  queue-specific lease, document-processing-status, attempt, enabled-connection and
+  reminder-due predicates.
+  TASK-201 must prove indexed bounded plans at representative volume, define the
+  numerical budget and align every SLI with its queue claim contract before production
+  alert thresholds are trusted.
 - **Local Postgres proof** (no Docker required): `createdb erp_system_proof` against
   PostgreSQL 16+, then point `POSTGRES_URL` at that empty database and run `npm run
   demo`. Do not migrate or seed it first: the proof's read-only preflight requires zero

@@ -3,8 +3,8 @@
 Execution instructions: [AI Native execution guide](AI_NATIVE_EXECUTION.md),
 [12 task packets](AI_NATIVE_EXECUTION.md#recommended-sequence) and
 [copyable follow-up prompt](AGENT_FOLLOWUP_PROMPT.md). TASK-240 completes this
-documentation refinement. The 60 execution checkpoints are currently 41/60; they are
-not additional task records or accepted AI capabilities.
+documentation refinement. The 60 execution checkpoints are currently **44/60**;
+they are not additional task records or accepted AI capabilities.
 
 AI Native delivery: [GOAL.md](../GOAL.md) contains the 12-workstream checklist
 and common DoD. TASK-227 is documentation-only; TASK-228, TASK-229, TASK-230,
@@ -19,7 +19,7 @@ step to a single viewport. TASK-226 adds the trusted Module Activation choice be
 TASK-215 is documentation
 reconciliation, not runtime completion.
 
-Reviewed: **2026-09-09**
+Reviewed: **2026-09-13**
 
 The machine-readable task source of truth is
 [`../tasks/tasks.jsonl`](../tasks/tasks.jsonl). This file is a human-readable index,
@@ -47,7 +47,13 @@ release-manifest publication, adds a bounded read-only release evidence verifier
 aligns the configured `/erp/` public path across Vite, nginx and the service worker locally; production,
 CI, device and external-service gates remain separate.
 
-TASK-194 audited historical HEAD `00e2533`. The current EPIC-067 worktree is 104 migrations
+Current snapshot (2026-09-13): the registry is **227 Done / 6 In Progress / 4 Todo /
+3 Blocked / 240 Total**; AI acceptance is **7/12 workstreams**, **35/48 criteria**
+and **44/60 checkpoints**. Candidate revision `b695a83` passed remote CI run
+`34746493412`; current public availability and exact release identity are tracked by
+TASK-199, while production/provider and owner-acceptance gates remain separate.
+
+TASK-194 audited historical HEAD `00e2533`. The historical EPIC-067 snapshot recorded 104 migrations
 through 0103, schema v103/255 tables, 129 Canonical / 0 Preview routes, 129 routes declaring
 API mode, 1,728 English i18n keys/72 local packs, 315 permission codes and PWA v264. HEAD
 collects 170 files / 666
@@ -57,8 +63,8 @@ also passed typechecks, lint, API/Demo builds, generated schema/drift/permission
 2 focused Platform files / 15 tests, 2 disposable PostgreSQL files / 2 tests, Staff Calendar API integration 6/6, Staff Calendar
 Demo E2E, Platform layout E2E with both tenant modes, Demo autofill E2E, the
 59-route/13-role access matrix, 129-screen desktop/mobile audit and 129-route ×
-5-language × 2-viewport audit. The current disposable PostgreSQL/FORCE-RLS proof is
-recorded in TASK-195; current-HEAD remote CI is now green and production release remains open, while
+5-language × 2-viewport audit. The historical disposable PostgreSQL/FORCE-RLS proof is
+recorded in TASK-195; that checkpoint's remote CI was green and production release remained open, while
 public probes and older suite totals are historical evidence. The current remote CI run
 `34189671568` on the latest code-bearing revision `ff6e0d9355c38ce06065267034c020ac55eea7e9` passed all four Vitest
 shards and every validation gate, including PostgreSQL 16 security, the five-language
@@ -66,8 +72,8 @@ desktop/mobile matrix, smoke, full 129-route screen and both layout audits. The 
 PostgreSQL and i18n failures are historical and are recorded as repaired source/CI
 findings. GitHub Pages run `34189671604` succeeded for the static Demo and its
 `release.json` identifies the same revision, demo mode and 133 files. Production API
-availability remains separate; a fresh public probe returns HTTP 502 from the production
-Cloudflare origin.
+availability was separate; its fresh public probe returned HTTP 502 from the production
+Cloudflare origin. Current availability is tracked by TASK-199 above.
 TASK-211 is done:
 the generated business i18n allowlist is synchronized and its CI drift check is configured;
 the current workflow evidence is recorded under TASK-203. TASK-212 is done: active-route
@@ -183,7 +189,7 @@ delivery: `SMTP_HOST` is empty and no password-reset mail path is enabled.
 | TASK-208 | Done | Platform/Tenant workspace dual-mode UX, MAC-effective Admin navigation, exact Employee integration and five-language browser proof |
 | TASK-209 | Blocked | PostgreSQL/RLS, current CI, release, documentation and KB proof; current CI is complete, but deployed/production evidence remains |
 
-The registry therefore has **226 Done / 6 In Progress / 5 Todo / 3 Blocked / 240 Total**.
+The registry therefore has **227 Done / 6 In Progress / 4 Todo / 3 Blocked / 240 Total**.
 The blockers are TASK-017 (physical phone), TASK-193 (SMTP/recovery) and TASK-209
 (release proof waiting for deployed-production evidence). TASK-203 is Done with current-HEAD
 remote evidence; TASK-209 remains blocked only by the separate production release chain.
@@ -436,9 +442,9 @@ statuses above and keep each change independently testable:
   checks do not satisfy the real-device acceptance criterion.
 - **TASK-193:** administrator email recovery. Production SMTP and Platform recovery are
   not configured/proven.
-- **TASK-209:** release proof remains blocked. Current-HEAD CI is green in run
-  `34189671568`, but production public health, exact deployed revision and production
-  configuration evidence remain under TASK-199/TASK-209.
+- **TASK-209:** release proof remains blocked. The current candidate CI is green in run
+  `34746493412`, but the remaining deployed/production configuration and release
+  evidence stay under TASK-199/TASK-209.
 
 See [ROLE_PERMISSION_ARCHITECTURE.md](ROLE_PERMISSION_ARCHITECTURE.md) for the current
 implementation boundary and migration dependencies, and [EPICS.md](EPICS.md) for epic

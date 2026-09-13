@@ -1,5 +1,26 @@
 # Deployment
 
+Public Tunnel recovery — 2026-09-11: `https://gmb01.xyz/erp/` is available.
+The system Tunnel now routes ERP to `127.0.0.1:18791`; public health returns 200
+and the complete release verifier matches revision
+`03487b13ce838407d97cd00697bd2b54b4a7c918` and all 126 asset hashes.
+A narrowly scoped Cloudflare rule prevents email and performance-beacon HTML
+injection on the ERP shell URLs. Chrome renders the Production sign-in page;
+unauthenticated Employee, Company Receipt and Platform session APIs return 401.
+This supersedes earlier public-502/pending-cutover checkpoints below. TASK-199
+remains open for operational alerting/ownership and exercised rollback; OCR,
+real-provider and business acceptance are separate. No database or application
+release was changed. Evidence: [public recovery](ai-native/evidence/TASK-199-2026-09-11.md).
+
+
+Public availability recheck — 2026-09-13: the read-only checker against
+`https://gmb01.xyz/erp` returned healthy for revision
+`03487b13ce838407d97cd00697bd2b54b4a7c918`; all seven release checks passed across
+126 manifest assets. This confirms public revision and asset identity at probe time.
+TASK-199 remains open for an approved alert destination, named incident responder,
+delivered test alert and exercised immutable application rollback. Evidence:
+[dated public recheck](ai-native/evidence/TASK-199-2026-09-13-public-availability.md).
+
 Two release targets are defined from one repo; GitHub Pages is the public static Demo
 deployment and Docker is the production deployment:
 
@@ -76,18 +97,16 @@ The local Receipt-to-Pack persistence and PDF evidence is recorded in
 This does not establish off-machine recovery, production scale, public HTTPS health,
 OCR worker readiness or human visual PDF review.
 
-Public `https://gmb01.xyz/erp` still returns 502. The active system Tunnel reads
-`/etc/cloudflared/config.yml`, which currently lacks the `/erp` route. The home
-Tunnel config is not active; the old Node service at 8791 is only a placeholder.
-A checksum-guarded activation script under `~/Documents/ERP-Production` is prepared
-with backup and restart-failure rollback. System administrator authentication and
-subsequent public HTTPS verification remain required. Do not mark public recovery
-from the local health endpoint alone.
-The candidate file passes `cloudflared tunnel --config
-~/Documents/ERP-Production/cloudflared-config.proposed.yml ingress validate`; this
-checks syntax and rule ordering only, and does not activate the system Tunnel.
+The active system Tunnel reads `/etc/cloudflared/config.yml` and now routes
+`/erp` to `http://127.0.0.1:18791`. The home Tunnel config and old Node placeholder
+at 8791 are not the production route. Administrator activation and public
+health/revision/126-file verification completed on 2026-09-11; see the
+[recovery and rollback record](ai-native/evidence/TASK-199-2026-09-11.md).
+The ERP shell configuration rule disables only Email Obfuscation and RUM injection
+for `/erp`, `/erp/` and `/erp/index.html` on `gmb01.xyz`, preserving exact manifest
+hashes without changing WAF, TLS or authentication.
 
-Overnight recheck — 2026-09-11: the loopback production revision and Compose
+Historical pre-cutover recheck — 2026-09-11: the loopback production revision and Compose
 services remain healthy; public `/erp/health` is still HTTP 502 and the active
 system configuration remains unchanged.
 The activation script's syntax, ShellCheck result, non-root guard, pinned candidate
@@ -200,6 +219,53 @@ fixture pass remains source/tooling evidence; it does not replace the selected p
 origin's two independent read-only probes, deployed revision, monitoring or rollback
 evidence. A local build or a stale cached asset is not deployment evidence.
 
+For scheduler and incident-sink handoff, `npm run check:availability` wraps the same
+verifier with a bounded per-request timeout and emits one sanitized JSON event. A
+healthy release returns `status: "healthy"` with the verified revision, file count and
+check booleans; any verifier failure or timeout returns `status: "degraded"` with a
+stable code and exits `1`. Invalid command options exit `2`. The command never sends
+an alert, writes remote state or includes response bodies, credentials or transport
+details. The exported `buildAvailabilityAlert`/`deliverAvailabilityAlert` boundary
+adds a fixed-message degraded/recovered event, requires an explicit HTTPS host
+allowlist, rejects credentials/query strings/fragments and redirects, bounds delivery
+time, and cancels the sink response body. An Operations owner can connect it to the
+approved alert destination without changing application behavior:
+
+```bash
+npm run check:availability -- <public-origin> \
+  --expected-revision <commit> \
+  --timeout-ms 15000 \
+  --target erp-public
+```
+
+The canonical scheduler handoff is `npm run check:availability-alert`. It emits the
+same fixed-message event and performs a delivery only when
+`ERP_AVAILABILITY_ALERT_ENDPOINT` and the comma-separated
+`ERP_AVAILABILITY_ALERT_ALLOWED_HOSTS` environment value are present. Optional
+`ERP_AVAILABILITY_ALERT_AUTHORIZATION` and
+`ERP_AVAILABILITY_ALERT_TIMEOUT_MS` values stay in the process environment and are
+never included in command output. Missing or invalid delivery configuration fails
+closed; without an endpoint the command is an explicit dry-run. A successful health
+check still returns exit `1` when the release is degraded, while a delivery
+configuration or sink failure returns exit `2` for an otherwise healthy release.
+
+```bash
+ERP_AVAILABILITY_ALERT_ENDPOINT='https://alerts.example.test/events' \
+ERP_AVAILABILITY_ALERT_ALLOWED_HOSTS='alerts.example.test' \
+ERP_AVAILABILITY_ALERT_TIMEOUT_MS=15000 \
+npm run check:availability-alert -- <public-origin> \
+  --expected-revision <commit> --target erp-public
+```
+
+`scripts/check-availability.test.ts` covers healthy/degraded verification, the bounded
+timeout path, unexpected-error message redaction, invalid-option redaction, endpoint
+allowlisting, credential/query rejection, redirect/error response cleanup and bounded
+alert-delivery timeout (13 tests). `scripts/check-availability-alert.test.ts` covers
+the canonical dry-run, allowlisted delivery, missing allowlist, sink rejection,
+bounded timeout and CLI redaction. These are source-controlled delivery contracts;
+an approved sink, responder and exercised production alert remain TASK-199 acceptance
+evidence.
+
 ### Worker telemetry source boundary
 
 `src/worker/telemetry.ts` provides a read-only structured queue snapshot for `npm run
@@ -209,18 +275,32 @@ failed, dead-letter and oldest-pending-age values. The primary worker covers aut
 outbox, reporting, tax-evidence, document scan/extraction and calendar/reminder queues;
 the dedicated calendar worker covers its three calendar/reminder queues. Set
 `WORKER_TELEMETRY_POLL_MS` to change the interval, subject to a 10-second minimum.
+When an Operations/database owner has approved a per-statement budget, set
+`WORKER_TELEMETRY_QUERY_TIMEOUT_MS` to a positive millisecond value; the worker
+clamps it to 1–120,000 ms and applies it with PostgreSQL `SET LOCAL` inside each
+telemetry transaction. Leaving it unset preserves the current no-timeout behavior.
+Each snapshot also records `queryDurationMs`, the wall-clock duration of its aggregate
+queue read. This measurement supports later representative-volume budget evidence; it
+does not define an SLO, alert threshold or production acceptance by itself.
+
+For a bounded, secret-free handoff check, pipe captured NDJSON records through
+`npm run check:worker-telemetry`. It validates only the aggregate snapshot shape and
+queue predicates. Supply an Operations/database-owner-approved threshold explicitly
+with `--max-query-ms`; without that option the command deliberately performs no
+performance judgment. See [SCALABILITY.md](SCALABILITY.md#11-worker-telemetry-and-operational-handoff)
+for the evidence and recovery handoff procedure.
 
 The snapshot is deliberately aggregate-only: it contains no tenant identifiers, queue
 payloads, credentials, lock owners or raw transport errors. Reporting, document and
 calendar reads run under the same transaction-local worker flags used by the processing
 commands; `outbox_event` remains a separately restricted operational table. This is a
 source-level observability primitive, not production proof. Both worker entry points
-currently await a due snapshot before processing work, and the aggregate queries scan
-each queue without a top-level row filter. The generic `ready` calculation checks
-`available_at` but does not fully mirror queue-specific lease/reminder/capability claim
-conditions, so it can include leased or not-yet-claimable rows. TASK-201 must bound or
-decouple collection, reconcile metric predicates with claim predicates, prove query plans
-at representative volume, and then add an operational sink, alert thresholds/ownership,
+invoke a single-flight, non-blocking emitter before processing work, so a slow telemetry
+query does not delay the business tick. Queue-specific `ready` and active `inFlight`
+predicates mirror the worker claim boundaries for leases, document processing statuses,
+report attempts, enabled calendar connections and reminder due time. The aggregate queries still scan each queue
+without a top-level row filter. TASK-201 must prove query plans and a bounded budget at
+representative volume, then connect an operational sink, alert thresholds/ownership,
 exercised recovery, backup integrity/restore timing and capacity/failover runbooks.
 
 ### Platform switch-scroll hotfix evidence (2026-08-13)
@@ -435,6 +515,27 @@ depend on a published `WEB_PORT`. The release script never calls `docker compose
 never runs `npm run migrate`, and never runs the seed. A source-only change therefore
 does not alter existing rows or schema. Keep `COMPOSE_PROJECT_NAME=erp-system` stable in
 `.env` so the named volume namespace remains stable even if the checkout path changes.
+
+For an application-only rollback, first review the previous immutable image
+references and run the no-Docker plan check. Each reference must be pinned to an
+`@sha256:<64-hex>` digest so the reviewed application revision cannot move under a
+mutable tag:
+
+```bash
+./deploy/rollback-release.sh --plan \
+  --api-image <previous-api-image> \
+  --web-image <previous-web-image> \
+  --calendar-worker-image <previous-calendar-worker-image>
+```
+
+After an approved backup and incident decision, execute the same rollback with
+`CONFIRM_RELEASE_ROLLBACK=YES` and the three `ERP_ROLLBACK_*_IMAGE` values. The helper
+validates each local digest-pinned image, writes a temporary mode-0600 Compose override, recreates
+only `api`, `web` and `calendar-worker`, and checks the private `web -> nginx -> api
+/health` path. It never runs migrations, seeds data, deletes containers outside those
+three services or removes PostgreSQL/document volumes. A successful command proves the
+selected application images are healthy on that host; it is not by itself evidence of a
+reviewed production incident, alert delivery, RPO/RTO or a completed rollback drill.
 
 The `calendar-worker` is part of the application release and does not own the database
 schema. It always processes durable Staff Calendar reminders; external delivery is

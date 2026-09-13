@@ -1,8 +1,8 @@
 # ERP goal execution plan
 
-Latest full workspace regression — 2026-09-11: `npm test -- --run` exited 0 with
-204 test files passed, 3 skipped, 901 tests passed and 3 skipped in 1186.52
-seconds. This supersedes the previous 900-test local count while remaining
+Latest full workspace regression — 2026-09-12: `npm test -- --reporter=dot` exited 0 with
+211 test files and 992 tests passed; 4 PostgreSQL-dependent files/tests were skipped.
+This supersedes the earlier 204-file/901-test local count while remaining
 repository-only evidence; PostgreSQL target, production, public Tunnel, OCR,
 provider and human acceptance remain separate gates.
 
@@ -24,17 +24,15 @@ The confirmation was simulated and the provider was a local OpenAI-shaped
 fixture, so this remains technical evidence rather than real-provider or
 business-user acceptance.
 
-Hosted Demo checkpoint — 2026-09-11: the latest successful Pages workflow
-serves the current branch; its application assets come from code release
-`ae7a3cfabde0e03a704d943dc1d99cc3bb672e2a`. A fresh public-origin browser
-context completed Setup Wizard with `expenses_tax`, confirmed one explicitly
-labelled synthetic Company Receipt, called the live Demo gateway
-(`/demo/session` 201 and `/demo/v1/responses` 200), required visible
-confirmation and read back one persisted Pack and PDF. This proves the
-deployed Demo UI/gateway/command boundary; it does not establish production
-OCR, a real provider account, public Tunnel health or human business
-acceptance. Full evidence is in
-[TASK-234 hosted E2E evidence](ai-native/evidence/TASK-234-2026-09-09.md#public-pages-deployment-and-hosted-demo-receipt-to-pack-e2e--2026-09-11).
+Hosted Demo checkpoint — 2026-09-13: merged Pages workflow `34751369035` published
+revision `a67595d5b67d24d6dfcc02b0c04f89c0e6c391ae` with `dataMode=demo` and 136
+files. Hosted Chromium rendered the localized `Expenses & Tax unavailable` state
+without `&amp;`; My Receipts moved from `Offline draft 1` to `Stored securely 1`
+and remained after reload as `Quarantined · scanner unavailable`, without source,
+response, module, permission or business-table overrides. This proves the hosted
+Demo UI/upload boundary only; scanner availability, real provider/OCR and human
+acceptance remain open. Full evidence is in
+[the merged hosted evidence](ai-native/evidence/TASK-234-2026-09-13-merged-hosted-no-override.md).
 
 Latest production renderer checkpoint — 2026-09-11: release
 `03487b13ce838407d97cd00697bd2b54b4a7c918` is healthy across API, Web,
@@ -48,8 +46,9 @@ image XObject. Final private artifact hashes are SG
 bytes) and MY `4a377d1ef83945709109c3b07e7e9f0d435ddca89c09a81713651c04810d210a`
 (28,263,378 bytes). The source rows are still synthetic 68-byte 1×1 PNGs, so
 human business acceptance and replacement with a readable receipt source remain open.
-Public `/erp/health` remains HTTP 502 until the prepared system Tunnel route is
-activated.
+Public `/erp/health` returns HTTP 200 with the verified release revision and asset
+hashes; alerting, exercised rollback and human/provider acceptance remain open. See
+[the public availability evidence](ai-native/evidence/TASK-199-2026-09-13-public-availability.md).
 
 Production Receipt-to-Pack pilot baseline — 2026-09-10: the fresh local production PostgreSQL
 environment exercised the coherent API/Web revision
@@ -264,7 +263,7 @@ tokens); tested localhost origins were rejected. This is protocol evidence only,
 not full Receipt-to-Pack/operator acceptance. Requests send user query text, not
 receipt files, and do not occur at startup. See [AI_PROVIDERS.md](AI_PROVIDERS.md).
 
-Reviewed: **2026-09-10**. Goal owner: product owner. Execution/evidence owner:
+Reviewed: **2026-09-13**. Goal owner: product owner. Execution/evidence owner:
 engineering. This page owns the active focus and continuation decision;
 [GOAL.md](../GOAL.md) owns the goal/acceptance criteria, and
 [tasks/tasks.jsonl](../tasks/tasks.jsonl) owns statuses and dependencies.
@@ -295,11 +294,10 @@ server/Compose opt-in wiring now exist and have injected-HTTP/PGlite evidence.
 **Verification:** 5 focused files / 60 tests, final 19-test adapter hardening,
 G06 regression, common local gates and desktop/375px fixture pass. See
 [TASK-234 evidence](ai-native/evidence/TASK-234-2026-09-09.md#company-resolver-and-bootstrap--local-integration-verified).
-**Integrated regression:** the latest full run exited 0 with 204 files / 901 tests
-passed and 3 PostgreSQL files/tests skipped because POSTGRES_URL was unset.
-This supersedes the previous 900-test count and historical MCP fixture-clock
-failures. PostgreSQL and real operator acceptance remain open. See [regression
-evidence](ai-native/evidence/TASK-234-2026-09-09.md#full-workspace-regression-recheck--2026-09-11).
+**Integrated regression:** the latest full run exited 0 with 211 files / 992 tests
+passed and 4 PostgreSQL-dependent files/tests skipped because no PostgreSQL target
+was configured. This supersedes the previous 204-file/901-test count. PostgreSQL
+and real operator acceptance remain open. See the [current progress snapshot](../PROGRESS.md).
 **Pilot runner:** `scripts/receipt-assistant-pilot.ts` now rehearses fresh disk-backed
 SG/MY fixtures through authenticated APIs and verifies persisted Pack/PDF after
 database reopen. It now requires individual receipt detail reads and saves exact

@@ -106,6 +106,9 @@ passwords and activation secrets are never exposed. Entry and return are audited
 while Demo seed remains guarded by explicit Demo-only environment flags plus an
 empty-database check. Import preflight and commit remain server-side, bounded,
 replay-resistant, audited and transactionally atomic.
+Employee account create/reset validates the encrypted credential envelope before
+writing; active-secret and reveal paths validate persisted values and fail closed
+on malformed or tampered envelopes without exposing cryptographic errors.
 
 ## Dependency supply-chain boundary (TASK-143)
 

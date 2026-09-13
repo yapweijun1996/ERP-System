@@ -1,11 +1,368 @@
 # ERP-System Project Logic
 
+TASK-237 G10.1 acceptance mapping — 2026-09-13: the frozen Receipt Pilot
+catalog and independent oracle satisfy the exact evaluation-set criterion. The
+30 P01–P16 cases and 9 negative cases cover happy paths, invalid input, prompt
+injection, unauthorized data, stale approval, revocation and retry/replay, with
+Company scope and persisted Pack postconditions checked independently. This
+accepts G10.1 only in that evidence record; G10.3 is now separately accepted for
+the source/deterministic fixture boundary. G10.4 is separately accepted for the
+source/CI release-control boundary; real-provider and production evidence remain
+open. See the [dated acceptance evidence](ai-native/evidence/TASK-237-2026-09-13-g10-1-acceptance.md).
+
+TASK-237 G10.3 fixture observability — 2026-09-13: canonical C-SG and C-MY
+fixture runners emitted complete redacted reports with versioned fixture/model/
+prompt/tool metadata, hashed correlations, simulated approval state, verified
+Receipt/Pack/artifact postconditions, latency, provider calls, retries and
+`fullRetryCostMicros`. Focused tests reject unredacted identifiers, forbidden
+sensitive fields and under-reported retry cost. This accepts G10.3 for the
+source/deterministic fixture boundary; S4 owner-approved budgets, live-provider
+measurements, production rollout/retention/disable and human acceptance remain
+open. See the [dated evidence](ai-native/evidence/TASK-237-2026-09-13-g10-3-fixture-observability.md).
+
+TASK-237 G10.4 CI release-control acceptance — 2026-09-13: the current candidate
+`b695a833` passed remote CI run `34746493412`, which executes the same
+deterministic evaluator, broken-fixture fail-closed probe and rollout/
+emergency-disable probe. The local probe rejected a broken candidate, advanced a
+valid prompt version and blocked rollout after disable. This accepts G10.4 for
+the source/CI boundary; production rollout, retention and emergency-disable
+observation remain open. See the [dated evidence](ai-native/evidence/TASK-237-2026-09-13-g10-4-ci-acceptance.md).
+
+TASK-237 S4 provider scope and budget handoff — 2026-09-13: measured local
+fixture and hosted Demo query-only facts are consolidated with the required
+provider/model/data-policy and p95/cost/call/concurrency owner fields. The
+existing observability validator remains fail-closed while the budget state is
+pending; this handoff does not invent thresholds or establish provider,
+production or human-acceptance evidence. See the [dated handoff](ai-native/evidence/TASK-237-2026-09-13-budget-scope-handoff.md).
+
+TASK-237 Demo model evaluation rerun — 2026-09-13: a registered-Origin session
+preflight returned HTTP `201`, then three fresh Chromium contexts completed all
+30 frozen query slots but passed only 2/30, 5/30 and 6/30 proposals because the
+gateway returned bounded `demo_gateway_unavailable` failures. The deterministic
+negative gate remained 9/9 with zero safety or false-success failures. This is
+Demo query-only evidence and does not prove live model-scored receipt actions,
+provider budgets, production or human acceptance. See the [dated rerun evidence](ai-native/evidence/TASK-237-2026-09-13-demo-model-evaluation-rerun.md).
+
+TASK-237 local rollout/disable probe — 2026-09-13: the deterministic evaluator
+accepts version metadata and the CI validate path now exercises broken-candidate
+rejection, valid candidate advancement and emergency disable. This local probe
+does not establish production rollout/retention/disable evidence. Candidate
+revision `a4216346` subsequently passed remote CI run `34740634873`, including
+the evaluator, broken-fixture and rollout/disable steps plus all configured
+source/generated, database, Demo, i18n, browser, layout and public-subpath
+checks. A later Screen-audit timing race on run `34743412098` was repaired by
+waiting for the declared shared-list marker; repaired revision `b695a83` passed
+run `34746493412`. See the [dated probe evidence](ai-native/evidence/TASK-237-2026-09-13-rollout-disable-probe.md),
+[remote CI evidence](ai-native/evidence/TASK-237-2026-09-13-remote-ci.md) and
+[failure/repair evidence](ai-native/evidence/TASK-237-2026-09-13-remote-ci-screen-audit-failure.md).
+
+TASK-237 Demo model evaluation threshold — 2026-09-13: a shared 7-second paced
+runner with bounded transient-error retries completed three independent 30-case
+query-only runs at 30/30, 30/30 and 29/30 (100%, 100%, 96.7%), with provider calls
+30, 30 and 31, retries 0/0/1, p95 latency 7,639–8,626 ms, 9/9 deterministic
+negative cases and zero safety or false-success failures. This satisfies the
+numeric Demo threshold for S3/G10.2;
+live receipt actions, provider budgets, remote CI and production acceptance remain
+separate. See the [dated threshold evidence](ai-native/evidence/TASK-237-2026-09-13-demo-model-evaluation-success.md).
+
+TASK-202 authenticated API concurrent conflicting Pack facts — 2026-09-13: the
+Company Receipts API regression now launches two same-scope POST requests with
+one `packKey` but different date selections and proves exactly one `201` create
+plus one mapped `company_receipt_pack_key_conflict`/409 result and one scoped
+Pack row. Tenant scope remains session-derived and the shared immutable
+uniqueness/replay command is unchanged. This is local PGlite/API evidence; a
+PostgreSQL target, production release and Finance/QA acceptance remain separate.
+See the [dated evidence](ai-native/evidence/TASK-202-2026-09-13-api-concurrent-conflict.md).
+
+TASK-202 disposable PostgreSQL parity and authenticated Company Receipts E2E —
+2026-09-13: a fresh local PostgreSQL 16 database passed the full cross-engine
+Demo proof with identical PGlite/PostgreSQL results and exactly one winner in
+the true concurrency race. The authenticated Company Receipts API/browser
+journey also passed confirmation, refresh/search/range, Preview/PDF/Print and
+responsive checks through the PostgreSQL adapter. Temporary databases were
+dropped after the run. This is disposable local evidence only; production
+readable SG/MY sources and Finance/QA visual Print acceptance remain separate.
+See the [dated evidence](ai-native/evidence/TASK-202-2026-09-13-postgres-parity.md).
+
+TASK-202 concurrent conflicting Pack facts — 2026-09-13: the local Company
+Receipt Pack domain regression now launches two same-scope requests with one
+`packKey` but different date selections and proves exactly one immutable create
+plus one `company_receipt_pack_key_conflict`/409 result and one scoped Pack row.
+The production composite uniqueness and fact-matched replay logic is unchanged.
+This is local PGlite/source evidence; a PostgreSQL target, production release
+and Finance/QA acceptance remain separate. See the [dated evidence](ai-native/evidence/TASK-202-2026-09-13-concurrent-conflict.md).
+
+TASK-202 concurrent Pack-key convergence regression — 2026-09-13: the local
+Company Receipt Pack domain test now launches two same-scope identical
+`packKey` requests through the shared transaction helper and proves one created
+snapshot plus one fact-matched replay, equal source hash/rows/totals and one
+scoped Pack row. The production composite uniqueness and conflict-replay logic
+is unchanged. This is local PGlite/source evidence; a PostgreSQL target,
+production release and Finance/QA acceptance remain separate. See the [dated
+evidence](ai-native/evidence/TASK-202-2026-09-13-concurrent-pack-key.md).
+
+TASK-234 merged Pages publication and hosted no-override verification —
+2026-09-13: Pages workflow `34751369035` published revision
+`a67595d5b67d24d6dfcc02b0c04f89c0e6c391ae` with Demo mode and 136 files. Fresh
+hosted Chromium rendered the exact Company Receipts title `Expenses & Tax
+unavailable` without visible `&amp;`, then uploaded a 5 KB PNG through My
+Receipts; the record moved from `Offline draft 1` to `Stored securely 1` and
+remained after reload as `Quarantined · scanner unavailable`. No source,
+response, module/permission or business-table override was used. This closes
+the merged hosted Demo publication/title/upload visibility; scanner,
+real-provider OCR, production and human Finance/QA acceptance remain separate.
+See the [merged hosted evidence](ai-native/evidence/TASK-234-2026-09-13-merged-hosted-no-override.md)
+and the [prior hosted evidence](ai-native/evidence/TASK-234-2026-09-13-hosted-no-override.md).
+
+TASK-234 remote CI terminal acceptance — 2026-09-13: GitHub Actions run
+`34730030719` completed successfully for revision
+`d936a348e50d0b9edf7718ac1eadba1f5a17a4b6`. Source/generated, Demo, i18n,
+desktop/mobile browser, Screen, transaction-list, operational-workspace,
+production public-subpath and cleanup checks all passed. This closes the remote
+CI regression-safety gate only; scanner availability, real-provider OCR,
+production Pack release and human Pack/Print acceptance remain separate. See
+the [dated terminal CI evidence](ai-native/evidence/TASK-234-2026-09-13-ci-terminal.md).
+
+The merged revision `a67595d5b67d24d6dfcc02b0c04f89c0e6c391ae` has a separate
+terminal CI run `34751368911`. Its source/generated, database, Demo, i18n and
+desktop/mobile Browser smoke gates passed, but the Screen audit failed with
+`LAYOUT [desktop:user-mgmt] transaction-list-v1 root missing`; later layout,
+public-subpath and cleanup steps were skipped. The local audit recovery budget
+is now 30 seconds and the focused and full local screen audits pass; a fresh
+candidate CI terminal run is required for the repaired revision. See [merged CI
+failure evidence](ai-native/evidence/TASK-234-2026-09-13-merged-ci-failure.md)
+and the earlier [merged CI progress evidence](ai-native/evidence/TASK-234-2026-09-13-merged-ci-progress.md).
+
+Historical TASK-234 public Pages bundle recheck — 2026-09-13: the read-only
+Pages `release.json` identified revision
+`976a863eabcb8f1499308a64dac646146ed44b6e` (`workflowRunId` `34689661151`),
+whose `app.js` lacked the current module-title repair and whose
+`screens-hr.js` read `d.capabilities.receipts` without unwrapping
+`contextResponse.data`. The public CSS retained the wizard scroll and sticky
+header/footer rules. This pre-publication record is superseded by the authorized
+hosted verification above; it remains separate from real-provider and
+production evidence. See the [dated public bundle
+recheck](ai-native/evidence/TASK-234-2026-09-13-public-bundle-recheck.md).
+
+TASK-234 My Receipts capability-envelope handoff — 2026-09-13: the committed
+`5e983e9bd88a1d2bb4f0d25695d1a61f2d6a167b` screen fix unwraps the server
+`{data, meta}` work-context response before reading `capabilities.receipts.writable`.
+The focused Company Receipts/Demo regression confirms upload reachability and
+localized access text without changing tenant, approval or Demo/PostgreSQL
+contracts. The local publication gap is superseded by the hosted no-override
+verification above; real provider and human acceptance remain open. See [dated
+evidence](ai-native/evidence/TASK-234-2026-09-13-upload-title-candidate.md).
+
 TASK-234 governed HEIC original inspection — 2026-09-13: the Receipt Assistant
 now accepts HEIC/HEIF content after the existing tenant, version and SHA-256
 checks. It avoids an unsupported browser image preview and offers a download
 with the governed original name; PDF/PNG/JPEG/WebP previews remain unchanged.
 This is local source/Demo evidence only and does not replace production provider
 or business acceptance. See [dated evidence](ai-native/evidence/TASK-234-2026-09-13-heic-original-download.md).
+
+TASK-204 effective-date ambiguity guard — 2026-09-13: the shared
+`getEffectiveTaxRate()` repository query now returns `null` for an ambiguous
+Company-scoped effective date instead of selecting one overlapping rule by
+insertion order. Tests preserve inclusive `validFrom` / exclusive `validTo`
+semantics and prove identical tax codes remain isolated by Master, Company and
+tax regime. This is local source/Demo/PGlite evidence; qualified tax-owner
+approval and production SG/MY configuration remain separate. See [dated
+evidence](ai-native/evidence/TASK-204-2026-09-13-ambiguity-guard.md).
+
+TASK-193 employee credential-envelope boundary — 2026-09-13: employee account
+create/reset commands now require the exact encrypted-token envelope before
+writes, active-secret reads fail closed on malformed persisted values, and
+temporary-password reveal normalizes decrypt failures to bounded
+`temporary_credential_unavailable` output. The authenticated route continues to
+derive tenant scope from the session and appends reveal audit only after
+success. Local HR/API/PGlite evidence passes 3 files / 19 tests; production
+SMTP, separate Platform Superadmin recovery, PostgreSQL/RLS and owner review
+remain open. See [dated TASK-193 evidence](ai-native/evidence/TASK-193-2026-09-13-credential-envelope.md).
+
+TASK-201 bounded worker telemetry handoff — 2026-09-13: primary and calendar
+workers now emit aggregate-only query duration, accept an optional bounded
+transaction-local statement timeout, and keep document/calendar readiness
+predicates aligned with worker claim rules. The read-only telemetry validator
+enforces the fixed queue shape, privacy allowlist, explicit budget classification
+and stdin pipeline marker. Local source/fixture/Demo gates pass; representative
+production scale, SLO, alert, restore and failover evidence remain separate.
+See [dated TASK-201 evidence](ai-native/evidence/TASK-201-2026-09-13-telemetry-handoff.md).
+
+TASK-199 availability and rollback source handoff — 2026-09-13: the release verifier now owns response cancellation/reader release on bounded failures; availability events are fixed-message, secret-free and deduplicable; alert delivery remains default-deny with HTTPS host allowlisting; rollback accepts only immutable application image digests and preserves PostgreSQL/document volumes. Local fixture verification passes 4 files / 37 tests plus lint, typechecks, Demo and Demo build. Production alert sink, responder, delivered alert and exercised rollback remain open. See [dated TASK-199 evidence](ai-native/evidence/TASK-199-2026-09-13-source-handoff.md).
+
+TASK-199 public availability recheck — 2026-09-13: a read-only
+`check:availability` probe against `https://gmb01.xyz/erp` returned healthy for
+revision `03487b13ce838407d97cd00697bd2b54b4a7c918`; all seven release checks
+passed across 126 manifest assets. This confirms public availability and exact
+release identity at probe time, while alert delivery, incident ownership and
+rollback remain separate operational gates. See [dated recheck](ai-native/evidence/TASK-199-2026-09-13-public-availability.md).
+
+TASK-205 source safety/readiness boundary — 2026-09-13: the document processing worker, HTTP drivers, connector readiness projection and authenticated retry action now enforce bounded application-owned errors, response cleanup, encrypted-token fail-closed checks, authenticated tenant scope and idempotent audit recovery. The focused local/API regression passes 6 files / 65 tests; production provider/account/region/retention/health/rotation/recovery and owner acceptance remain separate gates. See [dated TASK-205 evidence](ai-native/evidence/TASK-205-2026-09-13-source-boundary.md).
+
+TASK-202 Receipt Pack Print contract — 2026-09-13: the authenticated Pack PDF
+route now has direct `action=print` contract coverage for inline disposition,
+private no-store caching, bounded artifact/source hashes, `%PDF` content and
+`pdf_print` audit attribution under the session-derived Master/Company scope.
+The Pack/API/PDF regression passes 4 files / 23 tests; Demo and browser checks
+remain fixture evidence. Production readable SG/MY sources and Finance/QA
+visual Print acceptance remain open. See [dated TASK-202 evidence](ai-native/evidence/TASK-202-2026-09-13-print-contract.md).
+
+TASK-236 repository acceptance — 2026-09-11: the bounded durable Receipt Pack workflow now persists run/step state, approval waiting, leases, pause/resume/cancel and transactional trigger deduplication; disposable PostgreSQL two-worker proof and current-branch CI run `34530777179` passed. Production/provider/business-owner acceptance remains separate. See [TASK-236 evidence](ai-native/evidence/TASK-236-2026-09-11.md).
+
+
+TASK-205 Vision readiness recheck — 2026-09-11: source-level Vision failure,
+revocation, retry and same-chain recovery tests pass. Configured
+`document-vision` health checks remain `warning` with
+`provider_health_unverified` and do not advance `lastSuccessAt` without a live
+probe. The hosted Demo endpoint
+is a bounded receipt-search proposal service and does not receive receipt files
+or stand in for `DOCUMENT_VISION_GATEWAY_URL`; Codex OCR review is therefore
+synthetic evidence only. Production provider/account/region/retention/health
+and live alert/recovery evidence remains an external gate. See the
+[dated TASK-205 record](ai-native/evidence/TASK-205-2026-09-11-source-review.md).
+
+The tenant-scoped `GET /api/integration/document-processing-readiness` projection
+derives `masterFn` and `companyFn` from the authenticated session and ignores
+client-supplied tenant query parameters. It keeps source capability, Company configuration and live provider evidence as
+separate facts. It is secret-free and returns `externalProviderReady` only for a
+BYOK Vision policy whose enabled connected connector has credentials, endpoint,
+region, retention and healthy `lastCheckedAt` + `lastSuccessAt` evidence; a
+historical success without its health-check timestamp remains unverified; pausing the connector
+invalidates readiness even when that timestamp remains as historical metadata. A credential-only fixture
+therefore remains `configured-provider-unverified`. Persisted connector credential
+state is revalidated as encrypted envelopes at readiness, enable and health-check
+boundaries, including connectors whose policy does not require a credential, so a
+malformed non-empty stored value is invalid and cannot be enabled, reported healthy
+or promoted to ready. The policy-selection command and worker extraction boundary
+apply the same envelope check, so malformed persisted credentials fail closed
+before any Vision or local-OCR call. A null envelope remains valid for an explicitly
+credential-free OpenAI-compatible policy. Local OCR remains the safe
+source capability and the Demo endpoint/Codex review does not become production
+provider evidence. The readiness projection is scoped by both `masterFn` and
+`companyFn`; a same-named Company under another Master receives its own default
+state and cannot observe the configured connector endpoint or credential.
+
+The shared document worker may claim queued scan/extraction jobs before a tenant
+is known, but it derives the composite `masterFn` + `companyFn` scope from each
+claimed job before reading bytes, calling Local OCR/Vision or persisting results.
+The cross-tenant regression covers simultaneous `M1/C-SG` and `M1/C-MY` jobs and
+asserts exact source-hash/byte correspondence and scope-preserving persistence.
+When policies differ, the same boundary resolves the provider, region, model,
+base URL and credential from that job's Company scope; a Local OCR job receives
+no Vision credential, and a BYOK Vision job receives only its own connector data.
+
+TASK-234 Agent provider configuration follows the same fail-closed credential rule:
+`publicRow` reports `credentialConfigured` only for a valid encrypted-token envelope,
+derives `enabled` from that validity for non-deterministic providers, and never returns
+the stored label for a malformed value. The update command rejects a malformed
+persisted envelope until the caller clears it or supplies a valid replacement; runtime
+resolution retains its independent encrypted-envelope check.
+
+Document worker retry and dead-letter persistence maps arbitrary scanner/provider
+exceptions to bounded application-owned messages; raw provider URLs, credentials and
+response bodies are not stored in document job or processing outbox error fields. The
+three HTTP drivers pass `redirect: 'error'` so document requests fail closed on redirects.
+Their successful responses are streamed and capped at 8 MiB before JSON parsing;
+runtimes that expose only `text()` receive the same byte check before parsing;
+failed responses and invalid or advertised oversized responses cancel their
+unconsumed bodies before the fixed status, metadata or bounded-size error is
+returned. Successful responses must parse as a non-array JSON object; syntax or
+shape failures return one bounded application-owned error before field access. If a
+streamed read fails, the reader is cancelled before the original transport error
+is rethrown and its lock is released. The HTTP Vision driver preserves a
+provider-supplied 64-character
+hexadecimal visual fingerprint for worker validation and persistence; it never
+derives that evidence from OCR text.
+
+TASK-204 official-source recheck — 2026-09-11: IRAS and Royal Malaysian Customs/MOF
+material was compared with the current effective-dated `tax_rule` seed and resolver.
+The source-backed record keeps SG rate/registration/transition facts and surfaces the
+Malaysia rental/leasing rate and exemption conflict for qualified-owner resolution.
+No production tax rule or compliance claim changed. See the
+[dated recheck](ai-native/evidence/TASK-204-2026-09-11-source-review.md).
+
+
+Receipt upload and authorized Demo review — 2026-09-11: My Receipts must unwrap
+`my.context().data` before reading `capabilities.receipts.writable`, matching the
+existing Demo/API response envelope. The screen now does so; 3 focused regressions
+and desktop/375px browser upload checks pass. No business permission or scanner
+contract changed. The user selected the existing Demo gateway and delegated
+OCR/receipt/PDF review to Codex. One synthetic receipt produced one persisted Pack;
+authorized PDF bytes/hash remained identical after reload and both pages were
+independently rendered/read. The local source repair is not deployed; the hosted
+run used an explicitly temporary screen override and module/scan fixtures.
+[Evidence and remaining boundaries](ai-native/evidence/TASK-234-2026-09-11-codex-demo.md).
+At this pre-publication checkpoint, the no-override Pages check at 1440px still
+showed zero upload controls because the published bundle read the work-context
+envelope before `.data`; the local repair passed focused screen tests plus
+desktop/mobile Demo E2E. Release-owner authorization was the next measurable exit
+at that time. The later authorized Pages publication and hosted no-override
+verification supersede this gap; scanner, real-provider OCR and human acceptance
+remain open. See [the superseding hosted evidence](ai-native/evidence/TASK-234-2026-09-13-hosted-no-override.md).
+
+The browser Demo gateway cancels an unconsumed body for rejected 403/503/redirect
+responses before returning a bounded application error, and a denied session still
+dispatches no inference request. This preserves the Demo transport boundary and
+does not establish real-provider or production evidence. See the
+[cleanup record](ai-native/evidence/TASK-234-2026-09-09.md#demo-gateway-rejected-response-cleanup--2026-09-11t103256z).
+
+Upload repair release candidate — 2026-09-11: detached commit
+`02f28fe5a3aaa69b1d6f63c09cf00a1415a8dca4` is based on the deployed Demo source
+`ae7a3cfabde0e03a704d943dc1d99cc3bb672e2a` and contains only the My Receipts
+response-envelope fix. Candidate lint, both typechecks, PGlite proof and a
+temporary 3-test capability-envelope regression passed. The clean Demo build
+and a fresh setup browser session
+verified the three writable upload controls without a screen override. This is
+a local release candidate; push, Pages deployment and production acceptance
+remain separate.
+
+Public Tunnel recovery — 2026-09-11: `https://gmb01.xyz/erp/` is available.
+The system Tunnel now routes ERP to `127.0.0.1:18791`; public health returns 200
+and the complete release verifier matches revision
+`03487b13ce838407d97cd00697bd2b54b4a7c918` and all 126 asset hashes.
+A narrowly scoped Cloudflare rule prevents email and performance-beacon HTML
+injection on the ERP shell URLs. Chrome renders the Production sign-in page;
+unauthenticated Employee, Company Receipt and Platform session APIs return 401.
+This supersedes earlier public-502/pending-cutover checkpoints below. TASK-199
+remains open for operational alerting/ownership and exercised rollback; OCR,
+real-provider and business acceptance are separate. No database or application
+release was changed. Evidence: [public recovery](ai-native/evidence/TASK-199-2026-09-11.md).
+
+Application rollback remains a separate, explicit boundary. The source-controlled
+`deploy/rollback-release.sh` accepts only reviewed immutable `@sha256:<64-hex>` image references, requires
+`CONFIRM_RELEASE_ROLLBACK=YES`, recreates `api`, `web` and `calendar-worker` through a
+temporary mode-0600 Compose override, preserves PostgreSQL/document volumes and checks
+the private web-to-API health path. Local plan/guard tests do not prove production
+rollback or alert ownership.
+
+The release verifier cancels response bodies when URL or bounded-size prechecks fail,
+cancels a stream reader when reading fails, and releases its reader lock after stream
+errors. This prevents an operational probe from retaining an unconsumed body while
+keeping its application-owned failure code.
+
+Availability alerting remains an operations-owned boundary. `check-availability.mjs`
+builds fixed-message degraded/recovered events and only delivers them through an
+explicit HTTPS host allowlist with credential/query/fragment and redirect rejection,
+bounded timeout and response-body cleanup. Each event carries a deterministic,
+secret-free SHA-256 `dedupeKey` based on its release identity or bounded degraded
+code, and the adapter forwards that value as `idempotency-key` for scheduler retry
+deduplication. The source adapter is locally tested but does not select an alert sink,
+assign a responder or send a production notification.
+
+Availability handoff now also has a source-controlled `check:availability` wrapper
+around the release verifier. It applies a bounded per-request timeout and emits one
+sanitized `healthy` or `degraded` JSON event with stable exit codes, without sending
+alerts or exposing response bodies. The focused fixture covers success, revision
+mismatch and timeout; an approved sink, responder and exercised production alert are
+still operational acceptance evidence.
+
+The canonical `check:availability-alert` command consumes that same event and remains
+dry-run by default. It calls the default-deny delivery adapter only when an explicit
+HTTPS endpoint and matching host allowlist are supplied through environment
+configuration; optional authorization and timeout values remain process-local. Missing
+or rejected delivery configuration returns a bounded failure without printing
+credentials or sink responses. This makes scheduler integration reviewable while
+preserving the separate production sink, responder and delivered-alert gate.
 
 Production Receipt-to-Pack checkpoint — 2026-09-10: the fresh local production
 API/Web revision `9ec8c0e5c1361dfe77c8a3e8cdca4730e0b56e05` now has the new Master
@@ -31,8 +388,14 @@ Real operator acceptance remains open. Pages release
 All 135 served assets match the clean committed build; the remaining manifest
 entry is the unserved empty `.nojekyll` marker. The previous release has a
 hash-verified local rollback copy. Full-suite local regression passed: 895 tests,
-with 3 PostgreSQL tests skipped. Remote CI run 34423634351 is in progress; the prior run was superseded
-after all four unit-test shards passed.
+with 3 PostgreSQL tests skipped. Remote CI run 34423634351 was observed after the
+prior run was superseded and has now been rechecked as terminal `cancelled`: all
+four Vitest shards passed, while the combined typecheck/transaction/Demo-build job
+was cancelled during the browser matrix. A later read-only recheck found CI run
+34539106998 green for the published pre-repair revision
+`3e93249e34ff607fc693c1ad7b72e020df25825c`, including the browser and layout
+audits. That result is separate from the dirty root and detached upload-repair
+candidate; no current-root CI success is claimed.
 Browser access resumed. The real existing-Master setup path exposed a static
 catalog/entitlement mismatch. The local repair projects actual Master availability,
 disables unavailable modules/dependencies and preserves the shared write guard.
@@ -149,7 +512,7 @@ Pack read-back and artifact/source hash verification. S4 adds the contextual van
 workspace with visible cited sources, exact preview/confirmation, progress,
 cancellation/recovery, Company/draft isolation, five locales, both themes and
 desktop/375px focus/touch evidence. S5 passes the actual Demo/PGlite Pack/artifact
-assertions and local gates. G07.1-G07.4 are accepted for local/repository scope;
+assertions and local gates. G07.1-G07.2 and G07.4 are accepted for local/repository scope; G07.3 remains open for the real server/provider journey;
 the deterministic zero-spend provider is local test evidence only and no approved
 real-provider account/spend is available. TASK-238/S1 now publishes a source-backed
 matrix for order-to-cash, procure-to-pay, record-to-report, inventory, HR/leave/payroll
@@ -275,26 +638,6 @@ Preview/PDF/Print artifacts at desktop and 375px mobile sizes. This is local and
 disposable-environment evidence; it does not certify production, remote MCP,
 WebMCP, provider or physical-device behavior. Source/test evidence:
 [TASK-233/S5](ai-native/evidence/TASK-233-2026-09-09.md#s5--verify-all-negative-paths).
-
-TASK-236 (local implementation, 2026-09-11) adds the bounded durable
-`receipt_pack.create` workflow in `src/modules/agent/durableWorkflow.ts`.
-`agent_workflow_run` and `agent_workflow_step` persist tenant scope, actor,
-approved-intent reference, checkpoints, leases, heartbeat, bounded attempts and
-result references. Queueing writes the run, three steps and the transactional
-`agent.workflow.receipt_pack.requested` outbox event together; the trigger and
-effect keys are hash-only. Worker claims use the `app.agent_worker` RLS context,
-expired leases recover the same run identity, and duplicate delivery is
-idempotent. Approval waiting, pause/resume/cancel, current module/grant/principal
-and exact-intent rechecks, stored-intent execution and Pack/PDF hash readback are
-all owned by this boundary; it reuses the governed Pack command instead of
-creating a second selection authority. A committed Pack is reconciled on late
-cancellation, while uncertain cross-system work stays on the same run for manual
-recovery. Focused PGlite tests pass for approval/resume, duplicate trigger,
-lease recovery, revocation before effect, late cancellation and bounded attempt
-exhaustion. Repository implementation and common DoD are complete after disposable
-PostgreSQL two-worker proof and green current-branch CI run `34530777179`; provider,
-production and business acceptance remain separate gates. Evidence:
-[TASK-236](ai-native/evidence/TASK-236-2026-09-11.md).
 
 TASK-230/S1 selects MCP `2025-11-25` Streamable HTTP at the versioned
 `/api/mcp/v1` resource and pins `@modelcontextprotocol/sdk@1.30.0` with
@@ -666,6 +1009,12 @@ The recovery page immediately removes the fragment and retains the token only in
 memory; both document navigation and fragment-only navigation are supported.
 Platform Superadmin is a separate `platform_principal` authority and has no email
 recovery implementation in this release; the tenant endpoint cannot recover it.
+Employee account creation and HR reset accept only the server-side encrypted
+credential envelope before opening their transaction. Active-secret reads validate
+the persisted envelope, and temporary-password reveal maps malformed or
+cryptographically tampered values to the bounded unavailable response without
+returning crypto details. This protects the write, read and decrypt boundaries even
+when persisted JSON no longer matches the TypeScript input contract.
 See [TASK-193 local evidence](ai-native/evidence/TASK-193-2026-09-09.md).
 
 Authentication mail failure records store application-owned phase codes only
@@ -683,16 +1032,38 @@ TASK-193 release evidence.
 
 Both worker entry points also emit an aggregate-only `erp.worker.telemetry` snapshot
 every 60 seconds by default. `src/worker/telemetry.ts` reports pending/ready/in-flight/
-retrying/failed/dead-letter counts and oldest pending age for the outbox, document,
+retrying/failed/dead-letter counts, oldest pending age and the measured aggregate
+`queryDurationMs` for the outbox, document,
 reporting, tax-evidence and calendar queues under their existing worker RLS flags. It
 does not include tenant identifiers, payloads, credentials, lock owners or raw errors.
 `createWorkerTelemetryEmitter` dispatches the snapshot single-flight without delaying the
 business tick. Queue-specific `ready` and active `inFlight` counts now mirror the worker
-claim boundaries for leases, report attempts, enabled calendar connections and reminder
-due time; focused tests cover the outbox lease and calendar-connection cases. The
-aggregate queries are still whole-table reads, so representative query budgets/plans,
+claim boundaries for leases, document processing statuses, report attempts, enabled
+calendar connections and reminder due time; focused tests cover outbox and document
+lease cases plus calendar-connection behavior. The
+aggregate queries are still whole-table queue reads, while calendar leave and
+appointment readiness uses a tenant-scoped derived enabled-connection `LEFT JOIN`
+to avoid a repeated per-row connection lookup; disabled connections remain counted in
+`pending`. The duration field is measurement only. An optional
+`WORKER_TELEMETRY_QUERY_TIMEOUT_MS` applies a bounded
+transaction-local PostgreSQL statement timeout to each telemetry aggregate when an
+owner supplies a budget; unset keeps the existing behavior. Representative query
+budgets/plans,
 the operational sink, thresholds, production SLOs and recovery ownership remain
 TASK-201 evidence. No queue business rule changes in TASK-215.
+
+A disposable PostgreSQL 16 pre-join baseline with 25,000 synthetic rows per monitored
+queue returned all eight queues in 49ms under a 250ms local budget; its
+calendar-leave plan was 169.348ms. A follow-up 25,000-row comparison measured
+14.176–15.116ms for the correlated `EXISTS` and 8.856–9.252ms for the joined form;
+the current source calendar-only read returned 25,000 ready leave events in 32ms.
+The 122MiB fixture is local evidence only and does not establish the required
+representative production volume or SLO.
+
+`scripts/validate-worker-telemetry.mjs` is the source-controlled, read-only handoff
+checker for captured telemetry. It validates the aggregate-only shape and only applies
+a performance verdict when an Operations/database owner supplies `--max-query-ms`; it
+has no default threshold and never connects to a tenant database.
 
 Sources: `src/worker/outbox.ts`, `src/worker/telemetry.ts`, `src/worker.ts`, and
 `src/modules/integration/eventLog.ts`.
@@ -989,20 +1360,40 @@ encrypted credential material. Pausing the connector sets it to `paused`/disable
 worker refuses to decrypt or call the provider while retaining the append-only audit
 history.
 
+The shared HTTP scanner/OCR/Vision driver boundary rejects gateway URLs containing
+embedded credentials, query parameters or fragments before document bytes are sent.
+Each driver also passes `redirect: 'error'`, preventing an HTTP redirect from forwarding
+document bytes or provider authorization to another host. Successful responses are
+streamed and capped at 8 MiB before parsing, while failed, invalid-content-length
+and advertised oversized responses cancel their unconsumed bodies before the fixed
+status, metadata or bounded-size error is returned. Malformed or non-object JSON is
+rejected before service-specific fields are read.
+The processing worker integration keeps a non-success HTTP Vision response in the
+failed extraction state with no raw text or upstream detail, and it never silently
+switches to local OCR; the 401/500 boundary is covered by the actual HTTP driver in
+the source regression.
+
 Provider failures remain failed/unavailable and are retried through the bounded worker
 lease; after five automatic attempts the job is `dead_letter` and only an explicit
 `retryDocumentProcessing` requeues the same document/version/extraction chain. The
-worker never silently falls back from a requested Vision provider to local OCR.
+authenticated `POST /api/documents/:documentId/actions/retry-processing` action is
+governance-permissioned, tenant/version-bound and idempotently audited before calling
+the same command. The worker never silently falls back from a requested Vision provider
+to local OCR.
 
 Sources: `src/auth/tokenCrypto.ts`, `src/modules/integration/connector.ts`,
-`src/modules/documents/processing.ts`, `src/modules/documents/processingDrivers.ts` and
-`src/modules/integration/connector.test.ts` / `src/modules/documents/processing.test.ts`.
+`src/modules/documents/processing.ts`, `src/modules/documents/processingDrivers.ts`,
+`src/api/routes/documents.ts` and `src/modules/integration/connector.test.ts` /
+`src/modules/documents/processing.test.ts` / `src/api/documentGovernance.integration.test.ts`.
 
 ## 7. GST/SST effective-date and posting contract (TASK-204)
 
 `tax_rule` is an effective-dated Company fact. `getEffectiveTaxRate()` in
 `src/data/repo.ts` selects the Company regime and applies the single
 `[valid_from, valid_to)` interval: `valid_from` is inclusive and `valid_to` is exclusive.
+If multiple rules match the same Company, tax code and document date, the lookup returns
+no rule so downstream posting fails closed instead of silently choosing an overlapping
+version.
 `expense_policy_version` follows the same interval and rejects zero-length ranges.
 
 Each configured rule now carries an explicit `tax_classification`,

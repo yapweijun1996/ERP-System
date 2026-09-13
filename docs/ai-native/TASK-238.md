@@ -47,7 +47,7 @@ Existing bankReceipt and paymentVoucher support bounded settlement paths. Ordina
 
   Checkpoint exit: Owner-approved scope and accounting examples exist before monetary implementation; no fabricated sign-off.
 
-  Evidence: [TASK-238/S2 proposed settlement/applicability decisions](evidence/TASK-238-2026-09-09.md#s2--proposed-settlement-and-market-applicability-decisions-not-approved). Owner approval and qualified tax-owner applicability are still required.
+  Evidence: [TASK-238/S2 proposed settlement/applicability decisions](evidence/TASK-238-2026-09-09.md#s2--proposed-settlement-and-market-applicability-decisions-not-approved) and the [2026-09-13 owner-decision blocker recheck](evidence/TASK-238-2026-09-13-owner-decision-blocker.md). Owner approval and qualified tax-owner applicability are still required.
 
 - [ ] **S3 — Implement approved settlement slice.**
 

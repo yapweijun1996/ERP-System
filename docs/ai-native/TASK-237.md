@@ -39,7 +39,7 @@ Each scored case has a versioned input fixture, expected permitted actions and i
 
   Checkpoint exit: The evaluator independently detects wrong IDs, unauthorized data, duplicate Pack and false-success claims.
 
-  Evidence: [2026-09-13 frozen case set and independent oracle](evidence/TASK-237-2026-09-13-s1-case-set.md).
+  Evidence: [2026-09-13 frozen case set and independent oracle](evidence/TASK-237-2026-09-13-s1-case-set.md) and [G10.1 acceptance mapping](evidence/TASK-237-2026-09-13-g10-1-acceptance.md).
 
 - [x] **S2 — Automate deterministic and adversarial gates.**
 
@@ -63,7 +63,7 @@ Each scored case has a versioned input fixture, expected permitted actions and i
 
   Checkpoint exit: Per-run reports contain latency and full retry cost; missing approved budgets keep the operational gate open.
 
-  Evidence: [2026-09-13 redacted observability report contract](evidence/TASK-237-2026-09-13-observability-contract.md) and [2026-09-13 Demo threshold report](evidence/TASK-237-2026-09-13-demo-model-evaluation-success.md); owner-approved numerical budgets, full retry cost and production observability remain unverified.
+  Evidence: [2026-09-13 redacted observability report contract](evidence/TASK-237-2026-09-13-observability-contract.md), [2026-09-13 fixture observability reports](evidence/TASK-237-2026-09-13-g10-3-fixture-observability.md), [2026-09-13 Demo threshold report](evidence/TASK-237-2026-09-13-demo-model-evaluation-success.md) and [2026-09-13 provider scope and budget handoff](evidence/TASK-237-2026-09-13-budget-scope-handoff.md); owner-approved numerical budgets, live-provider measurements and production observability remain unverified.
 
 - [ ] **S5 — Exercise release regression and disable.**
 
@@ -87,10 +87,10 @@ is needed. Do not mark the task Done merely because all five checkpoints are che
   - Current result: Earlier concurrent/rate-limited attempts were retained as historical failures. The paced v5 run completed all three 30-case denominators and reached 30/30, 30/30 and 29/30 verified query proposals, with 9/9 negative cases, zero safety failures and zero false-success results. This meets the numeric Demo query-only threshold; it does not prove live receipt actions or a production provider.
 - **G10.3:** Record redacted run/model/tool versions, correlation IDs, approvals, resource postconditions, latency and full retry cost; never log secrets or unnecessary sensitive payloads.
   - Required evidence: Redacted traces, latency and total retry cost.
-  - Current result: The Demo report now records redacted run identifiers, model/prompt/fixture versions, per-run p95 latency and provider-call totals without retaining payloads. Full retry-cost accounting, owner-approved numerical budgets and production observability remain unverified.
+  - Current result: The fixture runner now records redacted run/model/prompt/fixture/tool versions, correlation IDs, simulated approval state, Receipt/Pack/artifact postconditions, latency, calls, retries and conservative `fullRetryCostMicros` for both C-SG and C-MY; focused adversarial tests reject unredacted identifiers, forbidden fields and under-reported retry cost. This accepts G10.3 for source/deterministic fixture evidence. Owner-approved numerical budgets, live-provider measurements and production observability remain unverified.
 - **G10.4:** Gate model/prompt/tool changes on the same evaluations, record environment and evidence artifacts, and exercise a failed rollout plus emergency disable.
   - Required evidence: CI regression failure, rollback/disable evidence.
-  - Current result: The workflow runs the deterministic gate, broken-fixture failure probe and rollout/disable probe in the actual CI path. Remote run `34740634873` passed all four Vitest shards plus source/generated, database, Demo, i18n, browser, layout and public-subpath checks; the probe rejected a broken candidate without replacing the active version, accepted a valid candidate and blocked rollout after emergency disable. A later docs-only run `34743412098` exposed a bounded `user-mgmt` screen-audit timing race; the audit now waits for every declared shared-list marker and the local 50-route list audit passes. A production rollout/retention/disable observation remains unverified.
+  - Current result: The workflow runs the same deterministic gate, broken-fixture failure probe and rollout/disable probe in the actual CI path. Repaired remote run `34746493412` for candidate `b695a83` passed all four Vitest shards plus source/generated, database, Demo, i18n, browser, layout and public-subpath checks; the probe rejected a broken candidate without replacing the active version, accepted a valid prompt-version candidate and blocked rollout after emergency disable. A later docs-only run `34743412098` exposed a bounded `user-mgmt` screen-audit timing race; the audit now waits for every declared shared-list marker and the repaired candidate passed. This accepts G10.4 for the source/CI release-control boundary; a production rollout/retention/disable observation remains unverified. See [G10.4 CI acceptance evidence](evidence/TASK-237-2026-09-13-g10-4-ci-acceptance.md).
 
 ## Existing regression commands
 

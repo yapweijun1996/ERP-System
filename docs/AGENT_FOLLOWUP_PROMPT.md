@@ -1,5 +1,10 @@
 # ERP Agent Follow-up Prompt
 
+> Current continuation entry (2026-09-11): read [GOAL](../GOAL.md),
+> [PROGRESS](../PROGRESS.md) and [GOAL_PROMPT](../GOAL_PROMPT.md) first.
+> Their checked current projection supersedes older counts, blocker snapshots and
+> continuation priorities below. Keep this document for detailed procedures/history.
+
 Copy the block below into the continuation task. The operator may select
 GPT-5.6 Luna / Max; these instructions do not depend on model-specific tools.
 

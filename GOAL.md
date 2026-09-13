@@ -1,8 +1,12 @@
 # AI Native ERP System Goal
 
-Reviewed: **2026-09-11**. Planning baseline: `d4c9dc9`.
+Reviewed: **2026-09-13**. Planning baseline: `d4c9dc9`.
 Owner: product owner; engineering owns implementation and evidence.
 Delivery programme: **EPIC-068 / TASK-227–240**.
+
+Read [PROGRESS.md](PROGRESS.md) for the current board and next measurable outcome.
+Use [GOAL_PROMPT.md](GOAL_PROMPT.md) to continue work. This file owns stable outcomes,
+acceptance criteria and the common Definition of Done; it is not a chronological log.
 
 Latest production renderer checkpoint — **2026-09-11**: application release
 `03487b13ce838407d97cd00697bd2b54b4a7c918` is healthy across API, Web,
@@ -12,8 +16,10 @@ database without migration or reset. The Receipt Pack renderer now preserves
 governed source bytes and writes a readable identity page for PNG/JPEG sources below
 2×2 pixels. Final SG/MY artifacts are structurally verified two-page A4 PDFs; their
 source rows remain synthetic 68-byte 1×1 PNGs, so readable-source replacement and
-human visual/business acceptance remain open. Public `/erp/health` is still HTTP 502
-until the prepared system Tunnel route is activated.
+human visual/business acceptance remain open. The public `/erp/health` route now returns
+HTTP 200 with the verified release revision and asset hashes; alerting, rollback and
+human/provider acceptance remain open. See [TASK-199 recovery evidence](docs/ai-native/evidence/TASK-199-2026-09-11.md)
+and the [2026-09-13 public recheck](docs/ai-native/evidence/TASK-199-2026-09-13-public-availability.md).
 
 Production Receipt-to-Pack pilot baseline — **2026-09-10**: a fresh local production PostgreSQL
 environment now runs coherent API/Web revision
@@ -96,8 +102,8 @@ access makes it actionable. Tax, SMTP, physical-device and other inherited gates
 are supporting delivery work; they must not silently replace the pilot milestone.
 
 **Progress rule:** report the milestone outcome, newly verified evidence, exact
-remaining gap and next action. Use the counts below as separate indicators; 94.2%
-historical task closure is not 94.2% product or production readiness. New plans,
+remaining gap and next action. Use the counts below as separate indicators; 94.6%
+historical task closure is not 94.6% product or production readiness. New plans,
 reworded documentation and repeated tests do not increase capability completion.
 
 See [the active execution plan](docs/GOAL_EXECUTION_PLAN.md) for the current
@@ -131,8 +137,8 @@ whenever task status or a goal checkbox changes.
 | All registered tasks | 227 | 13 | 240 |
 | Inherited open delivery tasks at baseline | 0 | 8 | 8 |
 | New AI Native delivery workstreams, TASK-228–239 | 7 | 5 | 12 |
-| Goal DoD criteria, G01.1–G12.4 | 32 | 16 | 48 |
-| Execution checkpoints, five per delivery packet | 43 | 17 | 60 |
+| Goal DoD criteria, G01.1–G12.4 | 35 | 13 | 48 |
+| Execution checkpoints, five per delivery packet | 44 | 16 | 60 |
 | Goal documentation tasks, TASK-227 and TASK-240 | 2 | 0 | 2 |
 
 Registry states: **227 Done / 6 In Progress / 4 Todo / 3 Blocked / 240 Total**.
@@ -141,7 +147,7 @@ The 12 new tasks contain **5 P0 / 7 P1** work packages. The 13 pending tasks con
 **5 P0 / 9 P1**. Priorities describe release risk; dependency order governs execution.
 
 Historical registry completion is **94.6% (227/240)**. AI Native workstream acceptance
-is **58.3% (7/12)** and criterion acceptance is **66.7% (32/48)**. These are unweighted
+is **58.3% (7/12)** and criterion acceptance is **72.9% (35/48)**. These are unweighted
 counts, not estimates of engineering effort, time remaining or overall product quality.
 Existing ERP foundations receive no automatic credit for new Agent acceptance criteria.
 Documentation tasks and execution checkpoints are excluded from AI capability
@@ -423,16 +429,18 @@ foundations are listed for reuse; they do not satisfy the complete new DoD.
 
 **Task:** [TASK-234](docs/ai-native/TASK-234.md) · **Priority:** P1 · **Phase:** Pilot
 **Dependencies:** TASK-230.
-**Current evidence:** Governed document OCR/Vision exists; wizard AI selection is preview-only and no broad reporting/NL-query assistant exists. TASK-234/S1 defines the server-owned provider request/response/tool-call contract, explicit draft/waiting/running/succeeded/failed/cancelled states, whole-run deadline/cancellation, input/output/call/retry/cost limits, pre-call cost reservation and actionable fail-closed errors. TASK-234/S2 adds Company-scoped provider/model/data-policy configuration, AES-GCM credentials, explicit rotation/provider-change decisions, bounded limits, model/egress validation, permission/idempotency boundaries and secret-free views/audits. TASK-234/S3 adds the server-owned bounded Receipt conversation loop, cited facts, exact Pack preview, G06 confirmation wait/resume, governed Pack execution, persisted Pack read-back and artifact/source hash verification. TASK-234/S4 adds the contextual vanilla-JS workspace with visible sources, exact preview/confirmation, progress, cancellation, recovery, Company-scope isolation, five locale resources, both themes and desktop/375px focus/touch evidence; S5 passes the fixture, actual Demo/PGlite Pack/artifact assertions and local gates. No real provider account or approved spend is available, so the real-provider gate remains explicit and TASK-234 stays in progress. [TASK-234/S1 evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s1--define-runtime-states-and-limits) · [S2 evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s2--implement-secret-safe-server-configuration) · [S3 evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s3--implement-the-receipt-conversation-loop) · [S4 evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s4--build-the-contextual-workspace) · [S5 evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s5--validate-fixture-and-real-model-journeys).
+**Current evidence:** Governed document OCR/Vision exists; wizard AI selection is preview-only and no broad reporting/NL-query assistant exists. TASK-234/S1 defines the server-owned provider request/response/tool-call contract, explicit draft/waiting/running/succeeded/failed/cancelled states, whole-run deadline/cancellation, input/output/call/retry/cost limits, pre-call cost reservation and actionable fail-closed errors. TASK-234/S2 adds Company-scoped provider/model/data-policy configuration, AES-GCM credentials, explicit rotation/provider-change decisions, bounded limits, model/egress validation, permission/idempotency boundaries and secret-free views/audits. TASK-234/S3 adds the server-owned bounded Receipt conversation loop, cited facts, exact Pack preview, G06 confirmation wait/resume, governed Pack execution, persisted Pack read-back and artifact/source hash verification. TASK-234/S4 adds the contextual vanilla-JS workspace with visible sources, exact preview/confirmation, progress, cancellation, recovery, Company-scope isolation, five locale resources, both themes and desktop/375px focus/touch evidence; S5 passes the fixture, actual Demo/PGlite Pack/artifact assertions and local gates. The merged Pages candidate `a67595d5b67d24d6dfcc02b0c04f89c0e6c391ae` now has hosted Demo title/upload verification with no source/response/module/permission override; hosted scanning remains `scanner unavailable`. The prior remote CI for `d936a348` completed successfully across source/generated, Demo, i18n, desktop/mobile browser, Screen, transaction-list, operational-workspace, production public-subpath and cleanup checks; the merged revision's CI is tracked separately until terminal; the latest pre-browser progress is recorded in [merged CI progress evidence](docs/ai-native/evidence/TASK-234-2026-09-13-merged-ci-progress.md). No real provider account or approved spend is available, so the real-provider gate remains explicit and TASK-234 stays in progress. See the [merged hosted no-override evidence](docs/ai-native/evidence/TASK-234-2026-09-13-merged-hosted-no-override.md), [prior hosted evidence](docs/ai-native/evidence/TASK-234-2026-09-13-hosted-no-override.md) and [terminal CI evidence](docs/ai-native/evidence/TASK-234-2026-09-13-ci-terminal.md) · [TASK-234/S1 evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s1--define-runtime-states-and-limits) · [S2 evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s2--implement-secret-safe-server-configuration) · [S3 evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s3--implement-the-receipt-conversation-loop) · [S4 evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s4--build-the-contextual-workspace) · [S5 evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s5--validate-fixture-and-real-model-journeys).
 
 - [x] **G07.1** Implement a server-owned provider interface and Company configuration with encrypted secrets, allowed models, data policy, bounded timeout and per-run cost/call budgets.
   - Evidence: [TASK-234/S1-S2 evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s2--implement-secret-safe-server-configuration).
 - [x] **G07.2** Provide contextual chat, cited receipt results, Pack preview and confirmation, with distinct draft, waiting, running, succeeded, failed and cancelled states.
   - Evidence: [TASK-234/S3-S4 evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s4--build-the-contextual-workspace).
-- [x] **G07.3** Complete the real receipt-to-Pack journey using governed tools and verified database/artifact postconditions; the assistant cannot announce success from model prose alone.
-  - Evidence: [TASK-234/S3-S4 governed execution evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s4--build-the-contextual-workspace).
+- [ ] **G07.3** Complete the real receipt-to-Pack journey using governed tools and verified database/artifact postconditions; the assistant cannot announce success from model prose alone.
+  - Partial evidence only; Demo/Codex OCR is synthetic and does not prove the real server/provider journey. See [TASK-234 Demo evidence](docs/ai-native/evidence/TASK-234-2026-09-11-codex-demo.md) and [TASK-234/S3-S4 governed execution evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s4--build-the-contextual-workspace).
 - [x] **G07.4** Prove provider failure/cancellation and zero credential leakage; test en/ms/zh/ja/vi, light/dark, desktop/mobile and accessible focus/keyboard behavior.
   - Evidence: [TASK-234/S4-S5 failure, locale, theme and accessibility evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s5--validate-fixture-and-real-model-journeys). The later [TASK-232 locale remediation](docs/ai-native/evidence/TASK-232-2026-09-09.md#post-s5-agent-governance-locale-remediation--2026-09-09) closes the separate global i18n follow-up; provider, production and physical-device evidence remain separate.
+
+2026-09-11 supporting exit: the user authorized the existing Demo endpoint and Codex OCR/review without a user-operated step. The [observed Demo run and upload repair](docs/ai-native/evidence/TASK-234-2026-09-11-codex-demo.md) verify one readable synthetic receipt and one persisted Pack/PDF after reload. G07.3 remains open because this Demo evidence does not establish a real server/provider receipt journey.
 
 ### G08 — Build permission-aware ERP semantics and knowledge retrieval
 
@@ -468,18 +476,22 @@ foundations are listed for reuse; they do not satisfy the complete new DoD.
 
 **Task:** [TASK-237](docs/ai-native/TASK-237.md) · **Priority:** P0 · **Phase:** Expansion
 **Dependencies:** TASK-229, TASK-230, TASK-231, TASK-234, TASK-235, TASK-236.
-**Current evidence:** Domain/API/browser tests and audit records exist; no dedicated Agent evaluation release gate is established.
+**Current evidence:** Domain/API/browser tests and audit records exist; TASK-237 now has a frozen 30-case catalog, a deterministic 30/30 plus 9/9 safety gate, local redacted observability validation, CI-path wiring, a rollout/disable probe, a complete paced Demo query-only evaluation at 30/30, 30/30 and 29/30, and successful repaired remote CI run `34746493412` for candidate revision `b695a83` after the bounded shared-list audit-wait fix. This meets the numeric three-run Demo threshold and current-branch regression gate; it does not establish live receipt-action execution, owner-approved budgets or production rollout/retention/disable evidence. See the [fixture observability evidence](docs/ai-native/evidence/TASK-237-2026-09-13-g10-3-fixture-observability.md) and [remote CI failure/repair evidence](docs/ai-native/evidence/TASK-237-2026-09-13-remote-ci-screen-audit-failure.md).
 
-- [ ] **G10.1** Version a receipt-pilot evaluation set with happy paths, invalid input, prompt injection, unauthorized data access, stale approval, revocation and retry scenarios.
-- [ ] **G10.2** Require every deterministic authorization/transaction invariant to pass and zero false-success results; achieve at least 95 percent verified success in each of three recorded runs, each containing at least 30 valid pilot cases.
-- [ ] **G10.3** Record redacted run/model/tool versions, correlation IDs, approvals, resource postconditions, latency and full retry cost; never log secrets or unnecessary sensitive payloads.
-- [ ] **G10.4** Gate model/prompt/tool changes on the same evaluations, record environment and evidence artifacts, and exercise a failed rollout plus emergency disable.
+- [x] **G10.1** Version a receipt-pilot evaluation set with happy paths, invalid input, prompt injection, unauthorized data access, stale approval, revocation and retry scenarios.
+  - Evidence: [TASK-237 G10.1 acceptance](docs/ai-native/evidence/TASK-237-2026-09-13-g10-1-acceptance.md).
+- [x] **G10.2** Require every deterministic authorization/transaction invariant to pass and zero false-success results; achieve at least 95 percent verified success in each of three recorded runs, each containing at least 30 valid pilot cases.
+  - Evidence: [TASK-237 Demo threshold evaluation](docs/ai-native/evidence/TASK-237-2026-09-13-demo-model-evaluation-success.md).
+- [x] **G10.3** Record redacted run/model/tool versions, correlation IDs, approvals, resource postconditions, latency and full retry cost; never log secrets or unnecessary sensitive payloads.
+  - Evidence: [TASK-237 G10.3 fixture observability](docs/ai-native/evidence/TASK-237-2026-09-13-g10-3-fixture-observability.md).
+- [x] **G10.4** Gate model/prompt/tool changes on the same evaluations, record environment and evidence artifacts, and exercise a failed rollout plus emergency disable.
+  - Evidence: [TASK-237 G10.4 CI acceptance](docs/ai-native/evidence/TASK-237-2026-09-13-g10-4-ci-acceptance.md).
 
 ### G11 — Close the selected ERP business journeys and market acceptance gaps
 
 **Task:** [TASK-238](docs/ai-native/TASK-238.md) · **Priority:** P1 · **Phase:** Expansion
 **Dependencies:** TASK-227.
-**Current evidence:** Canonical routes and partial workflows exist. TASK-238/S1 publishes a source-backed matrix for six selected journey areas with owner roles, tests and explicit exclusions; S2 records a proposed same-customer/same-currency settlement policy and SG/MY applicability worksheet, but product/finance and qualified tax-owner decisions are not approved. Settlement closure, all-module E2E and complete SG/MY statutory support are not proven. [S1 evidence](docs/ai-native/evidence/TASK-238-2026-09-09.md#cross-module-capability-matrix) · [S2 proposal](docs/ai-native/evidence/TASK-238-2026-09-09.md#s2--proposed-settlement-and-market-applicability-decisions-not-approved)
+**Current evidence:** Canonical routes and partial workflows exist. TASK-238/S1 publishes a source-backed matrix for six selected journey areas with owner roles, tests and explicit exclusions; S2 records a proposed same-customer/same-currency settlement policy and SG/MY applicability worksheet, but product/finance and qualified tax-owner decisions are not approved. Settlement closure, all-module E2E and complete SG/MY statutory support are not proven. The 2026-09-13 recheck confirms that no product/finance or qualified tax-owner approval has been recorded, so S2 remains open. [S1 evidence](docs/ai-native/evidence/TASK-238-2026-09-09.md#cross-module-capability-matrix) · [S2 proposal](docs/ai-native/evidence/TASK-238-2026-09-09.md#s2--proposed-settlement-and-market-applicability-decisions-not-approved) · [S2 blocker recheck](docs/ai-native/evidence/TASK-238-2026-09-13-owner-decision-blocker.md)
 
 - [ ] **G11.1** Publish an owner-reviewed capability matrix for order-to-cash, procure-to-pay, record-to-report, inventory, HR/leave/payroll and receipt/evidence flows with explicit exclusions.
   - Evidence: [TASK-238/S1 source-backed matrix](docs/ai-native/evidence/TASK-238-2026-09-09.md#cross-module-capability-matrix); owner review remains pending.

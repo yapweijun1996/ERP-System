@@ -5,7 +5,7 @@ server AI contract/workspace and the remaining real-provider integration. G03 pr
 server; G04 provides outbound external MCP connections. Inbound MCP is locally evidenced; outbound MCP remains planned. These boundaries
 do not replace the governed Vision pipeline below.
 
-Reviewed: **2026-09-10**. This document separates the implemented governed document
+Reviewed: **2026-09-11**. This document separates the implemented governed document
 Vision path from the local Receipt assistant and its locally connected provider runtime and open live-account gate.
 
 ## Default browser Demo gateway — 2026-09-10
@@ -37,6 +37,24 @@ not activate the production server assistant or document OCR.
 This browser path does not reconfigure API-mode Company providers or document
 OCR, and does not establish the original server six-tool live pilot as complete.
 
+Readiness recheck — 2026-09-11: a fresh registered-origin probe again returned a
+valid ephemeral `dmo_*` session and a completed bounded search proposal. The
+endpoint accepts query text only; it does not accept receipt bytes and is not
+`DOCUMENT_VISION_GATEWAY_URL`. Demo/Codex OCR review therefore remains synthetic
+protocol evidence, separate from production gateway/account/model/region/retention,
+health, alert and recovery evidence tracked by TASK-205. The source connector
+health check records configured `document-vision` as `warning` with
+`provider_health_unverified` and leaves `lastSuccessAt` unchanged until a live
+provider probe is implemented and observed. Readiness also requires both the
+health-check timestamp (`lastCheckedAt`) and the successful-probe timestamp
+(`lastSuccessAt`); a historical success without its corresponding health check
+cannot promote a provider to ready. Persisted connector credential state is
+revalidated as AES-GCM envelopes at readiness, enable and health-check boundaries,
+including connectors whose policy does not require a credential; a non-empty
+malformed value is classified as invalid and cannot enable, report healthy or
+promote the provider to ready. A null envelope remains valid only for an explicitly
+credential-free OpenAI-compatible policy.
+
 ## 1. Current implementation truth
 
 | Capability | Status | Current boundary |
@@ -44,7 +62,7 @@ OCR, and does not establish the original server six-tool live pilot as complete.
 | Setup-wizard AI choice | Preview only | The static local wizard lists OpenAI, Gemini, DeepSeek and LM Studio, but the provider/key stay in in-memory form state and are discarded on Finish/Back. They do not configure an adapter. |
 | Local document OCR | Implemented worker boundary | Local OCR is the default document-processing policy. The worker calls the deployment-owned `DOCUMENT_LOCAL_OCR_URL`; unavailable/indeterminate extraction never makes an unsafe document clean. |
 | BYOK document Vision | Implemented governed boundary | A Company may select `openai`, `google` or `openai_compatible` plus region and 0–365-day provider retention. The worker sends the document to the deployment-owned `DOCUMENT_VISION_GATEWAY_URL`. |
-| Server AI provider configuration | Local foundation implemented | TASK-234/S1-S2 define the server provider request/response/tool-call contract, bounded run policy and Company-scoped `agent_provider_config` with AES-GCM credentials, allowlisted models/exact HTTPS egress and secret-free browser/audit views. No real provider account or network model call is claimed. |
+| Server AI provider configuration | Local foundation implemented | TASK-234/S1-S2 define the server provider request/response/tool-call contract, bounded run policy and Company-scoped `agent_provider_config` with AES-GCM credentials, allowlisted models/exact HTTPS egress and secret-free browser/audit views. Public views and updates revalidate persisted credential envelopes; malformed stored values are shown as unconfigured/disabled and cannot be retained without a valid replacement. No real provider account or network model call is claimed. |
 | Contextual Receipt assistant | Local workspace implemented; live provider gate open | TASK-234/S3 adds the server-owned bounded six-tool conversation loop, cited facts, exact Pack preview, G06 confirmation bridge, governed execution and persisted/artifact verification. S4 adds the contextual vanilla-JS workspace with Company/draft isolation, visible sources, progress/cancel/recovery, five locales, both themes and desktop/375px focus/touch evidence; S5 passes Demo/PGlite and local gates. It uses an injected deterministic zero-spend fixture locally; no approved real-provider account or network model call is available. |
 
 Do not describe the setup-wizard preview as a working OpenAI/Gemini/DeepSeek/LM Studio
@@ -70,6 +88,10 @@ Only enabled OpenAI/GPT-4.1 mini, `dataRegion=global` and
 other providers/models are rejected, never silently replaced. Before every egress,
 configuration and resolved Agent grants are rechecked; changes require a fresh run.
 Only granted pilot tools are advertised. No transaction spans the network call.
+The Agent configuration projection also treats credential presence as valid only when
+the persisted value matches the server encrypted-token envelope. A malformed non-empty
+value is secret-free, unconfigured and disabled in public views, and an update fails
+closed until a valid replacement or an explicit clear is supplied.
 
 `receiptAssistantBootstrap.ts`, `src/server.ts` and Compose now connect the resolver.
 Activation requires `ERP_RECEIPT_ASSISTANT_ENABLED=true`, an explicit
@@ -113,17 +135,35 @@ The current contract is intentionally server/worker mediated:
 - the `document-vision` integration connector accepts only a validated AES-GCM envelope,
   requires server token-encryption configuration and never returns plaintext; configuring
   it again replaces the prior envelope, while pausing it revokes worker use without
-  deleting the audit/history boundary;
+  deleting the audit/history boundary. Readiness, enable and health-check paths
+  revalidate the persisted envelope, so presence alone never counts as configured;
+  malformed stored values fail closed without exposing their contents;
 - `src/modules/documents/processing.ts` decrypts only inside the worker call boundary;
 - `src/modules/documents/processingDrivers.ts` calls the deployment-owned gateway with
-  bounded timeouts and provider policy headers;
+  bounded timeouts and provider policy headers; its shared URL guard accepts only
+  absolute HTTP(S) destinations without embedded credentials, query parameters or
+  fragments, so all scanner/OCR/Vision drivers fail before document egress when a
+  deployment URL is unsafe. Failed HTTP responses, malformed/unsafe `Content-Length`
+  declarations and advertised responses above the 8 MiB bound cancel their
+  unconsumed bodies before the fixed status, metadata or bounded-size error is
+  returned. Successful bodies, including runtimes that expose only `text()`, are
+  byte-bounded before parsing and must parse as non-array JSON objects; syntax or
+  shape failures return one bounded invalid-response error before field access. If
+  a streamed read fails, the reader is cancelled before the original transport
+  error is rethrown and its lock is always released. A provider-supplied visual fingerprint
+  is preserved only when it is a valid 64-character hexadecimal value; the worker
+  validates and persists that provider evidence without deriving one from OCR text;
 - scan-clean state, immutable version/hash identity, extraction provenance and manual
   review remain authoritative even when a provider fails;
 - provider HTTP failures, malformed/empty responses and transport timeouts remain a
   failed or unavailable extraction and are retried explicitly by the worker lease. The
   worker allows five automatic attempts by default, then records `dead_letter` on the
   scan/extraction job and document signal; `retryDocumentProcessing` is the explicit
-  operator requeue boundary and preserves the same document/version/extraction identity;
+  operator requeue boundary and preserves the same document/version/extraction identity.
+  The authenticated `POST /api/documents/:documentId/actions/retry-processing` action
+  exposes that boundary only to `documents.governance.manage`, validates that the
+  supplied version belongs to the active tenant/document, and records an idempotent
+  audit event;
 - the selected fallback policy is **manual retry/review**. A Vision failure never silently
   invokes local OCR, so a local OCR result cannot be mistaken for the requested provider's
   provenance or policy boundary;
@@ -133,12 +173,15 @@ The current contract is intentionally server/worker mediated:
   network path.
 
 Tests cover encrypted connector storage, credential non-disclosure, envelope validation,
+malformed stored-envelope rejection at enable/health/readiness boundaries,
 credential rotation and pause/revocation behavior, policy validation,
 credential-required and credential-free OpenAI-compatible paths, direct gateway 4xx/5xx,
 malformed/empty output and transport timeout, paused/revoked connector denial, and
 retry/manual-review behavior that preserves one document/version extraction without
-automatic local-OCR fallback, including bounded dead-letter and same-chain manual requeue
-behavior. They do not prove a particular third-party account, a region promise, live
+automatic local-OCR fallback, including bounded dead-letter, same-chain manual requeue
+and authenticated API recovery behavior. Worker retry/dead-letter persistence maps arbitrary provider and transport
+exceptions to bounded application-owned messages; raw provider error bodies do not enter
+document job or processing outbox records. They do not prove a particular third-party account, a region promise, live
 dead-letter alert/recovery operations or a configured production gateway. Those remain
 TASK-205 production-readiness evidence.
 

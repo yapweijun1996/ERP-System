@@ -1,11 +1,11 @@
 # Release Checklist
 
 AI Native release is a separate future gate in [GOAL.md](../GOAL.md), EPIC-068.
-The current local/repository baseline accepts 32/48 goal criteria; 16 criteria and
+The current local/repository baseline accepts 35/48 goal criteria; 13 criteria and
 the production release gate remain open. Historical checked items below retain their
 recorded evidence scope; they do not certify a production release for TASK-228–239.
 
-Latest release boundary (2026-09-09): see [TEST_COVERAGE.md](TEST_COVERAGE.md).
+Latest release boundary (2026-09-13): see [TEST_COVERAGE.md](TEST_COVERAGE.md).
 Checked entries below retain named historical/local evidence only; rerun required
 gates for the selected release revision. TASK-214 found open runtime failures, so
 this checklist does not authorize or certify a production release.
@@ -24,9 +24,9 @@ For the current source-backed action backlog and evidence boundaries, see
       green. Never treat a zero-step infrastructure failure as validation.
 - [x] `npm run typecheck && npm run typecheck:web` — root and Web typechecks pass after
       aligning the Demo purchase-requisition adapter with the actor-input command shape.
-- [x] `npm test` — current 2026-09-08 HEAD run passes 176 files / 724 tests with 2 skipped
-      files and 2 skipped tests (178 files / 726 tests total). Production and current-HEAD
-      remote CI remain separate release gates.
+- [x] `npm test -- --reporter=dot` — current 2026-09-12 workspace run passes 211 files /
+      992 tests with 4 PostgreSQL-dependent files/tests skipped. Production and current-
+      HEAD remote CI remain separate release gates.
 - [x] `npx vitest run scripts/verify-release.test.ts` — local HTTP-fixture release
       verifier passes root/health/setup/manifest, revision-mismatch, redirect-path and
       CLI exit/status checks. This does not verify a public release.
@@ -84,12 +84,13 @@ For the current source-backed action backlog and evidence boundaries, see
       TASK-203 is Done with current-HEAD remote CI evidence, TASK-204 remains In progress until tax-owner production review and TASK-205 remains
       In progress until production Vision configuration and live dead-letter alert/recovery
       evidence is recorded.
-- [x] GitHub Actions executes current HEAD with every required gate green. Run
-      `34530777179` passed all four Vitest shards, lint/docs/generated checks, root/web
-      typechecks, PostgreSQL security and concurrency proofs, Demo build, five-language
-      desktop/mobile i18n, browser smoke, full screen audit, transaction-list layout audit,
-      operational-workspace layout audit and the production public-subpath contract.
-      Production health/revision evidence remains separate.
+- [x] GitHub Actions executes the current candidate with every required gate green. Run
+      `34746493412` for revision `b695a833ace3983149dd3728bbb1124fd010b250` passed all four
+      Vitest shards, lint/docs/generated checks, root/web typechecks, PostgreSQL security and
+      concurrency proofs, Demo build, five-language desktop/mobile i18n, browser smoke, full
+      screen audit, transaction-list layout audit, operational-workspace layout audit and the
+      production public-subpath contract. Production health/revision and owner acceptance
+      remain separate.
 - [x] 2026-08-12 current-worktree secret baseline: the tracked diff and `web/dist`
       contain no known provider/token/private-key signature; high-entropy diff strings
       were classified as document, route, module, DOM/i18n or deterministic-test values.

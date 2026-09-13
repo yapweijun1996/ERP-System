@@ -1,5 +1,10 @@
 # AI Native ERP Execution Guide
 
+> Current continuation entry (2026-09-11): read [GOAL](../GOAL.md),
+> [PROGRESS](../PROGRESS.md) and [GOAL_PROMPT](../GOAL_PROMPT.md) first.
+> Their checked current projection supersedes older counts, blocker snapshots and
+> continuation priorities below. Keep this document for detailed procedures/history.
+
 Reviewed: 2026-09-08. TASK-240 refines instructions only.
 Read [GOAL.md](../GOAL.md) for the target and [AGENT_FOLLOWUP_PROMPT.md](AGENT_FOLLOWUP_PROMPT.md)
 for the copyable handoff. The instructions are model-independent; the requested
