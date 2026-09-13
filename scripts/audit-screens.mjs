@@ -677,6 +677,17 @@ async function auditRoutes(browser, viewport) {
         '#viewRoot [data-layout="transaction-list-v1"][data-list-route="timesheet"][data-canonical-timesheet="true"]',
       )), null, { timeout: RECOVERY_TIMEOUT_MS }).catch(() => {});
     }
+    if (LIST_LAYOUTS.has(meta?.layout)) {
+      // Every shared list screen owns its layout only after its async data
+      // reads resolve. A fixed 200 ms settle window is too short for the
+      // admin user/role pair on a cold Demo adapter and creates a flaky
+      // missing-root result even though navigate() has not failed.
+      await page.waitForFunction(({ route: expectedRoute, layout: expectedLayout }) => (
+        [...document.querySelectorAll('#viewRoot [data-layout][data-list-route]')]
+          .some((element) => element.getAttribute('data-layout') === expectedLayout
+            && element.getAttribute('data-list-route') === expectedRoute)
+      ), { route, layout: meta.layout }, { timeout: RECOVERY_TIMEOUT_MS }).catch(() => {});
+    }
 
     const rendered = await page.evaluate(() => {
       const el = document.getElementById('viewRoot');

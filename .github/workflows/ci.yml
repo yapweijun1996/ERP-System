@@ -103,6 +103,9 @@ jobs:
           fi
           grep -Fq "receipt_pilot_evaluation_gate_failed:P06-create-sg" output/receipt-pilot-broken.log
 
+      - name: Receipt Pilot rollout and emergency-disable probe
+        run: npm run check:receipt-pilot-rollout
+
       - name: Check generated PGlite artifacts
         run: npm run check:demo-schema
 
