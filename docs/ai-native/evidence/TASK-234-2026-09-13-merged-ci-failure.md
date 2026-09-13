@@ -26,7 +26,7 @@ The Screen audit exited 1 at `2026-09-13T11:23:11.956Z` (19:23:11 Asia/Singapore
 
 ## Reproduction and repair boundary
 
-The local built-Demo audit reproduced the route eventually rendering after the shared list data reads resolved. The audit's previous 10-second recovery budget was too short for a cold, resource-contended hosted runner after the preceding browser suites. The smallest repair raises the bounded `RECOVERY_TIMEOUT_MS` in `scripts/audit-screens.mjs` to 30 seconds; timeout still remains a visible failure and no layout assertion is removed. Local desktop shared-list (50/50), default desktop+mobile shared-list (50/50), and full desktop+mobile screen audits (130/130) passed after the repair.
+The local built-Demo audit reproduced the route eventually rendering after the shared list data reads resolved. The audit's previous 10-second recovery budget was too short for a cold, resource-contended hosted runner after the preceding browser suites. The smallest repair in candidate revision `c18378dc74fb6bc63099bfc0651b39fa56ae354f` raises the bounded `RECOVERY_TIMEOUT_MS` in `scripts/audit-screens.mjs` to 30 seconds; timeout still remains a visible failure and no layout assertion is removed. Local desktop shared-list (50/50), default desktop+mobile shared-list (50/50), and full desktop+mobile screen audits (130/130) passed after the repair.
 
 A fresh candidate CI terminal run is still required before this remote regression-safety gate can be considered closed for the repaired revision. The prior successful run `34730030719` for `d936a348` remains historical evidence for that separate revision.
 
@@ -35,4 +35,4 @@ A fresh candidate CI terminal run is still required before this remote regressio
 - **Evidence class:** remote CI terminal failure plus local repair verification.
 - **Expected/actual:** recorded above with exact revision, environment, actor class and failure output.
 - **Counts:** task, goal-criterion, checkpoint and capability counts unchanged.
-- **Next measurable action:** commit only the focused audit-budget repair, start a fresh candidate CI run, and record its terminal result before updating regression-safety status.
+- **Next measurable action:** publish the repaired candidate branch, start a fresh candidate CI run, and record its terminal result before updating regression-safety status.
