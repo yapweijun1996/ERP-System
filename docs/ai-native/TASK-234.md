@@ -71,6 +71,15 @@ screen audits pass; a fresh candidate CI terminal run is still required. See
 the [merged CI failure evidence](evidence/TASK-234-2026-09-13-merged-ci-failure.md)
 and the earlier [merged CI progress record](evidence/TASK-234-2026-09-13-merged-ci-progress.md).
 
+The fresh candidate CI run `34755628672` for `a6b2bb7d836d5bd2dfc3914637b80400e97f8c6d`
+also reached a terminal failure at the same `desktop:user-mgmt` list-root
+assertion after all pre-browser gates, i18n and Browser smoke passed. The
+transaction-list, operational-workspace, public-subpath and cleanup steps were
+skipped. The follow-up audit repair now retries one bounded route navigation
+when the list root is still absent after the 30-second wait; local 50/50 and
+full 130-route desktop/mobile audits plus lint pass. A new hosted CI terminal
+run is required for this repair. See the [fresh CI failure evidence](evidence/TASK-234-2026-09-13-fresh-ci-failure.md).
+
 ## Remove mandatory account activation — user decision 2026-09-10
 
 Outcome: accounts created in Demo or a real Company are usable immediately.

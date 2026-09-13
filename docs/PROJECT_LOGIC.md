@@ -133,6 +133,14 @@ candidate CI terminal run is required for the repaired revision. See [merged CI
 failure evidence](ai-native/evidence/TASK-234-2026-09-13-merged-ci-failure.md)
 and the earlier [merged CI progress evidence](ai-native/evidence/TASK-234-2026-09-13-merged-ci-progress.md).
 
+Fresh candidate CI run `34755628672` for `a6b2bb7d836d5bd2dfc3914637b80400e97f8c6d`
+repeated the same `desktop:user-mgmt` shared-list root failure after all
+pre-browser, i18n and Browser smoke gates passed. The follow-up audit repair
+re-navigates a list route once when its root remains absent after the bounded
+30-second wait; local 50/50 and full 130-route desktop/mobile audits plus lint
+pass. A new hosted terminal run is required before remote regression safety is
+closed. See the [fresh CI evidence](ai-native/evidence/TASK-234-2026-09-13-fresh-ci-failure.md).
+
 Historical TASK-234 public Pages bundle recheck — 2026-09-13: the read-only
 Pages `release.json` identified revision
 `976a863eabcb8f1499308a64dac646146ed44b6e` (`workflowRunId` `34689661151`),

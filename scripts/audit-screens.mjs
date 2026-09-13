@@ -690,6 +690,38 @@ async function auditRoutes(browser, viewport) {
           .some((element) => element.getAttribute('data-layout') === expectedLayout
             && element.getAttribute('data-list-route') === expectedRoute)
       ), { route, layout: meta.layout }, { timeout: RECOVERY_TIMEOUT_MS }).catch(() => {});
+      const listRootReady = await page.evaluate(({ expectedRoute, expectedLayout }) => (
+        [...document.querySelectorAll('#viewRoot [data-layout][data-list-route]')]
+          .some((element) => element.getAttribute('data-layout') === expectedLayout
+            && element.getAttribute('data-list-route') === expectedRoute)
+      ), { expectedRoute: route, expectedLayout: meta.layout });
+      if (!listRootReady) {
+        // A first Demo adapter read can fail while PGlite is still opening.
+        // Retry the route once so a transient cold-start error is recoverable,
+        // while retaining a bounded visible failure when the root is truly
+        // absent after the retry.
+        console.log(`[${route}] List layout root missing after recovery wait; retrying route navigation.`);
+        await page.evaluate(async ({ r, fixture }) => {
+          try {
+            if (fixture === 'sales-enquiry') {
+              if (!DB.enquiries || !DB.enquiries[0]) throw new Error('sales-enquiry fixture has no record');
+              openTxn('enquiry', DB.enquiries[0]);
+            } else if (fixture === 'purchasing-rfq') {
+              if (!DB.rfqs || !DB.rfqs[0]) throw new Error('purchasing-rfq fixture has no record');
+              openPurTxn('rfq', DB.rfqs[0]);
+            } else {
+              await navigate(r);
+            }
+          } catch {
+            // The existing render inspection records the resulting error.
+          }
+        }, { r: route, fixture: meta && meta.fixture });
+        await page.waitForFunction(({ route: expectedRoute, layout: expectedLayout }) => (
+          [...document.querySelectorAll('#viewRoot [data-layout][data-list-route]')]
+            .some((element) => element.getAttribute('data-layout') === expectedLayout
+              && element.getAttribute('data-list-route') === expectedRoute)
+        ), { route, layout: meta.layout }, { timeout: RECOVERY_TIMEOUT_MS }).catch(() => {});
+      }
     }
 
     const rendered = await page.evaluate(() => {
