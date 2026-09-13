@@ -249,6 +249,134 @@ describe('Company Receipt Pack', () => {
       .rejects.toMatchObject({ code: 'company_receipt_pack_not_found', status: 404 });
   });
 
+  it('converges concurrent identical Pack keys on one fact-matched snapshot', async () => {
+    const png = Uint8Array.from(Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zsx8AAAAASUVORK5CYII=',
+      'base64',
+    ));
+    const evidence = await cleanEvidence(
+      viewerId,
+      'receipt_pack_concurrent_0001',
+      'concurrent-receipt.png',
+      'image/png',
+      png,
+    );
+    const receipt = await withTenantTransaction(db, sg, (tx) =>
+      createCompanyReceiptWithin(tx, sg, viewerId, {
+        documentId: evidence.document.id,
+        documentVersionId: evidence.version.id,
+        transactionDate: '2026-08-11',
+        merchant: 'Concurrent Pack Merchant',
+        amount: '18.2500',
+        currency: 'SGD',
+        category: 'Meals',
+        businessPurpose: 'Concurrent Pack convergence proof',
+      }));
+    const input = {
+      packKey: 'company-receipt-pack:concurrent-0001',
+      dateFrom: '2026-08-11',
+      dateTo: '2026-08-11',
+      locale: 'en',
+    };
+    const [first, second] = await Promise.all([
+      withTenantTransaction(db, sg, (tx) =>
+        createCompanyReceiptPackWithin(tx, sg, adminId, 'company', input)),
+      withTenantTransaction(db, sg, (tx) =>
+        createCompanyReceiptPackWithin(tx, sg, adminId, 'company', input)),
+    ]);
+
+    expect([first, second].filter((result) => !result.replayed)).toHaveLength(1);
+    expect([first, second].filter((result) => result.replayed)).toHaveLength(1);
+    expect(first.pack).toMatchObject({
+      packKey: input.packKey,
+      rowCount: 1,
+      documentCount: 1,
+      rows: [expect.objectContaining({ receiptId: receipt.id, amount: '18.2500' })],
+    });
+    expect(second.pack).toMatchObject({
+      packKey: input.packKey,
+      sourceSha256: first.pack.sourceSha256,
+      rows: first.pack.rows,
+      totals: first.pack.totals,
+    });
+    expect(await db.select().from(companyReceiptPack).where(and(
+      eq(companyReceiptPack.masterFn, sg.masterFn),
+      eq(companyReceiptPack.companyFn, sg.companyFn),
+      eq(companyReceiptPack.packKey, input.packKey),
+    ))).toHaveLength(1);
+  });
+
+  it('returns one deterministic conflict for concurrent differing Pack facts', async () => {
+    const png = Uint8Array.from(Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zsx8AAAAASUVORK5CYII=',
+      'base64',
+    ));
+    const firstEvidence = await cleanEvidence(
+      viewerId,
+      'receipt_pack_concurrent_conflict_0001',
+      'concurrent-conflict-first.png',
+      'image/png',
+      png,
+    );
+    const secondEvidence = await cleanEvidence(
+      viewerId,
+      'receipt_pack_concurrent_conflict_0002',
+      'concurrent-conflict-second.png',
+      'image/png',
+      Uint8Array.from([...png, 2]),
+    );
+    await withTenantTransaction(db, sg, (tx) => createCompanyReceiptWithin(tx, sg, viewerId, {
+      documentId: firstEvidence.document.id,
+      documentVersionId: firstEvidence.version.id,
+      transactionDate: '2026-08-11',
+      merchant: 'Concurrent Conflict First',
+      amount: '18.2500',
+      currency: 'SGD',
+      category: 'Meals',
+      businessPurpose: 'Concurrent conflict first selection',
+    }));
+    await withTenantTransaction(db, sg, (tx) => createCompanyReceiptWithin(tx, sg, viewerId, {
+      documentId: secondEvidence.document.id,
+      documentVersionId: secondEvidence.version.id,
+      transactionDate: '2026-08-12',
+      merchant: 'Concurrent Conflict Second',
+      amount: '21.7500',
+      currency: 'SGD',
+      category: 'Meals',
+      businessPurpose: 'Concurrent conflict second selection',
+    }));
+    const packKey = 'company-receipt-pack:concurrent-conflict-0001';
+    const outcomes = await Promise.allSettled([
+      withTenantTransaction(db, sg, (tx) => createCompanyReceiptPackWithin(tx, sg, adminId, 'company', {
+        packKey,
+        dateFrom: '2026-08-11',
+        dateTo: '2026-08-11',
+        locale: 'en',
+      })),
+      withTenantTransaction(db, sg, (tx) => createCompanyReceiptPackWithin(tx, sg, adminId, 'company', {
+        packKey,
+        dateFrom: '2026-08-12',
+        dateTo: '2026-08-12',
+        locale: 'en',
+      })),
+    ]);
+
+    expect(outcomes.filter((outcome) => outcome.status === 'fulfilled')).toHaveLength(1);
+    const rejected = outcomes.find(
+      (outcome): outcome is PromiseRejectedResult => outcome.status === 'rejected',
+    );
+    expect(rejected).toBeDefined();
+    expect(rejected!.reason).toMatchObject({
+      code: 'company_receipt_pack_key_conflict',
+      status: 409,
+    });
+    expect(await db.select().from(companyReceiptPack).where(and(
+      eq(companyReceiptPack.masterFn, sg.masterFn),
+      eq(companyReceiptPack.companyFn, sg.companyFn),
+      eq(companyReceiptPack.packKey, packKey),
+    ))).toHaveLength(1);
+  });
+
   it('preserves identity for an unsupported original through Pack PDF rendering', async () => {
     const stored = await createManagedDocument(db, sg, { userId: viewerId }, {
       documentKey: 'receipt-pack-heic-placeholder-0001',

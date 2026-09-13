@@ -935,6 +935,76 @@ describe('Company Receipts API', () => {
     ]));
   });
 
+  it('returns one deterministic conflict for concurrent differing Pack facts', async () => {
+    const scope = { masterFn: 'M1', companyFn: 'C-SG' };
+    const firstEvidence = await evidence(scope, adminId, 'receipt_api_concurrent_conflict_0001');
+    const secondEvidence = await evidence(scope, adminId, 'receipt_api_concurrent_conflict_0002');
+    await withTenantTransaction(db, scope, (tx) => createCompanyReceiptWithin(
+      tx,
+      scope,
+      adminId,
+      {
+        ...payload(firstEvidence.document.id, firstEvidence.version.id),
+        transactionDate: '2026-08-10',
+        merchant: 'API Concurrent Conflict First',
+        amount: '18.2500',
+      },
+    ));
+    await withTenantTransaction(db, scope, (tx) => createCompanyReceiptWithin(
+      tx,
+      scope,
+      adminId,
+      {
+        ...payload(secondEvidence.document.id, secondEvidence.version.id),
+        transactionDate: '2026-08-11',
+        merchant: 'API Concurrent Conflict Second',
+        amount: '21.7500',
+      },
+    ));
+    const auth = await login('admin', 'demo1234');
+    const headers = {
+      cookie: auth.cookie,
+      'x-csrf-token': auth.csrf,
+      'content-type': 'application/json',
+    };
+    const packKey = 'company-receipt-pack:api-concurrent-conflict-0001';
+    const requests = [
+      {
+        ...headers,
+        'x-request-id': 'company-receipt-pack-concurrent-first',
+      },
+      {
+        ...headers,
+        'x-request-id': 'company-receipt-pack-concurrent-second',
+      },
+    ].map((requestHeaders, index) => fetch(`${baseUrl}/api/company-receipts/packs`, {
+      method: 'POST',
+      headers: requestHeaders,
+      body: JSON.stringify({
+        packKey,
+        dateFrom: index === 0 ? '2026-08-10' : '2026-08-11',
+        dateTo: index === 0 ? '2026-08-10' : '2026-08-11',
+        locale: 'en',
+      }),
+    }));
+    const responses = await Promise.all(requests);
+    const results = await Promise.all(responses.map(async (response) => ({
+      status: response.status,
+      body: await response.json(),
+    })));
+
+    expect(results.filter((result) => result.status === 201)).toHaveLength(1);
+    const conflict = results.find((result) => result.status === 409);
+    expect(conflict?.body).toMatchObject({
+      error: { code: 'company_receipt_pack_key_conflict' },
+    });
+    expect(await db.select().from(companyReceiptPack).where(and(
+      eq(companyReceiptPack.masterFn, scope.masterFn),
+      eq(companyReceiptPack.companyFn, scope.companyFn),
+      eq(companyReceiptPack.packKey, packKey),
+    ))).toHaveLength(1);
+  });
+
   it('serves bounded semantic totals through the authenticated receipt boundary', async () => {
     const scope = { masterFn: 'M1', companyFn: 'C-SG' };
     const viewerEvidence = await evidence(scope, viewerId, 'receipt_semantic_viewer_0001');
