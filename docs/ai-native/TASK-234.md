@@ -77,8 +77,18 @@ assertion after all pre-browser gates, i18n and Browser smoke passed. The
 transaction-list, operational-workspace, public-subpath and cleanup steps were
 skipped. The follow-up audit repair now retries one bounded route navigation
 when the list root is still absent after the 30-second wait; local 50/50 and
-full 130-route desktop/mobile audits plus lint pass. A new hosted CI terminal
-run is required for this repair. See the [fresh CI failure evidence](evidence/TASK-234-2026-09-13-fresh-ci-failure.md).
+full 130-route desktop/mobile audits plus lint pass. See the [fresh CI failure
+evidence](evidence/TASK-234-2026-09-13-fresh-ci-failure.md).
+
+Hosted CI run `34759696683` then completed successfully for repair revision
+`20e8af00da0a9a4fdeee2a73b88abe2fde9bc791`. All four Vitest shards and the
+combined source/generated, PostgreSQL, Demo, i18n, Browser smoke, Screen,
+transaction-list, operational-workspace, production public-subpath and cleanup
+gates passed; Pages run `34759696630` also completed successfully for the same
+revision. This closes the audit-recovery regression-safety boundary only. It
+does not promote G07.3: approved provider/model/data-policy/spend scope and a
+same-run real-provider receipt-to-Pack proof remain required. See the [terminal
+retry evidence](evidence/TASK-234-2026-09-13-ci-retry-terminal.md).
 
 ## Remove mandatory account activation — user decision 2026-09-10
 

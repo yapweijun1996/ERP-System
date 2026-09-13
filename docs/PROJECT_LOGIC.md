@@ -138,8 +138,13 @@ repeated the same `desktop:user-mgmt` shared-list root failure after all
 pre-browser, i18n and Browser smoke gates passed. The follow-up audit repair
 re-navigates a list route once when its root remains absent after the bounded
 30-second wait; local 50/50 and full 130-route desktop/mobile audits plus lint
-pass. A new hosted terminal run is required before remote regression safety is
-closed. See the [fresh CI evidence](ai-native/evidence/TASK-234-2026-09-13-fresh-ci-failure.md).
+pass. Hosted CI run `34759696683` then completed successfully for repair
+revision `20e8af00da0a9a4fdeee2a73b88abe2fde9bc791`, including all four Vitest
+shards, Screen, transaction-list, operational-workspace, production
+public-subpath and cleanup gates. This closes remote audit regression safety
+for the repair; provider scope, real-provider OCR, production and human
+acceptance remain open. See the [fresh CI evidence](ai-native/evidence/TASK-234-2026-09-13-fresh-ci-failure.md)
+and [hosted retry terminal evidence](ai-native/evidence/TASK-234-2026-09-13-ci-retry-terminal.md).
 
 Historical TASK-234 public Pages bundle recheck — 2026-09-13: the read-only
 Pages `release.json` identified revision

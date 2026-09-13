@@ -21,14 +21,24 @@ real-provider/OCR execution, production Pack release, readable SG/MY sources
 and Finance/QA human Pack/Print acceptance remain separate. See [terminal CI
 evidence](ai-native/evidence/TASK-234-2026-09-13-ci-terminal.md).
 
+TASK-234 bounded list-route retry verification — 2026-09-13: hosted CI run
+`34759696683` completed successfully for repair revision
+`20e8af00da0a9a4fdeee2a73b88abe2fde9bc791`; all four Vitest shards and the
+source/generated, PostgreSQL, Demo, i18n, Browser smoke, Screen,
+transaction-list, operational-workspace, production public-subpath and cleanup
+gates passed. Pages run `34759696630` also completed successfully for the same
+revision. This closes the audit-recovery regression-safety boundary only;
+approved provider scope, real-provider OCR, production Pack release and human
+Finance/QA acceptance remain separate. See [hosted retry terminal evidence](ai-native/evidence/TASK-234-2026-09-13-ci-retry-terminal.md).
+
 The merged revision `a67595d5b67d24d6dfcc02b0c04f89c0e6c391ae` has a separate
 terminal CI run `34751368911`. Its source/generated, database, Demo, i18n and
 desktop/mobile Browser smoke gates passed, but Screen audit failed with
 `LAYOUT [desktop:user-mgmt] transaction-list-v1 root missing`; later
 transaction-list, operational-workspace, production public-subpath and cleanup
-steps were skipped. The local audit recovery budget is now 30 seconds and the
-focused and full local screen audits pass; a fresh candidate CI run is required
-for the repaired revision. See [merged CI failure evidence](ai-native/evidence/TASK-234-2026-09-13-merged-ci-failure.md)
+steps were skipped. The bounded retry repair was subsequently verified by
+successful run `34759696683` for `20e8af0`; the failure remains historical
+context. See [merged CI failure evidence](ai-native/evidence/TASK-234-2026-09-13-merged-ci-failure.md)
 and the earlier [merged CI progress evidence](ai-native/evidence/TASK-234-2026-09-13-merged-ci-progress.md).
 
 TASK-237 Demo model evaluation rerun — 2026-09-13: the registered-Origin Demo
