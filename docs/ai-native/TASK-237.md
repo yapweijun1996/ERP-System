@@ -71,7 +71,7 @@ Each scored case has a versioned input fixture, expected permitted actions and i
 
   Checkpoint exit: G10 includes real CI execution, evaluator failure detection and rollout/disable evidence.
 
-  Evidence: [2026-09-13 local CI gate wiring and failure probe](evidence/TASK-237-2026-09-13-ci-gate-wiring.md), [2026-09-13 local rollout/disable probe](evidence/TASK-237-2026-09-13-rollout-disable-probe.md) and [2026-09-13 remote CI regression](evidence/TASK-237-2026-09-13-remote-ci.md); run `34740634873` passed for candidate revision `a4216346`, while production rollout/retention/disable remain unverified.
+  Evidence: [2026-09-13 local CI gate wiring and failure probe](evidence/TASK-237-2026-09-13-ci-gate-wiring.md), [2026-09-13 local rollout/disable probe](evidence/TASK-237-2026-09-13-rollout-disable-probe.md), [2026-09-13 remote CI regression](evidence/TASK-237-2026-09-13-remote-ci.md) and the retained [screen-audit failure](evidence/TASK-237-2026-09-13-remote-ci-screen-audit-failure.md); run `34740634873` passed for candidate revision `a4216346`, while the later docs-only run `34743412098` exposed and received a bounded audit-wait repair. Production rollout/retention/disable remain unverified.
 
 ## DoD mapping: all four must pass
 
@@ -90,7 +90,7 @@ is needed. Do not mark the task Done merely because all five checkpoints are che
   - Current result: The Demo report now records redacted run identifiers, model/prompt/fixture versions, per-run p95 latency and provider-call totals without retaining payloads. Full retry-cost accounting, owner-approved numerical budgets and production observability remain unverified.
 - **G10.4:** Gate model/prompt/tool changes on the same evaluations, record environment and evidence artifacts, and exercise a failed rollout plus emergency disable.
   - Required evidence: CI regression failure, rollback/disable evidence.
-  - Current result: The workflow runs the deterministic gate, broken-fixture failure probe and rollout/disable probe in the actual CI path. Remote run `34740634873` passed all four Vitest shards plus source/generated, database, Demo, i18n, browser, layout and public-subpath checks; the probe rejected a broken candidate without replacing the active version, accepted a valid candidate and blocked rollout after emergency disable. A production rollout/retention/disable observation remains unverified.
+  - Current result: The workflow runs the deterministic gate, broken-fixture failure probe and rollout/disable probe in the actual CI path. Remote run `34740634873` passed all four Vitest shards plus source/generated, database, Demo, i18n, browser, layout and public-subpath checks; the probe rejected a broken candidate without replacing the active version, accepted a valid candidate and blocked rollout after emergency disable. A later docs-only run `34743412098` exposed a bounded `user-mgmt` screen-audit timing race; the audit now waits for every declared shared-list marker and the local 50-route list audit passes. A production rollout/retention/disable observation remains unverified.
 
 ## Existing regression commands
 
