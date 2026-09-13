@@ -26,7 +26,7 @@ The validate job completed with failure at `2026-09-13T13:03:49Z` (21:03:49 Asia
 
 ## Repair boundary and local verification
 
-The failure repeats the `desktop:user-mgmt` cold Demo render class seen in [the earlier merged-run evidence](TASK-234-2026-09-13-merged-ci-failure.md). The audit had already waited 30 seconds for a shared-list root, but a transient first navigation/render error can leave the loading/error shell without the list root; waiting alone cannot recover that state. The follow-up repair adds one bounded route re-navigation when the declared list root is still absent, then retains the existing layout assertions and visible failure if the root remains absent.
+The failure repeats the `desktop:user-mgmt` cold Demo render class seen in [the earlier merged-run evidence](TASK-234-2026-09-13-merged-ci-failure.md). The audit had already waited 30 seconds for a shared-list root, but a transient first navigation/render error can leave the loading/error shell without the list root; waiting alone cannot recover that state. Candidate revision `02647139095c3d72c83bd564a99e50e178562864` adds one bounded route re-navigation when the declared list root is still absent, then retains the existing layout assertions and visible failure if the root remains absent.
 
 After the repair, local built-Demo verification passed:
 
@@ -41,4 +41,4 @@ The repair requires a new hosted CI terminal run before the remote regression-sa
 - **Evidence class:** remote CI terminal failure plus local bounded retry repair.
 - **Expected/actual:** recorded above with exact revision, environment, actor class and failure output.
 - **Counts:** task, goal-criterion, checkpoint and capability counts unchanged.
-- **Next measurable action:** commit and publish the retry repair, then record the next hosted CI terminal result without overrides.
+- **Next measurable action:** publish candidate revision `02647139095c3d72c83bd564a99e50e178562864`, then record the next hosted CI terminal result without overrides.
