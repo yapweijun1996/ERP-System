@@ -146,6 +146,15 @@ for the repair; provider scope, real-provider OCR, production and human
 acceptance remain open. See the [fresh CI evidence](ai-native/evidence/TASK-234-2026-09-13-fresh-ci-failure.md)
 and [hosted retry terminal evidence](ai-native/evidence/TASK-234-2026-09-13-ci-retry-terminal.md).
 
+Current Pages revision `e6fbc33f5dc5ad15234708bb8d6bbac7661df5cf` was rechecked
+through the normal hosted Demo path: the restricted Company Receipts title was
+`Expenses & Tax unavailable` without literal `&amp;`, and a 5 KB PNG uploaded
+through My Receipts reached `Quarantined · scanner unavailable` and remained
+after reload. Browser console errors/warnings were zero and no source,
+response, permission, module or business-table override was used. This current
+publication evidence remains separate from real-provider OCR, production and
+human acceptance. See the [current hosted no-override evidence](ai-native/evidence/TASK-234-2026-09-13-current-hosted-no-override.md).
+
 Historical TASK-234 public Pages bundle recheck — 2026-09-13: the read-only
 Pages `release.json` identified revision
 `976a863eabcb8f1499308a64dac646146ed44b6e` (`workflowRunId` `34689661151`),

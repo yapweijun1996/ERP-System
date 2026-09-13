@@ -31,6 +31,14 @@ revision. This closes the audit-recovery regression-safety boundary only;
 approved provider scope, real-provider OCR, production Pack release and human
 Finance/QA acceptance remain separate. See [hosted retry terminal evidence](ai-native/evidence/TASK-234-2026-09-13-ci-retry-terminal.md).
 
+The current Pages revision `e6fbc33f5dc5ad15234708bb8d6bbac7661df5cf` was
+also verified in a fresh normal Demo browser session: Company Receipts rendered
+the exact `Expenses & Tax unavailable` title without `&amp;`; My Receipts
+accepted the 5 KB PNG through Choose file and Sync all, reached
+`Quarantined · scanner unavailable`, and retained the row after reload. Browser
+console errors and warnings were zero, with no source, response, permission,
+module or business-table override. See [current hosted no-override evidence](ai-native/evidence/TASK-234-2026-09-13-current-hosted-no-override.md).
+
 The merged revision `a67595d5b67d24d6dfcc02b0c04f89c0e6c391ae` has a separate
 terminal CI run `34751368911`. Its source/generated, database, Demo, i18n and
 desktop/mobile Browser smoke gates passed, but Screen audit failed with

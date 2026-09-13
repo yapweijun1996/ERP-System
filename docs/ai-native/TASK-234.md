@@ -60,6 +60,15 @@ so TASK-234 stays In Progress and no G07 criterion or S-checkpoint count changes
 S5 supporting exit: Codex checked both PDF pages and exact persisted identity.
 No existing S checkbox or full G07 criterion is newly promoted by this increment.
 
+Current Pages revision `e6fbc33f5dc5ad15234708bb8d6bbac7661df5cf` was rechecked
+after the documentation release. A fresh normal Demo browser session rendered
+the exact `Expenses & Tax unavailable` title without `&amp;`, uploaded the 5 KB
+PNG through My Work → My Receipts, observed `Stored securely 1` and
+`Quarantined · scanner unavailable`, and retained the row after reload. Browser
+console errors and warnings were both zero; no source, response, permission,
+module or business-table override was used. See the [current hosted
+no-override evidence](evidence/TASK-234-2026-09-13-current-hosted-no-override.md).
+
 The merged revision's remote CI run `34751368911` is separately tracked. It
 reached a terminal failure after all four Vitest shards, pre-browser source,
 generated, database, Demo and build gates, the i18n matrix/report upload and the
