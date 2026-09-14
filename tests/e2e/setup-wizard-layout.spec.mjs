@@ -262,6 +262,42 @@ async function main() {
           await page.locator('#wizCompany').waitFor({ state: 'visible', timeout: TIMEOUT });
           await page.locator('#wizNext').click();
           await page.locator('#wizAdminName').waitFor({ state: 'visible', timeout: TIMEOUT });
+          const adminForm = await page.evaluate(() => {
+            const body = document.querySelector('#wizStepBody');
+            const intro = body?.querySelector('.wiz-p');
+            const fields = body?.querySelector('.wiz-admin-fields');
+            const items = [...(fields?.querySelectorAll('.fld') || [])];
+            const actions = body?.querySelector('.wiz-admin-actions');
+            const introGap = intro && fields ? fields.getBoundingClientRect().top - intro.getBoundingClientRect().bottom : 0;
+            const fieldGaps = items.slice(1).map((item, index) => item.getBoundingClientRect().top - items[index].getBoundingClientRect().bottom);
+            const lastField = items[items.length - 1];
+            const actionGap = lastField && actions ? actions.getBoundingClientRect().top - lastField.getBoundingClientRect().bottom : 0;
+            return {
+              fieldCount: items.length,
+              introGap,
+              fieldGaps,
+              actionGap,
+              actions: [...(body?.querySelectorAll('.wiz-admin-actions button') || [])].map((button) => button.textContent.trim()),
+            };
+          });
+          if (adminForm.fieldCount !== 5
+            || adminForm.introGap < 9
+            || adminForm.fieldGaps.some((gap) => gap < 9)
+            || adminForm.actionGap < 11
+            || JSON.stringify(adminForm.actions) !== JSON.stringify(['Generate secure password', 'Copy credentials', 'Download credentials'])) {
+            throw new Error(`desktop: admin form spacing or credential controls regressed: ${JSON.stringify(adminForm)}`);
+          }
+          await page.locator('#wizGeneratePassword').click();
+          const generatedPassword = await page.evaluate(() => ({
+            password: document.querySelector('#wizAdminPassword')?.value || '',
+            confirmation: document.querySelector('#wizAdminPasswordConfirm')?.value || '',
+            status: document.querySelector('#wizErr')?.textContent || '',
+          }));
+          if (generatedPassword.password.length !== 20
+            || generatedPassword.password !== generatedPassword.confirmation
+            || generatedPassword.status !== 'A secure password was generated.') {
+            throw new Error(`desktop: secure password generation regressed: ${JSON.stringify({ passwordLength: generatedPassword.password.length, confirmationMatches: generatedPassword.password === generatedPassword.confirmation, status: generatedPassword.status })}`);
+          }
           await page.locator('#wizNext').click();
           await page.locator('#wizModuleSeg input[data-module-key]').first().waitFor({ state: 'visible', timeout: TIMEOUT });
 

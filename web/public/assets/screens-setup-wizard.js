@@ -698,11 +698,13 @@ function renderSetupWizard(){
     }
     if(S.step===3){
       return '<h2 class="wiz-h">'+esc(s('s3h'))+'</h2><p class="wiz-p">'+esc(s('s3p'))+'</p>'+
-        fld(s('s3name'), '<input id="wizAdminName" value="'+esc(S.adminName)+'" placeholder="'+esc(s('s3nameph'))+'" autofocus>')+
-        fld(s('s3username'), '<input id="wizAdminUsername" value="'+esc(S.adminUsername)+'" autocomplete="username">')+
-        fld(s('s3email'), '<input id="wizAdminEmail" type="email" value="'+esc(S.adminEmail)+'" placeholder="'+esc(s('s3emailph'))+'">')+
-        fld(s('s3password'), '<input id="wizAdminPassword" type="password" value="'+esc(S.adminPassword)+'" placeholder="'+esc(s('s3passwordph'))+'" autocomplete="new-password">')+
-        fld(s('s3passwordConfirm'), '<input id="wizAdminPasswordConfirm" type="password" value="'+esc(S.adminPasswordConfirm)+'" autocomplete="new-password">')+
+        '<div class="wiz-admin-fields">'+
+          fld(s('s3name'), '<input id="wizAdminName" value="'+esc(S.adminName)+'" placeholder="'+esc(s('s3nameph'))+'" autofocus>')+
+          fld(s('s3username'), '<input id="wizAdminUsername" value="'+esc(S.adminUsername)+'" autocomplete="username">')+
+          fld(s('s3email'), '<input id="wizAdminEmail" type="email" value="'+esc(S.adminEmail)+'" placeholder="'+esc(s('s3emailph'))+'">')+
+          fld(s('s3password'), '<input id="wizAdminPassword" type="password" value="'+esc(S.adminPassword)+'" placeholder="'+esc(s('s3passwordph'))+'" autocomplete="new-password">')+
+          fld(s('s3passwordConfirm'), '<input id="wizAdminPasswordConfirm" type="password" value="'+esc(S.adminPasswordConfirm)+'" autocomplete="new-password">')+
+        '</div>'+
         '<div class="wiz-admin-actions"><button class="btn soft" type="button" id="wizGeneratePassword">'+esc(s('s3generatePassword'))+'</button><button class="btn plain" type="button" id="wizCopyCredentials">'+esc(s('s3copyCredentials'))+'</button><button class="btn ghost" type="button" id="wizDownloadCredentials">'+esc(s('s3downloadCredentials'))+'</button></div>'+
         '<p class="wiz-admin-credential-note">'+esc(s('s3credentialNotice'))+'</p>'+
         '<div class="auth-error" id="wizErr"></div>';

@@ -472,7 +472,9 @@ html,body{
 #setupWizardView .wiz-module-plan>.ico{flex:0 0 auto;width:18px;height:18px;margin-top:1px;}
 #setupWizardView .wiz-module-plan div{display:grid;gap:3px;min-width:0;}
 #setupWizardView .wiz-module-plan b{font-size:calc(12px * var(--fs,1));color:var(--text);}
-#setupWizardView .wiz-admin-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;}
+#setupWizardView .wiz-admin-fields{display:grid;gap:10px;margin-top:10px;}
+#setupWizardView .wiz-admin-fields .fld{margin-top:0;}
+#setupWizardView .wiz-admin-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
 #setupWizardView .wiz-admin-actions .btn{min-height:36px;justify-content:center;}
 #setupWizardView .wiz-admin-credential-note{margin:8px 0 0;color:var(--muted);font-size:calc(11px * var(--fs,1));line-height:1.4;}
 #setupWizardView .wiz-provider-fields{display:grid;gap:18px;margin-top:18px;}
