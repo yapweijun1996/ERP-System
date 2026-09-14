@@ -51,7 +51,19 @@ function renderSetupWizard(){
     MY:{ currency:'MYR', symbol:'RM', taxRegime:'SST', taxLabel:'SST 8%' },
   };
   var IS_API = typeof window.erpDataMode === 'function' && window.erpDataMode() === 'api';
+  // This public Browser Demo is deliberately separate from governed server
+  // providers. It can only run on the registered ERP Demo origin and keeps its
+  // short-lived session capability in this page's memory.
+  var DEMO_GATEWAY_ORIGIN = 'https://gmb01.xyz';
+  var DEMO_GATEWAY_BASE_URL = 'https://gpt.yapweijun1996.com';
+  var DEMO_GATEWAY_PROJECT_ID = 'erp-demo';
+
+  function browserDemoGatewayAvailable(){
+    return !IS_API && window.location.origin === DEMO_GATEWAY_ORIGIN && typeof window.fetch === 'function';
+  }
+
   var PROVIDERS = [
+    ...(browserDemoGatewayAvailable() ? [['demo_gateway', 'Demo Gateway (recommended)']] : []),
     ['', 'None — skip for now'],
     ['openai', 'OpenAI'],
     ['gemini', 'Google Gemini'],
@@ -70,7 +82,7 @@ function renderSetupWizard(){
     adminEmail:'admin.acme@acme.co',
     adminPassword:'demo1234',
     adminPasswordConfirm:'demo1234',
-    aiProvider:'',
+    aiProvider:browserDemoGatewayAvailable() ? 'demo_gateway' : '',
     aiKey:'',
   };
 
@@ -90,6 +102,10 @@ function renderSetupWizard(){
       s4h:'Connect an AI provider (optional)', s4p:'Bring Your Own Key — your key is never stored or sent to us; this preview does not persist it.',
       s4provider:'Provider', s4key:'API key', s4keyph:'Not required for this preview',
       s4note:'This key is kept only in this step’s memory and is discarded on Finish/Back — nothing is saved.',
+      demoGatewayIntro:'Use the browser Demo Gateway. No API key is required; it does not configure server AI.',
+      demoGatewayConnecting:'Connecting to the Demo Gateway…', demoGatewayReady:'Demo session ready for this page. It is not saved and expires automatically.',
+      demoGatewayUnavailable:'The Demo Gateway is unavailable. You can skip it and continue; server AI settings are unchanged.',
+      demoGatewayNote:'This is a public browser demo only. It never enables a production provider or stores a credential.',
       s5h:'Review and finish', s5p:'Finishing writes the company, tax rule, chart of accounts and admin user to this browser’s demo database (PGlite/IndexedDB).',
       s5pProd:'Finishing securely creates the organization, company, tax rule, chart of accounts and first administrator in PostgreSQL.',
       sumLang:'Language', sumOrg:'Organization', sumOrgCode:'Login code', sumCompany:'Company', sumCountry:'Country', sumCurrency:'Currency', sumTax:'Tax regime',
@@ -378,6 +394,9 @@ function renderSetupWizard(){
     adminPasswordConfirm:IS_API?'':DEMO_DEFAULTS.adminPasswordConfirm,
     aiProvider:IS_API?'':DEMO_DEFAULTS.aiProvider,
     aiKey:IS_API?'':DEMO_DEFAULTS.aiKey,
+    demoGatewaySessionToken:null,
+    demoGatewayStatus:'idle',
+    demoGatewayRequest:null,
     moduleKeys:[],
     modulesInitialized:false,
   };
@@ -386,6 +405,44 @@ function renderSetupWizard(){
 
   function copy(){ i18nLegacy(COPY); return COPY[S.lang]||COPY.en; }
   function s(k){ var c=copy(); return c[k]!=null?c[k]:(COPY.en[k]!=null?COPY.en[k]:k); }
+
+  function clearDemoGatewaySession(){
+    S.demoGatewaySessionToken=null;
+    S.demoGatewayStatus='idle';
+    S.demoGatewayRequest=null;
+  }
+
+  function demoGatewayStatusText(){
+    if(S.demoGatewayStatus==='connecting') return s('demoGatewayConnecting');
+    if(S.demoGatewayStatus==='ready') return s('demoGatewayReady');
+    if(S.demoGatewayStatus==='unavailable') return s('demoGatewayUnavailable');
+    return s('demoGatewayNote');
+  }
+
+  function prepareDemoGatewaySession(){
+    if(S.aiProvider!=='demo_gateway' || !browserDemoGatewayAvailable() || S.demoGatewayStatus==='ready') return;
+    if(S.demoGatewayRequest) return;
+    S.demoGatewayStatus='connecting';
+    S.demoGatewayRequest=window.fetch(DEMO_GATEWAY_BASE_URL+'/demo/session', {
+      method:'POST', credentials:'omit', cache:'no-store', redirect:'error',
+      headers:{'Content-Type':'application/json'}, body:JSON.stringify({project_id:DEMO_GATEWAY_PROJECT_ID}),
+    }).then(function(response){
+      if(!response.ok) throw new Error('demo_gateway_session_unavailable');
+      return response.json();
+    }).then(function(payload){
+      if(!payload || typeof payload.token!=='string' || !/^[A-Za-z0-9._-]{16,4096}$/.test(payload.token)) {
+        throw new Error('demo_gateway_session_invalid');
+      }
+      S.demoGatewaySessionToken=payload.token;
+      S.demoGatewayStatus='ready';
+    }).catch(function(){
+      clearDemoGatewaySession();
+      S.demoGatewayStatus='unavailable';
+    }).finally(function(){
+      S.demoGatewayRequest=null;
+      if(S.step===5 && S.aiProvider==='demo_gateway') render();
+    });
+  }
 
   function stepper(){
     var steps = STEP_KEYS.map(function(k){ return [s(k)]; });
@@ -511,7 +568,8 @@ function renderSetupWizard(){
       }
     }
     S.moduleKeys=catalog.filter(function(item){ return enabled.has(item.key); }).map(function(item){ return item.key; });
-    render();
+    var stepBody=document.getElementById('wizStepBody');
+    render({stepScrollTop:stepBody?stepBody.scrollTop:0});
   }
 
   function stepBody(){
@@ -547,12 +605,16 @@ function renderSetupWizard(){
       return '<h2 class="wiz-h">'+esc(s('s4h'))+'</h2><p class="wiz-p">'+esc(s('s4p'))+'</p>'+modulePicker();
     }
     if(S.step===5){
-      return '<h2 class="wiz-h">'+esc(s('s5h'))+'</h2><p class="wiz-p">'+esc(s('s5p'))+'</p>'+
+      var demoGatewaySelected=S.aiProvider==='demo_gateway';
+      if(demoGatewaySelected) prepareDemoGatewaySession();
+      return '<h2 class="wiz-h">'+esc(s('s5h'))+'</h2><p class="wiz-p">'+esc(demoGatewaySelected?s('demoGatewayIntro'):s('s5p'))+'</p>'+
         fld(s('s5provider'), '<select id="wizProvider">'+PROVIDERS.map(function(p){
           return '<option value="'+esc(p[0])+'" '+(p[0]===S.aiProvider?'selected':'')+'>'+esc(p[1])+'</option>';
         }).join('')+'</select>')+
-        fld(s('s5key'), '<input id="wizAiKey" type="password" value="'+esc(S.aiKey)+'" placeholder="'+esc(s('s5keyph'))+'" '+(S.aiProvider?'':'disabled')+'>')+
-        '<p class="wiz-p" style="margin-top:6px">'+esc(s('s5note'))+'</p>';
+        (demoGatewaySelected
+          ? '<p class="wiz-p" role="status" style="margin-top:10px">'+esc(demoGatewayStatusText())+'</p>'
+          : fld(s('s5key'), '<input id="wizAiKey" type="password" value="'+esc(S.aiKey)+'" placeholder="'+esc(s('s5keyph'))+'" '+(S.aiProvider?'':'disabled')+'>')+
+            '<p class="wiz-p" style="margin-top:6px">'+esc(s('s5note'))+'</p>');
     }
     // step 6 — summary
     meta = COUNTRY_META[S.country];
@@ -583,7 +645,7 @@ function renderSetupWizard(){
     return '<div class="set-savebar wizard-savebar">'+left+(S.step>0?'<div class="grow"></div>':'')+right+'</div>';
   }
 
-  function render(){
+  function render(options){
     var langAttr = S.lang==='zh'?'zh-Hans':S.lang;
     host.setAttribute('lang', langAttr);
     document.documentElement.lang = langAttr;
@@ -594,6 +656,10 @@ function renderSetupWizard(){
       footer()+
       '</section>';
     wire();
+    if(options&&typeof options.stepScrollTop==='number'){
+      var scrollContainer=document.getElementById('wizStepBody');
+      if(scrollContainer) scrollContainer.scrollTop=Math.max(0,Math.min(options.stepScrollTop,scrollContainer.scrollHeight-scrollContainer.clientHeight));
+    }
   }
 
   function readCurrentStepInputs(){
@@ -611,7 +677,8 @@ function renderSetupWizard(){
     }
     else if(S.step===5){
       var p=document.getElementById('wizProvider'); if(p) S.aiProvider=p.value;
-      var k=document.getElementById('wizAiKey'); if(k) S.aiKey=k.value;
+      if(S.aiProvider==='demo_gateway') S.aiKey='';
+      else { var k=document.getElementById('wizAiKey'); if(k) S.aiKey=k.value; }
     }
   }
 
@@ -647,7 +714,12 @@ function renderSetupWizard(){
       b.addEventListener('click',function(){ readCurrentStepInputs(); S.country=b.dataset.v; render(); });
     });
     var provSel=document.getElementById('wizProvider');
-    if(provSel) provSel.addEventListener('change',function(){ readCurrentStepInputs(); render(); });
+    if(provSel) provSel.addEventListener('change',function(){
+      var previous=S.aiProvider;
+      readCurrentStepInputs();
+      if(previous!==S.aiProvider) clearDemoGatewaySession();
+      render();
+    });
     var moduleSeg=document.getElementById('wizModuleSeg');
     if(moduleSeg) moduleSeg.querySelectorAll('input[data-module-key]').forEach(function(input){
       input.addEventListener('change',function(){ updateModuleSelection(input.dataset.moduleKey,input.checked); });
@@ -669,6 +741,7 @@ function renderSetupWizard(){
     var finish=document.getElementById('wizFinish');
     if(finish) finish.addEventListener('click',function(){
       finish.setAttribute('disabled','');
+      clearDemoGatewaySession();
       var dataAdapter = window.ErpSystemData || window.ErpSystemDemo;
       var run = (dataAdapter && dataAdapter.completeSetup)
         ? dataAdapter.completeSetup({

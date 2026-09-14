@@ -666,3 +666,29 @@ body.palette-open{overflow:hidden;overscroll-behavior:none;}
 }
 
 /* component-specific styles live in erp-blocks.css */
+
+/* ===== device-local background artwork =====
+   Background is deliberately decorative: business surfaces remain opaque so
+   record readability and contrast do not depend on the chosen artwork. */
+html[data-background="aurora"]{--workspace-background:radial-gradient(circle at 8% 0%,rgba(59,130,246,.14),transparent 28%),radial-gradient(circle at 96% 100%,rgba(139,92,246,.12),transparent 30%),var(--bg);}
+html[data-background="mist"]{--workspace-background:radial-gradient(circle at 15% 0%,rgba(14,165,233,.10),transparent 30%),linear-gradient(145deg,var(--bg),var(--surface-2));}
+html[data-background="paper"]{--workspace-background:var(--bg);}
+html[data-background="night-sky"]{--workspace-background:radial-gradient(circle at 10% 0%,rgba(67,56,202,.16),transparent 28%),radial-gradient(circle at 94% 100%,rgba(14,116,144,.12),transparent 30%),var(--bg);}
+body,.app{background:var(--workspace-background,var(--bg));}
+
+html[data-background="mist"] .auth-view{background:radial-gradient(circle at 14% 12%,rgba(56,189,248,.16),transparent 32%),linear-gradient(145deg,#eef8fc,#f7fafc 58%,#edf5ff);}
+html[data-background="paper"] .auth-view{background:var(--bg);}
+html[data-background="night-sky"] .auth-view{background:radial-gradient(circle at 12% 8%,rgba(99,102,241,.22),transparent 30%),linear-gradient(145deg,#11152b,#18203b 55%,#102a36);}
+html[data-background="mist"] #setupWizardView.auth-view{background:radial-gradient(circle at 76% 16%,rgba(56,189,248,.18),transparent 28%),linear-gradient(145deg,#eefbff,#f4f8fc 56%,#eff6ff);}
+html[data-background="paper"] #setupWizardView.auth-view{background:var(--bg);}
+html[data-background="night-sky"] #setupWizardView.auth-view{background:radial-gradient(circle at 76% 16%,rgba(129,140,248,.25),transparent 30%),radial-gradient(circle at 16% 86%,rgba(45,212,191,.12),transparent 30%),linear-gradient(145deg,#0b1024,#151a38 56%,#092731);}
+html[data-background="mist"] #setupWizardView.auth-view::before{background:radial-gradient(circle at 34% 30%,#d8f5ff 0%,#7dd3fc 42%,#38bdf8 72%,#1d4ed8 100%);box-shadow:inset -42px -52px 84px rgba(14,116,144,.28),0 42px 95px rgba(14,165,233,.18);}
+html[data-background="mist"] #setupWizardView.auth-view::after{background:radial-gradient(circle at 36% 32%,#e0f2fe 0%,#67e8f9 42%,#22d3ee 72%,#0e7490 100%);box-shadow:inset -35px -42px 70px rgba(8,145,178,.26),0 38px 88px rgba(14,165,233,.16);}
+html[data-background="paper"] #setupWizardView.auth-view::before,html[data-background="paper"] #setupWizardView.auth-view::after{display:none;}
+html[data-background="night-sky"] #setupWizardView.auth-view::before{background:radial-gradient(circle at 34% 30%,#c7d2fe 0%,#818cf8 38%,#4f46e5 70%,#1e1b4b 100%);box-shadow:inset -42px -52px 84px rgba(30,27,75,.5),0 42px 95px rgba(67,56,202,.25);}
+html[data-background="night-sky"] #setupWizardView.auth-view::after{background:radial-gradient(circle at 36% 32%,#99f6e4 0%,#2dd4bf 38%,#0f766e 70%,#042f2e 100%);box-shadow:inset -35px -42px 70px rgba(4,47,46,.48),0 38px 88px rgba(20,184,166,.16);}
+html[data-background="night-sky"] .auth-panel{background:rgba(28,28,30,.82);border-color:rgba(255,255,255,.16);}
+@media (prefers-reduced-motion:reduce){html[data-background] #setupWizardView.auth-view::before,html[data-background] #setupWizardView.auth-view::after{animation:none;}}
+html[data-theme="dark"][data-background="mist"]{--workspace-background:radial-gradient(circle at 15% 0%,rgba(56,189,248,.13),transparent 30%),linear-gradient(145deg,#101820,#151b2a);}
+html[data-theme="dark"][data-background="mist"] .auth-view{background:radial-gradient(circle at 14% 12%,rgba(56,189,248,.18),transparent 32%),linear-gradient(145deg,#0d1720,#121c2d 58%,#0c1a2a);}
+html[data-theme="dark"][data-background="mist"] #setupWizardView.auth-view{background:radial-gradient(circle at 76% 16%,rgba(56,189,248,.20),transparent 30%),linear-gradient(145deg,#0d1720,#121c2d 58%,#0c1a2a);}

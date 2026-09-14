@@ -44,6 +44,7 @@ SCREENS['settings'] = async function(root, params){
       verified:'Session verified', fullName:'Full name', workEmail:'Work email',
       access:'Access', company:'Active company', companyDesc:'Controlled by your authenticated session.',
       theme:'Theme', themeDesc:'Applied immediately and stored only in this browser.',
+      background:'Background', backgroundDesc:'Shared by sign-in, setup and this workspace on this device.',
       light:'Light', dark:'Dark', palette:'Colour palette',
       paletteDesc:'A device preference used throughout the application.',
       accent:'Accent colour', accentDesc:'Used for links, highlights and active states.',
@@ -79,6 +80,7 @@ SCREENS['settings'] = async function(root, params){
       verified:'Sesi disahkan', fullName:'Nama penuh', workEmail:'E-mel kerja',
       access:'Akses', company:'Syarikat aktif', companyDesc:'Dikawal oleh sesi disahkan anda.',
       theme:'Tema', themeDesc:'Digunakan serta-merta dan disimpan dalam pelayar ini sahaja.',
+      background:'Latar belakang', backgroundDesc:'Dikongsi oleh daftar masuk, persediaan dan ruang kerja pada peranti ini.',
       light:'Cerah', dark:'Gelap', palette:'Palet warna',
       paletteDesc:'Keutamaan peranti yang digunakan di seluruh aplikasi.',
       accent:'Warna aksen', accentDesc:'Digunakan untuk pautan, sorotan dan keadaan aktif.',
@@ -114,6 +116,7 @@ SCREENS['settings'] = async function(root, params){
       verified:'会话已验证', fullName:'姓名', workEmail:'工作邮箱',
       access:'访问身份', company:'当前公司', companyDesc:'由您已验证的登录会话控制。',
       theme:'主题', themeDesc:'立即生效，仅保存在此浏览器。',
+      background:'背景', backgroundDesc:'在此设备的登录、设置向导和工作区中共用。',
       light:'浅色', dark:'深色', palette:'配色方案',
       paletteDesc:'应用于整个系统的本机偏好。',
       accent:'强调色', accentDesc:'用于链接、高亮和活动状态。',
@@ -160,6 +163,8 @@ SCREENS['settings'] = async function(root, params){
       "companyDesc": "認証されたセッションによって制御されます。",
       "theme": "テーマ",
       "themeDesc": "すぐに適用され、このブラウザーにのみ保存されます。",
+      "background": "背景",
+      "backgroundDesc": "このデバイスのサインイン、セットアップ、ワークスペースで共有されます。",
       "light": "ライト",
       "dark": "暗い",
       "palette": "カラーパレット",
@@ -225,6 +230,8 @@ SCREENS['settings'] = async function(root, params){
       "companyDesc": "Kiểm soát bởi phiên xác thực của bạn.",
       "theme": "chủ đề",
       "themeDesc": "Áp dụng ngay lập tức và chỉ được lưu trữ trong trình duyệt này.",
+      "background": "Nền",
+      "backgroundDesc": "Dùng chung cho đăng nhập, thiết lập và không gian làm việc trên thiết bị này.",
       "light": "Ánh sáng",
       "dark": "Tối tăm",
       "palette": "Bảng màu",
@@ -287,11 +294,13 @@ SCREENS['settings'] = async function(root, params){
     <input value="${esc(value==null?'—':String(value))}" readonly aria-readonly="true"></div>`;
 
   let storedTheme=document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light';
+  let storedBackground=document.documentElement.getAttribute('data-background')||'aurora';
   let storedTextSize='1';
   let storedAccent='#0071E3';
   let storedPalette='';
   try{
     storedTextSize=localStorage.getItem('aria-textsize')||'1';
+    storedBackground=localStorage.getItem('aria-background')||storedBackground;
     storedAccent=localStorage.getItem('aria-accent')||'#0071E3';
     storedPalette=localStorage.getItem('aria-palette')||'';
   }catch{}
@@ -330,6 +339,9 @@ SCREENS['settings'] = async function(root, params){
     ${row(s('theme'),s('themeDesc'),seg('theme',[
       ['light',s('light')],['dark',s('dark')],
     ],storedTheme))}
+    ${row(s('background'),s('backgroundDesc'),seg('background',[
+      ['aurora','Aurora'],['mist','Mist'],['paper','Paper'],['night-sky','Night sky'],
+    ],storedBackground))}
     ${row(s('palette'),s('paletteDesc'),`<div class="set-palettes">${palettes.map(p=>
       `<button class="set-pal ${p[0]===storedPalette?'on':''}" data-c="${p[1]}" data-name="${p[0]}" aria-label="${p[0]}">
         <span class="set-pal-sw">${p[2].map(c=>`<i style="background:${c}"></i>`).join('')}</span>
@@ -434,6 +446,7 @@ SCREENS['settings'] = async function(root, params){
       }
       control.querySelectorAll('button').forEach(item=>item.classList.toggle('on',item===button));
       if(group==='theme') applyTheme(value);
+      else if(group==='background') applyBackground(value);
       else if(group==='sidebar') setNavCollapsed(value==='collapsed',true);
       else if(group==='density'){
         document.documentElement.setAttribute('data-density',value==='compact'?'compact':'default');
@@ -468,7 +481,7 @@ SCREENS['settings'] = async function(root, params){
   root.querySelector('[data-act="reset-device"]')?.addEventListener('click',()=>{
     if(!confirm(s('resetConfirm'))) return;
     [
-      'aria-theme','aria-nav','aria-density','aria-textsize',
+      'aria-theme','aria-background','aria-nav','aria-density','aria-textsize',
       'aria-accent','aria-palette',
     ].forEach(key=>{ try{ localStorage.removeItem(key); }catch{} });
     toast(s('resetDone'),'ok');

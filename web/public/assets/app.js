@@ -1855,6 +1855,20 @@ function applyTheme(t){
 }
 function toggleTheme(){ applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark'); }
 
+/* Background artwork is a personal, device-local preference. It is deliberately
+   available before sign-in so the login and setup views share the same choice. */
+const BACKGROUND_OPTIONS=new Set(['aurora','mist','paper','night-sky']);
+function applyBackground(background){
+  const normalized=BACKGROUND_OPTIONS.has(background)?background:'aurora';
+  document.documentElement.setAttribute('data-background',normalized);
+  try{localStorage.setItem('aria-background',normalized);}catch{}
+}
+function restoreBackground(){
+  let stored='aurora';
+  try{stored=localStorage.getItem('aria-background')||'aurora';}catch{}
+  applyBackground(stored);
+}
+
 /* ---------- sidebar collapse ---------- */
 let navUserSet=false;
 function setNavCollapsed(on, fromUser){
@@ -2360,6 +2374,7 @@ function renderTabbar(){
 
 /* ---------- boot ---------- */
 async function boot(){
+  restoreBackground();
   if(typeof initI18n==='function') await initI18n();
   if(window.ErpTenantRecovery&&window.ErpTenantRecovery.isActive()){
     window.ErpTenantRecovery.render();

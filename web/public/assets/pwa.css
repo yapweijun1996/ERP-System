@@ -456,7 +456,7 @@ html,body{
   font-style:normal;
   font-weight:700;
 }
-#setupWizardView .wiz-module-state{grid-area:state;color:var(--accent);font-size:calc(10px * var(--fs,1));font-weight:700;line-height:1.6;white-space:nowrap;}
+#setupWizardView .wiz-module-state{grid-area:state;min-width:52px;color:var(--accent);font-size:calc(10px * var(--fs,1));font-weight:700;line-height:1.6;text-align:right;white-space:nowrap;}
 #setupWizardView .wiz-module-note{margin:12px 0 0;color:var(--muted);font-size:calc(12px * var(--fs,1));line-height:1.4;}
 #setupWizardView .wiz-module-plan{
   display:flex;
