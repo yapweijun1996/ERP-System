@@ -1799,5 +1799,7 @@ window.__ERP_I18N_EN__=Object.freeze({
   "staff.emailCopied": "Email copied",
   "staff.copyFailed": "Unable to access or copy the credential. Check your access and clipboard permission, then try again.",
   "staff.emailTemplate": "To: {email}\nSubject: Your {company} ERP account\n\nHello {name},\n\nYour ERP account is ready to use.\n\nSign in: {url}\nOrganization code: {organization}\nUsername: {username}\nEmail: {email}\nPassword: {password}\n\nNo activation is required. Keep your password private. Contact HR if you need help.\n\nRegards,\nHR",
-  "purchasing.goodsReceipts.description": "Review full receipts posted against approved purchase orders. Posting updates inventory and feeds the 3-way match."
+  "purchasing.goodsReceipts.description": "Review full receipts posted against approved purchase orders. Posting updates inventory and feeds the 3-way match.",
+  "pwa.currentVersion": "Current",
+  "pwa.latestVersion": "Latest"
 });

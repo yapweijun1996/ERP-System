@@ -6,7 +6,7 @@
   let offeredUpdateKey = null;
   let applyingUpdate = false;
   const UPDATE_CHECK_INTERVAL_MS = 60 * 1000;
-  const SERVICE_WORKER_VERSION = 'erp-system-pwa-v267';
+  const SERVICE_WORKER_VERSION = 'erp-system-pwa-v268';
   const DISMISSED_UPDATE_KEY = 'erp-system-dismissed-pwa-update';
   const LEGACY_SOURCE_FINGERPRINT_KEY = 'erp-system-source-fingerprint';
   const copy = (key, fallback) => typeof window.t === 'function' ? window.t(key) : fallback;
@@ -93,11 +93,13 @@
     if (el) el.classList.remove('show');
   }
 
-  function showToast({ title, body, version, versionLabel, primary, secondary, onPrimary, onSecondary }){
+  function showToast({ title, body, version, versionLabel, currentVersion, latestVersion, currentVersionLabel, latestVersionLabel, primary, secondary, onPrimary, onSecondary }){
     const el = ensureToast();
-    const versionMarkup = version
-      ? `<small class="pwa-version">${escapeHtml(versionLabel || 'Version')}: <code data-pwa-version>${escapeHtml(version)}</code></small>`
-      : '';
+    const versionMarkup = latestVersion
+      ? `<small class="pwa-version"><span>${escapeHtml(currentVersionLabel || 'Current')}</span> <code data-pwa-current-version>${escapeHtml(currentVersion || '—')}</code><span aria-hidden="true"> → </span><span>${escapeHtml(latestVersionLabel || 'Latest')}</span> <code data-pwa-latest-version>${escapeHtml(latestVersion)}</code></small>`
+      : (version
+        ? `<small class="pwa-version">${escapeHtml(versionLabel || 'Version')}: <code data-pwa-version>${escapeHtml(version)}</code></small>`
+        : '');
     el.innerHTML = `
       <div class="pwa-copy"><b>${escapeHtml(title)}</b><span>${escapeHtml(body)}</span>${versionMarkup}</div>
       <div class="pwa-actions">
@@ -114,6 +116,7 @@
   async function showUpdatePrompt(worker){
     if (!worker || applyingUpdate || worker.state === 'redundant') return;
     const updateKey = await getWorkerVersion(worker);
+    const currentKey = await getWorkerVersion(navigator.serviceWorker.controller);
     if (applyingUpdate || worker.state === 'redundant' || offeredUpdateKey === updateKey) return;
     offeredUpdateKey = updateKey;
     if (readDismissedUpdate() === updateKey) return;
@@ -121,8 +124,10 @@
     showToast({
       title:copy('pwa.updateReady','Update ready'),
       body:copy('pwa.updateBody','A new ERP System version is available.'),
-      version:updateKey,
-      versionLabel:copy('pwa.version','Version'),
+      currentVersion:currentKey,
+      latestVersion:updateKey,
+      currentVersionLabel:copy('pwa.currentVersion','Current'),
+      latestVersionLabel:copy('pwa.latestVersion','Latest'),
       primary:copy('pwa.updateNow','Update now'),
       secondary:copy('pwa.later','Later'),
       onPrimary(){
