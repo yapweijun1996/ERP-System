@@ -786,9 +786,20 @@ function renderSetupWizard(){
       render();
     });
     var moduleSeg=document.getElementById('wizModuleSeg');
-    if(moduleSeg) moduleSeg.querySelectorAll('input[data-module-key]').forEach(function(input){
-      input.addEventListener('change',function(){ updateModuleSelection(input.dataset.moduleKey,input.checked); });
-    });
+    if(moduleSeg){
+      moduleSeg.querySelectorAll('input[data-module-key]').forEach(function(input){
+        input.addEventListener('change',function(){ updateModuleSelection(input.dataset.moduleKey,input.checked); });
+      });
+      moduleSeg.querySelectorAll('[data-module-card]').forEach(function(card){
+        card.addEventListener('click',function(event){
+          if(event.target.closest('input, label, details')) return;
+          var input=card.querySelector('input[data-module-key]');
+          if(!input || input.disabled) return;
+          input.checked=!input.checked;
+          updateModuleSelection(input.dataset.moduleKey,input.checked);
+        });
+      });
+    }
 
     var back=document.getElementById('wizBack');
     if(back) back.addEventListener('click',function(){ readCurrentStepInputs(); S.step--; render(); });
