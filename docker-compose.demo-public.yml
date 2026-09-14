@@ -1,6 +1,14 @@
 # Makes the existing gmb01.xyz/erp Cloudflare Tunnel ingress serve the local
 # Demo. The host port is deliberately the Tunnel's existing local upstream.
 services:
+  # Use this overlay with docker-compose.demo.yml so the bundle itself knows
+  # that clients enter through the public /erp mount. Port 8081 remains an
+  # internal host hop for the proxy, not the client-facing address.
+  demo:
+    build:
+      args:
+        ERP_PUBLIC_URL: https://gmb01.xyz/erp
+
   public-demo-proxy:
     image: nginx:alpine
     container_name: erp-system-demo-public-proxy
@@ -10,4 +18,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./web/nginx.demo-public.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      demo:
+        condition: service_healthy
     restart: unless-stopped

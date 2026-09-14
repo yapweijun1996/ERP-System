@@ -453,6 +453,16 @@ function renderSetupWizard(){
     return s('modulesNoDependencies');
   }
 
+  function moduleIcon(moduleKey){
+    var icons={
+      sales:'cart', purchasing:'truck', crm:'people', inventory:'box', warehouse:'warehouse',
+      manufacturing:'factory', quality:'shield', finance:'bank', hr:'people', payroll:'money',
+      project:'project', service:'wrench', asset:'asset', workflow:'flow', bi:'chart',
+      integration:'plug', expenses_tax:'receipt',
+    };
+    return ic(icons[moduleKey]||'grid');
+  }
+
   function modulePicker(){
     var catalog=setupModuleCatalog();
     initializeModuleSelection(catalog);
@@ -466,9 +476,9 @@ function renderSetupWizard(){
       var inputId='wizModule-'+item.key;
       return '<article class="wiz-module-card '+(selected?'is-selected':'')+'" data-module-card="'+esc(item.key)+'">'+
         '<input id="'+esc(inputId)+'" type="checkbox" data-module-key="'+esc(item.key)+'" '+(selected?'checked':'')+' '+(unavailable?'disabled':'')+'>'+
-        '<label class="wiz-module-copy" for="'+esc(inputId)+'"><span><b>'+esc(item.name)+'</b>'+
+        '<label class="wiz-module-copy" for="'+esc(inputId)+'"><span><i class="wiz-module-icon" aria-hidden="true">'+moduleIcon(item.key)+'</i><b>'+esc(item.name)+'</b>'+
         (!unavailable&&item.defaultCompanyAllocated?'<em>'+esc(s('modulesRecommended'))+'</em>':'')+'</span>'+
-        '</label><details class="wiz-module-details"><summary>'+esc(s('modulesDetails'))+'</summary>'+
+        '</label><details class="wiz-module-details"><summary><span class="wiz-module-details-icon" aria-hidden="true">'+ic('info')+'</span><span>'+esc(s('modulesDetails'))+'</span><span class="wiz-module-details-chevron" aria-hidden="true">'+ic('chevD')+'</span></summary>'+
         '<small>'+esc(description)+'</small></details>'+
         '<span class="wiz-module-state">'+esc(selected?s('modulesSelected'):'')+'</span></article>';
     }).join('')+'</div>'+
@@ -521,7 +531,7 @@ function renderSetupWizard(){
         fld(s('s2lbl'), '<input id="wizCompany" value="'+esc(S.companyName)+'" placeholder="'+esc(s('s2ph'))+'" autofocus>')+
         '<div class="fld" style="margin-top:10px"><span>'+esc(s('s2country'))+'</span>'+
         seg('country', [['SG','Singapore'],['MY','Malaysia']], S.country, 'wizCountrySeg')+'</div>'+
-        '<p class="wiz-p" style="margin-top:10px">'+esc(s('sumCurrency'))+': <b>'+esc(meta.currency)+'</b> &middot; '+esc(s('sumTax'))+': <b>'+esc(meta.taxLabel)+'</b></p>'+
+        '<p class="wiz-p" style="margin-top:10px">'+esc(s('sumCurrency'))+': <b>'+esc(meta.currency)+'</b></p>'+
         '<div class="auth-error" id="wizErr"></div>';
     }
     if(S.step===3){
@@ -549,13 +559,16 @@ function renderSetupWizard(){
     var langNative = (I18N_LANGS.filter(function(l){ return l.code===S.lang; })[0]||{}).native||S.lang;
     var providerLabel = (PROVIDERS.filter(function(p){ return p[0]===S.aiProvider; })[0]||[undefined,s('none')])[1];
     var selectedModules=setupModuleCatalog().filter(function(item){ return S.moduleKeys.indexOf(item.key)!==-1; }).map(function(item){ return item.name; });
+    var summaryPairs = ['sumLang,'+langNative, 'sumOrg,'+(S.masterName||'—'), 'sumOrgCode,'+(S.organizationCode||'—'), 'sumCompany,'+(S.companyName||'—'),
+      'sumCountry,'+S.country, 'sumCurrency,'+meta.currency];
+    summaryPairs.push(
+      'sumAdmin,'+((S.adminName||'—')+(S.adminEmail?' · '+S.adminEmail:'')),
+      'sumModules,'+(selectedModules.join(', ')||s('modulesNone')),
+      'sumAi,'+providerLabel,
+    );
     return '<h2 class="wiz-h">'+esc(s('s6h'))+'</h2><p class="wiz-p">'+esc(IS_API?s('s6pProd'):s('s6p'))+'</p>'+
       '<div class="panel" style="margin-top:8px"><div class="panel-body" style="padding:14px 16px;display:grid;gap:8px;font-size:13px">'+
-      ['sumLang,'+langNative, 'sumOrg,'+(S.masterName||'—'), 'sumOrgCode,'+(S.organizationCode||'—'), 'sumCompany,'+(S.companyName||'—'),
-       'sumCountry,'+S.country, 'sumCurrency,'+meta.currency, 'sumTax,'+meta.taxLabel,
-       'sumAdmin,'+((S.adminName||'—')+(S.adminEmail?' · '+S.adminEmail:'')),
-       'sumModules,'+(selectedModules.join(', ')||s('modulesNone')),
-       'sumAi,'+providerLabel].map(function(pair){
+      summaryPairs.map(function(pair){
         var parts=pair.split(','); return '<div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--muted)">'+esc(s(parts[0]))+'</span><b>'+esc(parts.slice(1).join(','))+'</b></div>';
       }).join('')+
       '</div></div>';
