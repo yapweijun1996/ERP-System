@@ -1,8 +1,8 @@
 # ERP Project Progress
 
-Reviewed: **2026-09-13, Asia/Singapore**. Snapshot of the current root worktree,
-not an automated live monitor. Source baseline: `fa8781b16df0e61871074da2ccfdbe3dcef178a5`
-on `main`; source candidate `20e8af0` records the hosted retry-repair CI
+Reviewed: **2026-09-14, Asia/Singapore**. Snapshot of the current root worktree,
+not an automated live monitor. Current baseline: `71d14f2bbd7bcd4b8c0aaabbf1964d99d2a8dfea`
+on `main`; product source repair `20e8af0` records the hosted retry-repair CI
 terminal success after the merged/fresh CI failure boundaries,
 the focused TASK-237 evaluation, rollout gates and shared-list audit readiness
 repair; the prior TASK-202 disposable PostgreSQL parity evidence remains
@@ -16,7 +16,11 @@ Earlier HEIC original-download evidence remains in `de9cb87` after implementatio
 commit `335aa9c172a12f54f8a321f5c5d0cc36286832ae`.
 Pulled worktree changes and local evidence commits remain retained; unresolved
 conflicts remain cleared. These
-SHAs alone do not identify all local changes.
+SHAs alone do not identify all local changes. The docs-only descendant
+`71d14f2bbd7bcd4b8c0aaabbf1964d99d2a8dfea` passed hosted CI run `34764953884`
+with all four Vitest shards and the combined source/generated, PostgreSQL, Demo,
+i18n, browser, layout, public-subpath and cleanup gates successful; this is
+regression evidence only and does not change capability counts.
 The current working tree also contains the TASK-199 deployment-summary
 reconciliation recorded in the dated evidence; it changes documentation only and
 does not change the capability counts or next operational exit. It now also
@@ -753,3 +757,4 @@ then repeat the hosted upload check without a screen override. See [dated eviden
 | 2026-09-13, fresh candidate CI terminal failure and bounded retry repair | Candidate run `34755628672` for `a6b2bb7d836d5bd2dfc3914637b80400e97f8c6d` repeated `LAYOUT [desktop:user-mgmt] transaction-list-v1 root missing` after all pre-browser, i18n and Browser smoke gates passed; transaction-list, operational-workspace, public-subpath and cleanup steps were skipped. The audit now re-navigates once when a declared list root is still absent after the 30-second wait; local shared-list 50/50 and full 130-route desktop/mobile audits plus lint pass | Hosted regression safety remains open until a new candidate CI terminal succeeds; no task, criterion, checkpoint or capability count changed; [CI run](https://github.com/yapweijun1996/ERP-System/actions/runs/34755628672); [fresh failure evidence](docs/ai-native/evidence/TASK-234-2026-09-13-fresh-ci-failure.md) |
 | 2026-09-13, TASK-234 hosted retry-repair CI terminal acceptance | Hosted CI run `34759696683` passed for revision `20e8af00da0a9a4fdeee2a73b88abe2fde9bc791`; four Vitest shards, source/generated, PostgreSQL, Demo, i18n, Browser smoke, Screen, transaction-list, operational-workspace, production public-subpath and cleanup gates all passed. Pages run `34759696630` also succeeded for the same revision | Hosted regression safety is closed for the bounded audit-recovery repair; real provider/model/data-policy/spend scope, real-provider OCR, production Pack release and human Finance/QA acceptance remain open; no task, criterion, checkpoint or capability count changed; [CI run](https://github.com/yapweijun1996/ERP-System/actions/runs/34759696683); [terminal evidence](docs/ai-native/evidence/TASK-234-2026-09-13-ci-retry-terminal.md) |
 | 2026-09-13, TASK-234 current hosted title/upload no-override | Latest browser-tested Pages revision `07d2b08d34b6fe9aa52bf06fb50386befc7709c8` rendered exact `Expenses & Tax unavailable` without `&amp;`; normal My Receipts upload reached `Stored securely 1` and `Quarantined · scanner unavailable`, and the row remained after reload with zero browser console errors/warnings | Current publication and Demo upload visibility are verified without overrides; scanner, real-provider OCR, production Pack and human Finance/QA acceptance remain open; no task, criterion, checkpoint or capability count changed; [Pages run](https://github.com/yapweijun1996/ERP-System/actions/runs/34764665157); [current hosted evidence](docs/ai-native/evidence/TASK-234-2026-09-13-current-hosted-no-override.md) |
+| 2026-09-14, TASK-234 docs-only hosted CI terminal acceptance | Documentation descendant `71d14f2bbd7bcd4b8c0aaabbf1964d99d2a8dfea` passed hosted CI run `34764953884`; four Vitest shards, source/generated, PostgreSQL, Demo, i18n, Browser smoke, Screen, transaction-list, operational-workspace, public-subpath and cleanup gates all succeeded | Regression evidence is closed for the documentation descendant; no task, criterion, checkpoint or capability count changed; G07.3 still requires approved provider/model/data-policy/spend scope and same-run real-provider Receipt-to-Pack evidence; [CI run](https://github.com/yapweijun1996/ERP-System/actions/runs/34764953884); [dated evidence](docs/ai-native/evidence/TASK-234-2026-09-14-ci-docs-terminal.md) |

@@ -99,6 +99,16 @@ does not promote G07.3: approved provider/model/data-policy/spend scope and a
 same-run real-provider receipt-to-Pack proof remain required. See the [terminal
 retry evidence](evidence/TASK-234-2026-09-13-ci-retry-terminal.md).
 
+The documentation-only descendant `71d14f2bbd7bcd4b8c0aaabbf1964d99d2a8dfea`
+also passed hosted CI run `34764953884`: all four Vitest shards and the
+combined source/generated, PostgreSQL, Demo, i18n, Browser smoke, Screen,
+transaction-list, operational-workspace, production public-subpath and cleanup
+gates completed successfully. This confirms repository regression safety after
+the evidence refresh; it adds no product capability and does not promote G07.3.
+Approved provider/model/data-policy/spend scope and same-run real-provider
+Receipt-to-Pack evidence remain required. See the [docs-only CI terminal
+evidence](evidence/TASK-234-2026-09-14-ci-docs-terminal.md).
+
 ## Remove mandatory account activation — user decision 2026-09-10
 
 Outcome: accounts created in Demo or a real Company are usable immediately.

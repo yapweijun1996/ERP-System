@@ -146,6 +146,15 @@ for the repair; provider scope, real-provider OCR, production and human
 acceptance remain open. See the [fresh CI evidence](ai-native/evidence/TASK-234-2026-09-13-fresh-ci-failure.md)
 and [hosted retry terminal evidence](ai-native/evidence/TASK-234-2026-09-13-ci-retry-terminal.md).
 
+TASK-234 docs-only hosted CI terminal acceptance — 2026-09-14: run
+`34764953884` completed successfully for revision
+`71d14f2bbd7bcd4b8c0aaabbf1964d99d2a8dfea`. All four Vitest shards and the
+combined source/generated, PostgreSQL, Demo, i18n, browser, Screen,
+transaction-list, operational-workspace, public-subpath and cleanup gates
+passed. This is regression evidence for the documentation descendant only;
+real provider, production and human acceptance remain separate. See the
+[dated evidence](ai-native/evidence/TASK-234-2026-09-14-ci-docs-terminal.md).
+
 Latest browser-tested Pages revision `07d2b08d34b6fe9aa52bf06fb50386befc7709c8` was rechecked
 through the normal hosted Demo path: the restricted Company Receipts title was
 `Expenses & Tax unavailable` without literal `&amp;`, and a 5 KB PNG uploaded

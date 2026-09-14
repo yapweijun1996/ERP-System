@@ -1,6 +1,6 @@
 # AI Native ERP System Goal
 
-Reviewed: **2026-09-13**. Planning baseline: `d4c9dc9`.
+Reviewed: **2026-09-14**. Planning baseline: `d4c9dc9`.
 Owner: product owner; engineering owns implementation and evidence.
 Delivery programme: **EPIC-068 / TASK-227–240**.
 
@@ -441,6 +441,13 @@ foundations are listed for reuse; they do not satisfy the complete new DoD.
   - Evidence: [TASK-234/S4-S5 failure, locale, theme and accessibility evidence](docs/ai-native/evidence/TASK-234-2026-09-09.md#s5--validate-fixture-and-real-model-journeys). The later [TASK-232 locale remediation](docs/ai-native/evidence/TASK-232-2026-09-09.md#post-s5-agent-governance-locale-remediation--2026-09-09) closes the separate global i18n follow-up; provider, production and physical-device evidence remain separate.
 
 2026-09-11 supporting exit: the user authorized the existing Demo endpoint and Codex OCR/review without a user-operated step. The [observed Demo run and upload repair](docs/ai-native/evidence/TASK-234-2026-09-11-codex-demo.md) verify one readable synthetic receipt and one persisted Pack/PDF after reload. G07.3 remains open because this Demo evidence does not establish a real server/provider receipt journey.
+
+2026-09-14 supporting CI exit: the documentation-only descendant
+`71d14f2bbd7bcd4b8c0aaabbf1964d99d2a8dfea` passed hosted CI run `34764953884`,
+including all four Vitest shards and the source/generated, PostgreSQL, Demo,
+i18n, browser, layout, public-subpath and cleanup gates. This adds regression
+evidence only; G07.3 and all capability counts remain unchanged. See the
+[dated CI evidence](docs/ai-native/evidence/TASK-234-2026-09-14-ci-docs-terminal.md).
 
 ### G08 — Build permission-aware ERP semantics and knowledge retrieval
 

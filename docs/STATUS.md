@@ -1,4 +1,4 @@
-# Project Status — reviewed 2026-09-13
+# Project Status — reviewed 2026-09-14
 
 TASK-234 merged hosted publication and no-override verification — 2026-09-13:
 Pages workflow `34751369035` completed successfully for merged revision
@@ -38,6 +38,15 @@ accepted the 5 KB PNG through Choose file and Sync all, reached
 `Quarantined · scanner unavailable`, and retained the row after reload. Browser
 console errors and warnings were zero, with no source, response, permission,
 module or business-table override. See [current hosted no-override evidence](ai-native/evidence/TASK-234-2026-09-13-current-hosted-no-override.md).
+
+TASK-234 docs-only hosted CI terminal acceptance — 2026-09-14: GitHub Actions
+run `34764953884` completed successfully for revision
+`71d14f2bbd7bcd4b8c0aaabbf1964d99d2a8dfea`. All four Vitest shards and the
+combined source/generated, PostgreSQL, Demo, i18n, Browser smoke, Screen,
+transaction-list, operational-workspace, production public-subpath and cleanup
+gates passed. This is a documentation-only regression record; scanner,
+real-provider OCR, production Pack release and human Finance/QA acceptance remain
+separate. See [docs-only CI evidence](ai-native/evidence/TASK-234-2026-09-14-ci-docs-terminal.md).
 
 The merged revision `a67595d5b67d24d6dfcc02b0c04f89c0e6c391ae` has a separate
 terminal CI run `34751368911`. Its source/generated, database, Demo, i18n and
