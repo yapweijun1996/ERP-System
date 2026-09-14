@@ -122,6 +122,12 @@ success and the OpenAI no-key guard without entering a credential or clicking
 Finish. See the [dated provider-test evidence](evidence/TASK-234-2026-09-14-provider-test-ui.md).
 This supporting UI repair changes no G07 criterion, S-checkpoint or capability count.
 
+The Review and finish summary received the same responsive treatment: Active
+modules are rendered as individually wrapped chips, keeping the label stable
+when many modules are selected and stacking the value below the label on narrow
+screens. The focused setup-wizard E2E now exercises eight selected modules and
+asserts the summary structure and overflow boundary.
+
 ## Remove mandatory account activation — user decision 2026-09-10
 
 Outcome: accounts created in Demo or a real Company are usable immediately.
