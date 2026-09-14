@@ -128,6 +128,15 @@ registry counts. Authenticated company defaults and per-employee overrides remai
 the schema/API contract and owner role must be defined before server persistence can be
 claimed. See the [dated background-style evidence](docs/ai-native/evidence/LOCAL-BACKGROUND-THEMES-2026-09-15.md).
 
+**Colour palette release — 2026-09-15:** the static Demo Language step now includes six
+contrast-aware fixed colour palettes (Aria Blue, Royal Purple, Ruby Red, Sunflower Amber,
+Forest Green and Ocean Teal). Palette tokens apply across sign-in, setup, workspace and
+Settings, while the existing device-local accent swatches remain available as a custom
+fallback. The seven-step rail and Finish protection are unchanged; local five-viewport setup
+E2E, lint, typechecks, Demo and build passed. This is UI-only evidence and does not change
+registry or capability counts. Company-wide and per-employee persistence remains open until
+an authenticated preference contract exists. See the [dated palette evidence](docs/ai-native/evidence/LOCAL-COLOR-PALETTES-2026-09-15.md).
+
 
 **Post-pull full regression — 2026-09-12:** with the merged tree at `3e93249` and the
 reapplied dirty worktree, Codex ran `npm test -- --reporter=dot` on the local macOS

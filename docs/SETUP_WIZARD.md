@@ -62,10 +62,11 @@ same UI shell and data adapter strategy described in [FRONTEND_PLAN.md](FRONTEND
 ### Static Demo local-wizard steps
 1. **Welcome / language** — pick UI language (en/ms/zh/ja/vi) up front so the rest of the
    wizard is localized, then choose one of the four fixed background styles (Aurora, Mist,
-   Paper or Night sky). The selected style applies immediately to sign-in, setup and the
-   current workspace and can be changed later in Settings. This preference is currently
-   browser-local; company-wide defaults and per-employee overrides need a future
-   authenticated preference contract. See [I18N.md](I18N.md).
+   Paper or Night sky) and one of six fixed colour palettes (Aria Blue, Royal Purple,
+   Ruby Red, Sunflower Amber, Forest Green or Ocean Teal). Both choices apply immediately
+   to sign-in, setup and the current workspace and can be changed later in Settings. These
+   preferences are currently browser-local; company-wide defaults and per-employee overrides
+   need a future authenticated preference contract. See [I18N.md](I18N.md).
 2. **Create master** — the top tenant (group/holding name) → `master_fn`.
 3. **Add company** — one legal entity:
    - country (**SG** / **MY**), which sets **currency + tax regime** (GST/SST) →
@@ -92,7 +93,8 @@ stage stays visible, while only the active stage shows its localized label. Each
 retains its accessible name and the active marker keeps its accent treatment. The Language
 step uses compact cards and a 44px minimum action target so it fits without vertical or
 horizontal scrolling at the supported `753×837`, `390×844`, and `375×812` viewports. The
-same no-scroll contract includes the compact four-option background style chooser. Longer
+same no-scroll contract includes the compact four-option background style chooser and
+six-option colour palette chooser. Longer
 data-entry steps retain vertical panel scrolling rather than clipping localized copy or form
 controls; no wizard step may create horizontal scrolling.
 

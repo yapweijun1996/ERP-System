@@ -9,6 +9,15 @@ yet an implementation contract because the tenancy schema has no background pref
 fields or authenticated read/write routes; adding that behavior requires a separate
 Demo/PGlite and PostgreSQL-parity schema/API decision.
 
+Colour palette preference — 2026-09-15: the same Language step also exposes six fixed,
+contrast-aware palettes (Aria Blue, Royal Purple, Ruby Red, Sunflower Amber, Forest Green
+and Ocean Teal). The selected palette is applied through browser-local `aria-palette`
+tokens across sign-in, setup, workspace and Settings, with legacy accent swatches retained
+as a custom device-local fallback. Palette choices are presentation preferences only and do
+not alter tenant data, permissions, approvals or business calculations. Company defaults and
+per-employee overrides remain outside the contract until scoped preference fields, routes,
+permissions and Demo/PGlite/PostgreSQL parity are defined.
+
 TASK-237 G10.1 acceptance mapping — 2026-09-13: the frozen Receipt Pilot
 catalog and independent oracle satisfy the exact evaluation-set criterion. The
 30 P01–P16 cases and 9 negative cases cover happy paths, invalid input, prompt
