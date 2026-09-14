@@ -263,11 +263,14 @@ async function main() {
           await page.locator('#wizNext').click();
           await page.locator('#wizAdminName').waitFor({ state: 'visible', timeout: TIMEOUT });
           const adminForm = await page.evaluate(() => {
+            const wizard = document.querySelector('#setupWizardView');
             const body = document.querySelector('#wizStepBody');
             const intro = body?.querySelector('.wiz-p');
             const fields = body?.querySelector('.wiz-admin-fields');
             const items = [...(fields?.querySelectorAll('.fld') || [])];
             const actions = body?.querySelector('.wiz-admin-actions');
+            const header = document.querySelector('.wizard-brandbar');
+            const footer = document.querySelector('.wizard-savebar');
             const introGap = intro && fields ? fields.getBoundingClientRect().top - intro.getBoundingClientRect().bottom : 0;
             const fieldGaps = items.slice(1).map((item, index) => item.getBoundingClientRect().top - items[index].getBoundingClientRect().bottom);
             const lastField = items[items.length - 1];
@@ -277,6 +280,10 @@ async function main() {
               introGap,
               fieldGaps,
               actionGap,
+              wizardScrollTop: wizard?.scrollTop || 0,
+              headerTop: header?.getBoundingClientRect().top || 0,
+              footerBottom: footer?.getBoundingClientRect().bottom || 0,
+              viewportHeight: innerHeight,
               actions: [...(body?.querySelectorAll('.wiz-admin-actions button') || [])].map((button) => button.textContent.trim()),
             };
           });
@@ -284,6 +291,9 @@ async function main() {
             || adminForm.introGap < 9
             || adminForm.fieldGaps.some((gap) => gap < 9)
             || adminForm.actionGap < 11
+            || adminForm.wizardScrollTop !== 0
+            || adminForm.headerTop < 0
+            || adminForm.footerBottom > adminForm.viewportHeight + 1
             || JSON.stringify(adminForm.actions) !== JSON.stringify(['Generate secure password', 'Copy credentials', 'Download credentials'])) {
             throw new Error(`desktop: admin form spacing or credential controls regressed: ${JSON.stringify(adminForm)}`);
           }

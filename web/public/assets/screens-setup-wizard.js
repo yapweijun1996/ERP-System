@@ -773,6 +773,10 @@ function renderSetupWizard(){
       footer()+
       '</section>';
     wire();
+    // Keep the fixed wizard shell anchored while the inner step body scrolls.
+    // Replacing the focused navigation button can otherwise preserve the old
+    // outer scroll offset and hide the brand bar on compact viewports.
+    host.scrollTop=0;
     if(options&&typeof options.stepScrollTop==='number'){
       var scrollContainer=document.getElementById('wizStepBody');
       if(scrollContainer) scrollContainer.scrollTop=Math.max(0,Math.min(options.stepScrollTop,scrollContainer.scrollHeight-scrollContainer.clientHeight));
