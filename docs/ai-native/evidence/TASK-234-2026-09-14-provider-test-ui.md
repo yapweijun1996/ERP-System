@@ -32,8 +32,8 @@ Commands and results:
 - `git diff --check` — pass.
 - `curl https://gmb01.xyz/erp/health` — HTTP 200, body `ok`.
 - `curl https://gmb01.xyz/erp/sw.js` — `erp-system-pwa-v271`.
+- `npm run test:e2e:setup-wizard` — pass for desktop, split-pane, reported-pane, iPhone and small-mobile (375px) viewports.
 
 Browser verification used the existing Chrome tab at the public Demo. The wizard was advanced through AI optional (step 6) and stopped there. The browser accessibility tree confirmed the test button, Demo success state and OpenAI no-key guard. No console errors were observed during this verification; older cached i18n fallback warnings remained in the historical browser log and were not produced by the final interaction.
 
 This is supporting UI evidence only. It does not check any G07 criterion or S-checkpoint and does not close TASK-234's separate real-provider/OCR, production, or human-acceptance gates.
-
