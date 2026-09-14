@@ -1,0 +1,13 @@
+# Makes the existing gmb01.xyz/erp Cloudflare Tunnel ingress serve the local
+# Demo. The host port is deliberately the Tunnel's existing local upstream.
+services:
+  public-demo-proxy:
+    image: nginx:alpine
+    container_name: erp-system-demo-public-proxy
+    ports:
+      - "127.0.0.1:18791:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./web/nginx.demo-public.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
