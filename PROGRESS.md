@@ -1,8 +1,8 @@
 # ERP Project Progress
 
 Reviewed: **2026-09-15, Asia/Singapore**. Snapshot of the current root worktree,
-not an automated live monitor. Current application release revision: `82f3054`
-(the follow-on evidence/progress commit is documentation-only).
+not an automated live monitor. Current application release revision: `5dcc15b`
+(the follow-on evidence/progress commit is `9b03913`, documentation-only).
 on `main`; the prior snapshot baseline `71d14f2bbd7bcd4b8c0aaabbf1964d99d2a8dfea`
 and product source repair `20e8af0` record the hosted retry-repair CI
 terminal success after the merged/fresh CI failure boundaries,
