@@ -128,6 +128,14 @@ when many modules are selected and stacking the value below the label on narrow
 screens. The focused setup-wizard E2E now exercises eight selected modules and
 asserts the summary structure and overflow boundary.
 
+The Admin user step was then refined with a 10px intro/field rhythm, a 12px
+credential-action gap and visible secure-password/copy/download controls. A
+mobile render defect was corrected by anchoring the outer wizard shell at
+`scrollTop=0` while leaving `wizStepBody` as the only scroll region. Public Demo
+revision `40f29c2f0f8ebec30f868f88d66168722a4a5a4c` serves `erp-system-pwa-v275`
+and `admin-spacing-v3`; desktop, tablet and 390px browser checks plus the setup
+wizard E2E pass without clicking Finish. See the [Admin setup evidence](evidence/TASK-234-2026-09-14-provider-test-ui.md#admin-setup-spacing-and-mobile-shell-verification--2026-09-15).
+
 ## Remove mandatory account activation — user decision 2026-09-10
 
 Outcome: accounts created in Demo or a real Company are usable immediately.
