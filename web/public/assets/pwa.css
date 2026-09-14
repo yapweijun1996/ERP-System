@@ -446,7 +446,8 @@ html,body{
 #setupWizardView .wiz-module-details[open] .wiz-module-details-chevron{transform:rotate(180deg);}
 #setupWizardView .wiz-module-details small,
 #setupWizardView .wiz-module-plan small{display:block;margin-top:5px;color:var(--muted);font-size:calc(11.5px * var(--fs,1));line-height:1.35;}
-#setupWizardView .wiz-module-copy em{
+#setupWizardView .wiz-module-state em{
+  display:inline-block;
   flex:0 0 auto;
   padding:2px 6px;
   border-radius:999px;
@@ -456,7 +457,7 @@ html,body{
   font-style:normal;
   font-weight:700;
 }
-#setupWizardView .wiz-module-state{grid-area:state;min-width:52px;color:var(--accent);font-size:calc(10px * var(--fs,1));font-weight:700;line-height:1.6;text-align:right;white-space:nowrap;}
+#setupWizardView .wiz-module-state{grid-area:state;min-width:84px;color:var(--accent);font-size:calc(10px * var(--fs,1));font-weight:700;line-height:1.6;text-align:right;white-space:nowrap;}
 #setupWizardView .wiz-module-note{margin:12px 0 0;color:var(--muted);font-size:calc(12px * var(--fs,1));line-height:1.4;}
 #setupWizardView .wiz-module-plan{
   display:flex;

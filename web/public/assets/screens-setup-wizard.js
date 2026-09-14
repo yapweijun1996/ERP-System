@@ -533,11 +533,10 @@ function renderSetupWizard(){
       var inputId='wizModule-'+item.key;
       return '<article class="wiz-module-card '+(selected?'is-selected':'')+'" data-module-card="'+esc(item.key)+'">'+
         '<input id="'+esc(inputId)+'" type="checkbox" data-module-key="'+esc(item.key)+'" '+(selected?'checked':'')+' '+(unavailable?'disabled':'')+'>'+
-        '<label class="wiz-module-copy" for="'+esc(inputId)+'"><span><i class="wiz-module-icon" aria-hidden="true">'+moduleIcon(item.key)+'</i><b>'+esc(item.name)+'</b>'+
-        (!unavailable&&item.defaultCompanyAllocated?'<em>'+esc(s('modulesRecommended'))+'</em>':'')+'</span>'+
+        '<label class="wiz-module-copy" for="'+esc(inputId)+'"><span><i class="wiz-module-icon" aria-hidden="true">'+moduleIcon(item.key)+'</i><b>'+esc(item.name)+'</b></span>'+
         '</label><details class="wiz-module-details"><summary><span class="wiz-module-details-icon" aria-hidden="true">'+ic('info')+'</span><span>'+esc(s('modulesDetails'))+'</span><span class="wiz-module-details-chevron" aria-hidden="true">'+ic('chevD')+'</span></summary>'+
         '<small>'+esc(description)+'</small></details>'+
-        '<span class="wiz-module-state">'+esc(selected?s('modulesSelected'):'')+'</span></article>';
+        '<span class="wiz-module-state">'+(!unavailable&&item.defaultCompanyAllocated?'<em>'+esc(s('modulesRecommended'))+'</em>':'')+'</span></article>';
     }).join('')+'</div>'+
       '<p class="wiz-module-note">'+esc(s('moduleRoles'))+'</p>'+
       '<section class="wiz-module-plan" aria-label="'+esc(s('modulePlannedTitle'))+'"><span aria-hidden="true">'+ic('clock')+'</span><div><b>'+esc(s('modulePlannedTitle'))+'</b><small>'+esc(s('modulePlanned'))+'</small></div></section>';
