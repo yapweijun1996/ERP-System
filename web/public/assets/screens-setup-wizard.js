@@ -109,6 +109,7 @@ function renderSetupWizard(){
       demoGatewayConnecting:'Connecting to the Demo Gateway…', demoGatewayReady:'Demo session ready for this page. It is not saved and expires automatically.',
       demoGatewayUnavailable:'The Demo Gateway is unavailable. You can skip it and continue; server AI settings are unchanged.',
       demoGatewayNote:'This is a public browser demo only. It never enables a production provider or stores a credential.',
+      providerTest:'Test connection', providerTesting:'Testing provider connection…', providerTestReady:'Connection successful.', providerTestFailed:'Connection failed. Check the provider and credential.', providerTestSelectProvider:'Select a provider before testing.', providerTestCredentialRequired:'Enter an API key before testing this provider.', providerTestLocal:'For LM Studio, start the local server before testing.',
       s5h:'Review and finish', s5p:'Finishing writes the company, tax rule, chart of accounts and admin user to this browser’s demo database (PGlite/IndexedDB).',
       s5pProd:'Finishing securely creates the organization, company, tax rule, chart of accounts and first administrator in PostgreSQL.',
       sumLang:'Language', sumOrg:'Organization', sumOrgCode:'Login code', sumCompany:'Company', sumCountry:'Country', sumCurrency:'Currency', sumTax:'Tax regime',
@@ -488,6 +489,59 @@ function renderSetupWizard(){
     });
   }
 
+  function providerTestRequest(provider,key){
+    var request={url:'',headers:{}};
+    if(provider==='openai'){
+      request.url='https://api.openai.com/v1/models';
+      request.headers.Authorization='Bearer '+key;
+    }else if(provider==='gemini'){
+      request.url='https://generativelanguage.googleapis.com/v1beta/models';
+      request.headers['x-goog-api-key']=key;
+    }else if(provider==='deepseek'){
+      request.url='https://api.deepseek.com/models';
+      request.headers.Authorization='Bearer '+key;
+    }else if(provider==='lmstudio'){
+      request.url='http://127.0.0.1:1234/v1/models';
+    }else{
+      throw new Error('provider_test_unsupported');
+    }
+    var controller=typeof AbortController==='function'?new AbortController():null;
+    var timeout=window.setTimeout(function(){ if(controller) controller.abort(); },10000);
+    var options={method:'GET',headers:request.headers,mode:'cors',credentials:'omit',cache:'no-store',redirect:'error'};
+    if(controller) options.signal=controller.signal;
+    return window.fetch(request.url,options).then(function(response){ window.clearTimeout(timeout); return response; },function(error){ window.clearTimeout(timeout); throw error; });
+  }
+
+  function setProviderTestStatus(message){
+    var status=document.getElementById('wizProviderStatus');
+    if(status) status.textContent=message;
+  }
+
+  function testProviderConnection(){
+    readCurrentStepInputs();
+    if(!S.aiProvider){ setProviderTestStatus(s('providerTestSelectProvider')); return; }
+    if(S.aiProvider==='demo_gateway'){
+      if(S.demoGatewayStatus==='ready'){
+        setProviderTestStatus(s('providerTestReady'));
+        return;
+      }
+      setProviderTestStatus(s('providerTesting'));
+      prepareDemoGatewaySession();
+      return;
+    }
+    if(S.aiProvider!=='lmstudio'&&!S.aiKey){
+      setProviderTestStatus(s('providerTestCredentialRequired'));
+      return;
+    }
+    setProviderTestStatus(S.aiProvider==='lmstudio'?s('providerTestLocal'):s('providerTesting'));
+    providerTestRequest(S.aiProvider,S.aiKey).then(function(response){
+      if(!response.ok) throw new Error('provider_test_failed');
+      setProviderTestStatus(s('providerTestReady'));
+    }).catch(function(){
+      setProviderTestStatus(s('providerTestFailed'));
+    });
+  }
+
   function stepper(){
     var steps = STEP_KEYS.map(function(k){ return [s(k)]; });
     return wizardStepper(steps, S.step, S.reached);
@@ -653,13 +707,17 @@ function renderSetupWizard(){
       var demoGatewaySelected=S.aiProvider==='demo_gateway';
       if(demoGatewaySelected) prepareDemoGatewaySession();
       return '<h2 class="wiz-h">'+esc(s('s5h'))+'</h2><p class="wiz-p">'+esc(demoGatewaySelected?s('demoGatewayIntro'):s('s5p'))+'</p>'+
-        fld(s('s5provider'), '<select id="wizProvider">'+PROVIDERS.map(function(p){
-          return '<option value="'+esc(p[0])+'" '+(p[0]===S.aiProvider?'selected':'')+'>'+esc(p[1])+'</option>';
-        }).join('')+'</select>')+
-        (demoGatewaySelected
-          ? '<p class="wiz-p" role="status" style="margin-top:10px">'+esc(demoGatewayStatusText())+'</p>'
-          : fld(s('s5key'), '<input id="wizAiKey" type="password" value="'+esc(S.aiKey)+'" placeholder="'+esc(s('s5keyph'))+'" '+(S.aiProvider?'':'disabled')+'>')+
-            '<p class="wiz-p" style="margin-top:6px">'+esc(s('s5note'))+'</p>');
+        '<div class="wiz-provider-fields">'+
+          fld(s('s5provider'), '<select id="wizProvider">'+PROVIDERS.map(function(p){
+            return '<option value="'+esc(p[0])+'" '+(p[0]===S.aiProvider?'selected':'')+'>'+esc(p[1])+'</option>';
+          }).join('')+'</select>')+
+          (demoGatewaySelected
+            ? '<p class="wiz-p wiz-provider-note">'+esc(demoGatewayStatusText())+'</p>'
+            : fld(s('s5key'), '<input id="wizAiKey" type="password" value="'+esc(S.aiKey)+'" placeholder="'+esc(s('s5keyph'))+'" '+(S.aiProvider?'':'disabled')+'>')+
+              '<p class="wiz-p wiz-provider-note">'+esc(s('s5note'))+'</p>')+
+        '</div>'+
+        '<div class="wiz-provider-actions"><button class="btn soft" type="button" id="wizTestProvider">'+esc(s('providerTest'))+'</button></div>'+
+        '<p class="wiz-p wiz-provider-status" id="wizProviderStatus" role="status" aria-live="polite">'+esc(demoGatewaySelected?demoGatewayStatusText():s('providerTestSelectProvider'))+'</p>';
     }
     // step 6 — summary
     meta = COUNTRY_META[S.country];
@@ -785,6 +843,8 @@ function renderSetupWizard(){
       if(previous!==S.aiProvider) clearDemoGatewaySession();
       render();
     });
+    var testProvider=document.getElementById('wizTestProvider');
+    if(testProvider) testProvider.addEventListener('click',testProviderConnection);
     var moduleSeg=document.getElementById('wizModuleSeg');
     if(moduleSeg){
       moduleSeg.querySelectorAll('input[data-module-key]').forEach(function(input){
