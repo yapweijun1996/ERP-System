@@ -305,7 +305,7 @@ function renderSetupWizard(){
   var MODULE_STEP_COPY = {
     en:{
       s4:'Modules', s4h:'Activate company modules', s4p:'Choose what this company needs first. You can adjust Company allocation later from the Platform workspace.',
-      modulesRecommended:'Recommended', modulesSelected:'Selected', modulesDependencies:'Includes: {modules}',
+      modulesRecommended:'Recommended', modulesSelected:'Selected', modulesDetails:'Details', modulesDependencies:'Includes: {modules}', modulesNoDependencies:'No additional dependencies.',
       modulesUnavailable:'Requires Platform activation for this organization or its dependencies.',
       moduleExpenses:'Company receipts, tax evidence packs and print/download.',
       moduleHr:'Staff directory, employee accounts, calendar and leave applications.',
@@ -315,7 +315,7 @@ function renderSetupWizard(){
     },
     ms:{
       s4:'Modul', s4h:'Aktifkan modul syarikat', s4p:'Pilih perkara yang diperlukan syarikat ini dahulu. Peruntukan Syarikat boleh dilaras kemudian dalam ruang kerja Platform.',
-      modulesRecommended:'Disyorkan', modulesSelected:'Dipilih', modulesDependencies:'Termasuk: {modules}',
+      modulesRecommended:'Disyorkan', modulesSelected:'Dipilih', modulesDetails:'Butiran', modulesDependencies:'Termasuk: {modules}', modulesNoDependencies:'Tiada kebergantungan tambahan.',
       modulesUnavailable:'Memerlukan pengaktifan Platform untuk organisasi ini atau kebergantungannya.',
       moduleExpenses:'Resit syarikat, pek bukti cukai dan cetak/muat turun.',
       moduleHr:'Direktori staf, akaun pekerja, kalendar dan permohonan cuti.',
@@ -325,7 +325,7 @@ function renderSetupWizard(){
     },
     zh:{
       s4:'模块', s4h:'启用公司模块', s4p:'先选择这家公司需要的功能。以后可在平台工作区调整公司的模块分配。',
-      modulesRecommended:'推荐', modulesSelected:'已选择', modulesDependencies:'包含：{modules}',
+      modulesRecommended:'推荐', modulesSelected:'已选择', modulesDetails:'详情', modulesDependencies:'包含：{modules}', modulesNoDependencies:'无额外依赖项。',
       modulesUnavailable:'需要平台管理员为此组织启用该模块及其依赖模块。',
       moduleExpenses:'公司收据、税务证据包，以及打印/下载。',
       moduleHr:'员工名录、员工账户、日历和请假申请。',
@@ -335,7 +335,7 @@ function renderSetupWizard(){
     },
     ja:{
       s4:'モジュール', s4h:'会社モジュールを有効にする', s4p:'この会社が最初に必要とする機能を選択します。会社への割り当ては後で Platform ワークスペースで変更できます。',
-      modulesRecommended:'推奨', modulesSelected:'選択済み', modulesDependencies:'含まれるもの: {modules}',
+      modulesRecommended:'推奨', modulesSelected:'選択済み', modulesDetails:'詳細', modulesDependencies:'含まれるもの: {modules}', modulesNoDependencies:'追加の依存関係はありません。',
       modulesUnavailable:'この組織のモジュールまたは依存モジュールをプラットフォームで有効にする必要があります。',
       moduleExpenses:'会社領収書、税務証跡パック、印刷/ダウンロード。',
       moduleHr:'従業員名簿、従業員アカウント、カレンダー、休暇申請。',
@@ -345,7 +345,7 @@ function renderSetupWizard(){
     },
     vi:{
       s4:'Mô-đun', s4h:'Kích hoạt mô-đun công ty', s4p:'Chọn những gì công ty này cần trước. Bạn có thể điều chỉnh phân bổ Công ty sau trong không gian làm việc Platform.',
-      modulesRecommended:'Đề xuất', modulesSelected:'Đã chọn', modulesDependencies:'Bao gồm: {modules}',
+      modulesRecommended:'Đề xuất', modulesSelected:'Đã chọn', modulesDetails:'Chi tiết', modulesDependencies:'Bao gồm: {modules}', modulesNoDependencies:'Không có phần phụ thuộc bổ sung.',
       modulesUnavailable:'Cần kích hoạt trên nền tảng cho tổ chức này hoặc các mô-đun phụ thuộc.',
       moduleExpenses:'Biên lai công ty, gói bằng chứng thuế và in/tải xuống.',
       moduleHr:'Danh bạ nhân viên, tài khoản nhân viên, lịch và đơn xin nghỉ.',
@@ -450,7 +450,7 @@ function renderSetupWizard(){
     if(item.dependencies.length){
       return s('modulesDependencies').replace('{modules}',item.dependencies.join(', '));
     }
-    return '';
+    return s('modulesNoDependencies');
   }
 
   function modulePicker(){
@@ -463,12 +463,14 @@ function renderSetupWizard(){
       var unavailable=item.available===false;
       var selected=!unavailable&&S.moduleKeys.indexOf(item.key)!==-1;
       var description=unavailable?s('modulesUnavailable'):moduleDescription(item);
-      return '<label class="wiz-module-card '+(selected?'is-selected':'')+'" data-module-card="'+esc(item.key)+'">'+
-        '<input type="checkbox" data-module-key="'+esc(item.key)+'" '+(selected?'checked':'')+' '+(unavailable?'disabled':'')+'>'+
-        '<span class="wiz-module-copy"><span><b>'+esc(item.name)+'</b>'+
+      var inputId='wizModule-'+item.key;
+      return '<article class="wiz-module-card '+(selected?'is-selected':'')+'" data-module-card="'+esc(item.key)+'">'+
+        '<input id="'+esc(inputId)+'" type="checkbox" data-module-key="'+esc(item.key)+'" '+(selected?'checked':'')+' '+(unavailable?'disabled':'')+'>'+
+        '<label class="wiz-module-copy" for="'+esc(inputId)+'"><span><b>'+esc(item.name)+'</b>'+
         (!unavailable&&item.defaultCompanyAllocated?'<em>'+esc(s('modulesRecommended'))+'</em>':'')+'</span>'+
-        (description?'<small>'+esc(description)+'</small>':'')+'</span>'+
-        '<span class="wiz-module-state">'+esc(selected?s('modulesSelected'):'')+'</span></label>';
+        '</label><details class="wiz-module-details"><summary>'+esc(s('modulesDetails'))+'</summary>'+
+        '<small>'+esc(description)+'</small></details>'+
+        '<span class="wiz-module-state">'+esc(selected?s('modulesSelected'):'')+'</span></article>';
     }).join('')+'</div>'+
       '<p class="wiz-module-note">'+esc(s('moduleRoles'))+'</p>'+
       '<section class="wiz-module-plan" aria-label="'+esc(s('modulePlannedTitle'))+'"><span aria-hidden="true">'+ic('clock')+'</span><div><b>'+esc(s('modulePlannedTitle'))+'</b><small>'+esc(s('modulePlanned'))+'</small></div></section>';
