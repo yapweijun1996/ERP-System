@@ -54,6 +54,20 @@ npm run preview        # serve web/dist locally
 The build inlines the demo data adapter and the seed dataset. No `DATABASE_URL`, no API.
 The demo also ships as an installable PWA shell; see [PWA.md](PWA.md).
 
+For a client demo that should run from Docker on the local machine, use the checked-in
+static Compose service:
+
+```bash
+make demo-docker-up       # builds the Demo image and starts nginx on :8081
+curl -fsS http://localhost:8081/health
+make demo-docker-down
+```
+
+This service is still Demo mode: PGlite/WASM and IndexedDB run in the browser, while
+the container only serves static assets. It does not start or connect to API,
+PostgreSQL, workers or credential-bearing configuration. The `demo-boot-progress`
+database loading bar and setup provisioning stepper remain part of the image.
+
 ## 3. Mock data
 
 - Canonical seed lives in `src/data/seed.ts` and the Drizzle schema under

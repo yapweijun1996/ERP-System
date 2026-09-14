@@ -15,6 +15,7 @@ COPY src ./src
 COPY web ./web
 ARG VITE_DATA_MODE=api
 ENV VITE_DATA_MODE=$VITE_DATA_MODE
+ARG VITE_BUILD_SCRIPT=build
 ARG VITE_PLATFORM_DEMO_AUTOFILL=false
 ENV VITE_PLATFORM_DEMO_AUTOFILL=$VITE_PLATFORM_DEMO_AUTOFILL
 ARG ERP_PUBLIC_URL=http://localhost:8080
@@ -25,10 +26,10 @@ ARG ERP_RELEASE_DATA_MODE=api
 ENV RELEASE_DATA_MODE=$ERP_RELEASE_DATA_MODE
 COPY scripts/public-base-path.mjs scripts/public-base-path.d.mts scripts/write-nginx-config.mjs scripts/write-release-manifest.mjs /app/scripts/
 WORKDIR /app/web
-RUN npm run build \
+RUN if [ "$VITE_BUILD_SCRIPT" = "build:demo" ]; then npm run build:demo; else npm run build; fi \
   && node /app/scripts/write-release-manifest.mjs /app/web/dist \
   && chmod 0644 /app/web/dist/release.json \
-  && node /app/scripts/write-nginx-config.mjs /app/web/nginx.conf.template /app/web/nginx.conf
+  && if [ "$VITE_DATA_MODE" = "demo" ]; then cp /app/web/nginx.demo.conf /app/web/nginx.conf; else node /app/scripts/write-nginx-config.mjs /app/web/nginx.conf.template /app/web/nginx.conf; fi
 
 FROM nginx:alpine
 COPY --from=build /app/web/dist /usr/share/nginx/html

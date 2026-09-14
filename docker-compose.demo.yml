@@ -1,0 +1,22 @@
+# Local client Demo: static Vite/PGlite build served by nginx.
+# No API, PostgreSQL, worker, credentials or production data are used.
+services:
+  demo:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      args:
+        VITE_DATA_MODE: demo
+        VITE_BUILD_SCRIPT: build:demo
+        VITE_PLATFORM_DEMO_AUTOFILL: ${VITE_PLATFORM_DEMO_AUTOFILL:-false}
+        ERP_PUBLIC_URL: ${ERP_PUBLIC_URL:-http://localhost:8081}
+        ERP_RELEASE_COMMIT: ${ERP_RELEASE_COMMIT:-local-demo}
+        ERP_RELEASE_DATA_MODE: demo
+    ports:
+      - "${DEMO_WEB_PORT:-8081}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider --quiet http://127.0.0.1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped

@@ -2,7 +2,7 @@
 # Run `make` or `make help` to list targets.
 
 .DEFAULT_GOAL := help
-.PHONY: help setup setup-interactive setup-production up down restart logs release migrate seed reset demo preview ps psql
+.PHONY: help setup setup-interactive setup-production up down restart logs release migrate seed reset demo demo-docker-up demo-docker-down demo-docker-logs preview ps psql
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -44,6 +44,15 @@ reset: ## DESTRUCTIVE: wipe DB volume and re-setup from scratch
 
 demo: ## Build the static demo bundle (PGlite) into dist/
 	npm run build:demo
+
+demo-docker-up: ## Build and run the static Demo in Docker (PGlite + IndexedDB)
+	docker compose -f docker-compose.demo.yml up -d --build
+
+demo-docker-down: ## Stop the local Docker Demo
+	docker compose -f docker-compose.demo.yml down
+
+demo-docker-logs: ## Tail local Docker Demo logs
+	docker compose -f docker-compose.demo.yml logs -f
 
 preview: ## Serve the built demo locally
 	npm run preview

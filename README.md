@@ -79,6 +79,25 @@ The demo seeds mock data into PGlite (persisted in the browser's IndexedDB) on f
 load. **IndexedDB is for demo only** — it is not the 800 GB store. See
 [DEMO_MODE.md](docs/DEMO_MODE.md).
 
+### Local client Demo in Docker (no backend)
+
+Use the checked-in Demo Compose file when a client needs a local URL without GitHub
+Pages or a PostgreSQL stack:
+
+```bash
+make demo-docker-up
+# open http://localhost:8081
+curl -fsS http://localhost:8081/health
+make demo-docker-down
+```
+
+The image builds the same `VITE_DATA_MODE=demo` bundle used by the public Demo and
+serves it as static files. PGlite/WASM runs in the browser and persists Demo data in
+that browser's IndexedDB; the container has no API, database, worker, credentials or
+production data. Set `DEMO_WEB_PORT` to use another host port. The existing Demo
+database boot progress bar (`demo-boot-progress`) and setup provisioning stepper are
+part of this bundle and remain visible in the local run.
+
 ### Production mode (Docker: web + api + PostgreSQL) — one command
 
 > `make setup` (`scripts/setup.sh`) is verified end-to-end, including a real
