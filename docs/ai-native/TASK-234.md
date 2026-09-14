@@ -109,6 +109,19 @@ Approved provider/model/data-policy/spend scope and same-run real-provider
 Receipt-to-Pack evidence remain required. See the [docs-only CI terminal
 evidence](evidence/TASK-234-2026-09-14-ci-docs-terminal.md).
 
+## Provider connection-test UI repair — 2026-09-14
+
+The AI optional step now exposes one explicit `Test connection` action for Demo
+Gateway, OpenAI, Google Gemini, DeepSeek and LM Studio. Demo testing reuses the
+page-scoped temporary session; BYOK testing sends a user-entered key only to the
+selected provider's models endpoint after the explicit click and never to the ERP
+server. The provider fields, action row and live status now use consistent spacing.
+The public Demo was rebuilt with service-worker `erp-system-pwa-v271` and the
+provider script fingerprint `provider-test-v2`. Browser evidence confirms Demo
+success and the OpenAI no-key guard without entering a credential or clicking
+Finish. See the [dated provider-test evidence](evidence/TASK-234-2026-09-14-provider-test-ui.md).
+This supporting UI repair changes no G07 criterion, S-checkpoint or capability count.
+
 ## Remove mandatory account activation — user decision 2026-09-10
 
 Outcome: accounts created in Demo or a real Company are usable immediately.
