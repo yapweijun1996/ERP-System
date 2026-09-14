@@ -741,7 +741,12 @@ function renderSetupWizard(){
     return '<h2 class="wiz-h">'+esc(s('s6h'))+'</h2><p class="wiz-p">'+esc(IS_API?s('s6pProd'):s('s6p'))+'</p>'+
       '<div class="panel" style="margin-top:8px"><div class="panel-body" style="padding:14px 16px;display:grid;gap:8px;font-size:13px">'+
       summaryPairs.map(function(pair){
-        var parts=pair.split(','); return '<div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--muted)">'+esc(s(parts[0]))+'</span><b>'+esc(parts.slice(1).join(','))+'</b></div>';
+        var parts=pair.split(','), key=parts[0], value=parts.slice(1).join(',');
+        if(key==='sumModules'){
+          var moduleItems=selectedModules.length?selectedModules:[s('modulesNone')];
+          return '<div class="wiz-summary-row wiz-summary-modules"><span class="wiz-summary-key">'+esc(s(key))+'</span><div class="wiz-summary-module-list" aria-label="'+esc(s(key))+'">'+moduleItems.map(function(name){ return '<span class="wiz-summary-module">'+esc(name)+'</span>'; }).join('')+'</div></div>';
+        }
+        return '<div class="wiz-summary-row"><span class="wiz-summary-key">'+esc(s(key))+'</span><b class="wiz-summary-value">'+esc(value)+'</b></div>';
       }).join('')+
       '</div></div>';
   }

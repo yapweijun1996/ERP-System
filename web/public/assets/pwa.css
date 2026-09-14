@@ -480,6 +480,16 @@ html,body{
 #setupWizardView .wiz-provider-actions{display:flex;align-items:center;gap:10px;margin-top:16px;}
 #setupWizardView .wiz-provider-actions .btn{min-height:38px;justify-content:center;}
 #setupWizardView .wiz-provider-status{min-height:20px;margin:8px 0 0;}
+#setupWizardView .wiz-summary-row{display:grid;grid-template-columns:minmax(112px,28%) minmax(0,1fr);align-items:start;gap:12px;min-width:0;}
+#setupWizardView .wiz-summary-key{min-width:0;color:var(--muted);line-height:1.35;}
+#setupWizardView .wiz-summary-value{min-width:0;text-align:right;line-height:1.35;overflow-wrap:anywhere;}
+#setupWizardView .wiz-summary-module-list{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;min-width:0;}
+#setupWizardView .wiz-summary-module{display:inline-flex;align-items:center;max-width:100%;padding:3px 8px;border-radius:999px;background:var(--accent-tint);color:var(--text);font-weight:600;line-height:1.3;white-space:nowrap;}
+@media (max-width:560px){
+  #setupWizardView .wiz-summary-row{grid-template-columns:1fr;gap:4px;}
+  #setupWizardView .wiz-summary-value{text-align:left;}
+  #setupWizardView .wiz-summary-module-list{justify-content:flex-start;}
+}
 @media (max-width:560px){
   #setupWizardView .wiz-module-grid{grid-template-columns:minmax(0,1fr);grid-auto-rows:minmax(92px,auto);gap:8px;margin-top:12px;}
   #setupWizardView .wiz-module-card{min-height:92px;padding:11px;gap:9px;}

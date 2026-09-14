@@ -323,7 +323,10 @@ async function main() {
           }
           await page.setViewportSize({ width: viewport.width, height: viewport.height });
 
-          await page.locator('#wizModuleSeg input[data-module-key="sales"]').click();
+          for (const key of ['sales', 'crm', 'inventory', 'warehouse', 'finance', 'hr', 'bi', 'expenses_tax']) {
+            const checkbox = page.locator(`#wizModuleSeg input[data-module-key="${key}"]`);
+            if (await checkbox.isEnabled() && !await checkbox.isChecked()) await checkbox.click();
+          }
           if (!await page.locator('#wizModuleSeg input[data-module-key="finance"]').isChecked()) {
             throw new Error('desktop: selecting Sales did not select required Finance dependency');
           }
@@ -331,6 +334,28 @@ async function main() {
           await page.locator('#wizProvider').waitFor({ state: 'visible', timeout: TIMEOUT });
           await page.locator('#wizNext').click();
           await page.locator('#wizFinish').waitFor({ state: 'visible', timeout: TIMEOUT });
+          const summaryModules = await page.evaluate(() => {
+            const row = document.querySelector('.wiz-summary-modules');
+            const key = row?.querySelector('.wiz-summary-key');
+            const modules = [...(row?.querySelectorAll('.wiz-summary-module') || [])];
+            const keyStyle = key ? getComputedStyle(key) : null;
+            const lineHeight = keyStyle ? parseFloat(keyStyle.lineHeight) : 0;
+            return {
+              keyText: key?.textContent?.trim() || '',
+              keyLines: lineHeight ? key.getBoundingClientRect().height / lineHeight : 0,
+              moduleCount: modules.length,
+              moduleListDisplay: row?.querySelector('.wiz-summary-module-list')
+                ? getComputedStyle(row.querySelector('.wiz-summary-module-list')).display : '',
+              overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+            };
+          });
+          if (summaryModules.keyText !== 'Active modules'
+            || summaryModules.moduleCount < 8
+            || summaryModules.keyLines > 1.2
+            || summaryModules.moduleListDisplay !== 'flex'
+            || summaryModules.overflow > 1) {
+            throw new Error(`desktop: review summary active-module layout regressed: ${JSON.stringify(summaryModules)}`);
+          }
         }
 
         if (viewport.label === 'desktop' || viewport.label === 'small-mobile') {
