@@ -249,6 +249,17 @@ html,body{
   .wiz-language-check .ico{width:12px;height:12px;}
   .wiz-language-note{margin-top:10px;padding:9px 11px;font-size:calc(11.5px * var(--fs,1));line-height:1.3;}
   .wiz-language-note>.ico{width:16px;height:16px;}
+  #setupWizardView .wiz-background-picker{margin-top:12px;padding-top:12px;}
+  #setupWizardView .wiz-background-copy h3{font-size:calc(13px * var(--fs,1));}
+  #setupWizardView .wiz-background-copy p{margin-top:2px;font-size:calc(10.5px * var(--fs,1));line-height:1.25;}
+  #setupWizardView .wiz-background-options{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:8px;}
+  #setupWizardView .wiz-background-option{min-height:48px;padding:6px;gap:6px;border-radius:9px;}
+  #setupWizardView .wiz-background-swatch{width:25px;height:25px;border-radius:7px;}
+  #setupWizardView .wiz-background-option-copy{padding-right:10px;}
+  #setupWizardView .wiz-background-option-copy b{font-size:calc(10px * var(--fs,1));}
+  #setupWizardView .wiz-background-option-copy small{display:none;}
+  #setupWizardView .wiz-background-check{top:4px;right:4px;width:13px;height:13px;}
+  #setupWizardView .wiz-background-check .ico{width:8px;height:8px;}
   #setupWizardView .wizard-savebar{padding-top:12px;gap:10px;}
   #setupWizardView .wizard-primary,#setupWizardView #wizBack{min-height:44px;border-radius:11px;}
   #setupWizardView .wizard-primary{font-size:calc(14px * var(--fs,1));}
@@ -364,6 +375,11 @@ html,body{
   #setupWizardView .wiz-language-copy b{font-size:calc(12.5px * var(--fs,1));}
   #setupWizardView .wiz-language-copy small{font-size:calc(10px * var(--fs,1));}
   #setupWizardView .wiz-language-note{margin-top:8px;padding:8px;font-size:calc(10.5px * var(--fs,1));}
+  #setupWizardView .wiz-background-picker{margin-top:10px;padding-top:10px;}
+  #setupWizardView .wiz-background-options{gap:5px;margin-top:6px;}
+  #setupWizardView .wiz-background-option{min-height:42px;padding:5px;gap:5px;}
+  #setupWizardView .wiz-background-swatch{width:22px;height:22px;border-radius:6px;}
+  #setupWizardView .wiz-background-option-copy b{font-size:calc(9.5px * var(--fs,1));}
 }
 
 /* Portrait phones and split panes have enough height for the compact language

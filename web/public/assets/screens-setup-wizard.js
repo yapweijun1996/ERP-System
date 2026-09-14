@@ -384,6 +384,15 @@ function renderSetupWizard(){
     }, MODULE_STEP_COPY[locale]);
   });
 
+  var BACKGROUND_COPY = {
+    en:{title:'Choose a background style',body:'Use the same visual style on sign-in, setup and this workspace. You can change it later in Settings.',sumBackground:'Background style',aurora:'Blue and violet ambient orbs',mist:'Soft cyan haze with a light canvas',paper:'Quiet neutral surface with no artwork',nightSky:'Deep indigo with teal accents'},
+    ms:{title:'Pilih gaya latar belakang',body:'Gunakan gaya visual yang sama pada daftar masuk, persediaan dan ruang kerja ini. Anda boleh menukarnya kemudian dalam Tetapan.',sumBackground:'Gaya latar belakang',aurora:'Bola cahaya biru dan ungu',mist:'Kabut sian lembut dengan kanvas cerah',paper:'Permukaan neutral tanpa karya seni',nightSky:'Indigo gelap dengan aksen teal'},
+    zh:{title:'选择背景样式',body:'登录页、设置向导和工作区会使用相同的视觉样式。您稍后可以在设置中更改。',sumBackground:'背景样式',aurora:'蓝紫色环境光球',mist:'浅色画布与柔和青色雾气',paper:'无装饰的安静中性背景',nightSky:'深靛蓝与青绿色点缀'},
+    ja:{title:'背景スタイルを選択',body:'サインイン、セットアップ、このワークスペースで同じ表示スタイルを使用します。後で設定から変更できます。',sumBackground:'背景スタイル',aurora:'青と紫のアンビエントオーブ',mist:'明るいキャンバスと柔らかなシアンの霧',paper:'アートワークのないニュートラルな背景',nightSky:'ティールのアクセントを持つ濃いインディゴ'},
+    vi:{title:'Chọn kiểu nền',body:'Sử dụng cùng một kiểu hiển thị khi đăng nhập, thiết lập và trong không gian làm việc này. Bạn có thể đổi sau trong Cài đặt.',sumBackground:'Kiểu nền',aurora:'Quầng sáng xanh lam và tím',mist:'Sương xanh lơ nhẹ trên nền sáng',paper:'Bề mặt trung tính yên tĩnh không hình nền',nightSky:'Chàm đậm với điểm nhấn xanh ngọc'},
+  };
+  Object.keys(COPY).forEach(function(locale){ Object.assign(COPY[locale], BACKGROUND_COPY[locale]||BACKGROUND_COPY.en); });
+
   var S = {
     step:0, reached:0,
     lang:(typeof getLang==='function'?getLang():'en'),
@@ -592,6 +601,25 @@ function renderSetupWizard(){
       '<div class="wiz-language-note" role="note">'+ic('info')+'<span>'+esc(s('s0note'))+'</span></div>';
   }
 
+  function backgroundPicker(){
+    var options = window.ERP_BACKGROUND_STYLE_OPTIONS || [
+      {id:'aurora',label:'Aurora'}, {id:'mist',label:'Mist'},
+      {id:'paper',label:'Paper'}, {id:'night-sky',label:'Night sky'},
+    ];
+    var current = document.documentElement.getAttribute('data-background') || 'aurora';
+    return '<section class="wiz-background-picker" aria-labelledby="wizBackgroundTitle">'+
+      '<div class="wiz-background-copy"><h3 id="wizBackgroundTitle">'+esc(s('title'))+'</h3><p>'+esc(s('body'))+'</p></div>'+
+      '<div class="wiz-background-options" role="radiogroup" aria-labelledby="wizBackgroundTitle">'+
+      options.map(function(option){
+        var key=option.id==='night-sky'?'nightSky':option.id;
+        var selected=option.id===current;
+        return '<button type="button" class="wiz-background-option '+(selected?'is-selected':'')+'" data-background-value="'+esc(option.id)+'" role="radio" aria-checked="'+selected+'">'+
+          '<span class="wiz-background-swatch wiz-background-swatch-'+esc(option.id)+'" aria-hidden="true"></span>'+
+          '<span class="wiz-background-option-copy"><b>'+esc(option.label)+'</b><small>'+esc(s(key))+'</small></span>'+
+          '<span class="wiz-background-check" aria-hidden="true">'+(selected?ic('check'):'')+'</span></button>';
+      }).join('')+'</div></section>';
+  }
+
   function setupModuleCatalog(){
     var dataAdapter=window.ErpSystemData||window.ErpSystemDemo;
     var catalog=dataAdapter&&typeof dataAdapter.setupModuleCatalog==='function'
@@ -679,7 +707,7 @@ function renderSetupWizard(){
   function stepBody(){
     if(S.step===0){
       return '<h2 class="wiz-h">'+esc(s('s0h'))+'</h2><p class="wiz-p">'+esc(s('s0p'))+'</p>'+
-        languageCards();
+        languageCards()+backgroundPicker();
     }
     if(S.step===1){
       return '<h2 class="wiz-h">'+esc(s('s1h'))+'</h2><p class="wiz-p">'+esc(s('s1p'))+'</p>'+
@@ -733,7 +761,10 @@ function renderSetupWizard(){
     var langNative = (I18N_LANGS.filter(function(l){ return l.code===S.lang; })[0]||{}).native||S.lang;
     var providerLabel = (PROVIDERS.filter(function(p){ return p[0]===S.aiProvider; })[0]||[undefined,s('none')])[1];
     var selectedModules=setupModuleCatalog().filter(function(item){ return S.moduleKeys.indexOf(item.key)!==-1; }).map(function(item){ return item.name; });
-    var summaryPairs = ['sumLang,'+langNative, 'sumOrg,'+(S.masterName||'—'), 'sumOrgCode,'+(S.organizationCode||'—'), 'sumCompany,'+(S.companyName||'—'),
+    var backgroundOptions=window.ERP_BACKGROUND_STYLE_OPTIONS||[];
+    var backgroundId=document.documentElement.getAttribute('data-background')||'aurora';
+    var backgroundLabel=(backgroundOptions.filter(function(option){ return option.id===backgroundId; })[0]||{}).label||backgroundId;
+    var summaryPairs = ['sumLang,'+langNative, 'sumBackground,'+backgroundLabel, 'sumOrg,'+(S.masterName||'—'), 'sumOrgCode,'+(S.organizationCode||'—'), 'sumCompany,'+(S.companyName||'—'),
       'sumCountry,'+S.country, 'sumCurrency,'+meta.currency];
     summaryPairs.push(
       'sumAdmin,'+((S.adminName||'—')+(S.adminEmail?' · '+S.adminEmail:'')),
@@ -830,6 +861,20 @@ function renderSetupWizard(){
     });
     var topLang=document.getElementById('wizTopLang');
     if(topLang) topLang.addEventListener('change',function(){ S.lang=topLang.value; render(); });
+    var backgroundOptions=host.querySelectorAll('[data-background-value]');
+    backgroundOptions.forEach(function(button){
+      button.addEventListener('click',function(){
+        var value=button.dataset.backgroundValue;
+        if(typeof applyBackground==='function') applyBackground(value);
+        backgroundOptions.forEach(function(item){
+          var selected=item===button;
+          item.classList.toggle('is-selected',selected);
+          item.setAttribute('aria-checked',String(selected));
+          var check=item.querySelector('.wiz-background-check');
+          if(check) check.innerHTML=selected?ic('check'):'';
+        });
+      });
+    });
     var countrySeg=document.getElementById('wizCountrySeg');
     if(countrySeg) countrySeg.querySelectorAll('button').forEach(function(b){
       b.addEventListener('click',function(){ readCurrentStepInputs(); S.country=b.dataset.v; render(); });

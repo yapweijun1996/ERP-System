@@ -1857,7 +1857,14 @@ function toggleTheme(){ applyTheme(document.documentElement.getAttribute('data-t
 
 /* Background artwork is a personal, device-local preference. It is deliberately
    available before sign-in so the login and setup views share the same choice. */
-const BACKGROUND_OPTIONS=new Set(['aurora','mist','paper','night-sky']);
+const BACKGROUND_STYLE_OPTIONS=[
+  {id:'aurora',label:'Aurora',description:'Blue and violet ambient orbs'},
+  {id:'mist',label:'Mist',description:'Soft cyan haze with a light canvas'},
+  {id:'paper',label:'Paper',description:'Quiet neutral surface with no artwork'},
+  {id:'night-sky',label:'Night sky',description:'Deep indigo with teal accents'},
+];
+const BACKGROUND_OPTIONS=new Set(BACKGROUND_STYLE_OPTIONS.map(option=>option.id));
+window.ERP_BACKGROUND_STYLE_OPTIONS=BACKGROUND_STYLE_OPTIONS;
 function applyBackground(background){
   const normalized=BACKGROUND_OPTIONS.has(background)?background:'aurora';
   document.documentElement.setAttribute('data-background',normalized);

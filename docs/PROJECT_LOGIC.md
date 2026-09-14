@@ -1,5 +1,14 @@
 # ERP-System Project Logic
 
+Background style preference — 2026-09-15: the first-run wizard exposes four fixed styles
+(Aurora, Mist, Paper and Night sky) alongside language selection. The choice is applied
+through the existing browser-local `aria-background` preference and shared by sign-in,
+setup, workspace and Settings; no business or tenant data is written. The seven-step
+wizard contract remains unchanged. A company default with employee-level overrides is not
+yet an implementation contract because the tenancy schema has no background preference
+fields or authenticated read/write routes; adding that behavior requires a separate
+Demo/PGlite and PostgreSQL-parity schema/API decision.
+
 TASK-237 G10.1 acceptance mapping — 2026-09-13: the frozen Receipt Pilot
 catalog and independent oracle satisfy the exact evaluation-set criterion. The
 30 P01–P16 cases and 9 negative cases cover happy paths, invalid input, prompt

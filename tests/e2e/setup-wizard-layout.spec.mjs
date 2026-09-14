@@ -122,6 +122,7 @@ async function main() {
           const panel = document.querySelector('#setupWizardView .wizard-panel');
           const continueButton = document.querySelector('#wizNext');
           const cards = [...document.querySelectorAll('#wizLangSeg .wiz-language-card')];
+          const backgrounds = [...document.querySelectorAll('[data-background-value]')];
           const stepper = document.querySelector('#setupWizardView .stepper');
           const steps = stepper ? [...stepper.querySelectorAll('.step')] : [];
           const currentStep = stepper?.querySelector('.step.current');
@@ -144,6 +145,11 @@ async function main() {
             panelScrollTop: panel.scrollTop,
             panelOverflowX: getComputedStyle(panel).overflowX,
             cards: cards.length,
+            backgrounds: backgrounds.map((option) => ({
+              value: option.getAttribute('data-background-value'),
+              role: option.getAttribute('role'),
+              checked: option.getAttribute('aria-checked'),
+            })),
             smallestCardHeight: Math.min(...cards.map((card) => card.getBoundingClientRect().height)),
             widestCardScrollDelta: Math.max(...cards.map((card) => card.scrollWidth - card.clientWidth)),
             lowestCardBottom: Math.max(...cards.map((card) => card.getBoundingClientRect().bottom)),
@@ -196,6 +202,20 @@ async function main() {
         if (layout.cards !== 5 || !layout.continueVisible) {
           throw new Error(`${viewport.label}: language cards or Continue button regressed: ${JSON.stringify(layout)}`);
         }
+        if (layout.backgrounds.length !== 4
+          || layout.backgrounds.some((option) => option.role !== 'radio')
+          || layout.backgrounds.filter((option) => option.checked === 'true').length !== 1) {
+          throw new Error(`${viewport.label}: background style chooser did not render accessible options: ${JSON.stringify(layout.backgrounds)}`);
+        }
+        await page.locator('[data-background-value="mist"]').click();
+        const backgroundState = await page.evaluate(() => ({
+          applied: document.documentElement.getAttribute('data-background'),
+          selected: document.querySelector('[data-background-value="mist"]')?.getAttribute('aria-checked'),
+        }));
+        if (backgroundState.applied !== 'mist' || backgroundState.selected !== 'true') {
+          throw new Error(`${viewport.label}: selecting a background style did not update the active theme: ${JSON.stringify(backgroundState)}`);
+        }
+        await page.locator('[data-background-value="aurora"]').click();
         assertResponsiveProgress(viewport, layout.progress, 'language');
 
         if (viewport.width <= 560) {
