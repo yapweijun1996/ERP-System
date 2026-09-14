@@ -517,6 +517,13 @@ function renderSetupWizard(){
     if(status) status.textContent=message;
   }
 
+  function providerTestInitialStatus(){
+    if(S.aiProvider==='demo_gateway') return demoGatewayStatusText();
+    if(!S.aiProvider) return s('providerTestSelectProvider');
+    if(S.aiProvider==='lmstudio') return s('providerTestLocal');
+    return s('providerTestCredentialRequired');
+  }
+
   function testProviderConnection(){
     readCurrentStepInputs();
     if(!S.aiProvider){ setProviderTestStatus(s('providerTestSelectProvider')); return; }
@@ -717,7 +724,7 @@ function renderSetupWizard(){
               '<p class="wiz-p wiz-provider-note">'+esc(s('s5note'))+'</p>')+
         '</div>'+
         '<div class="wiz-provider-actions"><button class="btn soft" type="button" id="wizTestProvider">'+esc(s('providerTest'))+'</button></div>'+
-        '<p class="wiz-p wiz-provider-status" id="wizProviderStatus" role="status" aria-live="polite">'+esc(demoGatewaySelected?demoGatewayStatusText():s('providerTestSelectProvider'))+'</p>';
+        '<p class="wiz-p wiz-provider-status" id="wizProviderStatus" role="status" aria-live="polite">'+esc(providerTestInitialStatus())+'</p>';
     }
     // step 6 — summary
     meta = COUNTRY_META[S.country];
