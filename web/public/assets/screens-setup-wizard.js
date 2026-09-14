@@ -699,7 +699,7 @@ function renderSetupWizard(){
     if(S.step===3){
       return '<h2 class="wiz-h">'+esc(s('s3h'))+'</h2><p class="wiz-p">'+esc(s('s3p'))+'</p>'+
         '<div class="wiz-admin-fields">'+
-          fld(s('s3name'), '<input id="wizAdminName" value="'+esc(S.adminName)+'" placeholder="'+esc(s('s3nameph'))+'" autofocus>')+
+          fld(s('s3name'), '<input id="wizAdminName" value="'+esc(S.adminName)+'" placeholder="'+esc(s('s3nameph'))+'">')+
           fld(s('s3username'), '<input id="wizAdminUsername" value="'+esc(S.adminUsername)+'" autocomplete="username">')+
           fld(s('s3email'), '<input id="wizAdminEmail" type="email" value="'+esc(S.adminEmail)+'" placeholder="'+esc(s('s3emailph'))+'">')+
           fld(s('s3password'), '<input id="wizAdminPassword" type="password" value="'+esc(S.adminPassword)+'" placeholder="'+esc(s('s3passwordph'))+'" autocomplete="new-password">')+
