@@ -472,6 +472,9 @@ html,body{
 #setupWizardView .wiz-module-plan>.ico{flex:0 0 auto;width:18px;height:18px;margin-top:1px;}
 #setupWizardView .wiz-module-plan div{display:grid;gap:3px;min-width:0;}
 #setupWizardView .wiz-module-plan b{font-size:calc(12px * var(--fs,1));color:var(--text);}
+#setupWizardView .wiz-admin-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;}
+#setupWizardView .wiz-admin-actions .btn{min-height:36px;justify-content:center;}
+#setupWizardView .wiz-admin-credential-note{margin:8px 0 0;color:var(--muted);font-size:calc(11px * var(--fs,1));line-height:1.4;}
 @media (max-width:560px){
   #setupWizardView .wiz-module-grid{grid-template-columns:minmax(0,1fr);grid-auto-rows:minmax(92px,auto);gap:8px;margin-top:12px;}
   #setupWizardView .wiz-module-card{min-height:92px;padding:11px;gap:9px;}

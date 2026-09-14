@@ -99,6 +99,9 @@ function renderSetupWizard(){
       s3h:'Create the first admin user', s3p:'This account will have full access once setup is applied.',
       s3name:'Full name', s3nameph:'e.g. Alex Tan', s3username:'Username', s3email:'Work email', s3emailph:'e.g. admin@acme.co',
       s3password:'Password', s3passwordph:'At least 8 characters', s3passwordConfirm:'Confirm password',
+      s3generatePassword:'Generate secure password', s3copyCredentials:'Copy credentials', s3downloadCredentials:'Download credentials',
+      s3credentialNotice:'The download contains a plaintext password. Keep it safe and delete it after first sign-in.',
+      s3passwordGenerated:'A secure password was generated.', s3credentialsCopied:'Credentials copied to this device.', s3credentialsCopyFailed:'Could not copy credentials. Use Download credentials instead.', s3credentialsMissing:'Enter a password before copying or downloading credentials.',
       s4h:'Connect an AI provider (optional)', s4p:'Bring Your Own Key — your key is never stored or sent to us; this preview does not persist it.',
       s4provider:'Provider', s4key:'API key', s4keyph:'Not required for this preview',
       s4note:'This key is kept only in this step’s memory and is discarded on Finish/Back — nothing is saved.',
@@ -412,6 +415,47 @@ function renderSetupWizard(){
     S.demoGatewayRequest=null;
   }
 
+  function secureRandomIndex(limit){
+    if(!window.crypto || typeof window.crypto.getRandomValues!=='function') throw new Error('secure_random_unavailable');
+    var maximum=Math.floor(0x100000000/limit)*limit;
+    var value=new Uint32Array(1);
+    do { window.crypto.getRandomValues(value); } while(value[0]>=maximum);
+    return value[0]%limit;
+  }
+
+  function generateSecurePassword(){
+    var groups=['ABCDEFGHJKLMNPQRSTUVWXYZ','abcdefghijkmnopqrstuvwxyz','23456789','!@#$%^&*-_=+'];
+    var all=groups.join('');
+    var chars=groups.map(function(group){ return group[secureRandomIndex(group.length)]; });
+    while(chars.length<20) chars.push(all[secureRandomIndex(all.length)]);
+    for(var i=chars.length-1;i>0;i--){ var swap=secureRandomIndex(i+1); var current=chars[i]; chars[i]=chars[swap]; chars[swap]=current; }
+    return chars.join('');
+  }
+
+  function adminCredentialsText(){
+    return 'Aria ERP admin setup credentials\n'+
+      'Username: '+S.adminUsername+'\n'+
+      'Email: '+S.adminEmail+'\n'+
+      'Password: '+S.adminPassword+'\n';
+  }
+
+  function requireAdminPassword(){
+    readCurrentStepInputs();
+    if(S.adminPassword) return true;
+    var error=document.getElementById('wizErr'); if(error) error.textContent=s('s3credentialsMissing');
+    return false;
+  }
+
+  function downloadAdminCredentials(){
+    if(!requireAdminPassword()) return;
+    var blob=new Blob([adminCredentialsText()],{type:'text/plain;charset=utf-8'});
+    var href=URL.createObjectURL(blob);
+    var link=document.createElement('a');
+    link.href=href; link.download='aria-erp-admin-credentials.txt'; link.style.display='none';
+    document.body.appendChild(link); link.click(); link.remove();
+    window.setTimeout(function(){ URL.revokeObjectURL(href); },0);
+  }
+
   function demoGatewayStatusText(){
     if(S.demoGatewayStatus==='connecting') return s('demoGatewayConnecting');
     if(S.demoGatewayStatus==='ready') return s('demoGatewayReady');
@@ -598,6 +642,8 @@ function renderSetupWizard(){
         fld(s('s3email'), '<input id="wizAdminEmail" type="email" value="'+esc(S.adminEmail)+'" placeholder="'+esc(s('s3emailph'))+'">')+
         fld(s('s3password'), '<input id="wizAdminPassword" type="password" value="'+esc(S.adminPassword)+'" placeholder="'+esc(s('s3passwordph'))+'" autocomplete="new-password">')+
         fld(s('s3passwordConfirm'), '<input id="wizAdminPasswordConfirm" type="password" value="'+esc(S.adminPasswordConfirm)+'" autocomplete="new-password">')+
+        '<div class="wiz-admin-actions"><button class="btn soft" type="button" id="wizGeneratePassword">'+esc(s('s3generatePassword'))+'</button><button class="btn plain" type="button" id="wizCopyCredentials">'+esc(s('s3copyCredentials'))+'</button><button class="btn ghost" type="button" id="wizDownloadCredentials">'+esc(s('s3downloadCredentials'))+'</button></div>'+
+        '<p class="wiz-admin-credential-note">'+esc(s('s3credentialNotice'))+'</p>'+
         '<div class="auth-error" id="wizErr"></div>';
     }
     if(S.step===4){
@@ -712,6 +758,26 @@ function renderSetupWizard(){
     if(countrySeg) countrySeg.querySelectorAll('button').forEach(function(b){
       b.addEventListener('click',function(){ readCurrentStepInputs(); S.country=b.dataset.v; render(); });
     });
+    var generatePassword=document.getElementById('wizGeneratePassword');
+    if(generatePassword) generatePassword.addEventListener('click',function(){
+      try{
+        var password=generateSecurePassword();
+        S.adminPassword=password; S.adminPasswordConfirm=password;
+        var passwordInput=document.getElementById('wizAdminPassword'); if(passwordInput) passwordInput.value=password;
+        var confirmInput=document.getElementById('wizAdminPasswordConfirm'); if(confirmInput) confirmInput.value=password;
+        var error=document.getElementById('wizErr'); if(error) error.textContent=s('s3passwordGenerated');
+      }catch{ var errorEl=document.getElementById('wizErr'); if(errorEl) errorEl.textContent=s('s3credentialsCopyFailed'); }
+    });
+    var copyCredentials=document.getElementById('wizCopyCredentials');
+    if(copyCredentials) copyCredentials.addEventListener('click',function(){
+      if(!requireAdminPassword()) return;
+      if(!navigator.clipboard || typeof navigator.clipboard.writeText!=='function'){
+        var error=document.getElementById('wizErr'); if(error) error.textContent=s('s3credentialsCopyFailed'); return;
+      }
+      navigator.clipboard.writeText(adminCredentialsText()).then(function(){ var error=document.getElementById('wizErr'); if(error) error.textContent=s('s3credentialsCopied'); },function(){ var error=document.getElementById('wizErr'); if(error) error.textContent=s('s3credentialsCopyFailed'); });
+    });
+    var downloadCredentials=document.getElementById('wizDownloadCredentials');
+    if(downloadCredentials) downloadCredentials.addEventListener('click',downloadAdminCredentials);
     var provSel=document.getElementById('wizProvider');
     if(provSel) provSel.addEventListener('change',function(){
       var previous=S.aiProvider;
