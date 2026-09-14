@@ -1,7 +1,8 @@
 # ERP Project Progress
 
 Reviewed: **2026-09-15, Asia/Singapore**. Snapshot of the current root worktree,
-not an automated live monitor. Current root revision: `4345f55c7eb081e4d2a914aeb160a7106299623f`
+not an automated live monitor. Current application release revision: `82f3054`
+(the follow-on evidence/progress commit is documentation-only).
 on `main`; the prior snapshot baseline `71d14f2bbd7bcd4b8c0aaabbf1964d99d2a8dfea`
 and product source repair `20e8af0` record the hosted retry-repair CI
 terminal success after the merged/fresh CI failure boundaries,
@@ -115,6 +116,17 @@ databases were dropped after the run; production readable SG/MY sources and
 Finance/QA visual Print acceptance remain open. See the [dated PostgreSQL
 evidence](docs/ai-native/evidence/TASK-202-2026-09-13-postgres-parity.md).
 Task registry SHA-256: `0889cc83c0d1345c81b00c049671d8ec8a3095fb10837eb32cedf2d3c2c22f16`.
+
+**Background styles release — 2026-09-15:** the static Demo Language step now includes
+four accessible fixed background styles (Aurora, Mist, Paper and Night sky). Selection
+applies immediately to sign-in, setup and the current workspace and remains available
+in Settings as a browser-local preference. Local five-viewport setup E2E, lint,
+typechecks, Demo, build and documentation checks passed; local and public health checks
+are `ok`, and public `release.json` reports `82f3054` with Service Worker cache
+`erp-system-pwa-v276`. This is UI capability evidence only and does not change the
+registry counts. Authenticated company defaults and per-employee overrides remain open:
+the schema/API contract and owner role must be defined before server persistence can be
+claimed. See the [dated background-style evidence](docs/ai-native/evidence/LOCAL-BACKGROUND-THEMES-2026-09-15.md).
 
 
 **Post-pull full regression — 2026-09-12:** with the merged tree at `3e93249` and the
