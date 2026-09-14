@@ -260,6 +260,15 @@ html,body{
   #setupWizardView .wiz-background-option-copy small{display:none;}
   #setupWizardView .wiz-background-check{top:4px;right:4px;width:13px;height:13px;}
   #setupWizardView .wiz-background-check .ico{width:8px;height:8px;}
+  #setupWizardView .wiz-color-picker{margin-top:10px;padding-top:10px;}
+  #setupWizardView .wiz-color-copy h3{font-size:calc(13px * var(--fs,1));}
+  #setupWizardView .wiz-color-copy p{margin-top:2px;font-size:calc(10.5px * var(--fs,1));line-height:1.25;}
+  #setupWizardView .wiz-color-options{grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;margin-top:6px;}
+  #setupWizardView .wiz-color-option{min-height:42px;padding:5px 3px;gap:4px;border-radius:8px;}
+  #setupWizardView .wiz-color-swatches{width:32px;height:9px;border-radius:4px;}
+  #setupWizardView .wiz-color-option b{font-size:calc(8.5px * var(--fs,1));}
+  #setupWizardView .wiz-color-check{top:3px;right:3px;width:12px;height:12px;}
+  #setupWizardView .wiz-color-check .ico{width:7px;height:7px;}
   #setupWizardView .wizard-savebar{padding-top:12px;gap:10px;}
   #setupWizardView .wizard-primary,#setupWizardView #wizBack{min-height:44px;border-radius:11px;}
   #setupWizardView .wizard-primary{font-size:calc(14px * var(--fs,1));}
@@ -380,6 +389,13 @@ html,body{
   #setupWizardView .wiz-background-option{min-height:42px;padding:5px;gap:5px;}
   #setupWizardView .wiz-background-swatch{width:22px;height:22px;border-radius:6px;}
   #setupWizardView .wiz-background-option-copy b{font-size:calc(9.5px * var(--fs,1));}
+  #setupWizardView .wiz-color-picker{margin-top:8px;padding-top:8px;}
+  #setupWizardView .wiz-color-copy h3{font-size:calc(12px * var(--fs,1));}
+  #setupWizardView .wiz-color-copy p{display:none;}
+  #setupWizardView .wiz-color-options{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-top:6px;}
+  #setupWizardView .wiz-color-option{min-height:38px;padding:4px;gap:3px;}
+  #setupWizardView .wiz-color-swatches{width:30px;height:8px;}
+  #setupWizardView .wiz-color-option b{font-size:calc(9px * var(--fs,1));}
 }
 
 /* Portrait phones and split panes have enough height for the compact language

@@ -1852,6 +1852,13 @@ function applyTheme(t){
   try{localStorage.setItem('aria-theme',theme);}catch{}
   const moon=$('#themeBtn'); if(moon)moon.innerHTML=ic(theme==='dark'?'sun':'moon');
   const sw=$('#acctThemeSw'); if(sw)sw.classList.toggle('on',theme==='dark');
+  if(typeof applyPalette==='function'){
+    let paletteId=document.documentElement.getAttribute('data-palette')||'aria';
+    let customAccent='';
+    try{customAccent=localStorage.getItem('aria-accent')||'';}catch{}
+    if(paletteId==='custom'&&customAccent&&typeof applyCustomAccent==='function') applyCustomAccent(customAccent,false);
+    else applyPalette(paletteId,false);
+  }
 }
 function toggleTheme(){ applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark'); }
 
@@ -1874,6 +1881,66 @@ function restoreBackground(){
   let stored='aurora';
   try{stored=localStorage.getItem('aria-background')||'aurora';}catch{}
   applyBackground(stored);
+}
+
+/* Accent palettes are shared by the setup wizard, authenticated shell and
+   settings. Tokens are kept device-local until an authenticated preference
+   contract exists; each palette has light and dark values for readable action
+   controls in both themes. */
+const COLOR_PALETTE_OPTIONS=[
+  {id:'aria',label:'Aria Blue',light:{accent:'#0071E3',action:'#0066CC',hover:'#0058B0'},dark:{accent:'#0A84FF',action:'#0A84FF',hover:'#3A9BFF'},swatches:['#0071E3','#5E5CE6','#0A7D8C']},
+  {id:'royal',label:'Royal Purple',light:{accent:'#6C5CE7',action:'#5B3FC4',hover:'#4A32A8'},dark:{accent:'#A78BFA',action:'#6D4EDB',hover:'#8B6CE8'},swatches:['#6C5CE7','#8B5CF6','#3B82F6']},
+  {id:'ruby',label:'Ruby Red',light:{accent:'#C6284F',action:'#B21F43',hover:'#971A37'},dark:{accent:'#FF6B8A',action:'#C6284F',hover:'#E64B6F'},swatches:['#C6284F','#EF4444','#F97316']},
+  {id:'sunflower',label:'Sunflower Amber',light:{accent:'#B26A00',action:'#A85D00',hover:'#854B00'},dark:{accent:'#F59E0B',action:'#B45309',hover:'#92400E'},swatches:['#B26A00','#F59E0B','#FFB340']},
+  {id:'forest',label:'Forest Green',light:{accent:'#18864B',action:'#147A43',hover:'#0F6335'},dark:{accent:'#30D158',action:'#1F9D57',hover:'#2DBB6A'},swatches:['#18864B','#0A7D8C','#34C759']},
+  {id:'ocean',label:'Ocean Teal',light:{accent:'#0A7D8C',action:'#076777',hover:'#05545F'},dark:{accent:'#5AD3E0',action:'#0A7D8C',hover:'#1596A7'},swatches:['#0A7D8C','#0071E3','#22D3EE']},
+];
+const COLOR_PALETTE_OPTIONS_BY_ID=new Map(COLOR_PALETTE_OPTIONS.map(option=>[option.id,option]));
+const LEGACY_PALETTE_IDS={Aria:'aria',Slate:'aria',Forest:'forest',Sunset:'ruby',Royal:'royal',Amber:'sunflower'};
+window.ERP_COLOR_PALETTE_OPTIONS=COLOR_PALETTE_OPTIONS;
+function normalizePaletteId(value){
+  if(COLOR_PALETTE_OPTIONS_BY_ID.has(value)) return value;
+  return LEGACY_PALETTE_IDS[value]||'aria';
+}
+window.erpNormalizePaletteId=normalizePaletteId;
+function setPaletteTokens(palette, customAccent){
+  const root=document.documentElement;
+  const dark=root.getAttribute('data-theme')==='dark';
+  const tokens=customAccent
+    ? {accent:customAccent,action:customAccent,hover:customAccent}
+    : (dark?palette.dark:palette.light);
+  const tint=dark?'20%':'14%';
+  root.style.setProperty('--accent',tokens.accent);
+  root.style.setProperty('--accent-d',tokens.hover);
+  root.style.setProperty('--accent-action',tokens.action);
+  root.style.setProperty('--accent-action-hover',tokens.hover);
+  root.style.setProperty('--accent-tint','color-mix(in srgb, '+tokens.accent+' '+tint+', transparent)');
+  root.style.setProperty('--accent-soft','color-mix(in srgb, '+tokens.accent+' 10%, var(--surface))');
+  root.style.setProperty('--accent-border','color-mix(in srgb, '+tokens.accent+' 34%, var(--border))');
+}
+function applyPalette(id,persist=true){
+  const normalized=normalizePaletteId(id);
+  const palette=COLOR_PALETTE_OPTIONS_BY_ID.get(normalized)||COLOR_PALETTE_OPTIONS_BY_ID.get('aria');
+  document.documentElement.setAttribute('data-palette',normalized);
+  setPaletteTokens(palette);
+  if(persist){
+    try{localStorage.setItem('aria-palette',normalized);localStorage.removeItem('aria-accent');}catch{}
+  }
+  return normalized;
+}
+function applyCustomAccent(colour,persist=true){
+  if(typeof colour!=='string'||!/^#[0-9a-f]{6}$/i.test(colour)) return applyPalette('aria',persist);
+  document.documentElement.setAttribute('data-palette','custom');
+  const palette=COLOR_PALETTE_OPTIONS_BY_ID.get('aria');
+  setPaletteTokens(palette,colour);
+  if(persist){try{localStorage.setItem('aria-accent',colour);localStorage.removeItem('aria-palette');}catch{}}
+  return 'custom';
+}
+function restorePalette(){
+  let paletteId=''; let customAccent='';
+  try{paletteId=localStorage.getItem('aria-palette')||'';customAccent=localStorage.getItem('aria-accent')||'';}catch{}
+  if(customAccent && !paletteId) return applyCustomAccent(customAccent,false);
+  return applyPalette(paletteId||'aria',false);
 }
 
 /* ---------- sidebar collapse ---------- */
@@ -2382,6 +2449,7 @@ function renderTabbar(){
 /* ---------- boot ---------- */
 async function boot(){
   restoreBackground();
+  restorePalette();
   if(typeof initI18n==='function') await initI18n();
   if(window.ErpTenantRecovery&&window.ErpTenantRecovery.isActive()){
     window.ErpTenantRecovery.render();
@@ -2446,8 +2514,8 @@ async function boot(){
   // theme
   let themePref='light'; try{themePref=localStorage.getItem('aria-theme')||'light';}catch{}
   applyTheme(themePref);
-  // personal prefs: accent + density
-  try{ const ac=localStorage.getItem('aria-accent'); if(ac){ document.documentElement.style.setProperty('--accent',ac); document.documentElement.style.setProperty('--accent-tint','color-mix(in srgb, '+ac+' 14%, transparent)'); } }catch{}
+  // personal prefs: palette + density
+  restorePalette();
   try{ if(localStorage.getItem('aria-density')==='compact') document.documentElement.setAttribute('data-density','compact'); }catch{}
   try{ const ts=localStorage.getItem('aria-textsize'); if(ts && ts!=='1') document.documentElement.style.setProperty('--fs',ts); }catch{}
   await loadModuleControl();

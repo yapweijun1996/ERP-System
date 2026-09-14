@@ -393,6 +393,15 @@ function renderSetupWizard(){
   };
   Object.keys(COPY).forEach(function(locale){ Object.assign(COPY[locale], BACKGROUND_COPY[locale]||BACKGROUND_COPY.en); });
 
+  var COLOR_PALETTE_COPY = {
+    en:{paletteTitle:'Choose a colour palette',paletteBody:'Use the same accent family across this device. You can change it later in Settings.',sumPalette:'Colour palette',aria:'Aria Blue',royal:'Royal Purple',ruby:'Ruby Red',sunflower:'Sunflower Amber',forest:'Forest Green',ocean:'Ocean Teal'},
+    ms:{paletteTitle:'Pilih palet warna',paletteBody:'Gunakan warna aksen yang sama pada peranti ini. Anda boleh menukarnya kemudian dalam Tetapan.',sumPalette:'Palet warna',aria:'Aria Biru',royal:'Ungu Diraja',ruby:'Merah Delima',sunflower:'Ambar Matahari',forest:'Hijau Hutan',ocean:'Teal Laut'},
+    zh:{paletteTitle:'选择配色方案',paletteBody:'在此设备统一使用强调色。您稍后可以在设置中更改。',sumPalette:'配色方案',aria:'Aria 蓝',royal:'皇家紫',ruby:'红宝石红',sunflower:'向日葵琥珀',forest:'森林绿',ocean:'海洋青'},
+    ja:{paletteTitle:'カラーパレットを選択',paletteBody:'このデバイスで同じアクセントカラーを使用します。後で設定から変更できます。',sumPalette:'カラーパレット',aria:'Aria ブルー',royal:'ロイヤルパープル',ruby:'ルビーレッド',sunflower:'サンフラワーアンバー',forest:'フォレストグリーン',ocean:'オーシャンティール'},
+    vi:{paletteTitle:'Chọn bảng màu',paletteBody:'Dùng cùng nhóm màu nhấn trên thiết bị này. Bạn có thể đổi sau trong Cài đặt.',sumPalette:'Bảng màu',aria:'Xanh Aria',royal:'Tím Hoàng gia',ruby:'Đỏ Ruby',sunflower:'Hổ phách hướng dương',forest:'Xanh rừng',ocean:'Xanh đại dương'},
+  };
+  Object.keys(COPY).forEach(function(locale){ Object.assign(COPY[locale], COLOR_PALETTE_COPY[locale]||COLOR_PALETTE_COPY.en); });
+
   var S = {
     step:0, reached:0,
     lang:(typeof getLang==='function'?getLang():'en'),
@@ -620,6 +629,28 @@ function renderSetupWizard(){
       }).join('')+'</div></section>';
   }
 
+  function colorPalettePicker(){
+    var options = window.ERP_COLOR_PALETTE_OPTIONS || [
+      {id:'aria',label:'Aria Blue',swatches:['#0071E3','#5E5CE6','#0A7D8C']},
+      {id:'royal',label:'Royal Purple',swatches:['#6C5CE7','#8B5CF6','#3B82F6']},
+      {id:'ruby',label:'Ruby Red',swatches:['#C6284F','#EF4444','#F97316']},
+      {id:'sunflower',label:'Sunflower Amber',swatches:['#B26A00','#F59E0B','#FFB340']},
+      {id:'forest',label:'Forest Green',swatches:['#18864B','#0A7D8C','#34C759']},
+      {id:'ocean',label:'Ocean Teal',swatches:['#0A7D8C','#0071E3','#22D3EE']},
+    ];
+    var current = document.documentElement.getAttribute('data-palette') || 'aria';
+    if(current==='custom' || !options.some(function(option){ return option.id===current; })) current='aria';
+    return '<section class="wiz-color-picker" aria-labelledby="wizColorPaletteTitle">'+
+      '<div class="wiz-color-copy"><h3 id="wizColorPaletteTitle">'+esc(s('paletteTitle'))+'</h3><p>'+esc(s('paletteBody'))+'</p></div>'+
+      '<div class="wiz-color-options" role="radiogroup" aria-labelledby="wizColorPaletteTitle">'+
+      options.map(function(option){
+        var selected=option.id===current;
+        return '<button type="button" class="wiz-color-option '+(selected?'is-selected':'')+'" data-color-palette-value="'+esc(option.id)+'" role="radio" aria-checked="'+selected+'" aria-label="'+esc(s(option.id))+'">'+
+          '<span class="wiz-color-swatches" aria-hidden="true">'+(option.swatches||[]).map(function(colour){ return '<i style="background:'+esc(colour)+'"></i>'; }).join('')+'</span>'+
+          '<b>'+esc(s(option.id))+'</b><span class="wiz-color-check" aria-hidden="true">'+(selected?ic('check'):'')+'</span></button>';
+      }).join('')+'</div></section>';
+  }
+
   function setupModuleCatalog(){
     var dataAdapter=window.ErpSystemData||window.ErpSystemDemo;
     var catalog=dataAdapter&&typeof dataAdapter.setupModuleCatalog==='function'
@@ -707,7 +738,7 @@ function renderSetupWizard(){
   function stepBody(){
     if(S.step===0){
       return '<h2 class="wiz-h">'+esc(s('s0h'))+'</h2><p class="wiz-p">'+esc(s('s0p'))+'</p>'+
-        languageCards()+backgroundPicker();
+        languageCards()+backgroundPicker()+colorPalettePicker();
     }
     if(S.step===1){
       return '<h2 class="wiz-h">'+esc(s('s1h'))+'</h2><p class="wiz-p">'+esc(s('s1p'))+'</p>'+
@@ -764,7 +795,10 @@ function renderSetupWizard(){
     var backgroundOptions=window.ERP_BACKGROUND_STYLE_OPTIONS||[];
     var backgroundId=document.documentElement.getAttribute('data-background')||'aurora';
     var backgroundLabel=(backgroundOptions.filter(function(option){ return option.id===backgroundId; })[0]||{}).label||backgroundId;
-    var summaryPairs = ['sumLang,'+langNative, 'sumBackground,'+backgroundLabel, 'sumOrg,'+(S.masterName||'—'), 'sumOrgCode,'+(S.organizationCode||'—'), 'sumCompany,'+(S.companyName||'—'),
+    var paletteOptions=window.ERP_COLOR_PALETTE_OPTIONS||[];
+    var paletteId=document.documentElement.getAttribute('data-palette')||'aria';
+    var paletteLabel=s(paletteId)||(paletteOptions.filter(function(option){ return option.id===paletteId; })[0]||{}).label||paletteId;
+    var summaryPairs = ['sumLang,'+langNative, 'sumBackground,'+backgroundLabel, 'sumPalette,'+paletteLabel, 'sumOrg,'+(S.masterName||'—'), 'sumOrgCode,'+(S.organizationCode||'—'), 'sumCompany,'+(S.companyName||'—'),
       'sumCountry,'+S.country, 'sumCurrency,'+meta.currency];
     summaryPairs.push(
       'sumAdmin,'+((S.adminName||'—')+(S.adminEmail?' · '+S.adminEmail:'')),
@@ -871,6 +905,20 @@ function renderSetupWizard(){
           item.classList.toggle('is-selected',selected);
           item.setAttribute('aria-checked',String(selected));
           var check=item.querySelector('.wiz-background-check');
+          if(check) check.innerHTML=selected?ic('check'):'';
+        });
+      });
+    });
+    var colorPaletteOptions=host.querySelectorAll('[data-color-palette-value]');
+    colorPaletteOptions.forEach(function(button){
+      button.addEventListener('click',function(){
+        var value=button.dataset.colorPaletteValue;
+        if(typeof applyPalette==='function') applyPalette(value);
+        colorPaletteOptions.forEach(function(item){
+          var selected=item===button;
+          item.classList.toggle('is-selected',selected);
+          item.setAttribute('aria-checked',String(selected));
+          var check=item.querySelector('.wiz-color-check');
           if(check) check.innerHTML=selected?ic('check'):'';
         });
       });

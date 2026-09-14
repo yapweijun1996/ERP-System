@@ -310,14 +310,18 @@ SCREENS['settings'] = async function(root, params){
     ['#0071E3','Blue'],['#5E5CE6','Indigo'],['#0a7d8c','Teal'],
     ['#1f9d57','Green'],['#FF9500','Amber'],['#FF375F','Pink'],
   ];
-  const palettes=[
-    ['Aria','#0071E3',['#0071E3','#5E5CE6','#0a7d8c']],
-    ['Slate','#5b6472',['#5b6472','#8a94a6','#0071E3']],
-    ['Forest','#1f9d57',['#1f9d57','#0a7d8c','#34C759']],
-    ['Sunset','#FF375F',['#FF375F','#FF9500','#FF2D55']],
-    ['Royal','#5E5CE6',['#5E5CE6','#7d5cff','#0071E3']],
-    ['Amber','#FF9500',['#FF9500','#FFB340','#FF375F']],
+  const paletteOptions=window.ERP_COLOR_PALETTE_OPTIONS||[
+    {id:'aria',label:'Aria Blue',light:{accent:'#0071E3'},swatches:['#0071E3','#5E5CE6','#0a7d8c']},
+    {id:'royal',label:'Royal Purple',light:{accent:'#6C5CE7'},swatches:['#6C5CE7','#8B5CF6','#3B82F6']},
+    {id:'ruby',label:'Ruby Red',light:{accent:'#C6284F'},swatches:['#C6284F','#EF4444','#F97316']},
+    {id:'sunflower',label:'Sunflower Amber',light:{accent:'#B26A00'},swatches:['#B26A00','#F59E0B','#FFB340']},
+    {id:'forest',label:'Forest Green',light:{accent:'#18864B'},swatches:['#18864B','#0A7D8C','#34C759']},
+    {id:'ocean',label:'Ocean Teal',light:{accent:'#0A7D8C'},swatches:['#0A7D8C','#0071E3','#22D3EE']},
   ];
+  const normalizePalette=typeof window.erpNormalizePaletteId==='function'
+    ?window.erpNormalizePaletteId
+    :value=>paletteOptions.some(option=>option.id===value)?value:'aria';
+  storedPalette=normalizePalette(storedPalette||'aria');
 
   const profile=panel('set-profile','user',s('profile'),`
     <div class="set-row top">
@@ -342,10 +346,10 @@ SCREENS['settings'] = async function(root, params){
     ${row(s('background'),s('backgroundDesc'),seg('background',[
       ['aurora','Aurora'],['mist','Mist'],['paper','Paper'],['night-sky','Night sky'],
     ],storedBackground))}
-    ${row(s('palette'),s('paletteDesc'),`<div class="set-palettes">${palettes.map(p=>
-      `<button class="set-pal ${p[0]===storedPalette?'on':''}" data-c="${p[1]}" data-name="${p[0]}" aria-label="${p[0]}">
-        <span class="set-pal-sw">${p[2].map(c=>`<i style="background:${c}"></i>`).join('')}</span>
-        <span class="set-pal-l">${p[0]}</span></button>`
+    ${row(s('palette'),s('paletteDesc'),`<div class="set-palettes">${paletteOptions.map(p=>
+      `<button class="set-pal ${p.id===storedPalette?'on':''}" data-c="${p.light.accent}" data-name="${p.id}" aria-label="${p.label}">
+        <span class="set-pal-sw">${p.swatches.map(c=>`<i style="background:${c}"></i>`).join('')}</span>
+        <span class="set-pal-l">${p.label}</span></button>`
     ).join('')}</div>`)}
     ${row(s('accent'),s('accentDesc'),`<div class="set-swatches">${accents.map(a=>
       `<button class="set-sw ${a[0]===storedAccent?'on':''}" data-c="${a[0]}" style="background:${a[0]}" aria-label="${a[1]}"></button>`
@@ -460,20 +464,26 @@ SCREENS['settings'] = async function(root, params){
   });
 
   function applyAccent(colour){
-    document.documentElement.style.setProperty('--accent',colour);
-    document.documentElement.style.setProperty('--accent-tint','color-mix(in srgb, '+colour+' 14%, transparent)');
+    if(typeof window.applyCustomAccent==='function') window.applyCustomAccent(colour);
+    else {
+      document.documentElement.setAttribute('data-palette','custom');
+      document.documentElement.style.setProperty('--accent',colour);
+      document.documentElement.style.setProperty('--accent-tint','color-mix(in srgb, '+colour+' 14%, transparent)');
+      document.documentElement.style.setProperty('--accent-action',colour);
+      document.documentElement.style.setProperty('--accent-action-hover',colour);
+    }
     try{ localStorage.setItem('aria-accent',colour); }catch{}
     root.querySelectorAll('.set-sw').forEach(item=>item.classList.toggle('on',item.dataset.c===colour));
   }
   root.querySelectorAll('.set-pal').forEach(palette=>palette.addEventListener('click',()=>{
     root.querySelectorAll('.set-pal').forEach(item=>item.classList.toggle('on',item===palette));
-    applyAccent(palette.dataset.c);
-    try{ localStorage.setItem('aria-palette',palette.dataset.name); }catch{}
-    toast(palette.dataset.name+' '+s('paletteApplied'),'ok');
+    if(typeof window.applyPalette==='function') window.applyPalette(palette.dataset.name);
+    else applyAccent(palette.dataset.c);
+    root.querySelectorAll('.set-sw').forEach(item=>item.classList.remove('on'));
+    toast(palette.querySelector('.set-pal-l')?.textContent+' '+s('paletteApplied'),'ok');
   }));
   root.querySelectorAll('.set-sw').forEach(swatch=>swatch.addEventListener('click',()=>{
     root.querySelectorAll('.set-pal').forEach(item=>item.classList.remove('on'));
-    try{ localStorage.removeItem('aria-palette'); }catch{}
     applyAccent(swatch.dataset.c);
   }));
 

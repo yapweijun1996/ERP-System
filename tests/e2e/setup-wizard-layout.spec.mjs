@@ -123,6 +123,7 @@ async function main() {
           const continueButton = document.querySelector('#wizNext');
           const cards = [...document.querySelectorAll('#wizLangSeg .wiz-language-card')];
           const backgrounds = [...document.querySelectorAll('[data-background-value]')];
+          const palettes = [...document.querySelectorAll('[data-color-palette-value]')];
           const stepper = document.querySelector('#setupWizardView .stepper');
           const steps = stepper ? [...stepper.querySelectorAll('.step')] : [];
           const currentStep = stepper?.querySelector('.step.current');
@@ -147,6 +148,11 @@ async function main() {
             cards: cards.length,
             backgrounds: backgrounds.map((option) => ({
               value: option.getAttribute('data-background-value'),
+              role: option.getAttribute('role'),
+              checked: option.getAttribute('aria-checked'),
+            })),
+            palettes: palettes.map((option) => ({
+              value: option.getAttribute('data-color-palette-value'),
               role: option.getAttribute('role'),
               checked: option.getAttribute('aria-checked'),
             })),
@@ -207,6 +213,11 @@ async function main() {
           || layout.backgrounds.filter((option) => option.checked === 'true').length !== 1) {
           throw new Error(`${viewport.label}: background style chooser did not render accessible options: ${JSON.stringify(layout.backgrounds)}`);
         }
+        if (layout.palettes.length !== 6
+          || layout.palettes.some((option) => option.role !== 'radio')
+          || layout.palettes.filter((option) => option.checked === 'true').length !== 1) {
+          throw new Error(`${viewport.label}: colour palette chooser did not render accessible options: ${JSON.stringify(layout.palettes)}`);
+        }
         await page.locator('[data-background-value="mist"]').click();
         const backgroundState = await page.evaluate(() => ({
           applied: document.documentElement.getAttribute('data-background'),
@@ -216,6 +227,16 @@ async function main() {
           throw new Error(`${viewport.label}: selecting a background style did not update the active theme: ${JSON.stringify(backgroundState)}`);
         }
         await page.locator('[data-background-value="aurora"]').click();
+        await page.locator('[data-color-palette-value="royal"]').click();
+        const paletteState = await page.evaluate(() => ({
+          applied: document.documentElement.getAttribute('data-palette'),
+          accent: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
+          selected: document.querySelector('[data-color-palette-value="royal"]')?.getAttribute('aria-checked'),
+        }));
+        if (paletteState.applied !== 'royal' || !paletteState.accent || paletteState.selected !== 'true') {
+          throw new Error(`${viewport.label}: selecting a colour palette did not update the active theme: ${JSON.stringify(paletteState)}`);
+        }
+        await page.locator('[data-color-palette-value="aria"]').click();
         assertResponsiveProgress(viewport, layout.progress, 'language');
 
         if (viewport.width <= 560) {
