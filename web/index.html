@@ -21,7 +21,7 @@
 <link rel="stylesheet" href="%BASE_URL%assets/purchasing-ext.css" />
 <link rel="stylesheet" href="%BASE_URL%assets/receipt-tax-evidence.css?v=20260730-v1" />
 <link rel="stylesheet" href="%BASE_URL%assets/company-receipts.css?v=20260909-task234-s4-v1" />
-<link rel="stylesheet" href="%BASE_URL%assets/pwa.css?v=20260915-mobile-topbar-v1" />
+<link rel="stylesheet" href="%BASE_URL%assets/pwa.css?v=20260915-compact-mobile-search-v1" />
 </head>
 <body class="auth-locked">
 <a class="skip" href="#viewRoot" data-i18n="skip">Skip to content</a>
@@ -66,9 +66,9 @@
 
   <div class="main">
     <header class="topbar">
-      <button type="button" class="search" id="globalSearch" aria-label="Search (Command K)">
-        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.7" fill="none"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-        <input type="search" name="global-search-trigger" placeholder="Search documents, items, partners, actions…" data-i18n-ph="search.ph" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" tabindex="-1" readonly />
+      <button type="button" class="search" id="globalSearch" aria-label="Search (Command K)" aria-haspopup="dialog" aria-controls="palette" aria-keyshortcuts="Meta+K Control+K">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.7" fill="none"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <span class="search-label" data-i18n="search.ph">Search documents, items, partners, actions…</span>
         <span class="kbd">⌘K</span>
       </button>
       <button class="ctxbtn" id="ctxCompany" data-tip="Switch company / branch" data-i18n-tip="tip.company"></button>

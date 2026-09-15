@@ -137,27 +137,28 @@ html,body{
   .pwa-toast{bottom:calc(var(--mobile-tabbar-base) + var(--safe-bottom) + 12px);}
 }
 
-/* At phone widths the search trigger is a primary task, while the shell
-   controls are secondary actions. Give search a complete row so Flexbox
-   cannot collapse its input to a few pixels when the 44px touch targets are
-   all present. The action row may wrap naturally if a role exposes extra
-   controls, but it must never create page-level horizontal overflow. */
+/* At phone widths the search trigger is a secondary surface, not a persistent
+   form. Keep it as one compact touch target so the shell stays one row high;
+   the existing command palette owns the actual search input after activation. */
 @media (max-width:560px){
   .topbar{
-    align-content:center;
-    flex-wrap:wrap;
-    justify-content:flex-end;
+    flex-wrap:nowrap;
+    justify-content:flex-start;
     column-gap:4px;
-    row-gap:6px;
-    overflow-x:visible;
   }
   .topbar .search{
-    flex:1 0 100%;
-    width:100%;
-    min-width:0;
+    flex:0 0 44px;
+    width:44px;
+    min-width:44px;
+    height:44px;
+    padding:0;
+    gap:0;
+    border-radius:50%;
+    justify-content:center;
+    text-align:center;
   }
-  .topbar .search input{min-width:0;}
-  .topbar .search .kbd{display:none;}
+  .topbar .search svg{width:21px;height:21px;}
+  .topbar .search-label,.topbar .search .kbd{display:none;}
 }
 
 @media (max-width:520px){

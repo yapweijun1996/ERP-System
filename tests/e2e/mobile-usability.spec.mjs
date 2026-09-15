@@ -258,35 +258,39 @@ async function runNarrowTopbarSearch(browser) {
     const metrics = await page.evaluate(() => {
       const topbar = document.querySelector('.topbar');
       const search = document.querySelector('#globalSearch');
-      const input = document.querySelector('#globalSearch input');
-      if (!topbar || !search || !input) throw new Error('topbar search controls did not render');
+      const icon = search?.querySelector('svg');
+      const label = search?.querySelector('.search-label');
+      if (!topbar || !search || !icon || !label) throw new Error('topbar search controls did not render');
       const topbarRect = topbar.getBoundingClientRect();
       const searchRect = search.getBoundingClientRect();
-      const inputRect = input.getBoundingClientRect();
+      const iconRect = icon.getBoundingClientRect();
       const topbarStyle = getComputedStyle(topbar);
-      const topbarContentWidth = topbar.clientWidth
-        - parseFloat(topbarStyle.paddingLeft)
-        - parseFloat(topbarStyle.paddingRight);
       return {
         topbarWidth: topbarRect.width,
         topbarHeight: topbarRect.height,
         topbarClientWidth: topbar.clientWidth,
-        topbarContentWidth,
         topbarScrollWidth: topbar.scrollWidth,
         searchRect: searchRect.toJSON(),
-        inputRect: inputRect.toJSON(),
+        iconRect: iconRect.toJSON(),
+        labelDisplay: getComputedStyle(label).display,
+        searchLabel: search.getAttribute('aria-label') || '',
+        nestedInput: Boolean(search.querySelector('input')),
         documentClientWidth: document.documentElement.clientWidth,
         documentScrollWidth: document.documentElement.scrollWidth,
       };
     });
-    assert(Math.abs(metrics.searchRect.width - metrics.topbarContentWidth) <= 2,
-      `narrow mobile: search trigger did not use the full row: ${JSON.stringify(metrics)}`);
-    assert(metrics.inputRect.width >= 100,
-      `narrow mobile: search input collapsed below a usable width: ${JSON.stringify(metrics)}`);
-    assert(metrics.inputRect.left >= metrics.searchRect.left && metrics.inputRect.right <= metrics.searchRect.right + 1,
-      `narrow mobile: search input escaped its trigger: ${JSON.stringify(metrics)}`);
-    assert(metrics.topbarScrollWidth <= metrics.topbarClientWidth + 1,
-      `narrow mobile: topbar has horizontal overflow: ${JSON.stringify(metrics)}`);
+    assert(metrics.searchRect.width >= 44 && metrics.searchRect.height >= 44,
+      `narrow mobile: search trigger is smaller than the touch target: ${JSON.stringify(metrics)}`);
+    assert(metrics.searchRect.left >= -1 && metrics.searchRect.right <= metrics.topbarWidth + 1,
+      `narrow mobile: search trigger escaped the topbar: ${JSON.stringify(metrics)}`);
+    assert(metrics.iconRect.width >= 18 && metrics.iconRect.height >= 18,
+      `narrow mobile: search SVG icon is not visible: ${JSON.stringify(metrics)}`);
+    assert(metrics.labelDisplay === 'none' && !metrics.nestedInput,
+      `narrow mobile: persistent search field still occupies the topbar: ${JSON.stringify(metrics)}`);
+    assert(metrics.searchLabel.includes('Search'),
+      `narrow mobile: search trigger has no accessible label: ${JSON.stringify(metrics)}`);
+    assert(metrics.topbarHeight <= 80,
+      `narrow mobile: topbar became too tall: ${JSON.stringify(metrics)}`);
     assert(metrics.documentScrollWidth <= metrics.documentClientWidth + 1,
       `narrow mobile: document has horizontal overflow: ${JSON.stringify(metrics)}`);
 
@@ -295,9 +299,16 @@ async function runNarrowTopbarSearch(browser) {
     const paletteInput = await page.locator('#palInput').boundingBox();
     assert(paletteInput && paletteInput.width >= 100,
       `narrow mobile: opened search input is not usable: ${JSON.stringify(paletteInput)}`);
+    await page.waitForFunction(() => document.activeElement?.id === 'palInput', null, { timeout: TIMEOUT });
     await page.keyboard.press('Escape');
+    await page.waitForFunction(() => {
+      const palette = document.querySelector('#palette');
+      return palette?.getAttribute('aria-hidden') === 'true' && !palette.classList.contains('show');
+    }, null, { timeout: TIMEOUT });
+    assert(await page.evaluate(() => document.activeElement?.id === 'globalSearch'),
+      'narrow mobile: closing search did not restore focus to its trigger');
     assert(browserErrors.length === 0, `narrow mobile browser errors detected: ${browserErrors.join(' | ')}`);
-    console.log('PASS mobile usability: 320px topbar search remains full-width and opens the command palette');
+    console.log('PASS mobile usability: 320px compact SVG search trigger keeps the topbar thin and opens the command palette');
   } finally {
     await context.close();
   }
