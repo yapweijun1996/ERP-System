@@ -377,8 +377,41 @@ async function runMobileTableHorizontalScroll(browser) {
       `mobile table: horizontal wheel did not move the dedicated wrapper: ${JSON.stringify({ initial, afterScroll, metrics })}`);
     assert(afterScroll.firstCellLeft < initial.firstCellLeft,
       `mobile table: row content did not move with wrapper scroll: ${JSON.stringify({ initial, afterScroll, metrics })}`);
+
+    const touchClient = await context.newCDPSession(page);
+    await tableScroll.evaluate((wrap) => { wrap.scrollLeft = 0; });
+    const touchY = box.y + Math.min(24, box.height / 2);
+    const touchStartX = box.x + box.width * 0.82;
+    const touchEndX = box.x + box.width * 0.30;
+    await touchClient.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ id: 1, x: touchStartX, y: touchY, radiusX: 8, radiusY: 8, force: 1 }],
+    });
+    for (let step = 1; step <= 8; step += 1) {
+      await touchClient.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{
+          id: 1,
+          x: touchStartX + (touchEndX - touchStartX) * (step / 8),
+          y: touchY,
+          radiusX: 8,
+          radiusY: 8,
+          force: 1,
+        }],
+      });
+    }
+    await touchClient.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await page.waitForFunction(() => document.querySelector('[data-horizontal-scroll]')?.scrollLeft > 0, null, { timeout: TIMEOUT });
+    const afterTouch = await tableScroll.evaluate((wrap) => ({
+      scrollLeft: wrap.scrollLeft,
+      firstCellLeft: wrap.querySelector('.dt-r .dt-c')?.getBoundingClientRect().left || 0,
+    }));
+    assert(afterTouch.scrollLeft > 0,
+      `mobile table: touch swipe did not move the dedicated wrapper: ${JSON.stringify({ metrics, afterTouch })}`);
+    assert(afterTouch.firstCellLeft < initial.firstCellLeft,
+      `mobile table: touch swipe did not move row content: ${JSON.stringify({ initial, afterTouch, metrics })}`);
     assert(browserErrors.length === 0, `mobile table browser errors detected: ${browserErrors.join(' | ')}`);
-    console.log('PASS mobile usability: 390px table rows scroll horizontally inside the dedicated wrapper without page overflow');
+    console.log('PASS mobile usability: 390px table rows scroll horizontally by wheel and touch inside the dedicated wrapper without page overflow');
   } finally {
     await context.close();
   }
