@@ -137,6 +137,29 @@ html,body{
   .pwa-toast{bottom:calc(var(--mobile-tabbar-base) + var(--safe-bottom) + 12px);}
 }
 
+/* At phone widths the search trigger is a primary task, while the shell
+   controls are secondary actions. Give search a complete row so Flexbox
+   cannot collapse its input to a few pixels when the 44px touch targets are
+   all present. The action row may wrap naturally if a role exposes extra
+   controls, but it must never create page-level horizontal overflow. */
+@media (max-width:560px){
+  .topbar{
+    align-content:center;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+    column-gap:4px;
+    row-gap:6px;
+    overflow-x:visible;
+  }
+  .topbar .search{
+    flex:1 0 100%;
+    width:100%;
+    min-width:0;
+  }
+  .topbar .search input{min-width:0;}
+  .topbar .search .kbd{display:none;}
+}
+
 @media (max-width:520px){
   .pwa-toast{align-items:stretch;flex-direction:column;}
   .pwa-toast .pwa-actions{width:100%;}

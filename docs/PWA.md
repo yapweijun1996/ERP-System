@@ -89,6 +89,9 @@ Reference: <https://developer.mozilla.org/en-US/docs/Web/CSS/env>
 ERP System rules:
 
 - Topbar includes `safe-area-inset-top` on mobile.
+- At phone widths up to `560px`, the topbar search trigger occupies a full row;
+  secondary controls retain 44px touch targets on the following row so the search
+  input cannot collapse to an unusable width.
 - Page shell includes left/right safe-area padding on mobile.
 - Bottom tabbar height includes `safe-area-inset-bottom`; buttons fill the usable height.
 - Floating PWA install toast sits above the bottom tabbar on mobile.
@@ -122,5 +125,6 @@ Before publishing:
 - Browser loads `/ERP-System/` with no failed requests
 - `navigator.serviceWorker.ready` resolves on the Pages path
 - mobile viewport has no horizontal overflow
+- `320x700` keeps the topbar search input at a usable width and opens the command palette
 - no update toast or **Update now** button appears when a waiting worker exists
 - a waiting worker receives `SKIP_WAITING` automatically and `controllerchange` reloads once

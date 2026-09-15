@@ -241,6 +241,68 @@ async function runHalfWidth(browser) {
   }
 }
 
+async function runNarrowTopbarSearch(browser) {
+  const context = await browser.newContext({ viewport: { width: 320, height: 700 }, hasTouch: true, isMobile: true, serviceWorkers: 'block' });
+  const page = await context.newPage();
+  const browserErrors = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(`[console.error] ${message.text()}`);
+  });
+  page.on('pageerror', (error) => browserErrors.push(`[pageerror] ${error.message}`));
+  try {
+    await page.addInitScript(() => {
+      localStorage.setItem('aria-setup-wizard-complete', '1');
+      localStorage.setItem('aria-demo-auth', JSON.stringify({ signedIn: true, email: 'admin@acme.co', at: new Date(0).toISOString() }));
+    });
+    await openApprovalDetail(page, 'en', 'narrow-search');
+    const metrics = await page.evaluate(() => {
+      const topbar = document.querySelector('.topbar');
+      const search = document.querySelector('#globalSearch');
+      const input = document.querySelector('#globalSearch input');
+      if (!topbar || !search || !input) throw new Error('topbar search controls did not render');
+      const topbarRect = topbar.getBoundingClientRect();
+      const searchRect = search.getBoundingClientRect();
+      const inputRect = input.getBoundingClientRect();
+      const topbarStyle = getComputedStyle(topbar);
+      const topbarContentWidth = topbar.clientWidth
+        - parseFloat(topbarStyle.paddingLeft)
+        - parseFloat(topbarStyle.paddingRight);
+      return {
+        topbarWidth: topbarRect.width,
+        topbarHeight: topbarRect.height,
+        topbarClientWidth: topbar.clientWidth,
+        topbarContentWidth,
+        topbarScrollWidth: topbar.scrollWidth,
+        searchRect: searchRect.toJSON(),
+        inputRect: inputRect.toJSON(),
+        documentClientWidth: document.documentElement.clientWidth,
+        documentScrollWidth: document.documentElement.scrollWidth,
+      };
+    });
+    assert(Math.abs(metrics.searchRect.width - metrics.topbarContentWidth) <= 2,
+      `narrow mobile: search trigger did not use the full row: ${JSON.stringify(metrics)}`);
+    assert(metrics.inputRect.width >= 100,
+      `narrow mobile: search input collapsed below a usable width: ${JSON.stringify(metrics)}`);
+    assert(metrics.inputRect.left >= metrics.searchRect.left && metrics.inputRect.right <= metrics.searchRect.right + 1,
+      `narrow mobile: search input escaped its trigger: ${JSON.stringify(metrics)}`);
+    assert(metrics.topbarScrollWidth <= metrics.topbarClientWidth + 1,
+      `narrow mobile: topbar has horizontal overflow: ${JSON.stringify(metrics)}`);
+    assert(metrics.documentScrollWidth <= metrics.documentClientWidth + 1,
+      `narrow mobile: document has horizontal overflow: ${JSON.stringify(metrics)}`);
+
+    await page.locator('#globalSearch').click();
+    await page.locator('#palette.show').waitFor({ state: 'visible', timeout: TIMEOUT });
+    const paletteInput = await page.locator('#palInput').boundingBox();
+    assert(paletteInput && paletteInput.width >= 100,
+      `narrow mobile: opened search input is not usable: ${JSON.stringify(paletteInput)}`);
+    await page.keyboard.press('Escape');
+    assert(browserErrors.length === 0, `narrow mobile browser errors detected: ${browserErrors.join(' | ')}`);
+    console.log('PASS mobile usability: 320px topbar search remains full-width and opens the command palette');
+  } finally {
+    await context.close();
+  }
+}
+
 async function main() {
   const preview = await startPreview();
   const browser = await chromium.launch({ headless: true });
@@ -249,6 +311,7 @@ async function main() {
       await runLocale(browser, language, expected, { width: 375, height: 812 });
     }
     await runLocale(browser, 'en', LOCALES.en, { width: 1280, height: 900 });
+    await runNarrowTopbarSearch(browser);
     await runHalfWidth(browser);
   } finally {
     await browser.close();
