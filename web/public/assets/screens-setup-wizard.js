@@ -138,9 +138,14 @@ function renderSetupWizard(){
       s3h:'Cipta pengguna admin pertama', s3p:'Akaun ini akan mempunyai akses penuh selepas persediaan digunakan.',
       s3name:'Nama penuh', s3nameph:'cth. Aina Rahman', s3username:'Nama pengguna', s3email:'E-mel kerja', s3emailph:'cth. admin@acme.co',
       s3password:'Kata laluan', s3passwordph:'Sekurang-kurangnya 8 aksara', s3passwordConfirm:'Sahkan kata laluan',
+      s3generatePassword:'Jana kata laluan selamat', s3copyCredentials:'Salin kelayakan', s3downloadCredentials:'Muat turun kelayakan',
+      s3credentialNotice:'Muat turun mengandungi kata laluan teks biasa. Simpan dengan selamat dan padam selepas log masuk pertama.',
+      s3passwordGenerated:'Kata laluan selamat telah dijana.', s3credentialsCopied:'Kelayakan disalin ke peranti ini.', s3credentialsCopyFailed:'Tidak dapat menyalin kelayakan. Gunakan Muat turun kelayakan.', s3credentialsMissing:'Masukkan kata laluan sebelum menyalin atau memuat turun kelayakan.',
       s4h:'Sambungkan pembekal AI (pilihan)', s4p:'Bawa Kunci Anda Sendiri — kunci anda tidak disimpan atau dihantar kepada kami; pratonton ini tidak menyimpannya.',
       s4provider:'Pembekal', s4key:'Kunci API', s4keyph:'Tidak diperlukan untuk pratonton ini',
       s4note:'Kunci ini hanya disimpan dalam memori langkah ini dan dibuang apabila Selesai/Kembali — tiada apa yang disimpan.',
+      demoGatewayIntro:'Gunakan Demo Gateway dalam pelayar. Kunci API tidak diperlukan; ia tidak mengkonfigurasi AI pelayan.', demoGatewayConnecting:'Menyambung ke Demo Gateway…', demoGatewayReady:'Sesi demo sedia untuk halaman ini. Ia tidak disimpan dan tamat secara automatik.', demoGatewayUnavailable:'Demo Gateway tidak tersedia. Anda boleh melangkaunya dan meneruskan; tetapan AI pelayan tidak berubah.', demoGatewayNote:'Ini hanyalah demo pelayar awam. Ia tidak pernah mengaktifkan pembekal produksi atau menyimpan kelayakan.',
+      providerTest:'Uji sambungan', providerTesting:'Menguji sambungan pembekal…', providerTestReady:'Sambungan berjaya.', providerTestFailed:'Sambungan gagal. Semak pembekal dan kelayakan.', providerTestSelectProvider:'Pilih pembekal sebelum menguji.', providerTestCredentialRequired:'Masukkan kunci API sebelum menguji pembekal ini.', providerTestLocal:'Untuk LM Studio, mulakan pelayan tempatan sebelum menguji.',
       s5h:'Semak dan selesai', s5p:'Selesai akan menulis syarikat, peraturan cukai, carta akaun dan pengguna admin ke pangkalan data demo pelayar ini (PGlite/IndexedDB).',
       s5pProd:'Selesai akan mencipta organisasi, syarikat, peraturan cukai, carta akaun dan pentadbir pertama dengan selamat dalam PostgreSQL.',
       sumLang:'Bahasa', sumOrg:'Organisasi', sumOrgCode:'Kod log masuk', sumCompany:'Syarikat', sumCountry:'Negara', sumCurrency:'Mata wang', sumTax:'Rejim cukai',
@@ -169,9 +174,14 @@ function renderSetupWizard(){
       s3h:'创建第一个管理员账户', s3p:'设置生效后,此账户将拥有完整权限。',
       s3name:'姓名', s3nameph:'例如 陈晓明', s3username:'用户名', s3email:'工作邮箱', s3emailph:'例如 admin@acme.co',
       s3password:'密码', s3passwordph:'至少 8 个字符', s3passwordConfirm:'确认密码',
+      s3generatePassword:'生成安全密码', s3copyCredentials:'复制凭据', s3downloadCredentials:'下载凭据',
+      s3credentialNotice:'下载内容包含明文密码。请妥善保管，并在首次登录后删除。',
+      s3passwordGenerated:'已生成安全密码。', s3credentialsCopied:'凭据已复制到此设备。', s3credentialsCopyFailed:'无法复制凭据。请改用下载凭据。', s3credentialsMissing:'复制或下载凭据前请输入密码。',
       s4h:'连接 AI 提供商(可选)', s4p:'自带密钥 — 您的密钥不会被存储或发送给我们;此预览不会保存它。',
       s4provider:'提供商', s4key:'API 密钥', s4keyph:'此预览不需要',
       s4note:'此密钥仅保留在本步骤的内存中,点击完成/上一步后即被丢弃 — 不会被保存。',
+      demoGatewayIntro:'使用浏览器 Demo Gateway。无需 API 密钥；它不会配置服务器 AI。', demoGatewayConnecting:'正在连接 Demo Gateway…', demoGatewayReady:'此页面的演示会话已准备就绪。不会保存，并会自动过期。', demoGatewayUnavailable:'Demo Gateway 不可用。您可以跳过并继续；服务器 AI 设置不会改变。', demoGatewayNote:'这只是公开的浏览器演示。它不会启用生产提供商或存储凭据。',
+      providerTest:'测试连接', providerTesting:'正在测试提供商连接…', providerTestReady:'连接成功。', providerTestFailed:'连接失败。请检查提供商和凭据。', providerTestSelectProvider:'请先选择提供商再测试。', providerTestCredentialRequired:'测试此提供商前请输入 API 密钥。', providerTestLocal:'对于 LM Studio，请先启动本地服务器再测试。',
       s5h:'检查并完成', s5p:'点击完成后,公司、税务规则、会计科目表和管理员账户将写入此浏览器的演示数据库(PGlite/IndexedDB)。',
       s5pProd:'点击完成后,组织、公司、税务规则、会计科目表和首位管理员将安全地创建到 PostgreSQL。',
       sumLang:'语言', sumOrg:'组织', sumOrgCode:'登录代码', sumCompany:'公司', sumCountry:'国家', sumCurrency:'货币', sumTax:'税制',
@@ -224,12 +234,32 @@ function renderSetupWizard(){
       "s3password": "パスワード",
       "s3passwordph": "少なくとも 8 文字",
       "s3passwordConfirm": "パスワードを認証する",
+      "s3generatePassword": "安全なパスワードを生成",
+      "s3copyCredentials": "認証情報をコピー",
+      "s3downloadCredentials": "認証情報をダウンロード",
+      "s3credentialNotice": "ダウンロードには平文のパスワードが含まれます。安全に保管し、初回サインイン後に削除してください。",
+      "s3passwordGenerated": "安全なパスワードを生成しました。",
+      "s3credentialsCopied": "認証情報をこのデバイスにコピーしました。",
+      "s3credentialsCopyFailed": "認証情報をコピーできませんでした。代わりに認証情報をダウンロードしてください。",
+      "s3credentialsMissing": "コピーまたはダウンロードする前にパスワードを入力してください。",
       "s4h": "AI プロバイダーに接続する (オプション)",
       "s4p": "自分のキーを持参する — あなたのキーが保管されたり、当社に送信されたりすることはありません。このプレビューはそれを保持しません。",
       "s4provider": "プロバイダー",
       "s4key": "APIキー",
       "s4keyph": "このプレビューには必要ありません",
       "s4note": "このキーはこのステップのメモリ内にのみ保持され、「終了」/「戻る」時に破棄され、何も保存されません。",
+      "demoGatewayIntro": "ブラウザの Demo Gateway を使用します。API キーは不要で、サーバー AI は設定しません。",
+      "demoGatewayConnecting": "Demo Gateway に接続しています…",
+      "demoGatewayReady": "このページのデモセッションの準備ができました。保存されず、自動的に期限切れになります。",
+      "demoGatewayUnavailable": "Demo Gateway を利用できません。スキップして続行できます。サーバー AI 設定は変更されません。",
+      "demoGatewayNote": "これは公開ブラウザデモのみです。本番プロバイダーを有効にしたり、認証情報を保存したりすることはありません。",
+      "providerTest": "接続をテスト",
+      "providerTesting": "プロバイダー接続をテストしています…",
+      "providerTestReady": "接続に成功しました。",
+      "providerTestFailed": "接続に失敗しました。プロバイダーと認証情報を確認してください。",
+      "providerTestSelectProvider": "テストする前にプロバイダーを選択してください。",
+      "providerTestCredentialRequired": "このプロバイダーをテストする前に API キーを入力してください。",
+      "providerTestLocal": "LM Studio の場合は、テストする前にローカルサーバーを起動してください。",
       "s5h": "確認して終了",
       "s5p": "完了すると、会社、税規則、勘定科目表、および管理者ユーザーがこのブラウザのデモ データベース (PGlite/IndexedDB) に書き込まれます。",
       "s5pProd": "安全に完了すると、PostgreSQL に組織、会社、税法、勘定科目表、および最初の管理者が作成されます。",
@@ -290,12 +320,32 @@ function renderSetupWizard(){
       "s3password": "Mật khẩu",
       "s3passwordph": "Ít nhất 8 ký tự",
       "s3passwordConfirm": "Xác nhận mật khẩu",
+      "s3generatePassword": "Tạo mật khẩu an toàn",
+      "s3copyCredentials": "Sao chép thông tin đăng nhập",
+      "s3downloadCredentials": "Tải thông tin đăng nhập",
+      "s3credentialNotice": "Tệp tải xuống chứa mật khẩu dạng văn bản thuần. Hãy giữ an toàn và xóa sau lần đăng nhập đầu tiên.",
+      "s3passwordGenerated": "Đã tạo mật khẩu an toàn.",
+      "s3credentialsCopied": "Đã sao chép thông tin đăng nhập vào thiết bị này.",
+      "s3credentialsCopyFailed": "Không thể sao chép thông tin đăng nhập. Thay vào đó, hãy tải xuống.",
+      "s3credentialsMissing": "Nhập mật khẩu trước khi sao chép hoặc tải xuống thông tin đăng nhập.",
       "s4h": "Kết nối nhà cung cấp AI (tùy chọn)",
       "s4p": "Mang theo chìa khóa riêng của bạn - chìa khóa của bạn không bao giờ được lưu trữ hoặc gửi cho chúng tôi; bản xem trước này không tồn tại.",
       "s4provider": "nhà cung cấp",
       "s4key": "Khóa API",
       "s4keyph": "Không bắt buộc đối với bản xem trước này",
       "s4note": "Khóa này chỉ được lưu trong bộ nhớ của bước này và bị loại bỏ khi Hoàn tất/Quay lại - không có gì được lưu.",
+      "demoGatewayIntro": "Sử dụng Demo Gateway trong trình duyệt. Không cần khóa API; dịch vụ này không cấu hình AI máy chủ.",
+      "demoGatewayConnecting": "Đang kết nối với Demo Gateway…",
+      "demoGatewayReady": "Phiên demo của trang này đã sẵn sàng. Phiên không được lưu và tự động hết hạn.",
+      "demoGatewayUnavailable": "Demo Gateway không khả dụng. Bạn có thể bỏ qua và tiếp tục; cài đặt AI máy chủ không thay đổi.",
+      "demoGatewayNote": "Đây chỉ là bản demo trình duyệt công khai. Bản demo không bật nhà cung cấp sản xuất hoặc lưu thông tin đăng nhập.",
+      "providerTest": "Kiểm tra kết nối",
+      "providerTesting": "Đang kiểm tra kết nối nhà cung cấp…",
+      "providerTestReady": "Kết nối thành công.",
+      "providerTestFailed": "Kết nối thất bại. Kiểm tra nhà cung cấp và thông tin đăng nhập.",
+      "providerTestSelectProvider": "Chọn nhà cung cấp trước khi kiểm tra.",
+      "providerTestCredentialRequired": "Nhập khóa API trước khi kiểm tra nhà cung cấp này.",
+      "providerTestLocal": "Với LM Studio, hãy khởi động máy chủ cục bộ trước khi kiểm tra.",
       "s5h": "Xem xét và kết thúc",
       "s5p": "Hoàn tất ghi công ty, quy tắc thuế, biểu đồ tài khoản và người dùng quản trị vào cơ sở dữ liệu demo của trình duyệt này (PGlite/IndexedDB).",
       "s5pProd": "Việc hoàn tất một cách an toàn sẽ tạo ra tổ chức, công ty, quy tắc thuế, sơ đồ tài khoản và quản trị viên đầu tiên trong PostgreSQL.",
@@ -622,9 +672,10 @@ function renderSetupWizard(){
       options.map(function(option){
         var key=option.id==='night-sky'?'nightSky':option.id;
         var selected=option.id===current;
+        var label=typeof t==='function'&&option.labelKey?t(option.labelKey):option.label;
         return '<button type="button" class="wiz-background-option '+(selected?'is-selected':'')+'" data-background-value="'+esc(option.id)+'" role="radio" aria-checked="'+selected+'">'+
           '<span class="wiz-background-swatch wiz-background-swatch-'+esc(option.id)+'" aria-hidden="true"></span>'+
-          '<span class="wiz-background-option-copy"><b>'+esc(option.label)+'</b><small>'+esc(s(key))+'</small></span>'+
+          '<span class="wiz-background-option-copy"><b>'+esc(label)+'</b><small>'+esc(s(key))+'</small></span>'+
           '<span class="wiz-background-check" aria-hidden="true">'+(selected?ic('check'):'')+'</span></button>';
       }).join('')+'</div></section>';
   }
@@ -794,7 +845,8 @@ function renderSetupWizard(){
     var selectedModules=setupModuleCatalog().filter(function(item){ return S.moduleKeys.indexOf(item.key)!==-1; }).map(function(item){ return item.name; });
     var backgroundOptions=window.ERP_BACKGROUND_STYLE_OPTIONS||[];
     var backgroundId=document.documentElement.getAttribute('data-background')||'aurora';
-    var backgroundLabel=(backgroundOptions.filter(function(option){ return option.id===backgroundId; })[0]||{}).label||backgroundId;
+    var backgroundOption=backgroundOptions.filter(function(option){ return option.id===backgroundId; })[0]||{};
+    var backgroundLabel=backgroundOption.labelKey&&typeof t==='function'?t(backgroundOption.labelKey):(backgroundOption.label||backgroundId);
     var paletteOptions=window.ERP_COLOR_PALETTE_OPTIONS||[];
     var paletteId=document.documentElement.getAttribute('data-palette')||'aria';
     var paletteLabel=s(paletteId)||(paletteOptions.filter(function(option){ return option.id===paletteId; })[0]||{}).label||paletteId;

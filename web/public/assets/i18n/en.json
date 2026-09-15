@@ -1800,5 +1800,16 @@
   "staff.emailTemplate": "To: {email}\nSubject: Your {company} ERP account\n\nHello {name},\n\nYour ERP account is ready to use.\n\nSign in: {url}\nOrganization code: {organization}\nUsername: {username}\nEmail: {email}\nPassword: {password}\n\nNo activation is required. Keep your password private. Contact HR if you need help.\n\nRegards,\nHR",
   "purchasing.goodsReceipts.description": "Review full receipts posted against approved purchase orders. Posting updates inventory and feeds the 3-way match.",
   "pwa.currentVersion": "Current",
-  "pwa.latestVersion": "Latest"
+  "pwa.latestVersion": "Latest",
+  "common.table": "Table",
+  "appearance.aurora": "Aurora",
+  "appearance.mist": "Mist",
+  "appearance.paper": "Paper",
+  "appearance.nightSky": "Night sky",
+  "appearance.ariaBlue": "Aria Blue",
+  "appearance.royalPurple": "Royal Purple",
+  "appearance.rubyRed": "Ruby Red",
+  "appearance.sunflowerAmber": "Sunflower Amber",
+  "appearance.forestGreen": "Forest Green",
+  "appearance.oceanTeal": "Ocean Teal"
 }

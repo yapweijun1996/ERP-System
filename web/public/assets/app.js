@@ -1865,10 +1865,10 @@ function toggleTheme(){ applyTheme(document.documentElement.getAttribute('data-t
 /* Background artwork is a personal, device-local preference. It is deliberately
    available before sign-in so the login and setup views share the same choice. */
 const BACKGROUND_STYLE_OPTIONS=[
-  {id:'aurora',label:'Aurora',description:'Blue and violet ambient orbs'},
-  {id:'mist',label:'Mist',description:'Soft cyan haze with a light canvas'},
-  {id:'paper',label:'Paper',description:'Quiet neutral surface with no artwork'},
-  {id:'night-sky',label:'Night sky',description:'Deep indigo with teal accents'},
+  {id:'aurora',label:'Aurora',labelKey:'appearance.aurora',description:'Blue and violet ambient orbs'},
+  {id:'mist',label:'Mist',labelKey:'appearance.mist',description:'Soft cyan haze with a light canvas'},
+  {id:'paper',label:'Paper',labelKey:'appearance.paper',description:'Quiet neutral surface with no artwork'},
+  {id:'night-sky',label:'Night sky',labelKey:'appearance.nightSky',description:'Deep indigo with teal accents'},
 ];
 const BACKGROUND_OPTIONS=new Set(BACKGROUND_STYLE_OPTIONS.map(option=>option.id));
 window.ERP_BACKGROUND_STYLE_OPTIONS=BACKGROUND_STYLE_OPTIONS;
@@ -1888,12 +1888,12 @@ function restoreBackground(){
    contract exists; each palette has light and dark values for readable action
    controls in both themes. */
 const COLOR_PALETTE_OPTIONS=[
-  {id:'aria',label:'Aria Blue',light:{accent:'#0071E3',action:'#0066CC',hover:'#0058B0'},dark:{accent:'#0A84FF',action:'#0A84FF',hover:'#3A9BFF'},swatches:['#0071E3','#5E5CE6','#0A7D8C']},
-  {id:'royal',label:'Royal Purple',light:{accent:'#6C5CE7',action:'#5B3FC4',hover:'#4A32A8'},dark:{accent:'#A78BFA',action:'#6D4EDB',hover:'#8B6CE8'},swatches:['#6C5CE7','#8B5CF6','#3B82F6']},
-  {id:'ruby',label:'Ruby Red',light:{accent:'#C6284F',action:'#B21F43',hover:'#971A37'},dark:{accent:'#FF6B8A',action:'#C6284F',hover:'#E64B6F'},swatches:['#C6284F','#EF4444','#F97316']},
-  {id:'sunflower',label:'Sunflower Amber',light:{accent:'#B26A00',action:'#A85D00',hover:'#854B00'},dark:{accent:'#F59E0B',action:'#B45309',hover:'#92400E'},swatches:['#B26A00','#F59E0B','#FFB340']},
-  {id:'forest',label:'Forest Green',light:{accent:'#18864B',action:'#147A43',hover:'#0F6335'},dark:{accent:'#30D158',action:'#1F9D57',hover:'#2DBB6A'},swatches:['#18864B','#0A7D8C','#34C759']},
-  {id:'ocean',label:'Ocean Teal',light:{accent:'#0A7D8C',action:'#076777',hover:'#05545F'},dark:{accent:'#5AD3E0',action:'#0A7D8C',hover:'#1596A7'},swatches:['#0A7D8C','#0071E3','#22D3EE']},
+  {id:'aria',label:'Aria Blue',labelKey:'appearance.ariaBlue',light:{accent:'#0071E3',action:'#0066CC',hover:'#0058B0'},dark:{accent:'#0A84FF',action:'#0A84FF',hover:'#3A9BFF'},swatches:['#0071E3','#5E5CE6','#0A7D8C']},
+  {id:'royal',label:'Royal Purple',labelKey:'appearance.royalPurple',light:{accent:'#6C5CE7',action:'#5B3FC4',hover:'#4A32A8'},dark:{accent:'#A78BFA',action:'#6D4EDB',hover:'#8B6CE8'},swatches:['#6C5CE7','#8B5CF6','#3B82F6']},
+  {id:'ruby',label:'Ruby Red',labelKey:'appearance.rubyRed',light:{accent:'#C6284F',action:'#B21F43',hover:'#971A37'},dark:{accent:'#FF6B8A',action:'#C6284F',hover:'#E64B6F'},swatches:['#C6284F','#EF4444','#F97316']},
+  {id:'sunflower',label:'Sunflower Amber',labelKey:'appearance.sunflowerAmber',light:{accent:'#B26A00',action:'#A85D00',hover:'#854B00'},dark:{accent:'#F59E0B',action:'#B45309',hover:'#92400E'},swatches:['#B26A00','#F59E0B','#FFB340']},
+  {id:'forest',label:'Forest Green',labelKey:'appearance.forestGreen',light:{accent:'#18864B',action:'#147A43',hover:'#0F6335'},dark:{accent:'#30D158',action:'#1F9D57',hover:'#2DBB6A'},swatches:['#18864B','#0A7D8C','#34C759']},
+  {id:'ocean',label:'Ocean Teal',labelKey:'appearance.oceanTeal',light:{accent:'#0A7D8C',action:'#076777',hover:'#05545F'},dark:{accent:'#5AD3E0',action:'#0A7D8C',hover:'#1596A7'},swatches:['#0A7D8C','#0071E3','#22D3EE']},
 ];
 const COLOR_PALETTE_OPTIONS_BY_ID=new Map(COLOR_PALETTE_OPTIONS.map(option=>[option.id,option]));
 const LEGACY_PALETTE_IDS={Aria:'aria',Slate:'aria',Forest:'forest',Sunset:'ruby',Royal:'royal',Amber:'sunflower'};

@@ -318,6 +318,7 @@ SCREENS['settings'] = async function(root, params){
     {id:'forest',label:'Forest Green',light:{accent:'#18864B'},swatches:['#18864B','#0A7D8C','#34C759']},
     {id:'ocean',label:'Ocean Teal',light:{accent:'#0A7D8C'},swatches:['#0A7D8C','#0071E3','#22D3EE']},
   ];
+  const paletteLabelKey={aria:'appearance.ariaBlue',royal:'appearance.royalPurple',ruby:'appearance.rubyRed',sunflower:'appearance.sunflowerAmber',forest:'appearance.forestGreen',ocean:'appearance.oceanTeal'};
   const normalizePalette=typeof window.erpNormalizePaletteId==='function'
     ?window.erpNormalizePaletteId
     :value=>paletteOptions.some(option=>option.id===value)?value:'aria';
@@ -344,12 +345,12 @@ SCREENS['settings'] = async function(root, params){
       ['light',s('light')],['dark',s('dark')],
     ],storedTheme))}
     ${row(s('background'),s('backgroundDesc'),seg('background',[
-      ['aurora','Aurora'],['mist','Mist'],['paper','Paper'],['night-sky','Night sky'],
+      ['aurora',t('appearance.aurora')],['mist',t('appearance.mist')],['paper',t('appearance.paper')],['night-sky',t('appearance.nightSky')],
     ],storedBackground))}
     ${row(s('palette'),s('paletteDesc'),`<div class="set-palettes">${paletteOptions.map(p=>
-      `<button class="set-pal ${p.id===storedPalette?'on':''}" data-c="${p.light.accent}" data-name="${p.id}" aria-label="${p.label}">
+      `<button class="set-pal ${p.id===storedPalette?'on':''}" data-c="${p.light.accent}" data-name="${p.id}" aria-label="${t(paletteLabelKey[p.id]||'appearance.ariaBlue')}">
         <span class="set-pal-sw">${p.swatches.map(c=>`<i style="background:${c}"></i>`).join('')}</span>
-        <span class="set-pal-l">${p.label}</span></button>`
+        <span class="set-pal-l">${t(paletteLabelKey[p.id]||'appearance.ariaBlue')}</span></button>`
     ).join('')}</div>`)}
     ${row(s('accent'),s('accentDesc'),`<div class="set-swatches">${accents.map(a=>
       `<button class="set-sw ${a[0]===storedAccent?'on':''}" data-c="${a[0]}" style="background:${a[0]}" aria-label="${a[1]}"></button>`

@@ -950,7 +950,7 @@ function transactionListPage(root, config){
     </aside>`;
   }
   function renderListBody(rows){
-    const table=`<div class="sales-tablewrap" data-list-table tabindex="0" role="region" aria-label="Table" data-horizontal-scroll>${renderTable(rows)}</div>`;
+    const table=`<div class="sales-tablewrap" data-list-table tabindex="0" role="region" aria-label="${esc(t('common.table'))}" data-horizontal-scroll>${renderTable(rows)}</div>`;
     const pagination=renderPagination(rows);
     if(!detailPane) return `${table}${pagination}`;
     return `<div class="master-detail-register-workspace" data-master-detail-workspace>

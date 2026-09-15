@@ -1826,5 +1826,16 @@
   "staff.emailTemplate": "To: {email}\nSubject: Your {company} ERP account\n\nHello {name},\n\nYour ERP account is ready to use.\n\nSign in: {url}\nOrganization code: {organization}\nUsername: {username}\nEmail: {email}\nPassword: {password}\n\nNo activation is required. Keep your password private. Contact HR if you need help.\n\nRegards,\nHR",
   "purchasing.goodsReceipts.description": "Semak penerimaan penuh yang diposkan terhadap pesanan belian yang diluluskan. Pengeposan mengemas kini inventori dan menyokong padanan tiga hala.",
   "pwa.currentVersion": "Semasa",
-  "pwa.latestVersion": "Terkini"
+  "pwa.latestVersion": "Terkini",
+  "common.table": "Jadual",
+  "appearance.aurora": "Aurora",
+  "appearance.mist": "Kabut",
+  "appearance.paper": "Kertas",
+  "appearance.nightSky": "Langit malam",
+  "appearance.ariaBlue": "Biru Aria",
+  "appearance.royalPurple": "Ungu Diraja",
+  "appearance.rubyRed": "Merah Delima",
+  "appearance.sunflowerAmber": "Ambar Matahari",
+  "appearance.forestGreen": "Hijau Hutan",
+  "appearance.oceanTeal": "Teal Laut"
 }
