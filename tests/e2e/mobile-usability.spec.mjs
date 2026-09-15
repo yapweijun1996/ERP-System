@@ -314,6 +314,76 @@ async function runNarrowTopbarSearch(browser) {
   }
 }
 
+async function runMobileTableHorizontalScroll(browser) {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: 'block' });
+  const page = await context.newPage();
+  const browserErrors = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(`[console.error] ${message.text()}`);
+  });
+  page.on('pageerror', (error) => browserErrors.push(`[pageerror] ${error.message}`));
+  try {
+    await page.addInitScript(() => {
+      localStorage.setItem('aria-setup-wizard-complete', '1');
+      localStorage.setItem('aria-demo-auth', JSON.stringify({ signedIn: true, email: 'admin@acme.co', at: new Date(0).toISOString() }));
+    });
+    await page.goto(`${BASE_URL}/?table-scroll-e2e=${Date.now()}#leave-approval`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30000,
+    });
+    await page.locator('#viewRoot[data-screen-route="leave-approval"]').waitFor({ state: 'visible', timeout: TIMEOUT });
+    const tableScroll = page.locator('[data-horizontal-scroll]').first();
+    await tableScroll.waitFor({ state: 'visible', timeout: TIMEOUT });
+    const metrics = await tableScroll.evaluate((wrap) => {
+      const table = wrap.querySelector('.dt');
+      const list = wrap.closest('.master-detail-register-list');
+      const documentRoot = document.documentElement;
+      return {
+        wrapClientWidth: wrap.clientWidth,
+        wrapScrollWidth: wrap.scrollWidth,
+        wrapOverflowX: getComputedStyle(wrap).overflowX,
+        tableWidth: table?.getBoundingClientRect().width || 0,
+        listClientWidth: list?.clientWidth || 0,
+        listScrollWidth: list?.scrollWidth || 0,
+        documentClientWidth: documentRoot.clientWidth,
+        documentScrollWidth: documentRoot.scrollWidth,
+      };
+    });
+    assert(metrics.wrapScrollWidth > metrics.wrapClientWidth + 1,
+      `mobile table: dedicated wrapper has no horizontal overflow: ${JSON.stringify(metrics)}`);
+    assert(metrics.tableWidth >= 760,
+      `mobile table: SSOT table width collapsed: ${JSON.stringify(metrics)}`);
+    assert(metrics.wrapOverflowX === 'auto' || metrics.wrapOverflowX === 'scroll',
+      `mobile table: wrapper does not own horizontal scrolling: ${JSON.stringify(metrics)}`);
+    assert(metrics.listScrollWidth <= metrics.listClientWidth + 1,
+      `mobile table: parent list became a competing horizontal scroll host: ${JSON.stringify(metrics)}`);
+    assert(metrics.documentScrollWidth <= metrics.documentClientWidth + 1,
+      `mobile table: document has horizontal overflow: ${JSON.stringify(metrics)}`);
+
+    const box = await tableScroll.boundingBox();
+    assert(box, 'mobile table: scroll wrapper has no bounding box');
+    const initial = await tableScroll.evaluate((wrap) => {
+      wrap.scrollLeft = 0;
+      return { scrollLeft: wrap.scrollLeft, firstCellLeft: wrap.querySelector('.dt-r .dt-c')?.getBoundingClientRect().left || 0 };
+    });
+    await page.mouse.move(box.x + box.width / 2, box.y + Math.min(30, box.height / 2));
+    await page.mouse.wheel(240, 0);
+    await page.waitForFunction(() => document.querySelector('[data-horizontal-scroll]')?.scrollLeft > 0, null, { timeout: TIMEOUT });
+    const afterScroll = await tableScroll.evaluate((wrap) => ({
+      scrollLeft: wrap.scrollLeft,
+      firstCellLeft: wrap.querySelector('.dt-r .dt-c')?.getBoundingClientRect().left || 0,
+    }));
+    assert(afterScroll.scrollLeft > initial.scrollLeft,
+      `mobile table: horizontal wheel did not move the dedicated wrapper: ${JSON.stringify({ initial, afterScroll, metrics })}`);
+    assert(afterScroll.firstCellLeft < initial.firstCellLeft,
+      `mobile table: row content did not move with wrapper scroll: ${JSON.stringify({ initial, afterScroll, metrics })}`);
+    assert(browserErrors.length === 0, `mobile table browser errors detected: ${browserErrors.join(' | ')}`);
+    console.log('PASS mobile usability: 390px table rows scroll horizontally inside the dedicated wrapper without page overflow');
+  } finally {
+    await context.close();
+  }
+}
+
 async function main() {
   const preview = await startPreview();
   const browser = await chromium.launch({ headless: true });
@@ -323,6 +393,7 @@ async function main() {
     }
     await runLocale(browser, 'en', LOCALES.en, { width: 1280, height: 900 });
     await runNarrowTopbarSearch(browser);
+    await runMobileTableHorizontalScroll(browser);
     await runHalfWidth(browser);
   } finally {
     await browser.close();
