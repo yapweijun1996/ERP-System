@@ -39,6 +39,76 @@ function assertResponsiveProgress(viewport, progress, stage) {
   }
 }
 
+async function runModuleVisibilityAfterSetup(browser) {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: 'block' });
+  const page = await context.newPage();
+  const runtimeErrors = [];
+  page.on('pageerror', (error) => runtimeErrors.push(`pageerror: ${error.message}`));
+  page.on('console', (message) => {
+    if (message.type() === 'error') runtimeErrors.push(`console: ${message.text()}`);
+  });
+  try {
+    await page.goto(`${BASE_URL}/?module-visibility-e2e=${Date.now()}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30000,
+    });
+    await page.locator('#setupWizardView').waitFor({ state: 'visible', timeout: TIMEOUT });
+
+    for (const selector of ['#wizMaster', '#wizCompany', '#wizAdminName', '#wizModuleSeg', '#wizProvider', '#wizFinish']) {
+      await page.locator('#wizNext').click();
+      await page.locator(selector).waitFor({ state: 'visible', timeout: TIMEOUT });
+      if (selector === '#wizModuleSeg') {
+        const selectedBeforeFinish = await page.locator('#wizModuleSeg input[data-module-key]:checked').evaluateAll((inputs) => inputs.map((input) => input.dataset.moduleKey));
+        if (JSON.stringify(selectedBeforeFinish) !== JSON.stringify(['hr', 'expenses_tax'])) {
+          throw new Error(`fresh setup defaults unexpectedly changed: ${JSON.stringify(selectedBeforeFinish)}`);
+        }
+      }
+    }
+
+    await page.locator('#wizFinish').click();
+    await page.waitForFunction(() => localStorage.getItem('aria-setup-wizard-complete') === '1', null, { timeout: TIMEOUT });
+    await page.locator('#loginEmail').waitFor({ state: 'visible', timeout: TIMEOUT });
+    await page.locator('#loginEmail').fill('admin.acme@acme.co');
+    await page.locator('#loginPassword').fill('demo1234');
+    await page.locator('#loginForm button[type="submit"]').click();
+    await page.locator('#globalSearch').waitFor({ state: 'visible', timeout: TIMEOUT });
+    await page.waitForFunction(() => typeof DB !== 'undefined'
+      && DB.user?.email === 'admin.acme@acme.co'
+      && Array.isArray(DB.erpSystem?.modules), null, { timeout: TIMEOUT });
+
+    const state = await page.evaluate(() => ({
+      companyFn: DB.erpSystem.scope.companyFn,
+      companyName: DB.company.name,
+      enabledModules: DB.erpSystem.modules
+        .filter((module) => module.enabled === true)
+        .map((module) => module.moduleKey || module.module_key)
+        .sort(),
+    }));
+    if (state.companyFn === 'C-SG'
+      || state.companyName !== 'Acme Singapore'
+      || JSON.stringify(state.enabledModules) !== JSON.stringify(['expenses_tax', 'hr'])) {
+      throw new Error(`setup did not activate the new Company's selected modules: ${JSON.stringify(state)}`);
+    }
+
+    await page.locator('#globalSearch').click();
+    await page.locator('#palette').waitFor({ state: 'visible', timeout: TIMEOUT });
+    const commands = await page.locator('#palList .pitem[data-i] > span:not(.meta)').allTextContents();
+    const forbidden = ['Sales Dashboard', 'Sales Orders', 'Purchasing Dashboard', 'Stock on Hand', 'Work Orders'];
+    const leaked = commands.filter((command) => forbidden.includes(command.trim()));
+    if (leaked.length) {
+      throw new Error(`disabled module commands leaked after setup: ${JSON.stringify({ state, leaked })}`);
+    }
+    if (!commands.some((command) => command.trim() === 'HR / Payroll')
+      || !commands.some((command) => command.trim() === 'Leave Approval')) {
+      throw new Error(`enabled HR commands disappeared after setup: ${JSON.stringify({ state, commands })}`);
+    }
+    if (runtimeErrors.length) throw new Error(`module visibility emitted runtime errors: ${runtimeErrors.join(' | ')}`);
+    console.log('PASS setup module visibility E2E: selected modules control the post-setup command palette');
+  } finally {
+    await context.close();
+  }
+}
+
 if (!existsSync(DIST_INDEX)) {
   console.error('web/dist/index.html not found. Run "npm run build:demo" first.');
   process.exit(1);
@@ -552,6 +622,7 @@ async function main() {
         await context.close();
       }
     }
+    await runModuleVisibilityAfterSetup(browser);
   } finally {
     await browser.close();
     preview.kill();

@@ -1610,6 +1610,17 @@
           moduleKeys: input.moduleKeys,
         });
     });
+    /* The setup transaction creates a new Company and administrator. Make that
+       returned identity the active Demo scope before refresh() re-reads the
+       effective module projection; otherwise the adapter would refresh the
+       previously selected seeded Company and expose its unrelated modules. */
+    if(result&&result.companyFn){
+      SCOPE.companyFn=result.companyFn;
+      try{
+        localStorage.setItem('aria-active-company-fn',result.companyFn);
+        localStorage.setItem('aria-active-user-email',adminEmail);
+      }catch{}
+    }
     await refresh();
     return result;
   }
