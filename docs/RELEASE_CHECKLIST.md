@@ -114,8 +114,8 @@ were not checked in TASK-215.
 - [ ] Upgrade path: a profile holding the **previous** release's IndexedDB boots the
       new bundle and migrates (console shows `upgraded persistent PGlite schema`),
       no reset required
-- [ ] PWA update prompt appears on the reused profile and "Update now" reloads onto
-      the new version
+- [ ] A reused PWA profile silently activates the new worker and reloads once; no update
+      toast or "Update now" button appears
 - [ ] Spot-check at 375 px on at least dashboard + one Canonical write flow
 - [ ] Pages artifact contains `web/dist/` only — no `.env*`, production API endpoint,
       database connection string or provider credential

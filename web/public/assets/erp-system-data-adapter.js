@@ -1257,8 +1257,13 @@
          this resolved late — re-render it so the swap is actually visible
          instead of sitting correct-but-unpainted in DB until the user
          happens to navigate elsewhere. */
-      if (wasFallback && typeof navigate === 'function' && typeof CURRENT_ROUTE !== 'undefined' && CURRENT_ROUTE) {
-        navigate(CURRENT_ROUTE);
+      if (wasFallback) {
+        var wizardRefreshed = typeof window.refreshSetupWizard === 'function'
+          && window.refreshSetupWizard();
+        if (!wizardRefreshed && typeof navigate === 'function'
+          && typeof CURRENT_ROUTE !== 'undefined' && CURRENT_ROUTE) {
+          navigate(CURRENT_ROUTE);
+        }
       }
     } catch (e) {
       /* Never leave a failed or stale database writable through completeSetup()

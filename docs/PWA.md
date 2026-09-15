@@ -1,10 +1,10 @@
 # PWA Standard
 
-Current acceptance (2026-09-08): TASK-214 passed the v263 update lifecycle audit; TASK-199
-advanced the worker to v264 so API/health cache bypass follows the configured public subpath.
-Automatic discovery and explicit acceptance are implemented; multiple tabs, unsaved
-drafts, in-flight requests, interrupted upgrades and real-phone acceptance are not
-proven by that single lifecycle test. See [TEST_COVERAGE.md](TEST_COVERAGE.md).
+Current acceptance (2026-09-15): the PWA uses silent service-worker updates in v279.
+Automatic discovery, activation and one-time reload are implemented; no version-update
+toast or **Update now** button is part of the product surface. Multiple tabs, unsaved
+drafts, in-flight requests, interrupted upgrades and real-phone acceptance remain
+separate coverage items. See [TEST_COVERAGE.md](TEST_COVERAGE.md).
 
 This project treats the GitHub Pages demo as an installable PWA shell. Production Docker
 deploys can use the same shell, but production data still flows through the API.
@@ -21,7 +21,7 @@ Minimum PWA surface:
 - service worker registered from the same scope as the app
 - HTTPS in production; localhost is acceptable only for local testing
 - offline shell for navigation requests
-- update flow when a new waiting service worker is available
+- silent activation when a new waiting service worker is available
 
 References:
 
@@ -31,33 +31,28 @@ References:
 
 ## 2. Update Flow
 
-ERP System uses one user-controlled update flow, owned exclusively by the service worker:
+ERP System uses one silent update flow, owned exclusively by the service worker:
 
 1. Browser installs a new service worker in the background.
-2. The old app keeps running.
-3. `web/public/assets/pwa.js` detects `registration.waiting` and asks that worker for its
-   exact cache version.
-4. The UI shows a small toast with the waiting worker's version code plus **Update now** and **Later**.
-5. **Update now** posts `SKIP_WAITING` to the waiting worker.
-6. `controllerchange` reloads the page once.
+2. The old app keeps running while the new worker finishes installing.
+3. `web/public/assets/pwa.js` detects a waiting worker and posts `SKIP_WAITING`
+   automatically; it never renders a version-update toast or **Update now** button.
+4. `controllerchange` reloads the page once after the new worker takes control.
 
 The shell does not hash and download every source asset as a second update detector. That
 older mechanism could race the service-worker lifecycle and show two prompts for one release.
 Registration uses `updateViaCache: 'none'`, so the browser checks `sw.js` itself without using
 an HTTP cache entry.
 
-Choosing **Later** suppresses the same worker version for the current tab session. A genuinely
-newer worker has a different cache version and is shown normally. Only an update explicitly
-accepted through **Update now** is allowed to reload an already-open ERP workspace.
-
-This avoids surprise reloads in the middle of an ERP workflow.
+The explicit acceptance step was removed by product requirement. A completed worker install is
+the activation boundary, so the open workspace may reload once without user interaction.
 
 ## 3. Offline Strategy
 
 Service worker file: `web/public/sw.js`.
 
 The source-of-truth cache identifier at this review boundary is
-`erp-system-pwa-v278` in both `web/public/sw.js` and
+`erp-system-pwa-v279` in both `web/public/sw.js` and
 `web/public/assets/pwa.js`. A cache number proves source consistency only; it does not
 prove that the same revision has reached a hosted environment.
 
@@ -96,7 +91,7 @@ ERP System rules:
 - Topbar includes `safe-area-inset-top` on mobile.
 - Page shell includes left/right safe-area padding on mobile.
 - Bottom tabbar height includes `safe-area-inset-bottom`; buttons fill the usable height.
-- Floating PWA update/install toast sits above the bottom tabbar on mobile.
+- Floating PWA install toast sits above the bottom tabbar on mobile.
 - Detail sheets and command palette respect bottom safe area.
 - The viewport metadata leaves user zoom enabled; narrow touch controls use practical
   44px targets and mobile row actions do not depend on hover. Browser reflow evidence does
@@ -111,7 +106,7 @@ occupy the home-indicator area so there is no empty strip below the buttons.
 | --- | --- |
 | `web/public/manifest.webmanifest` | Install metadata, app identity, icons, shortcuts |
 | `web/public/sw.js` | Offline shell, runtime cache, update activation |
-| `web/public/assets/pwa.js` | Registration, install prompt, update prompt |
+| `web/public/assets/pwa.js` | Registration, silent update activation, install prompt |
 | `web/public/assets/pwa.css` | Toast UI and safe-area overrides |
 | `web/public/icons/` | PWA icons |
 
@@ -127,4 +122,5 @@ Before publishing:
 - Browser loads `/ERP-System/` with no failed requests
 - `navigator.serviceWorker.ready` resolves on the Pages path
 - mobile viewport has no horizontal overflow
-- update toast appears when a waiting worker exists
+- no update toast or **Update now** button appears when a waiting worker exists
+- a waiting worker receives `SKIP_WAITING` automatically and `controllerchange` reloads once

@@ -288,6 +288,11 @@ explicitly retained in My Receipts.
 
 ## Latest implementation milestones
 
+- **PWA/setup follow-up (2026-09-15):** PWA v279 silently activates waiting service
+  workers and reloads once after `controllerchange`; the version-update toast and
+  **Update now** action are removed. The Demo setup wizard preserves its current step
+  and entered values when late PGlite boot replaces a temporary fallback, allowing the
+  canonical module catalogue to render after recovery.
 - **TASK-210 — Done (2026-09-05):** the PWA update toast now renders the exact waiting
   service-worker release code beside the localized **Update now** / **Later** actions;
   cache, script and source version references are aligned at v263 and the lifecycle audit

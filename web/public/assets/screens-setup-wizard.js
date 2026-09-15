@@ -848,6 +848,16 @@ function renderSetupWizard(){
     }
   }
 
+  /* The demo adapter may replace a temporary offline fallback after this
+     wizard has already rendered. Refresh in place so the current step and
+     entered values survive while the canonical module catalogue appears. */
+  window.refreshSetupWizard=function(){
+    if(!host||!host.isConnected) return false;
+    var stepBody=document.getElementById('wizStepBody');
+    render({stepScrollTop:stepBody?stepBody.scrollTop:0});
+    return true;
+  };
+
   function readCurrentStepInputs(){
     if(S.step===1){
       var m=document.getElementById('wizMaster'); if(m) S.masterName=m.value;

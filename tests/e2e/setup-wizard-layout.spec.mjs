@@ -368,6 +368,17 @@ async function main() {
             throw new Error(`desktop: module activation defaults or layout regressed: ${JSON.stringify(moduleState)}`);
           }
 
+          const refreshedModuleState = await page.evaluate(() => ({
+            refreshed: typeof window.refreshSetupWizard === 'function' && window.refreshSetupWizard(),
+            currentStep: document.querySelector('.step.current .step-label')?.textContent?.trim() || '',
+            count: document.querySelectorAll('#wizModuleSeg input[data-module-key]').length,
+          }));
+          if (!refreshedModuleState.refreshed
+            || refreshedModuleState.currentStep !== 'Modules'
+            || refreshedModuleState.count !== 17) {
+            throw new Error(`desktop: late demo boot refresh lost the current Modules step: ${JSON.stringify(refreshedModuleState)}`);
+          }
+
           // Long content must scroll independently while both navigation bars stay visible.
           for (const size of [{ width: 1280, height: 900 }, { width: 603, height: 837 },
             { width: 390, height: 844 }, { width: 603, height: 420 }]) {

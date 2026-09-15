@@ -1469,10 +1469,6 @@ window.__ERP_I18N_EN__=Object.freeze({
   "pwa.installBody": "Add the demo to your home screen for app-style access.",
   "pwa.installTitle": "Install ERP System",
   "pwa.later": "Later",
-  "pwa.sourceUpdateBody": "New source code is available. Update now to load the latest ERP demo files.",
-  "pwa.updateBody": "A new ERP System version is available.",
-  "pwa.updateNow": "Update now",
-  "pwa.updateReady": "Update ready",
   "pwa.version": "Version",
   "staff.add": "Add Staff",
   "staff.subtitle": "Create the employee, login and company access together. All changes roll back if any part fails.",
@@ -1800,6 +1796,4 @@ window.__ERP_I18N_EN__=Object.freeze({
   "staff.copyFailed": "Unable to access or copy the credential. Check your access and clipboard permission, then try again.",
   "staff.emailTemplate": "To: {email}\nSubject: Your {company} ERP account\n\nHello {name},\n\nYour ERP account is ready to use.\n\nSign in: {url}\nOrganization code: {organization}\nUsername: {username}\nEmail: {email}\nPassword: {password}\n\nNo activation is required. Keep your password private. Contact HR if you need help.\n\nRegards,\nHR",
   "purchasing.goodsReceipts.description": "Review full receipts posted against approved purchase orders. Posting updates inventory and feeds the 3-way match.",
-  "pwa.currentVersion": "Current",
-  "pwa.latestVersion": "Latest"
 });

@@ -118,36 +118,55 @@ try {
   }
 
   const versionB = `${versionMatch[1]}-audit-b`;
-  console.log(`Deferring ${versionB}...`);
+  console.log(`Silently activating ${versionB}...`);
   servedWorkerSource = withVersion(versionB);
-  await page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.update());
-  await page.waitForSelector('#pwaToast.show [data-pwa-primary]', { state:'visible', timeout:15000 });
-  const firstPromptCount = await page.locator('#pwaToast.show').count();
-  if (firstPromptCount !== 1) throw new Error(`Expected one update prompt, found ${firstPromptCount}`);
-  const renderedVersion = await page.locator('#pwaToast [data-pwa-version]').textContent();
-  if (renderedVersion?.trim() !== versionB) {
-    throw new Error(`Expected update prompt to show ${versionB}, got ${renderedVersion || 'none'}`);
-  }
-
-  await page.locator('#pwaToast [data-pwa-secondary]').click();
-  await page.waitForSelector('#pwaToast.show', { state:'hidden' });
-  await page.reload({ waitUntil:'load' });
-  await page.waitForTimeout(1800);
+  await Promise.all([
+    page.waitForNavigation({ waitUntil:'load', timeout:15000 }),
+    page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.update()),
+  ]);
+  await page.waitForFunction((expected) => {
+    return new Promise((resolve) => {
+      const worker = navigator.serviceWorker.controller;
+      if (!worker) return resolve(false);
+      const channel = new MessageChannel();
+      const timer = setTimeout(() => resolve(false), 3000);
+      channel.port1.onmessage = (event) => {
+        clearTimeout(timer);
+        resolve(event.data?.version === expected);
+      };
+      worker.postMessage({ type:'GET_VERSION' }, [channel.port2]);
+    });
+  }, versionB, { timeout:15000 });
   if (await page.locator('#pwaToast.show').count()) {
-    throw new Error('The same deferred worker version prompted again after reload');
+    throw new Error('A silently activated update displayed an update prompt');
+  }
+  if (await page.locator('text=Update now').count()) {
+    throw new Error('The update-only Update now control is still present');
   }
 
   const versionC = `${versionMatch[1]}-audit-c`;
-  console.log(`Applying ${versionC}...`);
+  console.log(`Silently activating ${versionC}...`);
   servedWorkerSource = withVersion(versionC);
-  await page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.update());
-  await page.waitForSelector('#pwaToast.show [data-pwa-primary]', { state:'visible', timeout:15000 });
-
   await Promise.all([
     page.waitForNavigation({ waitUntil:'load', timeout:15000 }),
-    page.locator('#pwaToast [data-pwa-primary]').click(),
+    page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.update()),
   ]);
-  await page.waitForFunction(() => !document.querySelector('#pwaToast.show'));
+  await page.waitForFunction((expected) => {
+    return new Promise((resolve) => {
+      const worker = navigator.serviceWorker.controller;
+      if (!worker) return resolve(false);
+      const channel = new MessageChannel();
+      const timer = setTimeout(() => resolve(false), 3000);
+      channel.port1.onmessage = (event) => {
+        clearTimeout(timer);
+        resolve(event.data?.version === expected);
+      };
+      worker.postMessage({ type:'GET_VERSION' }, [channel.port2]);
+    });
+  }, versionC, { timeout:15000 });
+  if (await page.locator('text=Update now').count()) {
+    throw new Error('The update-only Update now control is still present after a second update');
+  }
 
   const finalState = await page.evaluate(async () => {
     const version = await new Promise((resolve) => {
@@ -164,19 +183,21 @@ try {
       legacyFingerprint: localStorage.getItem('erp-system-source-fingerprint'),
       dismissedVersion: sessionStorage.getItem('erp-system-dismissed-pwa-update'),
       sourceMarker: new URL(location.href).searchParams.get('source'),
+      updateNowControls: document.querySelectorAll('[data-pwa-primary]').length,
     };
   });
 
   if (finalState.version !== versionC) {
     throw new Error(`Expected active worker ${versionC}, got ${finalState.version || 'none'}`);
   }
-  if (finalState.legacyFingerprint || finalState.dismissedVersion || finalState.sourceMarker) {
+  if (finalState.legacyFingerprint || finalState.dismissedVersion || finalState.sourceMarker
+    || finalState.updateNowControls) {
     throw new Error(`Update cleanup is incomplete: ${JSON.stringify(finalState)}`);
   }
   if (errors.length) throw new Error(errors.join('\n'));
 
   await context.close();
-  console.log(`PWA update audit PASSED ✅ (${versionB} deferred once; ${versionC} activated once)`);
+  console.log(`PWA update audit PASSED ✅ (${versionB} and ${versionC} activated silently once each)`);
 } finally {
   if (browser) await browser.close();
   await new Promise((resolve) => server.close(resolve));

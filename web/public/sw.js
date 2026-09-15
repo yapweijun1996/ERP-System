@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'erp-system-pwa-v278';
+const CACHE_VERSION = 'erp-system-pwa-v279';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -121,7 +121,7 @@ self.addEventListener('install', (event) => {
 /* One failed CDN/tunnel response must not discard the complete worker. The
    fetch handler remains network-first for versioned assets, so a failed
    optional precache is repaired on the next request while the update worker
-   can still reach the waiting state and offer its explicit Update action. */
+   can still reach the waiting state and activate it silently. */
 async function precacheStaticAssets(cache) {
   const failures = [];
   const scope = new URL(self.registration.scope);
