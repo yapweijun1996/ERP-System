@@ -311,11 +311,11 @@
       <div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>${esc(pt('setup.brandSubtitle','First-run Platform setup'))}</small></span></div>
       <div class="auth-copy"><h1>${esc(pt('setup.title','Create Platform Superadmin'))}</h1><p>${esc(pt('setup.body','This one-time registration is available only while the production database is empty. The account is independent from tenant users.'))}</p>${stepperMarkup(1)}${demoBannerMarkup()}</div>
       <form class="auth-form" id="platformBootstrapForm" autocomplete="off">
-        <div class="fld"><span>${esc(pt('field.platformPrincipalKey','Platform principal key'))}</span><input id="bootstrapPrincipalKey" autocomplete="username" autocapitalize="none" required placeholder="${esc(pt('field.platformPrincipalPlaceholder','e.g. platform-admin'))}"></div>
-        <div class="fld"><span>${esc(pt('field.displayName','Display name'))}</span><input id="bootstrapDisplayName" autocomplete="name" required></div>
-        <div class="fld"><span>${esc(pt('field.email','Email'))}</span><input id="bootstrapEmail" type="email" autocomplete="email" required></div>
-        <div class="fld"><span>${esc(pt('field.password12','Password (12+ characters)'))}</span><input id="bootstrapPassword" type="password" autocomplete="new-password" minlength="12" required></div>
-        <div class="fld"><span>${esc(pt('field.confirmPassword','Confirm password'))}</span><input id="bootstrapPasswordConfirm" type="password" autocomplete="new-password" minlength="12" required></div>
+        <div class="fld"><label class="fldlabel" for="bootstrapPrincipalKey">${esc(pt('field.platformPrincipalKey','Platform principal key'))}</label><input id="bootstrapPrincipalKey" autocomplete="username" autocapitalize="none" required placeholder="${esc(pt('field.platformPrincipalPlaceholder','e.g. platform-admin'))}"></div>
+        <div class="fld"><label class="fldlabel" for="bootstrapDisplayName">${esc(pt('field.displayName','Display name'))}</label><input id="bootstrapDisplayName" autocomplete="name" required></div>
+        <div class="fld"><label class="fldlabel" for="bootstrapEmail">${esc(pt('field.email','Email'))}</label><input id="bootstrapEmail" type="email" autocomplete="email" required></div>
+        <div class="fld"><label class="fldlabel" for="bootstrapPassword">${esc(pt('field.password12','Password (12+ characters)'))}</label><input id="bootstrapPassword" type="password" autocomplete="new-password" minlength="12" required></div>
+        <div class="fld"><label class="fldlabel" for="bootstrapPasswordConfirm">${esc(pt('field.confirmPassword','Confirm password'))}</label><input id="bootstrapPasswordConfirm" type="password" autocomplete="new-password" minlength="12" required></div>
         <div class="auth-error" id="platformBootstrapError" role="alert"></div>
         <button class="btn primary lg" type="submit">${esc(pt('action.nextPlatform','Next: Create Platform Superadmin'))}</button>
       </form>
@@ -361,15 +361,15 @@
       <form class="auth-form" id="platformAwareLoginForm" autocomplete="off">
         <div id="tenantCredentials">
           <button type="button" class="btn soft" id="tenantRecoveryButton">${esc(window.tf('recovery.title','Recover account'))}</button>
-          <div class="fld"><span>${esc(pt('field.organizationCode','Organization code'))}</span><input id="tenantOrganizationCode" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="${esc(pt('field.organizationPlaceholder','e.g. ACME'))}"></div>
-          <div class="fld"><span>${esc(pt('field.username','Username'))}</span><input id="tenantUsername" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="${esc(pt('field.usernamePlaceholder','e.g. admin'))}"></div>
+          <div class="fld"><label class="fldlabel" for="tenantOrganizationCode">${esc(pt('field.organizationCode','Organization code'))}</label><input id="tenantOrganizationCode" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="${esc(pt('field.organizationPlaceholder','e.g. ACME'))}"></div>
+          <div class="fld"><label class="fldlabel" for="tenantUsername">${esc(pt('field.username','Username'))}</label><input id="tenantUsername" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="${esc(pt('field.usernamePlaceholder','e.g. admin'))}"></div>
         </div>
         <div id="platformCredentials" hidden>
           ${demoPlatformLoginAvailable?`<div class="platform-demo-login"><button type="button" class="btn primary" id="platformDemoLoginButton">${esc(pt('login.demoButton','Log in as Platform Admin (Demo)'))}</button><small>${esc(pt('login.demoBody','Uses the public platform-admin sample account. Demo only.'))}</small></div>`:''}
-          <div class="fld"><span>${esc(pt('field.platformPrincipalKey','Platform principal key'))}</span><input id="platformPrincipalKey" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="${esc(pt('field.platformPrincipalPlaceholder','e.g. platform-admin'))}"></div>
+          <div class="fld"><label class="fldlabel" for="platformPrincipalKey">${esc(pt('field.platformPrincipalKey','Platform principal key'))}</label><input id="platformPrincipalKey" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="${esc(pt('field.platformPrincipalPlaceholder','e.g. platform-admin'))}"></div>
           <p class="auth-help">${esc(pt('login.platformSessionHelp','Platform sessions are limited to one hour. Remember Me is not available.'))}</p>
         </div>
-        <div class="fld"><span>${esc(pt('field.password','Password'))}</span><div class="auth-password-control"><input id="realmPassword" type="password" autocomplete="current-password"><button type="button" class="auth-password-toggle" id="realmPasswordToggle" aria-controls="realmPassword" aria-label="${esc(pt('password.show','Show password'))}" aria-pressed="false"><span class="auth-password-toggle-icon">${ic('eye')}</span><span>${esc(pt('password.showShort','Show'))}</span></button></div></div>
+        <div class="fld"><label class="fldlabel" for="realmPassword">${esc(pt('field.password','Password'))}</label><div class="auth-password-control"><input id="realmPassword" type="password" autocomplete="current-password"><button type="button" class="auth-password-toggle" id="realmPasswordToggle" aria-controls="realmPassword" aria-label="${esc(pt('password.show','Show password'))}" aria-pressed="false"><span class="auth-password-toggle-icon">${ic('eye')}</span><span>${esc(pt('password.showShort','Show'))}</span></button></div></div>
         <label class="auth-remember" id="tenantRememberDeviceRow" hidden><input id="tenantRememberDevice" type="checkbox"><span>${esc(pt('login.rememberDevice','Remember this device (up to 30 days)'))}</span></label>
         <div class="auth-error" id="loginError" role="alert"></div>
         <button class="btn primary lg" type="submit">${esc(pt('action.signIn','Sign in'))}</button>

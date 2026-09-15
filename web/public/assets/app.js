@@ -238,10 +238,10 @@ function renderLogin(){
     </div>
     <form class="auth-form" id="loginForm" autocomplete="${apiMode?'off':'on'}">
       ${apiMode
-        ? `<div class="fld"><span>Organization code</span><input id="loginOrganizationCode" name="organizationCode" value="${esc(loginHint.organizationCode)}" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="e.g. ACME"></div>
-           <div class="fld"><span>Username</span><input id="loginUsername" name="username" value="${esc(loginHint.username)}" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="e.g. admin"></div>`
-        : `<div class="fld"><span>Email</span><input id="loginEmail" type="email" autocomplete="username" value="${esc(u.email)}"></div>`}
-      <div class="fld"><span>Password</span><div class="auth-password-control"><input id="loginPassword" type="password" autocomplete="current-password" placeholder="${apiMode?'':'Account password'}"><button type="button" class="auth-password-toggle" id="loginPasswordToggle" aria-controls="loginPassword" aria-label="Show password" aria-pressed="false"><span class="auth-password-toggle-icon">${ic('eye')}</span><span>Show</span></button></div></div>
+        ? `<div class="fld"><label class="fldlabel" for="loginOrganizationCode">Organization code</label><input id="loginOrganizationCode" name="organizationCode" value="${esc(loginHint.organizationCode)}" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="e.g. ACME"></div>
+           <div class="fld"><label class="fldlabel" for="loginUsername">Username</label><input id="loginUsername" name="username" value="${esc(loginHint.username)}" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="e.g. admin"></div>`
+        : `<div class="fld"><label class="fldlabel" for="loginEmail">Email</label><input id="loginEmail" type="email" autocomplete="username" value="${esc(u.email)}"></div>`}
+      <div class="fld"><label class="fldlabel" for="loginPassword">Password</label><div class="auth-password-control"><input id="loginPassword" type="password" autocomplete="current-password" placeholder="${apiMode?'':'Account password'}"><button type="button" class="auth-password-toggle" id="loginPasswordToggle" aria-controls="loginPassword" aria-label="Show password" aria-pressed="false"><span class="auth-password-toggle-icon">${ic('eye')}</span><span>Show</span></button></div></div>
       ${apiMode?`<label class="auth-remember" id="loginRememberDeviceRow"><input id="loginRememberDevice" type="checkbox" name="rememberDevice" ${rememberedLogin?'checked':''}><span>Remember this device (up to 30 days)</span></label>`:''}
       <div class="auth-error" id="loginError" role="alert"></div>
       ${apiMode?'<p class="auth-help">Use the credentials created during first-run setup. The password is never stored in this browser.</p>':''}
