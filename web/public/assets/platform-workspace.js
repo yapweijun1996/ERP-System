@@ -44,6 +44,24 @@
     if(!demoAutofillEnabled()||demoBannerDismissed()) return '';
     return `<aside class="platform-demo-banner" id="platformDemoBanner" role="status"><div><strong>${esc(pt('demo.bannerTitle','Demo quick setup · sample accounts'))}</strong><span>${esc(pt('demo.bannerBody','Sample accounts and passwords are public demo credentials. Do not use them for real business data.'))}</span></div><button type="button" class="btn soft platform-demo-banner-close" id="platformDemoBannerDismiss">${esc(pt('demo.dismiss','Dismiss'))}</button></aside>`;
   }
+  function secureRandomIndex(limit){
+    if(!window.crypto||typeof window.crypto.getRandomValues!=='function') throw new Error('secure_random_unavailable');
+    var maximum=Math.floor(0x100000000/limit)*limit;
+    var value=new Uint32Array(1);
+    do{ window.crypto.getRandomValues(value); }while(value[0]>=maximum);
+    return value[0]%limit;
+  }
+  function generatePlatformPassword(){
+    var groups=['ABCDEFGHJKLMNPQRSTUVWXYZ','abcdefghijkmnopqrstuvwxyz','23456789','!@#$%^&*-_=+'];
+    var all=groups.join('');
+    var chars=groups.map(function(group){ return group[secureRandomIndex(group.length)]; });
+    while(chars.length<20) chars.push(all[secureRandomIndex(all.length)]);
+    for(var index=chars.length-1;index>0;index--){
+      var swap=secureRandomIndex(index+1);
+      var current=chars[index]; chars[index]=chars[swap]; chars[swap]=current;
+    }
+    return chars.join('');
+  }
   function wirePasswordToggle(root,inputId,toggleId){
     var input=root&&root.querySelector('#'+inputId);
     var toggle=root&&root.querySelector('#'+toggleId);
@@ -314,8 +332,8 @@
         <div class="fld"><label class="fldlabel" for="bootstrapPrincipalKey">${esc(pt('field.platformPrincipalKey','Platform principal key'))}</label><input id="bootstrapPrincipalKey" autocomplete="username" autocapitalize="none" required placeholder="${esc(pt('field.platformPrincipalPlaceholder','e.g. platform-admin'))}"></div>
         <div class="fld"><label class="fldlabel" for="bootstrapDisplayName">${esc(pt('field.displayName','Display name'))}</label><input id="bootstrapDisplayName" autocomplete="name" required></div>
         <div class="fld"><label class="fldlabel" for="bootstrapEmail">${esc(pt('field.email','Email'))}</label><input id="bootstrapEmail" type="email" autocomplete="email" required></div>
-        <div class="fld"><label class="fldlabel" for="bootstrapPassword">${esc(pt('field.password12','Password (12+ characters)'))}</label><input id="bootstrapPassword" type="password" autocomplete="new-password" minlength="12" required></div>
-        <div class="fld"><label class="fldlabel" for="bootstrapPasswordConfirm">${esc(pt('field.confirmPassword','Confirm password'))}</label><input id="bootstrapPasswordConfirm" type="password" autocomplete="new-password" minlength="12" required></div>
+        <div class="fld platform-password-field"><label class="fldlabel" for="bootstrapPassword">${esc(pt('field.password12','Password (12+ characters)'))}</label><div class="auth-password-control"><input id="bootstrapPassword" type="password" autocomplete="new-password" minlength="12" maxlength="1024" required><button type="button" class="auth-password-toggle" id="bootstrapPasswordToggle" aria-controls="bootstrapPassword" aria-label="${esc(pt('password.show','Show password'))}" aria-pressed="false"><span class="auth-password-toggle-icon">${ic('eye')}</span><span>${esc(pt('password.showShort','Show'))}</span></button></div><div class="platform-password-actions"><button type="button" class="btn soft platform-password-generate" id="bootstrapGeneratePassword"><span class="auth-password-toggle-icon">${ic('refresh')}</span><span>${esc(pt('password.generate','Generate secure password'))}</span></button><span class="platform-password-status" id="platformBootstrapPasswordStatus" role="status" aria-live="polite"></span></div></div>
+        <div class="fld platform-password-field"><label class="fldlabel" for="bootstrapPasswordConfirm">${esc(pt('field.confirmPassword','Confirm password'))}</label><div class="auth-password-control"><input id="bootstrapPasswordConfirm" type="password" autocomplete="new-password" minlength="12" maxlength="1024" required><button type="button" class="auth-password-toggle" id="bootstrapPasswordConfirmToggle" aria-controls="bootstrapPasswordConfirm" aria-label="${esc(pt('password.show','Show password'))}" aria-pressed="false"><span class="auth-password-toggle-icon">${ic('eye')}</span><span>${esc(pt('password.showShort','Show'))}</span></button></div></div>
         <div class="auth-error" id="platformBootstrapError" role="alert"></div>
         <button class="btn primary lg" type="submit">${esc(pt('action.nextPlatform','Next: Create Platform Superadmin'))}</button>
       </form>
@@ -324,6 +342,20 @@
     applyDemoDefaults(view,'bootstrap');
     restoreDraft(view,'bootstrap');
     wireDemoBanner(view);
+    wirePasswordToggle(view,'bootstrapPassword','bootstrapPasswordToggle');
+    wirePasswordToggle(view,'bootstrapPasswordConfirm','bootstrapPasswordConfirmToggle');
+    var generatePassword=view.querySelector('#bootstrapGeneratePassword');
+    if(generatePassword) generatePassword.addEventListener('click',function(){
+      var status=view.querySelector('#platformBootstrapPasswordStatus');
+      try{
+        var password=generatePlatformPassword();
+        view.querySelector('#bootstrapPassword').value=password;
+        view.querySelector('#bootstrapPasswordConfirm').value=password;
+        if(status) status.textContent=pt('password.generated','A secure password was generated. Use Show password to review it before continuing.');
+      }catch{
+        if(status) status.textContent=pt('password.generateUnavailable','Secure password generation is unavailable in this browser.');
+      }
+    });
     view.querySelector('#platformBootstrapForm').addEventListener('submit',async function(event){
       event.preventDefault();
       var error=view.querySelector('#platformBootstrapError');
