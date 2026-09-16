@@ -240,6 +240,52 @@ async function main(): Promise<void> {
     await page.locator('#platformCreateCompanyForm').waitFor({ state: 'visible', timeout: TIMEOUT });
     assert(await page.locator('.platform-step.current').getAttribute('aria-label') === 'Company & administrators', 'Company provisioning progress is not on step 3');
     assert(await page.locator('.platform-shell-progress .platform-step').count() === 3, 'Company provisioning progress is not rendered as a full-width three-step row');
+
+    async function assertProvisioningIntroLayout(width: number, height: number): Promise<void> {
+      await page.setViewportSize({ width, height });
+      await page.waitForTimeout(50);
+      const metrics = await page.evaluate(() => {
+        const intro = document.querySelector<HTMLElement>('.platform-shell-intro');
+        const copy = document.querySelector<HTMLElement>('.platform-shell-intro .auth-copy');
+        const heading = document.querySelector<HTMLElement>('.platform-shell-intro h1');
+        const toolbar = document.querySelector<HTMLElement>('.platform-shell-toolbar');
+        const progress = document.querySelector<HTMLElement>('.platform-shell-progress');
+        if (!intro || !copy || !heading || !toolbar || !progress) return null;
+        const introValue = intro.getBoundingClientRect();
+        const copyValue = copy.getBoundingClientRect();
+        const headingValue = heading.getBoundingClientRect();
+        const toolbarValue = toolbar.getBoundingClientRect();
+        const progressValue = progress.getBoundingClientRect();
+        return {
+          display: getComputedStyle(intro).display,
+          copy: { left: copyValue.left, right: copyValue.right, top: copyValue.top, bottom: copyValue.bottom, width: copyValue.width },
+          heading: { left: headingValue.left, right: headingValue.right, top: headingValue.top, bottom: headingValue.bottom, width: headingValue.width },
+          toolbar: { left: toolbarValue.left, right: toolbarValue.right, top: toolbarValue.top, bottom: toolbarValue.bottom, width: toolbarValue.width },
+          progress: { left: progressValue.left, right: progressValue.right, top: progressValue.top, bottom: progressValue.bottom, width: progressValue.width },
+          intro: { left: introValue.left, right: introValue.right, top: introValue.top, bottom: introValue.bottom, width: introValue.width },
+          documentWidth: document.documentElement.scrollWidth,
+          viewportWidth: document.documentElement.clientWidth,
+        };
+      });
+      assert(metrics, `provisioning intro metrics missing at ${width}x${height}`);
+      assert(metrics.documentWidth - metrics.viewportWidth <= 1, `provisioning intro overflowed horizontally at ${width}x${height}`);
+      assert(metrics.heading.width >= 240, `provisioning heading was squeezed to ${metrics.heading.width}px at ${width}x${height}`);
+      assert(metrics.toolbar.right <= metrics.intro.right + 1 && metrics.progress.right <= metrics.intro.right + 1, `provisioning controls exceeded the intro width at ${width}x${height}`);
+      if (width <= 1100) {
+        assert(metrics.display === 'flex', `provisioning intro did not collapse to a single column at ${width}x${height}`);
+        assert(metrics.toolbar.bottom - metrics.toolbar.top <= 240, `provisioning toolbar retained excessive flex height at ${width}x${height}`);
+        assert(metrics.toolbar.top >= metrics.copy.bottom - 1, `provisioning toolbar overlaps intro copy at ${width}x${height}`);
+        assert(metrics.progress.top >= metrics.toolbar.bottom - 1, `provisioning progress overlaps toolbar at ${width}x${height}`);
+      } else {
+        assert(metrics.display === 'grid', `provisioning intro lost its desktop grid at ${width}x${height}`);
+        assert(metrics.toolbar.left > metrics.copy.left && metrics.toolbar.top <= metrics.copy.top + 1, `desktop provisioning toolbar is not aligned beside intro copy at ${width}x${height}`);
+      }
+    }
+
+    for (const [width, height] of [[1440, 900], [1280, 800], [1024, 768], [768, 1024], [430, 932], [390, 844], [375, 812]] as const) {
+      await assertProvisioningIntroLayout(width, height);
+    }
+
     const companyResponse = await fetch(`${listening.baseUrl}/api/platform/masters/${master.masterFn}/companies`, {
       method: 'POST',
       headers: platformHeaders(true, 'layout-company-1'),
