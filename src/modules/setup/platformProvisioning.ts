@@ -250,19 +250,13 @@ export async function createCompanyWithin(
   const [existingMasterAdmin] = await exec.select({ userId: masterAdminAccount.userId })
     .from(masterAdminAccount).where(eq(masterAdminAccount.masterFn, masterFn)).limit(1);
   const masterAdmin = existingMasterAdmin ? null : validateAccount(input.masterAdmin as ProvisionedAccountInput, 'Master Admin');
-  if (masterAdmin && (masterAdmin.email === owner.email || masterAdmin.username === owner.username)) {
-    throw new PlatformAccessError(409, 'duplicate_admin_identity', 'Master Admin and Company Owner identities must be different.');
+  if (masterAdmin && masterAdmin.username === owner.username) {
+    throw new PlatformAccessError(409, 'duplicate_admin_identity', 'Master Admin and Company Owner usernames must be different.');
   }
-  const [duplicateUser] = await exec.select({ userId: appUser.userId })
-    .from(appUser).where(and(eq(appUser.masterFn, masterFn), eq(appUser.email, owner.email))).limit(1);
-  if (duplicateUser) throw new PlatformAccessError(409, 'user_exists', 'A user with this Company Owner email already exists.');
   const [duplicateUsername] = await exec.select({ userId: appUser.userId })
     .from(appUser).where(and(eq(appUser.masterFn, masterFn), eq(appUser.username, owner.username))).limit(1);
   if (duplicateUsername) throw new PlatformAccessError(409, 'username_exists', 'A user with this Company Owner username already exists.');
   if (masterAdmin) {
-    const [duplicateMasterEmail] = await exec.select({ userId: appUser.userId })
-      .from(appUser).where(and(eq(appUser.masterFn, masterFn), eq(appUser.email, masterAdmin.email))).limit(1);
-    if (duplicateMasterEmail) throw new PlatformAccessError(409, 'user_exists', 'A user with this Master Admin email already exists.');
     const [duplicateMasterUsername] = await exec.select({ userId: appUser.userId })
       .from(appUser).where(and(eq(appUser.masterFn, masterFn), eq(appUser.username, masterAdmin.username))).limit(1);
     if (duplicateMasterUsername) throw new PlatformAccessError(409, 'username_exists', 'A user with this Master Admin username already exists.');

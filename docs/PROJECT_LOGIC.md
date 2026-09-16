@@ -1049,7 +1049,11 @@ request/confirm routes in `src/api/routes/auth.ts`, and
 `web/public/assets/auth-recovery.js` at `/reset-password` beneath the configured
 public mount. Company Owner and Master Admin reuse human `app_user` identity;
 non-human and Employee-linked identities remain excluded, and an ambiguous email
-across Masters fails closed. Confirmation locks the token/user and rechecks active,
+across matching human accounts or Masters fails closed. Because a first Company's
+Master Admin and Company Owner are separate accounts with distinct usernames but may
+share an email, email-only recovery is unavailable for that ambiguous address; use the
+account username and saved account details to identify the account. Confirmation locks
+the token/user and rechecks active,
 login-enabled human status before changing the password and revoking sessions.
 Request throttling normalizes email before hashing and counts attempts before
 issuance, including issuance failures. Tokens remain hashed in the token table,
@@ -1629,8 +1633,10 @@ Company and tenant-admin facts independently. Public bootstrap is open only when
 the commercial catalog/dependencies and stores Master entitlement/default Company
 allocation. `createCompanyWithin` is one transaction for SG/MY localization/tax,
 control-plane, accounts, live onboarding, inherited `company_module` rows, immutable
-Master Admin and Company Owner roles/users/memberships. `master_admin_account` lets later
-Companies add a system-managed membership for the same Master Admin identity. The
+Master Admin and Company Owner roles/users/memberships. The first Company creates
+separate accounts with distinct normalized usernames; their email addresses may be
+shared. `master_admin_account` lets later Companies add a system-managed membership for
+the same Master Admin identity. The
 Platform API wraps both mutations in `platform_idempotency` keyed by principal/operation/
 request hash and requires Platform CSRF, request ID and append-only audit.
 

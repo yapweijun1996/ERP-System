@@ -618,7 +618,9 @@ The Platform Superadmin then:
    Catalog entitlement/default allocation;
 2. creates the first SG/MY Company in one transaction with localization/tax,
    control-plane, chart-of-accounts, inherited allocation and live onboarding facts;
-3. supplies distinct initial credentials for an immutable Master Admin and Company Owner.
+3. supplies separate initial accounts for an immutable Master Admin and Company Owner. Their
+   normalized usernames must be distinct because usernames identify the login account; their
+   email addresses may be the same because email is contact/recovery data, not the login key.
 
 Later Companies receive a new Owner and a system-managed membership/role assignment for
 the durable Master Admin identity. Master Admin permissions are exactly dashboard read,

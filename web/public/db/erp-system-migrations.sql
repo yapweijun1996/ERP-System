@@ -13806,3 +13806,6 @@ BEGIN
       ADD CONSTRAINT "uq_agent_workflow_run_tenant_id" UNIQUE("id","master_fn","company_fn");
   END IF;
 END $$;
+
+-- 0115_skinny_zombie
+DROP INDEX IF EXISTS "uq_user_master_email";

@@ -163,7 +163,7 @@ suite('Platform provisioning PostgreSQL FORCE RLS proof', () => {
           },
           companyOwner: {
             name: 'Company Owner', username: 'pgowner',
-            email: 'pgowner@postgres.example', password: 'company-owner-password',
+            email: 'pgmasteradmin@postgres.example', password: 'company-owner-password',
           },
         }),
       },

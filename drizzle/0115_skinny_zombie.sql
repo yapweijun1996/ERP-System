@@ -1,0 +1,1 @@
+DROP INDEX "uq_user_master_email";

@@ -124,24 +124,39 @@ describe('Platform Superadmin tenant provisioning', () => {
     expect(mismatch.status).toBe(409);
     expect((await mismatch.json()).error.code).toBe('idempotency_key_reused');
 
+    const firstCompanyBody = {
+      name: 'Acme Singapore', country: 'SG',
+      masterAdmin: {
+        name: 'Master Admin', username: 'masteradmin', email: 'masteradmin@acme.test',
+        password: 'master-admin-password',
+      },
+      companyOwner: {
+        name: 'Company Owner', username: 'owner', email: 'masteradmin@acme.test',
+        password: 'company-owner-password',
+      },
+    };
+    const duplicateUsername = await fetch(`${running.baseUrl}/api/platform/masters/${master.masterFn}/companies`, {
+      method: 'POST',
+      headers: platformHeaders(true, 'company-duplicate-username'),
+      body: JSON.stringify({
+        ...firstCompanyBody,
+        companyOwner: { ...firstCompanyBody.companyOwner, username: 'masteradmin' },
+      }),
+    });
+    expect(duplicateUsername.status).toBe(409);
+    expect((await duplicateUsername.json()).error.code).toBe('duplicate_admin_identity');
+
     const firstCompany = await fetch(`${running.baseUrl}/api/platform/masters/${master.masterFn}/companies`, {
       method: 'POST',
       headers: platformHeaders(true, 'company-1'),
-      body: JSON.stringify({
-        name: 'Acme Singapore', country: 'SG',
-        masterAdmin: {
-          name: 'Master Admin', username: 'masteradmin', email: 'masteradmin@acme.test',
-          password: 'master-admin-password',
-        },
-        companyOwner: {
-          name: 'Company Owner', username: 'owner', email: 'owner@acme.test',
-          password: 'company-owner-password',
-        },
-      }),
+      body: JSON.stringify(firstCompanyBody),
     });
     expect(firstCompany.status).toBe(201);
     const company = (await firstCompany.json()).data as { companyFn: string; masterAdmin: { userId: number } };
     expect(company.masterAdmin.userId).toBeGreaterThan(0);
+    const firstCompanyUsers = await db.select({ username: appUser.username, email: appUser.email })
+      .from(appUser).where(eq(appUser.masterFn, master.masterFn));
+    expect(firstCompanyUsers.filter((user) => user.email === 'masteradmin@acme.test')).toHaveLength(2);
     const [firstOnboarding] = await db.select().from(companyOnboarding);
     expect(firstOnboarding.completedSteps).toEqual([
       'company', 'fiscal', 'warehouse', 'roles', 'staff', 'import', 'opening_balance', 'uat',

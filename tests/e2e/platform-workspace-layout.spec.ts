@@ -332,7 +332,7 @@ async function main(): Promise<void> {
         },
         companyOwner: {
           name: 'Layout Company Owner', username: 'layout-owner',
-          email: 'layout-owner@example.test', password: 'layout-owner-password',
+          email: 'layout-master-admin@example.test', password: 'layout-owner-password',
         },
       }),
     });

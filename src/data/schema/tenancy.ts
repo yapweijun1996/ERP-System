@@ -67,7 +67,6 @@ export const appUser = pgTable('app_user', {
   ...timestamps,
 }, (t) => [
   uniqueIndex('uq_user_master_username').on(t.masterFn, t.username),
-  uniqueIndex('uq_user_master_email').on(t.masterFn, t.email),
   check(
     'ck_app_user_account_state',
     sql`${t.accountState} in ('preactivated', 'active', 'offboarded')`,

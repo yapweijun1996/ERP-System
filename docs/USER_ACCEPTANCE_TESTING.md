@@ -300,12 +300,12 @@ health or exact-HEAD deployment proof.
       only an independent platform principal/session and auto-enters Platform workspace.
 - [x] Concurrent registration has one winner; non-empty, partial and replay requests
       return `409 already_initialized`; anonymous tenant setup returns `410`.
-- [x] Platform Superadmin creates Master then first Company with distinct Master Admin
-      and Company Owner, default allocation, localization/tax/control-plane/chart facts
+- [x] Platform Superadmin creates Master then first Company with separate Master Admin
+      and Company Owner accounts using distinct usernames (shared email allowed), default allocation, localization/tax/control-plane/chart facts
       and live onboarding; later Company reuses Master Admin identity.
 - [x] Master Admin negative API checks deny business, workflow, payment, payroll, MAC,
       support, simulation and `platform.*`; Company Owner MAC mutation is denied.
-- [x] Idempotency, duplicate code/email/username, dependency conflict, CSRF, request ID,
+- [x] Idempotency, duplicate code/username, shared admin email, dependency conflict, CSRF, request ID,
       audit and generated migration/schema checks pass.
 - [x] Deploy migration 0098/RLS to the existing production stack and verify old data,
       legacy/public bootstrap rejection and application health.

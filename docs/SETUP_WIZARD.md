@@ -111,8 +111,9 @@ local Company. Later tenant onboarding cannot choose modules or call a module AP
 Non-empty, partially initialized or concurrently claimed databases return `409
 already_initialized`; the public registration never creates `app_user` or `erp_session`.
 The public demo continues to write to PGlite/IndexedDB and can be reset for visitors.
-Username/email/login-code collisions and dependency conflicts are rejected before a
-partial Master/Company mutation, while a Master-without-Company state is a supported
+Master Admin and Company Owner remain separate accounts with distinct normalized usernames;
+they may share an email address. Username/login-code collisions and dependency conflicts are
+rejected before a partial Master/Company mutation, while a Master-without-Company state is a supported
 continuation point in the platform workspace.
 
 ### First-run detection
@@ -176,8 +177,8 @@ After registration:
 
 1. Create a Master and select only commercial Module Catalog entitlements/default
    Company allocation (baseline services are not sellable).
-2. Continue from the Master empty state to create the first Company, enter distinct
-   Master Admin and Company Owner credentials, and let the transaction create
+2. Continue from the Master empty state to create the first Company, enter separate Master
+   Admin and Company Owner accounts with distinct usernames (the email may be shared), and let the transaction create
    localization, tax, control-plane, chart and live onboarding facts.
 3. Create later Companies with only a Company Owner; the system reuses the Master Admin
    identity and adds an immutable system-managed membership/assignment.

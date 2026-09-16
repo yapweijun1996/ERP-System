@@ -3000,7 +3000,8 @@ TASK-190 adds migration 0098 and the platform provisioning commands/routes. A
 Platform Superadmin can create a server-generated Master, choose commercial Catalog
 entitlements/default Company allocation, then create a Company in one transaction with
 SG/MY localization/tax/control-plane/chart facts, inherited allocation, an immutable
-Master Admin and a separate Company Owner. Subsequent Companies reuse the durable Master
+Master Admin and a separate Company Owner. The first pair must use distinct usernames but
+may share an email address. Subsequent Companies reuse the durable Master
 Admin identity and receive system-managed membership/role assignments. Master Admin's
 allowlist is limited to dashboard/company switch, user/role/audit/settings; it has no
 business, workflow, payment, payroll, MAC, support, simulation or `platform.*` authority.
