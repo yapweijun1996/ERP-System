@@ -62,6 +62,36 @@
     }
     return chars.join('');
   }
+  function downloadPlatformAccountDetails(root){
+    var principalKey=root&&root.querySelector('#bootstrapPrincipalKey')?.value.trim();
+    var displayName=root&&root.querySelector('#bootstrapDisplayName')?.value.trim();
+    var email=root&&root.querySelector('#bootstrapEmail')?.value.trim();
+    var password=root&&root.querySelector('#bootstrapPassword')?.value;
+    var confirmation=root&&root.querySelector('#bootstrapPasswordConfirm')?.value;
+    if(!principalKey||!displayName||!email||!password||!confirmation||password!==confirmation) throw new Error('account_details_missing');
+    if(typeof Blob!=='function'||!window.URL||typeof window.URL.createObjectURL!=='function') throw new Error('download_unavailable');
+    var signInUrl=new URL('./',window.location.href).href;
+    var content=[
+      'Aria ERP — Platform Superadmin account',
+      '',
+      'Sign-in URL: '+signInUrl,
+      'Platform principal key: '+principalKey,
+      'Display name: '+displayName,
+      'Email: '+email,
+      'Password: '+password,
+      '',
+      'Keep this file private and delete it after saving the credentials securely.',
+    ].join('\n')+'\n';
+    var objectUrl=window.URL.createObjectURL(new Blob([content],{type:'text/plain;charset=utf-8'}));
+    var link=document.createElement('a');
+    link.href=objectUrl;
+    link.download='aria-erp-platform-admin-credentials.txt';
+    link.rel='noopener';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(function(){ window.URL.revokeObjectURL(objectUrl); },1000);
+  }
   function wirePasswordToggle(root,inputId,toggleId){
     var input=root&&root.querySelector('#'+inputId);
     var toggle=root&&root.querySelector('#'+toggleId);
@@ -332,7 +362,7 @@
         <div class="fld"><label class="fldlabel" for="bootstrapPrincipalKey">${esc(pt('field.platformPrincipalKey','Platform principal key'))}</label><input id="bootstrapPrincipalKey" autocomplete="username" autocapitalize="none" required placeholder="${esc(pt('field.platformPrincipalPlaceholder','e.g. platform-admin'))}"></div>
         <div class="fld"><label class="fldlabel" for="bootstrapDisplayName">${esc(pt('field.displayName','Display name'))}</label><input id="bootstrapDisplayName" autocomplete="name" required></div>
         <div class="fld"><label class="fldlabel" for="bootstrapEmail">${esc(pt('field.email','Email'))}</label><input id="bootstrapEmail" type="email" autocomplete="email" required></div>
-        <div class="fld platform-password-field"><label class="fldlabel" for="bootstrapPassword">${esc(pt('field.password12','Password (12+ characters)'))}</label><div class="auth-password-control"><input id="bootstrapPassword" type="password" autocomplete="new-password" minlength="12" maxlength="1024" required><button type="button" class="auth-password-toggle" id="bootstrapPasswordToggle" aria-controls="bootstrapPassword" aria-label="${esc(pt('password.show','Show password'))}" aria-pressed="false"><span class="auth-password-toggle-icon">${ic('eye')}</span><span>${esc(pt('password.showShort','Show'))}</span></button></div><div class="platform-password-actions"><button type="button" class="btn soft platform-password-generate" id="bootstrapGeneratePassword"><span class="auth-password-toggle-icon">${ic('refresh')}</span><span>${esc(pt('password.generate','Generate secure password'))}</span></button><span class="platform-password-status" id="platformBootstrapPasswordStatus" role="status" aria-live="polite"></span></div></div>
+        <div class="fld platform-password-field"><label class="fldlabel" for="bootstrapPassword">${esc(pt('field.password12','Password (12+ characters)'))}</label><div class="auth-password-control"><input id="bootstrapPassword" type="password" autocomplete="new-password" minlength="12" maxlength="1024" required><button type="button" class="auth-password-toggle" id="bootstrapPasswordToggle" aria-controls="bootstrapPassword" aria-label="${esc(pt('password.show','Show password'))}" aria-pressed="false"><span class="auth-password-toggle-icon">${ic('eye')}</span><span>${esc(pt('password.showShort','Show'))}</span></button></div><div class="platform-password-actions"><button type="button" class="btn soft platform-password-generate" id="bootstrapGeneratePassword"><span class="auth-password-toggle-icon">${ic('refresh')}</span><span>${esc(pt('password.generate','Generate secure password'))}</span></button><button type="button" class="btn soft platform-password-download" id="bootstrapDownloadCredentials" disabled><span class="auth-password-toggle-icon">${ic('download')}</span><span>${esc(pt('password.download','Download account details'))}</span></button><span class="platform-password-status" id="platformBootstrapPasswordStatus" role="status" aria-live="polite"></span></div></div>
         <div class="fld platform-password-field"><label class="fldlabel" for="bootstrapPasswordConfirm">${esc(pt('field.confirmPassword','Confirm password'))}</label><div class="auth-password-control"><input id="bootstrapPasswordConfirm" type="password" autocomplete="new-password" minlength="12" maxlength="1024" required><button type="button" class="auth-password-toggle" id="bootstrapPasswordConfirmToggle" aria-controls="bootstrapPasswordConfirm" aria-label="${esc(pt('password.show','Show password'))}" aria-pressed="false"><span class="auth-password-toggle-icon">${ic('eye')}</span><span>${esc(pt('password.showShort','Show'))}</span></button></div></div>
         <div class="auth-error" id="platformBootstrapError" role="alert"></div>
         <button class="btn primary lg" type="submit">${esc(pt('action.nextPlatform','Next: Create Platform Superadmin'))}</button>
@@ -345,15 +375,40 @@
     wirePasswordToggle(view,'bootstrapPassword','bootstrapPasswordToggle');
     wirePasswordToggle(view,'bootstrapPasswordConfirm','bootstrapPasswordConfirmToggle');
     var generatePassword=view.querySelector('#bootstrapGeneratePassword');
+    var downloadCredentials=view.querySelector('#bootstrapDownloadCredentials');
+    var passwordStatus=view.querySelector('#platformBootstrapPasswordStatus');
+    var accountFields=['bootstrapPrincipalKey','bootstrapDisplayName','bootstrapEmail','bootstrapPassword','bootstrapPasswordConfirm'];
+    function syncDownloadState(){
+      if(!downloadCredentials) return;
+      var invalid=accountFields.some(function(id){
+        var field=view.querySelector('#'+id);
+        return !field||!field.value.trim()||(typeof field.checkValidity==='function'&&!field.checkValidity());
+      });
+      var password=view.querySelector('#bootstrapPassword');
+      var confirmation=view.querySelector('#bootstrapPasswordConfirm');
+      downloadCredentials.disabled=invalid||!password||!confirmation||password.value!==confirmation.value;
+    }
+    accountFields.forEach(function(id){ var field=view.querySelector('#'+id); if(field) field.addEventListener('input',syncDownloadState); });
+    syncDownloadState();
     if(generatePassword) generatePassword.addEventListener('click',function(){
-      var status=view.querySelector('#platformBootstrapPasswordStatus');
       try{
         var password=generatePlatformPassword();
         view.querySelector('#bootstrapPassword').value=password;
         view.querySelector('#bootstrapPasswordConfirm').value=password;
-        if(status) status.textContent=pt('password.generated','A secure password was generated. Use Show password to review it before continuing.');
+        syncDownloadState();
+        if(passwordStatus) passwordStatus.textContent=pt('password.generated','A secure password was generated. Use Show password to review it before continuing.');
       }catch{
-        if(status) status.textContent=pt('password.generateUnavailable','Secure password generation is unavailable in this browser.');
+        if(passwordStatus) passwordStatus.textContent=pt('password.generateUnavailable','Secure password generation is unavailable in this browser.');
+      }
+    });
+    if(downloadCredentials) downloadCredentials.addEventListener('click',function(){
+      try{
+        downloadPlatformAccountDetails(view);
+        if(passwordStatus) passwordStatus.textContent=pt('password.downloaded','Account details downloaded. Store the file securely and delete it after saving the credentials.');
+      }catch(errorValue){
+        if(passwordStatus) passwordStatus.textContent=errorValue&&errorValue.message==='download_unavailable'
+          ?pt('password.downloadUnavailable','Account details could not be downloaded in this browser.')
+          :pt('password.downloadMissing','Complete the account details and generate or enter a password before downloading.');
       }
     });
     view.querySelector('#platformBootstrapForm').addEventListener('submit',async function(event){

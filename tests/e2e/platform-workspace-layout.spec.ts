@@ -78,12 +78,23 @@ async function main(): Promise<void> {
     assert(await bootstrapPage.locator('.platform-step.current').getAttribute('aria-label') === 'Platform Superadmin', 'bootstrap progress is not on Platform Superadmin');
     assert(await bootstrapPage.locator('#bootstrapGeneratePassword').count() === 1, 'bootstrap form is missing secure password generation');
     assert(await bootstrapPage.locator('#bootstrapPasswordToggle, #bootstrapPasswordConfirmToggle').count() === 2, 'bootstrap password fields are missing visibility controls');
+    assert(await bootstrapPage.locator('#bootstrapDownloadCredentials').count() === 1, 'bootstrap form is missing account details download');
+    assert(await bootstrapPage.locator('#bootstrapDownloadCredentials').isEnabled() === false, 'account details download is enabled before account fields are complete');
+    await bootstrapPage.locator('#bootstrapPrincipalKey').fill('layout-platform-admin');
+    await bootstrapPage.locator('#bootstrapDisplayName').fill('Layout Platform Admin');
+    await bootstrapPage.locator('#bootstrapEmail').fill('layout-platform@example.test');
     await bootstrapPage.locator('#bootstrapGeneratePassword').click();
     const generatedPassword = await bootstrapPage.locator('#bootstrapPassword').inputValue();
     const generatedConfirmation = await bootstrapPage.locator('#bootstrapPasswordConfirm').inputValue();
     assert(generatedPassword === generatedConfirmation, 'generated password was not copied to confirmation');
     assert(/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*\-_+=])[A-Za-z\d!@#$%^&*\-_+=]{20}$/.test(generatedPassword), 'generated password does not meet the secure password contract');
     assert((await bootstrapPage.locator('#platformBootstrapPasswordStatus').textContent())?.includes('secure password') === true, 'password generation status is missing');
+    assert(await bootstrapPage.locator('#bootstrapDownloadCredentials').isEnabled(), 'account details download did not enable after the account fields were completed');
+    const [accountDetailsDownload] = await Promise.all([
+      bootstrapPage.waitForEvent('download'),
+      bootstrapPage.locator('#bootstrapDownloadCredentials').click(),
+    ]);
+    assert(accountDetailsDownload.suggestedFilename() === 'aria-erp-platform-admin-credentials.txt', 'downloaded account details filename is incorrect');
     await bootstrapPage.locator('#bootstrapPasswordToggle').click();
     assert(await bootstrapPage.locator('#bootstrapPassword').getAttribute('type') === 'text', 'generated password cannot be revealed');
     await bootstrapPage.locator('#bootstrapPasswordToggle').click();
