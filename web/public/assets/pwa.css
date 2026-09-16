@@ -408,18 +408,29 @@ html,body{
   #setupWizardView .wiz-language-copy b{font-size:calc(12.5px * var(--fs,1));}
   #setupWizardView .wiz-language-copy small{font-size:calc(10px * var(--fs,1));}
   #setupWizardView .wiz-language-note{margin-top:8px;padding:8px;font-size:calc(10.5px * var(--fs,1));}
-  #setupWizardView .wiz-background-picker{margin-top:10px;padding-top:10px;}
-  #setupWizardView .wiz-background-options{gap:5px;margin-top:6px;}
-  #setupWizardView .wiz-background-option{min-height:42px;padding:5px;gap:5px;}
-  #setupWizardView .wiz-background-swatch{width:22px;height:22px;border-radius:6px;}
-  #setupWizardView .wiz-background-option-copy b{font-size:calc(9.5px * var(--fs,1));}
-  #setupWizardView .wiz-color-picker{margin-top:8px;padding-top:8px;}
-  #setupWizardView .wiz-color-copy h3{font-size:calc(12px * var(--fs,1));}
-  #setupWizardView .wiz-color-copy p{display:none;}
-  #setupWizardView .wiz-color-options{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-top:6px;}
-  #setupWizardView .wiz-color-option{min-height:38px;padding:4px;gap:3px;}
-  #setupWizardView .wiz-color-swatches{width:30px;height:8px;}
-  #setupWizardView .wiz-color-option b{font-size:calc(9px * var(--fs,1));}
+  /* Keep the setup choices readable on narrow phones. Four background cards
+     and six palette cards in one compressed row turn labels into ellipses;
+     two columns preserve the copy, touch targets, and selection affordance. */
+  #setupWizardView .wiz-background-picker,
+  #setupWizardView .wiz-color-picker{margin-top:16px;padding-top:14px;}
+  #setupWizardView .wiz-background-copy h3,
+  #setupWizardView .wiz-color-copy h3{font-size:calc(14px * var(--fs,1));}
+  #setupWizardView .wiz-background-copy p,
+  #setupWizardView .wiz-color-copy p{margin-top:4px;display:block;font-size:calc(11px * var(--fs,1));line-height:1.35;}
+  #setupWizardView .wiz-background-options{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px;}
+  #setupWizardView .wiz-background-option{min-height:68px;padding:9px;gap:8px;border-radius:12px;align-items:flex-start;}
+  #setupWizardView .wiz-background-swatch{width:28px;height:28px;border-radius:8px;margin-top:1px;}
+  #setupWizardView .wiz-background-option-copy{gap:2px;padding-right:8px;}
+  #setupWizardView .wiz-background-option-copy b{font-size:calc(11.5px * var(--fs,1));line-height:1.2;white-space:normal;overflow:visible;text-overflow:clip;}
+  #setupWizardView .wiz-background-option-copy small{font-size:calc(10px * var(--fs,1));line-height:1.25;-webkit-line-clamp:2;}
+  #setupWizardView .wiz-background-check{top:7px;right:7px;width:16px;height:16px;}
+  #setupWizardView .wiz-background-check .ico{width:10px;height:10px;}
+  #setupWizardView .wiz-color-options{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px;}
+  #setupWizardView .wiz-color-option{min-height:56px;padding:8px 10px;gap:6px;border-radius:11px;}
+  #setupWizardView .wiz-color-swatches{width:42px;height:11px;border-radius:5px;}
+  #setupWizardView .wiz-color-option b{font-size:calc(11.5px * var(--fs,1));line-height:1.15;white-space:normal;text-align:center;overflow:visible;text-overflow:clip;}
+  #setupWizardView .wiz-color-check{top:6px;right:6px;width:16px;height:16px;}
+  #setupWizardView .wiz-color-check .ico{width:9px;height:9px;}
 }
 
 /* Portrait phones and split panes have enough height for the compact language
