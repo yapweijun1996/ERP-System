@@ -286,6 +286,40 @@ async function main(): Promise<void> {
       await assertProvisioningIntroLayout(width, height);
     }
 
+    assert(await page.locator('#provisionMasterAdminPasswordGenerate').count() === 1, 'first Company form is missing Master Admin secure password generation');
+    assert(await page.locator('#provisionCompanyOwnerPasswordGenerate').count() === 1, 'Company form is missing Company Owner secure password generation');
+    assert(await page.locator('#platformCompanyDownloadCredentials').count() === 1, 'Company form is missing account details download');
+    assert(await page.locator('#platformCompanyDownloadCredentials').isDisabled(), 'Company account details download is enabled before account fields are complete');
+    const companyDownloadBeforeSubmit = await page.locator('#platformCompanyDownloadCredentials').evaluate((button) => {
+      const submit = document.querySelector<HTMLButtonElement>('#platformCreateCompanyAction');
+      return Boolean(submit && (button.compareDocumentPosition(submit) & Node.DOCUMENT_POSITION_FOLLOWING));
+    });
+    assert(companyDownloadBeforeSubmit, 'Company account details download is not positioned before the provisioning submit action');
+    await page.locator('#provisionMasterAdminPasswordGenerate').click();
+    await page.locator('#provisionCompanyOwnerPasswordGenerate').click();
+    const companyMasterPassword = await page.locator('#provisionMasterAdminPassword').inputValue();
+    const companyOwnerPassword = await page.locator('#provisionCompanyOwnerPassword').inputValue();
+    assert(/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*\-_+=])[A-Za-z\d!@#$%^&*\-_+=]{20}$/.test(companyMasterPassword), 'generated Master Admin password does not meet the secure password contract');
+    assert(/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*\-_+=])[A-Za-z\d!@#$%^&*\-_+=]{20}$/.test(companyOwnerPassword), 'generated Company Owner password does not meet the secure password contract');
+    await page.locator('#provisionCompanyName').fill('Layout Download Company');
+    await page.locator('#provisionMasterAdminName').fill('Layout Master Admin');
+    await page.locator('#provisionMasterAdminUsername').fill('layout-master-admin');
+    await page.locator('#provisionMasterAdminEmail').fill('layout-master-admin@example.test');
+    await page.locator('#provisionCompanyOwnerName').fill('Layout Company Owner');
+    await page.locator('#provisionCompanyOwnerUsername').fill('layout-owner');
+    await page.locator('#provisionCompanyOwnerEmail').fill('layout-owner@example.test');
+    assert(await page.locator('#platformCompanyDownloadCredentials').isEnabled(), 'Company account details download did not enable after the account fields were completed');
+    const [companyAccountDetailsDownload] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('#platformCompanyDownloadCredentials').click(),
+    ]);
+    assert(companyAccountDetailsDownload.suggestedFilename() === 'aria-erp-layout-download-company-account-details.txt', 'Company account details filename is incorrect');
+    assert((await page.locator('#platformCompanyPasswordStatus').textContent())?.includes('Account details downloaded') === true, 'Company account details download status is missing');
+    await page.locator('#provisionMasterAdminPasswordToggle').click();
+    assert(await page.locator('#provisionMasterAdminPassword').getAttribute('type') === 'text', 'Company Master Admin password cannot be revealed');
+    await page.locator('#provisionMasterAdminPasswordToggle').click();
+    assert(await page.locator('#provisionMasterAdminPassword').getAttribute('type') === 'password', 'Company Master Admin password cannot be hidden again');
+
     const companyResponse = await fetch(`${listening.baseUrl}/api/platform/masters/${master.masterFn}/companies`, {
       method: 'POST',
       headers: platformHeaders(true, 'layout-company-1'),

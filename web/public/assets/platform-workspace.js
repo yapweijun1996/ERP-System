@@ -92,6 +92,48 @@
     link.remove();
     window.setTimeout(function(){ window.URL.revokeObjectURL(objectUrl); },1000);
   }
+  function provisioningFieldValue(root,id){
+    var field=root&&root.querySelector('#'+id);
+    return field?field.value:'';
+  }
+  function downloadCompanyAccountDetails(root){
+    var companyName=provisioningFieldValue(root,'provisionCompanyName').trim();
+    var country=provisioningFieldValue(root,'provisionCompanyCountry').trim();
+    var masterAdminPasswordField=root&&root.querySelector('#provisionMasterAdminPassword');
+    var masterAdmin=masterAdminPasswordField?{
+      name:provisioningFieldValue(root,'provisionMasterAdminName').trim(),
+      username:provisioningFieldValue(root,'provisionMasterAdminUsername').trim(),
+      email:provisioningFieldValue(root,'provisionMasterAdminEmail').trim(),
+      password:masterAdminPasswordField.value,
+    }:null;
+    var companyOwner={
+      name:provisioningFieldValue(root,'provisionCompanyOwnerName').trim(),
+      username:provisioningFieldValue(root,'provisionCompanyOwnerUsername').trim(),
+      email:provisioningFieldValue(root,'provisionCompanyOwnerEmail').trim(),
+      password:provisioningFieldValue(root,'provisionCompanyOwnerPassword'),
+    };
+    var accounts=(masterAdmin?[masterAdmin]:[]).concat([companyOwner]);
+    if(!companyName||!country||accounts.some(function(account){ return !account.name||!account.username||!account.email||!account.password; })) throw new Error('account_details_missing');
+    if(typeof Blob!=='function'||!window.URL||typeof window.URL.createObjectURL!=='function') throw new Error('download_unavailable');
+    var signInUrl=new URL('./',window.location.href).href;
+    var content=['Aria ERP — Company account details','',
+      'Sign-in URL: '+signInUrl,
+      'Company: '+companyName,
+      'Country: '+country,
+      ''];
+    if(masterAdmin) content.push('Master Admin','Name: '+masterAdmin.name,'Username: '+masterAdmin.username,'Email: '+masterAdmin.email,'Password: '+masterAdmin.password,'');
+    content.push('Company Owner','Name: '+companyOwner.name,'Username: '+companyOwner.username,'Email: '+companyOwner.email,'Password: '+companyOwner.password,'','Keep this file private and delete it after saving the credentials securely.');
+    var objectUrl=window.URL.createObjectURL(new Blob([content.join('\n')+'\n'],{type:'text/plain;charset=utf-8'}));
+    var link=document.createElement('a');
+    link.href=objectUrl;
+    var slug=companyName.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,48)||'company';
+    link.download='aria-erp-'+slug+'-account-details.txt';
+    link.rel='noopener';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(function(){ window.URL.revokeObjectURL(objectUrl); },1000);
+  }
   function wirePasswordToggle(root,inputId,toggleId){
     var input=root&&root.querySelector('#'+inputId);
     var toggle=root&&root.querySelector('#'+toggleId);
@@ -104,6 +146,22 @@
     }
     toggle.addEventListener('click',function(){ update(input.type!=='text'); });
     update(false);
+  }
+  function wirePasswordGenerator(root,inputId,buttonId,statusId,onChange){
+    var input=root&&root.querySelector('#'+inputId);
+    var button=root&&root.querySelector('#'+buttonId);
+    var status=root&&root.querySelector('#'+statusId);
+    if(!input||!button) return;
+    button.addEventListener('click',function(){
+      try{
+        input.value=generatePlatformPassword();
+        input.dispatchEvent(new Event('input',{bubbles:true}));
+        if(status) status.textContent=pt('password.generated','A secure password was generated. Use Show password to review it before continuing.');
+        if(typeof onChange==='function') onChange();
+      }catch{
+        if(status) status.textContent=pt('password.generateUnavailable','Secure password generation is unavailable in this browser.');
+      }
+    });
   }
   function stepperMarkup(current){
     var labels=[pt('step.platform','Platform Superadmin'),pt('step.master','Master'),pt('step.companyAdmins','Company & administrators')];
@@ -539,6 +597,9 @@
   function provisioningInput(id,label,type,autocomplete){
     return `<div class="fld"><span>${esc(label)}</span><input id="${id}" type="${type||'text'}" autocomplete="${autocomplete||'off'}" required></div>`;
   }
+  function provisioningPasswordInput(id,label,toggleId,generatorId){
+    return `<div class="fld platform-password-field"><span>${esc(label)}</span><div class="auth-password-control"><input id="${id}" type="password" autocomplete="new-password" minlength="8" maxlength="1024" required><button type="button" class="auth-password-toggle" id="${toggleId}" aria-controls="${id}" aria-label="${esc(pt('password.show','Show password'))}" aria-pressed="false"><span class="auth-password-toggle-icon">${ic('eye')}</span><span>${esc(pt('password.showShort','Show'))}</span></button></div><div class="platform-password-actions"><button type="button" class="btn soft platform-password-generate" id="${generatorId}"><span class="auth-password-toggle-icon">${ic('refresh')}</span><span>${esc(pt('password.generate','Generate secure password'))}</span></button><span class="platform-password-status" id="${generatorId}Status" role="status" aria-live="polite"></span></div></div>`;
+  }
   function masterProvisioningMarkup(){
     var rows=(state.catalog||[]).map(function(item){
       var enabled=item.defaultCompanyAllocated===true;
@@ -555,8 +616,9 @@
     var intro=hasExistingCompany?pt('provision.companyExistingIntro','A Company already exists for this Master. Enter new unique Company and Owner details only if you want to create another one.'):pt('provision.companyDefaultIntro','Company allocation is copied from the Master defaults. Tenant onboarding cannot choose commercial modules.');
     return `<section class="platform-provision-panel" id="platformCompanyCreatePanel" aria-labelledby="platformCompanyCreateHeading"><div class="platform-panel-heading"><div><h2 id="platformCompanyCreateHeading" tabindex="-1">${esc(title)}</h2><p>${esc(intro)}</p></div></div><form id="platformCreateCompanyForm" class="auth-form">
       <section class="platform-form-section"><h3>${esc(pt('provision.companyDetails','Company details'))}</h3><div class="platform-form-grid">${provisioningInput('provisionCompanyName',pt('field.companyName','Company name'))}<div class="fld"><span>${esc(pt('field.country','Country'))}</span><select id="provisionCompanyCountry"><option value="SG">${esc(pt('field.singapore','Singapore (SG)'))}</option><option value="MY">${esc(pt('field.malaysia','Malaysia (MY)'))}</option></select></div></div></section>
-      ${needsMasterAdmin?`<section class="platform-form-section"><h3>${esc(pt('provision.masterAdmin','Master Admin'))} <small>${esc(pt('provision.firstCompanyOnly','(first Company only)'))}</small></h3><div class="platform-form-grid">${provisioningInput('provisionMasterAdminName',pt('field.masterAdminName','Master Admin name'))}${provisioningInput('provisionMasterAdminUsername',pt('field.masterAdminUsername','Master Admin username'))}${provisioningInput('provisionMasterAdminEmail',pt('field.masterAdminEmail','Master Admin email'),'email')}${provisioningInput('provisionMasterAdminPassword',pt('field.masterAdminPassword','Master Admin password'),'password','new-password')}</div></section>`:''}
-      <section class="platform-form-section"><h3>${esc(pt('provision.companyOwner','Company Owner'))}</h3><div class="platform-form-grid">${provisioningInput('provisionCompanyOwnerName',pt('field.companyOwnerName','Company Owner name'))}${provisioningInput('provisionCompanyOwnerUsername',pt('field.companyOwnerUsername','Company Owner username'))}${provisioningInput('provisionCompanyOwnerEmail',pt('field.companyOwnerEmail','Company Owner email'),'email')}${provisioningInput('provisionCompanyOwnerPassword',pt('field.companyOwnerPassword','Company Owner password'),'password','new-password')}</div></section>
+      ${needsMasterAdmin?`<section class="platform-form-section"><h3>${esc(pt('provision.masterAdmin','Master Admin'))} <small>${esc(pt('provision.firstCompanyOnly','(first Company only)'))}</small></h3><div class="platform-form-grid">${provisioningInput('provisionMasterAdminName',pt('field.masterAdminName','Master Admin name'))}${provisioningInput('provisionMasterAdminUsername',pt('field.masterAdminUsername','Master Admin username'))}${provisioningInput('provisionMasterAdminEmail',pt('field.masterAdminEmail','Master Admin email'),'email')}${provisioningPasswordInput('provisionMasterAdminPassword',pt('field.masterAdminPassword','Master Admin password'),'provisionMasterAdminPasswordToggle','provisionMasterAdminPasswordGenerate')}</div></section>`:''}
+      <section class="platform-form-section"><h3>${esc(pt('provision.companyOwner','Company Owner'))}</h3><div class="platform-form-grid">${provisioningInput('provisionCompanyOwnerName',pt('field.companyOwnerName','Company Owner name'))}${provisioningInput('provisionCompanyOwnerUsername',pt('field.companyOwnerUsername','Company Owner username'))}${provisioningInput('provisionCompanyOwnerEmail',pt('field.companyOwnerEmail','Company Owner email'),'email')}${provisioningPasswordInput('provisionCompanyOwnerPassword',pt('field.companyOwnerPassword','Company Owner password'),'provisionCompanyOwnerPasswordToggle','provisionCompanyOwnerPasswordGenerate')}</div></section>
+      <div class="platform-password-actions platform-company-account-actions"><button type="button" class="btn soft platform-password-download" id="platformCompanyDownloadCredentials" disabled><span class="auth-password-toggle-icon">${ic('download')}</span><span>${esc(pt('password.download','Download account details'))}</span></button><span class="platform-password-status" id="platformCompanyPasswordStatus" role="status" aria-live="polite"></span></div>
     </form></section>`;
   }
   function provisioningMarkup(hasExistingCompany){
@@ -839,6 +901,44 @@
   }
   function wireWorkspace(view){
     wireDemoBanner(view);
+    var companyAccountForm=view.querySelector('#platformCreateCompanyForm');
+    if(companyAccountForm){
+      var companyDownload=view.querySelector('#platformCompanyDownloadCredentials');
+      var companyPasswordStatus=view.querySelector('#platformCompanyPasswordStatus');
+      var companyAccountFields=['provisionCompanyName','provisionCompanyCountry','provisionCompanyOwnerName','provisionCompanyOwnerUsername','provisionCompanyOwnerEmail','provisionCompanyOwnerPassword'];
+      if(companyAccountForm.querySelector('#provisionMasterAdminPassword')) companyAccountFields.push('provisionMasterAdminName','provisionMasterAdminUsername','provisionMasterAdminEmail','provisionMasterAdminPassword');
+      function syncCompanyDownloadState(){
+        if(!companyDownload) return;
+        var invalid=companyAccountFields.some(function(id){
+          var field=companyAccountForm.querySelector('#'+id);
+          if(!field) return true;
+          var empty=field.type==='password'?!field.value:!field.value.trim();
+          return empty||(typeof field.checkValidity==='function'&&!field.checkValidity());
+        });
+        companyDownload.disabled=invalid;
+      }
+      if(companyAccountForm.querySelector('#provisionMasterAdminPassword')){
+        wirePasswordToggle(companyAccountForm,'provisionMasterAdminPassword','provisionMasterAdminPasswordToggle');
+        wirePasswordGenerator(companyAccountForm,'provisionMasterAdminPassword','provisionMasterAdminPasswordGenerate','provisionMasterAdminPasswordGenerateStatus',syncCompanyDownloadState);
+      }
+      wirePasswordToggle(companyAccountForm,'provisionCompanyOwnerPassword','provisionCompanyOwnerPasswordToggle');
+      wirePasswordGenerator(companyAccountForm,'provisionCompanyOwnerPassword','provisionCompanyOwnerPasswordGenerate','provisionCompanyOwnerPasswordGenerateStatus',syncCompanyDownloadState);
+      companyAccountFields.forEach(function(id){
+        var field=companyAccountForm.querySelector('#'+id);
+        if(field) field.addEventListener('input',syncCompanyDownloadState);
+      });
+      syncCompanyDownloadState();
+      if(companyDownload) companyDownload.addEventListener('click',function(){
+        try{
+          downloadCompanyAccountDetails(companyAccountForm);
+          if(companyPasswordStatus) companyPasswordStatus.textContent=pt('password.downloaded','Account details downloaded. Store the file securely and delete it after saving the credentials.');
+        }catch(errorValue){
+          if(companyPasswordStatus) companyPasswordStatus.textContent=errorValue&&errorValue.message==='download_unavailable'
+            ?pt('password.downloadUnavailable','Account details could not be downloaded in this browser.')
+            :pt('password.downloadMissing','Complete the account details and generate or enter a password before downloading.');
+        }
+      });
+    }
     window.removeEventListener('beforeunload',guardEntitlementUnload);
     window.addEventListener('beforeunload',guardEntitlementUnload);
     view.querySelector('#platformLogoutBtn').addEventListener('click',async function(){ if(!confirmDiscardEntitlements(view)) return; try{ await request('logout',{method:'POST',body:{}}); }finally{ cachedSession=null; location.reload(); } });
