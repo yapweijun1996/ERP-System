@@ -123,11 +123,10 @@ body.auth-locked{overflow:auto;}
 .auth-password-toggle:focus-visible{position:relative;z-index:1;outline-offset:1px;}
 .auth-password-toggle-icon{display:inline-grid;place-items:center;}
 .auth-password-toggle-icon .ico{width:16px;height:16px;}
-.platform-password-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px;min-width:0;}
+.platform-password-actions{display:grid;gap:8px;margin-top:8px;min-width:0;}
 .platform-password-generate{min-height:42px;}
 .platform-password-download{min-height:42px;}
 .platform-password-status{display:block;color:var(--muted);font-size:calc(12px * var(--fs,1));line-height:1.45;}
-.platform-password-status{grid-column:1/-1;}
 .platform-password-status:empty{display:none;}
 .auth-remember{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:calc(12.5px * var(--fs,1));line-height:1.35;cursor:pointer;user-select:none;}
 .auth-remember input{width:18px;height:18px;flex:none;margin:0;accent-color:var(--accent);}
@@ -158,7 +157,6 @@ body.auth-locked{overflow:auto;}
   #setupWizardView .auth-panel{-webkit-backdrop-filter:blur(20px) saturate(135%);backdrop-filter:blur(20px) saturate(135%);}
   .seg.wiz-lang-seg{gap:4px;padding:4px;}
   .seg.wiz-lang-seg button{padding:8px 6px;font-size:calc(12px * var(--fs,1));}
-  .platform-password-actions{grid-template-columns:minmax(0,1fr);}
 }
 
 @media (prefers-reduced-motion:reduce){

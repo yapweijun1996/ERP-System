@@ -80,6 +80,11 @@ async function main(): Promise<void> {
     assert(await bootstrapPage.locator('#bootstrapPasswordToggle, #bootstrapPasswordConfirmToggle').count() === 2, 'bootstrap password fields are missing visibility controls');
     assert(await bootstrapPage.locator('#bootstrapDownloadCredentials').count() === 1, 'bootstrap form is missing account details download');
     assert(await bootstrapPage.locator('#bootstrapDownloadCredentials').isEnabled() === false, 'account details download is enabled before account fields are complete');
+    const downloadBeforeSubmit = await bootstrapPage.locator('#bootstrapDownloadCredentials').evaluate((button) => {
+      const submit = button.form?.querySelector<HTMLButtonElement>('button[type="submit"]');
+      return Boolean(submit && (button.compareDocumentPosition(submit) & Node.DOCUMENT_POSITION_FOLLOWING));
+    });
+    assert(downloadBeforeSubmit, 'account details download is not positioned before the bootstrap submit action');
     await bootstrapPage.locator('#bootstrapPrincipalKey').fill('layout-platform-admin');
     await bootstrapPage.locator('#bootstrapDisplayName').fill('Layout Platform Admin');
     await bootstrapPage.locator('#bootstrapEmail').fill('layout-platform@example.test');
