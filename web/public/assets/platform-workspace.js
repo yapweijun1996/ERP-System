@@ -169,6 +169,15 @@
     if(current>labels.length) return '';
     return `<ol class="platform-stepper" aria-label="${esc(pt('step.progress','Provisioning progress'))}">${labels.map(function(label,index){ var number=index+1; var isComplete=number<current; var isCurrent=number===current; return `<li class="platform-step ${isComplete?'complete':''} ${isCurrent?'current':''}" aria-label="${esc(label)}" ${isCurrent?'aria-current="step"':''}><span>${isComplete?'✓':number}</span><b><span class="platform-step-label-full">${esc(label)}</span><span class="platform-step-label-short" aria-hidden="true">${esc(shortLabels[index])}</span></b></li>`; }).join('')}</ol>`;
   }
+  function platformIntroContextMarkup(stage,description,demo,progress){
+    var currentStep=Math.min(Math.max(Number(stage)||1,1),3);
+    var currentLabel=currentStep===1?pt('step.platformShort','Platform'):currentStep===2?pt('step.masterShort','Master'):pt('step.companyShort','Company');
+    var contextLabel=progress?pt('workspace.mobileContextLabel','Setup progress'):pt('workspace.mobileContextControls','Workspace context');
+    var summary=progress
+      ?pt('workspace.mobileContextStep','Step {step} of {total} · {label}',{step:currentStep,total:3,label:currentLabel})
+      :pt('workspace.tenantControl','Platform tenant control');
+    return `<details class="platform-intro-context" open><summary><span class="platform-intro-context-summary"><span class="platform-intro-context-label">${esc(contextLabel)}</span><strong>${esc(summary)}</strong></span><span class="platform-intro-context-chevron" aria-hidden="true">${ic('chevD')}</span></summary><div class="platform-intro-context-body"><p>${esc(description)}</p>${demo}${progress?`<div class="platform-shell-progress">${progress}</div>`:''}</div></details>`;
+  }
   function setFieldValue(root,id,value){
     var field=root&&root.querySelector('#'+id);
     if(!field||field.value) return;
@@ -885,8 +894,10 @@
       var progress=stepperMarkup(stage);
       var provisioning=provisioningMarkup(hasExistingCompany);
       var notice=state.notice;
+      var description=state.masterFn?pt('workspace.controlIntro','Platform-only Master and Company controls with audited tenant identity provisioning.'):pt('workspace.provisionIntro','Create the first Master, configure its commercial defaults, then create its first Company and administrators.');
+      var introContext=platformIntroContextMarkup(stage,description,demoBannerMarkup(),progress);
       state.notice='';
-      view.innerHTML=`<section class="auth-panel platform-shell"><header class="platform-shell-header"><div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>${esc(pt('workspace.subtitleWithUser','Platform Superadmin workspace · {name}',{name:state.session&&state.session.displayName||''}))}</small></span></div><button type="button" class="btn soft" id="platformLogoutBtn">${esc(pt('action.signOut','Sign out'))}</button></header><div class="platform-shell-intro${progress?' has-progress':''}${state.masterFn?' has-toolbar':''}"><div class="auth-copy"><h1 tabindex="-1">${esc(state.masterFn?(hasCompany?pt('workspace.tenantControl','Platform tenant control'):pt('workspace.finishProvisioning','Finish tenant provisioning')):pt('workspace.startProvisioning','Start tenant provisioning'))}</h1><p>${esc(state.masterFn?pt('workspace.controlIntro','Platform-only Master and Company controls with audited tenant identity provisioning.'):pt('workspace.provisionIntro','Create the first Master, configure its commercial defaults, then create its first Company and administrators.'))}</p>${demoBannerMarkup()}</div>${state.masterFn?switchMarkup(hasExistingCompany):''}${progress?`<div class="platform-shell-progress">${progress}</div>`:''}</div><div class="platform-shell-body"><div class="auth-error" id="platformWorkspaceError" role="alert" aria-live="assertive" tabindex="-1"></div>${notice?`<div class="platform-workspace-status" id="platformCompanyCreatedStatus" role="status" tabindex="-1">${esc(notice)}</div>`:''}${provisioning?`<div class="platform-workspace-grid">${provisioning}</div>`:''}${hasCompany?modulesMarkup()+simulationMarkup():''}</div>${provisioningActionMarkup(hasExistingCompany)}</section>`;
+      view.innerHTML=`<section class="auth-panel platform-shell"><header class="platform-shell-header"><div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>${esc(pt('workspace.subtitleWithUser','Platform Superadmin workspace · {name}',{name:state.session&&state.session.displayName||''}))}</small></span></div><button type="button" class="btn soft" id="platformLogoutBtn">${esc(pt('action.signOut','Sign out'))}</button></header><div class="platform-shell-intro${progress?' has-progress':''}${state.masterFn?' has-toolbar':''}"><div class="auth-copy"><h1 tabindex="-1">${esc(state.masterFn?(hasCompany?pt('workspace.tenantControl','Platform tenant control'):pt('workspace.finishProvisioning','Finish tenant provisioning')):pt('workspace.startProvisioning','Start tenant provisioning'))}</h1>${introContext}</div>${state.masterFn?switchMarkup(hasExistingCompany):''}</div><div class="platform-shell-body"><div class="auth-error" id="platformWorkspaceError" role="alert" aria-live="assertive" tabindex="-1"></div>${notice?`<div class="platform-workspace-status" id="platformCompanyCreatedStatus" role="status" tabindex="-1">${esc(notice)}</div>`:''}${provisioning?`<div class="platform-workspace-grid">${provisioning}</div>`:''}${hasCompany?modulesMarkup()+simulationMarkup():''}</div>${provisioningActionMarkup(hasExistingCompany)}</section>`;
       if(view.querySelector('#platformCreateMasterForm')||view.querySelector('#platformCreateCompanyForm')){
         applyDemoDefaults(view,draftStage,state.workspaceStage===WORKSPACE_STAGE.COMPANY?!(currentMaster()&&currentMaster().hasMasterAdmin):false);
         restoreDraft(view,draftStage);
@@ -899,8 +910,24 @@
       if(focusTarget&&typeof focusTarget.focus==='function') requestAnimationFrame(function(){ focusTarget.focus({preventScroll:true}); });
     }catch(error){ view.querySelector('.auth-copy').innerHTML=`<h1>${esc(pt('error.workspaceUnavailable','Platform workspace unavailable'))}</h1><p>${esc(error&&error.message||pt('error.entitlementLoadFailed','Unable to load platform entitlement data.'))}</p>`; }
   }
+  function wirePlatformIntroContext(){
+    var context=document.querySelector('#authView .platform-intro-context');
+    if(!context) return;
+    var mobile=window.matchMedia('(max-width:600px)');
+    context.open=mobile.matches?false:true;
+    if(!wirePlatformIntroContext.bound){
+      var sync=function(event){
+        var current=document.querySelector('#authView .platform-intro-context');
+        if(current) current.open=event.matches?false:true;
+      };
+      if(typeof mobile.addEventListener==='function') mobile.addEventListener('change',sync);
+      else if(typeof mobile.addListener==='function') mobile.addListener(sync);
+      wirePlatformIntroContext.bound=true;
+    }
+  }
   function wireWorkspace(view){
     wireDemoBanner(view);
+    wirePlatformIntroContext();
     var companyAccountForm=view.querySelector('#platformCreateCompanyForm');
     if(companyAccountForm){
       var companyDownload=view.querySelector('#platformCompanyDownloadCredentials');

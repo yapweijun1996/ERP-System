@@ -250,18 +250,21 @@ async function main(): Promise<void> {
         const heading = document.querySelector<HTMLElement>('.platform-shell-intro h1');
         const toolbar = document.querySelector<HTMLElement>('.platform-shell-toolbar');
         const progress = document.querySelector<HTMLElement>('.platform-shell-progress');
-        if (!intro || !copy || !heading || !toolbar || !progress) return null;
+        const context = document.querySelector<HTMLDetailsElement>('.platform-intro-context');
+        const contextBody = document.querySelector<HTMLElement>('.platform-intro-context-body');
+        if (!intro || !copy || !heading || !toolbar || !context || !contextBody) return null;
         const introValue = intro.getBoundingClientRect();
         const copyValue = copy.getBoundingClientRect();
         const headingValue = heading.getBoundingClientRect();
         const toolbarValue = toolbar.getBoundingClientRect();
-        const progressValue = progress.getBoundingClientRect();
+        const progressValue = progress?.getBoundingClientRect();
         return {
           display: getComputedStyle(intro).display,
+          contextOpen: context.open,
           copy: { left: copyValue.left, right: copyValue.right, top: copyValue.top, bottom: copyValue.bottom, width: copyValue.width },
           heading: { left: headingValue.left, right: headingValue.right, top: headingValue.top, bottom: headingValue.bottom, width: headingValue.width },
           toolbar: { left: toolbarValue.left, right: toolbarValue.right, top: toolbarValue.top, bottom: toolbarValue.bottom, width: toolbarValue.width },
-          progress: { left: progressValue.left, right: progressValue.right, top: progressValue.top, bottom: progressValue.bottom, width: progressValue.width },
+          progress: progressValue ? { left: progressValue.left, right: progressValue.right, top: progressValue.top, bottom: progressValue.bottom, width: progressValue.width } : null,
           intro: { left: introValue.left, right: introValue.right, top: introValue.top, bottom: introValue.bottom, width: introValue.width },
           documentWidth: document.documentElement.scrollWidth,
           viewportWidth: document.documentElement.clientWidth,
@@ -270,14 +273,22 @@ async function main(): Promise<void> {
       assert(metrics, `provisioning intro metrics missing at ${width}x${height}`);
       assert(metrics.documentWidth - metrics.viewportWidth <= 1, `provisioning intro overflowed horizontally at ${width}x${height}`);
       assert(metrics.heading.width >= 240, `provisioning heading was squeezed to ${metrics.heading.width}px at ${width}x${height}`);
-      assert(metrics.toolbar.right <= metrics.intro.right + 1 && metrics.progress.right <= metrics.intro.right + 1, `provisioning controls exceeded the intro width at ${width}x${height}`);
-      if (width <= 1100) {
+      assert(metrics.toolbar.right <= metrics.intro.right + 1, `provisioning toolbar exceeded the intro width at ${width}x${height}`);
+      if (width <= 600) {
+        assert(metrics.display === 'block', `mobile provisioning intro did not use the compact block layout at ${width}x${height}`);
+        assert(metrics.contextOpen === false, `mobile provisioning context is expanded by default at ${width}x${height}`);
+        assert(metrics.intro.bottom - metrics.intro.top <= 320, `mobile provisioning intro retained excessive height at ${width}x${height}`);
+        assert(metrics.toolbar.top >= metrics.heading.bottom - 1, `mobile provisioning toolbar overlaps the heading at ${width}x${height}`);
+      } else if (width <= 1100) {
         assert(metrics.display === 'flex', `provisioning intro did not collapse to a single column at ${width}x${height}`);
+        assert(metrics.contextOpen === true, `tablet provisioning context is not expanded at ${width}x${height}`);
+        assert(metrics.progress && metrics.progress.right <= metrics.intro.right + 1, `tablet provisioning progress exceeded the intro width at ${width}x${height}`);
         assert(metrics.toolbar.bottom - metrics.toolbar.top <= 240, `provisioning toolbar retained excessive flex height at ${width}x${height}`);
         assert(metrics.toolbar.top >= metrics.copy.bottom - 1, `provisioning toolbar overlaps intro copy at ${width}x${height}`);
-        assert(metrics.progress.top >= metrics.toolbar.bottom - 1, `provisioning progress overlaps toolbar at ${width}x${height}`);
       } else {
         assert(metrics.display === 'grid', `provisioning intro lost its desktop grid at ${width}x${height}`);
+        assert(metrics.contextOpen === true, `desktop provisioning context is not expanded at ${width}x${height}`);
+        assert(metrics.progress && metrics.progress.right <= metrics.copy.right + 1, `desktop provisioning progress escaped the intro copy column at ${width}x${height}`);
         assert(metrics.toolbar.left > metrics.copy.left && metrics.toolbar.top <= metrics.copy.top + 1, `desktop provisioning toolbar is not aligned beside intro copy at ${width}x${height}`);
       }
     }
@@ -285,6 +296,20 @@ async function main(): Promise<void> {
     for (const [width, height] of [[1440, 900], [1280, 800], [1024, 768], [768, 1024], [430, 932], [390, 844], [375, 812]] as const) {
       await assertProvisioningIntroLayout(width, height);
     }
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const introContext = page.locator('.platform-intro-context');
+    const introContextSummary = introContext.locator('summary');
+    const collapsedIntroHeight = await page.locator('.platform-shell-intro').evaluate((node) => node.getBoundingClientRect().height);
+    assert(await introContext.locator('.platform-intro-context-summary strong').textContent() === 'Step 3 of 3 · Company', 'mobile provisioning context summary does not identify the current step');
+    await introContextSummary.click();
+    await page.waitForTimeout(30);
+    assert(await introContext.evaluate((node) => node.open), 'mobile provisioning context did not open from its summary');
+    assert(await introContext.locator('.platform-shell-progress').isVisible(), 'expanded mobile provisioning context does not show progress');
+    const expandedIntroHeight = await page.locator('.platform-shell-intro').evaluate((node) => node.getBoundingClientRect().height);
+    assert(expandedIntroHeight > collapsedIntroHeight + 40, 'expanded mobile provisioning context did not reveal additional content');
+    await introContextSummary.click();
+    assert(await introContext.evaluate((node) => !node.open), 'mobile provisioning context did not close from its summary');
 
     assert(await page.locator('#provisionMasterAdminPasswordGenerate').count() === 1, 'first Company form is missing Master Admin secure password generation');
     assert(await page.locator('#provisionCompanyOwnerPasswordGenerate').count() === 1, 'Company form is missing Company Owner secure password generation');
