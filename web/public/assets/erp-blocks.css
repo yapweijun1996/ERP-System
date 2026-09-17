@@ -786,8 +786,10 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
 [data-canonical-master-control] .tablewrap{min-width:0;max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-inline:contain;}
 [data-canonical-master-control] .tablewrap>table.lines{min-width:640px;}
 [data-canonical-master-control]>.toolbar{min-width:0;}
-[data-canonical-master-control]>.toolbar>b,
-[data-canonical-master-control]>.toolbar>.mono{min-width:0;overflow-wrap:anywhere;}
+[data-canonical-master-control]>.toolbar .master-control-identity{display:flex;align-items:baseline;gap:10px;min-width:0;}
+[data-canonical-master-control]>.toolbar .master-control-identity>b,
+[data-canonical-master-control]>.toolbar .master-control-identity>.mono{min-width:0;overflow-wrap:anywhere;}
+[data-canonical-master-control]>.toolbar .master-control-actions{display:flex;align-items:center;gap:8px;min-width:0;}
 
 @media (max-width:980px){
   /* .app.nav-collapsed (specificity 0,2,0) would beat the plain .app rule below and
@@ -811,7 +813,11 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
     gap:8px;
   }
   [data-canonical-master-control]>.toolbar>.grow{display:none;}
-  [data-canonical-master-control]>.toolbar>.btn{
+  [data-canonical-master-control]>.toolbar .master-control-identity,
+  [data-canonical-master-control]>.toolbar .master-control-actions{
+    flex:1 1 100%;
+  }
+  [data-canonical-master-control]>.toolbar .master-control-actions .btn{
     flex:1 1 0;
     min-width:0;
     justify-content:center;
