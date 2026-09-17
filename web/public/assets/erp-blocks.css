@@ -815,7 +815,7 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
   [data-canonical-master-control]>.toolbar>.grow{display:none;}
   [data-canonical-master-control]>.toolbar .master-control-identity,
   [data-canonical-master-control]>.toolbar .master-control-actions{
-    flex:1 1 100%;
+    flex:0 0 100%;
   }
   [data-canonical-master-control]>.toolbar .master-control-actions .btn{
     flex:1 1 0;
