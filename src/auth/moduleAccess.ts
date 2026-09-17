@@ -6,6 +6,7 @@ import {
   type CommercialModuleKey,
   isCommercialModuleKey,
 } from './moduleCatalog';
+import { withTenantTransaction } from '../data/tenantTransaction';
 
 /**
  * Tenant-facing module projection after the EPIC-064 authority cutover.
@@ -37,42 +38,44 @@ export interface CompanyModuleState {
 export type MasterModuleState = CompanyModuleState;
 
 export async function listCompanyModules(
-  exec: DB,
+  db: DB,
   masterFn: string,
   companyFn: string,
 ): Promise<CompanyModuleState[]> {
-  const [entitlements, allocations] = await Promise.all([
-    exec.select({
-      moduleKey: masterModule.moduleKey,
-      enabled: masterModule.enabled,
-    }).from(masterModule).where(eq(masterModule.masterFn, masterFn)),
-    exec.select({
-      moduleKey: companyModule.moduleKey,
-      enabled: companyModule.enabled,
-      configured: companyModule.configured,
-    }).from(companyModule).where(and(
-      eq(companyModule.masterFn, masterFn),
-      eq(companyModule.companyFn, companyFn),
-    )),
-  ]);
-  const masterByKey = new Map(entitlements.map((row) => [row.moduleKey, row]));
-  const companyByKey = new Map(allocations.map((row) => [row.moduleKey, row]));
-  const effective = new Map<ModuleKey, boolean>(MODULE_KEYS.map((moduleKey) => [
-    moduleKey,
-    masterByKey.get(moduleKey)?.enabled === true
-      && companyByKey.get(moduleKey)?.enabled === true,
-  ]));
+  return withTenantTransaction(db, { masterFn, companyFn }, async (exec) => {
+    const [entitlements, allocations] = await Promise.all([
+      exec.select({
+        moduleKey: masterModule.moduleKey,
+        enabled: masterModule.enabled,
+      }).from(masterModule).where(eq(masterModule.masterFn, masterFn)),
+      exec.select({
+        moduleKey: companyModule.moduleKey,
+        enabled: companyModule.enabled,
+        configured: companyModule.configured,
+      }).from(companyModule).where(and(
+        eq(companyModule.masterFn, masterFn),
+        eq(companyModule.companyFn, companyFn),
+      )),
+    ]);
+    const masterByKey = new Map(entitlements.map((row) => [row.moduleKey, row]));
+    const companyByKey = new Map(allocations.map((row) => [row.moduleKey, row]));
+    const effective = new Map<ModuleKey, boolean>(MODULE_KEYS.map((moduleKey) => [
+      moduleKey,
+      masterByKey.get(moduleKey)?.enabled === true
+        && companyByKey.get(moduleKey)?.enabled === true,
+    ]));
 
-  return MODULE_KEYS.map((moduleKey) => ({
-    moduleKey,
-    enabled: effective.get(moduleKey) === true,
-    configured: effective.get(moduleKey) === true
-      && companyByKey.get(moduleKey)?.configured === true,
-    dependencies: MODULE_DEPENDENCIES[moduleKey],
-    blockers: MODULE_DEPENDENCIES[moduleKey].filter(
-      (dependency) => effective.get(dependency) !== true,
-    ),
-  }));
+    return MODULE_KEYS.map((moduleKey) => ({
+      moduleKey,
+      enabled: effective.get(moduleKey) === true,
+      configured: effective.get(moduleKey) === true
+        && companyByKey.get(moduleKey)?.configured === true,
+      dependencies: MODULE_DEPENDENCIES[moduleKey],
+      blockers: MODULE_DEPENDENCIES[moduleKey].filter(
+        (dependency) => effective.get(dependency) !== true,
+      ),
+    }));
+  });
 }
 
 export const listMasterModules = listCompanyModules;

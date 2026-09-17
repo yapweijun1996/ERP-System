@@ -1770,6 +1770,7 @@ function navigate(route, params){
   CURRENT_ROUTE_PARAMS=Object.assign({},params||{});
   window.__ERP_CURRENT_ROUTE__=route;
   window.ErpWebMcpConfirmation=null;
+  try{ history.replaceState({},'',`#${route}`); }catch{}
   if(!routeAllowed(route)){
     if(window.ErpWebMcp&&typeof window.ErpWebMcp.invalidate==='function'){
       window.ErpWebMcp.invalidate('navigation');
@@ -1793,7 +1794,6 @@ function navigate(route, params){
   root.innerHTML='';
   setActiveNav(route);
   closeAllPops();
-  try{ history.replaceState({},'',`#${route}`); }catch{}
   let output;
   try{
     output=SCREENS[route](root,params||{});
