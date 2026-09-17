@@ -176,26 +176,34 @@ html,body{
   .topbar #qcBtn:not([hidden]){margin-left:auto;}
   .topbar #qcBtn:not([hidden]) ~ #bellBtn{margin-left:0;}
   .topbar .search{
-    flex:0 0 44px;
-    width:44px;
+    flex:1 1 auto;
+    width:auto;
     min-width:44px;
+    max-width:none;
     height:44px;
-    padding:0;
-    gap:0;
-    border-radius:50%;
+    padding:0 12px;
+    gap:8px;
+    border-radius:999px;
     border:1px solid var(--hairline);
     background:var(--surface-2);
-    justify-content:center;
-    text-align:center;
+    justify-content:flex-start;
+    text-align:left;
   }
   .topbar .search svg{width:21px;height:21px;}
+  .topbar .search-label{
+    display:block;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .topbar .search .kbd{display:none;}
   .topbar .popwrap .avatar{
     flex:0 0 44px;
     width:44px;
     height:44px;
     max-width:none;
   }
-  .topbar .search-label,.topbar .search .kbd{display:none;}
 }
 
 @media (max-width:360px){
@@ -204,6 +212,16 @@ html,body{
      command palette and can yield its slot to the primary navigation. */
   .topbar #qcBtn{display:none;}
   .topbar{column-gap:4px;}
+  .topbar .search{
+    flex:0 0 44px;
+    width:44px;
+    padding:0;
+    gap:0;
+    border-radius:50%;
+    justify-content:center;
+    text-align:center;
+  }
+  .topbar .search-label{display:none;}
 }
 
 @media (max-width:520px){
