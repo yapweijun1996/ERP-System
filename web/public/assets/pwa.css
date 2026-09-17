@@ -167,8 +167,14 @@ html,body{
     display:flex;
     align-items:center;
     justify-content:center;
-    margin-left:auto;
+    margin-left:0;
   }
+  /* Keep the search trigger on the left and dock the action group to the
+     right edge. Quick Create can be present on other mobile surfaces, so it
+     owns the group spacer when visible; otherwise notifications own it. */
+  .topbar #bellBtn{margin-left:auto;}
+  .topbar #qcBtn:not([hidden]){margin-left:auto;}
+  .topbar #qcBtn:not([hidden]) ~ #bellBtn{margin-left:0;}
   .topbar .search{
     flex:0 0 44px;
     width:44px;
