@@ -778,6 +778,17 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
 .tabbar{display:none;}
 .mobtopbar{display:none;}
 
+/* The canonical Master Control tables keep their desktop column contract on
+   narrow screens, but the table itself owns the horizontal gesture. This
+   prevents row data from being clipped while keeping the document viewport
+   stable. */
+[data-canonical-master-control]{min-width:0;}
+[data-canonical-master-control] .tablewrap{min-width:0;max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-inline:contain;}
+[data-canonical-master-control] .tablewrap>table.lines{min-width:640px;}
+[data-canonical-master-control]>.toolbar{min-width:0;}
+[data-canonical-master-control]>.toolbar>b,
+[data-canonical-master-control]>.toolbar>.mono{min-width:0;overflow-wrap:anywhere;}
+
 @media (max-width:980px){
   /* .app.nav-collapsed (specificity 0,2,0) would beat the plain .app rule below and
      leave a phantom 68px sidebar column on phones — pin both to a single column. */
@@ -794,6 +805,17 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
   .headright .kfig{display:none;}
   .toolbar{padding:6px 16px 10px;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;}
   .toolbar::-webkit-scrollbar{display:none;}
+  [data-canonical-master-control]>.toolbar{
+    overflow:visible;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  [data-canonical-master-control]>.toolbar>.grow{display:none;}
+  [data-canonical-master-control]>.toolbar>.btn{
+    flex:1 1 0;
+    min-width:0;
+    justify-content:center;
+  }
   .filterchips{flex-wrap:nowrap;}
   .dash{padding:6px 16px 90px;}
   .dashgrid{grid-template-columns:1fr;}
