@@ -5,7 +5,7 @@
   let hadController = false;
   const activatedWorkers = new WeakSet();
   const UPDATE_CHECK_INTERVAL_MS = 60 * 1000;
-  const SERVICE_WORKER_VERSION = 'erp-system-pwa-v286';
+  const SERVICE_WORKER_VERSION = 'erp-system-pwa-v288';
   const LEGACY_SOURCE_FINGERPRINT_KEY = 'erp-system-source-fingerprint';
   const copy = (key, fallback) => typeof window.t === 'function' ? window.t(key) : fallback;
 

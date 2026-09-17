@@ -646,11 +646,18 @@
     return `<footer class="platform-shell-actionbar" id="platformProvisionActionbar" aria-label="${esc(pt('provision.actionBar','Provisioning action'))}"><div class="auth-error" id="${errorId}" role="alert" aria-live="assertive" tabindex="-1"></div>${cancel}<button class="btn primary" id="${actionId}" form="${formId}" type="submit">${esc(label)}</button></footer>`;
   }
   function switchMarkup(hasExistingCompany){
-    return `<div class="platform-workspace-controls platform-shell-toolbar">
-      <label class="fld"><span>${esc(pt('field.master','Master'))}</span><select id="platformMasterSelect">${options(state.tenants,state.masterFn,'masterFn','name')}</select></label>
-      <label class="fld"><span>${esc(pt('field.company','Company'))}</span><select id="platformCompanySelect">${options((currentMaster()||{}).companies||[],state.companyFn,'companyFn','name')}</select></label>
-      ${hasExistingCompany?`<button type="button" class="btn soft platform-create-company-trigger" id="platformOpenCompanyCreate" aria-expanded="${state.companyCreateOpen?'true':'false'}" aria-controls="platformCompanyCreatePanel">+ ${esc(pt('action.createCompany','Create Company'))}</button>`:''}
-    </div>`;
+    var master=currentMaster();
+    var company=currentCompany();
+    var masterName=master&&master.name||pt('field.master','Master');
+    var companyName=company&&company.name||'—';
+    return `<details class="platform-shell-toolbar-context" open>
+      <summary><span class="platform-toolbar-context-summary"><span class="platform-toolbar-context-label">${esc(pt('workspace.mobileContextControls','Workspace context'))}</span><strong>${esc(masterName)}</strong><span class="platform-toolbar-context-company">${esc(pt('field.company','Company'))}: ${esc(companyName)}</span></span><span class="platform-intro-context-chevron" aria-hidden="true">${ic('chevD')}</span></summary>
+      <div class="platform-shell-toolbar-context-body"><div class="platform-workspace-controls platform-shell-toolbar">
+        <label class="fld"><span>${esc(pt('field.master','Master'))}</span><select id="platformMasterSelect">${options(state.tenants,state.masterFn,'masterFn','name')}</select></label>
+        <label class="fld"><span>${esc(pt('field.company','Company'))}</span><select id="platformCompanySelect">${options((currentMaster()||{}).companies||[],state.companyFn,'companyFn','name')}</select></label>
+        ${hasExistingCompany?`<button type="button" class="btn soft platform-create-company-trigger" id="platformOpenCompanyCreate" aria-expanded="${state.companyCreateOpen?'true':'false'}" aria-controls="platformCompanyCreatePanel">+ ${esc(pt('action.createCompany','Create Company'))}</button>`:''}
+      </div></div>
+    </details>`;
   }
   function entitlementBadge(kind,label){ return `<span class="platform-status-badge ${esc(kind)}">${esc(label)}</span>`; }
   function dependencyMarkup(dependencies){
@@ -905,20 +912,28 @@
       wireWorkspace(view);
       var body=view.querySelector('.platform-shell-body');
       if(body) body.scrollTop=0;
+      if(state.pendingFocus==='company-create-opener'){
+        var toolbarContext=view.querySelector('.platform-shell-toolbar-context');
+        if(toolbarContext) toolbarContext.open=true;
+      }
       var focusTarget=state.pendingFocus==='company-create-heading'?view.querySelector('#platformCompanyCreateHeading'):state.pendingFocus==='company-create-opener'?view.querySelector('#platformOpenCompanyCreate'):state.pendingFocus==='company-created-status'?view.querySelector('#platformCompanyCreatedStatus'):view.querySelector('.platform-shell-intro h1');
       state.pendingFocus='';
       if(focusTarget&&typeof focusTarget.focus==='function') requestAnimationFrame(function(){ focusTarget.focus({preventScroll:true}); });
     }catch(error){ view.querySelector('.auth-copy').innerHTML=`<h1>${esc(pt('error.workspaceUnavailable','Platform workspace unavailable'))}</h1><p>${esc(error&&error.message||pt('error.entitlementLoadFailed','Unable to load platform entitlement data.'))}</p>`; }
   }
   function wirePlatformIntroContext(){
-    var context=document.querySelector('#authView .platform-intro-context');
-    if(!context) return;
+    var contexts=document.querySelectorAll('#authView .platform-intro-context, #authView .platform-shell-toolbar-context');
+    if(!contexts.length) return;
     var mobile=window.matchMedia('(max-width:600px)');
-    context.open=mobile.matches?false:true;
+    function syncContexts(isMobile){
+      document.querySelectorAll('#authView .platform-intro-context, #authView .platform-shell-toolbar-context').forEach(function(context){
+        context.open=!isMobile;
+      });
+    }
+    syncContexts(mobile.matches);
     if(!wirePlatformIntroContext.bound){
       var sync=function(event){
-        var current=document.querySelector('#authView .platform-intro-context');
-        if(current) current.open=event.matches?false:true;
+        syncContexts(event.matches);
       };
       if(typeof mobile.addEventListener==='function') mobile.addEventListener('change',sync);
       else if(typeof mobile.addListener==='function') mobile.addListener(sync);
