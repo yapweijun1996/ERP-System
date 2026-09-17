@@ -1490,6 +1490,7 @@ window.__ERP_I18N_EN__=Object.freeze({
   "staff.passwordHint": "A secure password is generated automatically. After creation, authorized HR or Superadmin can copy it and an employee email template.",
   "staff.companyRoles": "Company roles",
   "staff.roleHint": "Roles apply only to {company}. Multiple roles combine their allowed actions and widest data scope.",
+  "staff.baseRoleHint": "Employee base access is assigned automatically. Add another role only when this person needs extra permissions.",
   "staff.customRole": "Custom company role",
   "staff.noRoles": "No assignable company roles are available.",
   "staff.stepCount": "Step {step} of 3",

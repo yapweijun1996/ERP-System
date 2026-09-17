@@ -1515,6 +1515,7 @@
   "staff.passwordHint": "Kata laluan selamat dijana secara automatik. HR atau Superadmin yang dibenarkan boleh menyalinnya dan templat e-mel pekerja.",
   "staff.companyRoles": "Peranan syarikat",
   "staff.roleHint": "Peranan hanya terpakai kepada {company}. Pelbagai peranan menggabungkan tindakan dibenarkan dan skop data terluas.",
+  "staff.baseRoleHint": "Akses asas Employee diberikan secara automatik. Tambah peranan lain hanya jika orang ini memerlukan kebenaran tambahan.",
   "staff.customRole": "Peranan syarikat tersuai",
   "staff.noRoles": "Tiada peranan syarikat yang boleh diberikan.",
   "staff.stepCount": "Langkah {step} daripada 3",

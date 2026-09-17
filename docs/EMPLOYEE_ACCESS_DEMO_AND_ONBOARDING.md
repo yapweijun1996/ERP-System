@@ -52,11 +52,12 @@ state; new companies start with only the setup-safe Admin module enabled.
 ## 2. Staff onboarding and account lifecycle
 
 The Add Staff wizard captures employee details, manager, login identity,
-active company, one or more roles and leave opening. HR may save a non-secret
+active company, optional additional roles and leave opening. HR may save a non-secret
 `staff_onboarding_draft`. Creation automatically generates a cryptographically secure
 password; no manual password input is required.
 Creation is one transaction that creates or links the organization identity,
-creates the company membership and role grants, links the employee, initializes
+creates the company membership and the managed Employee base role plus any selected
+additional role grants, links the employee, initializes
 leave balance and appends audit evidence. Any failure rolls back every write.
 
 Usernames are unique inside the organization. If the username already exists, the

@@ -883,8 +883,11 @@ is never stored in drafts, ordinary responses, audit or browser persistent state
 Templates include the organization login code from the scoped Master. No email is
 sent automatically; the operator reviews, copies and delivers it manually.
 The canonical Employee role has nine grants, including the own-receipt mutations
-established by migration 0097. Provisioning also accepts the exact legacy six-grant
-role without rewriting it; any extra grant or broader resource scope is rejected.
+established by migration 0097. Provisioning creates and binds that managed base role
+automatically, so Staff onboarding may use no additional role; optional company roles
+are only for extra business permissions. Provisioning also accepts the exact legacy
+six-grant role without rewriting it; any extra grant or broader resource scope is
+rejected.
 
 employeeAccount.ts creates and resets immediately usable accounts. Reset still
 revokes old sessions. Generated-password handoff uses an expiring encrypted

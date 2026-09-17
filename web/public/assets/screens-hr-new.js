@@ -46,8 +46,8 @@ SCREENS['new-employee'] = async function(root){
           <p class="hint">${esc(t('staff.passwordHint'))}</p>
         </div></div>
         <div class="panel" ${step===3?'':'hidden'}><div class="panel-h">${ic('shield')}<h3>${esc(t('staff.companyRoles'))}</h3></div><div class="panel-body">
-          <div class="callout info">${t('staff.roleHint',{company:DB.company.name})}</div>
-          <div class="check-grid">${roles.length?roles.map(role=>`<label class="check-row"><input type="checkbox" name="neRole" value="${role.roleId}"><span><b>${esc(roleDisplayName(role))}</b><small>${esc(roleDisplayKey(role))}</small></span></label>`).join(''):`<div class="empty-state">${esc(t('staff.noRoles'))}</div>`}</div>
+          <div class="callout info">${esc(t('staff.roleHint',{company:DB.company.name}))}<br>${esc(t('staff.baseRoleHint'))}</div>
+          <div class="check-grid">${roles.length?roles.map(role=>`<label class="check-row"><input type="checkbox" name="neRole" value="${role.roleId}"><span><b>${esc(roleDisplayName(role))}</b><small>${esc(roleDisplayKey(role))}</small></span></label>`).join(''):`<div class="empty-state">${esc(t('staff.baseRoleHint'))}</div>`}</div>
           <div class="fldrow c2" style="margin-top:12px"><div class="fld"><span>${esc(s('fieldAnnualDays'))}</span><input type="number" id="neLeave" min="0" max="40" value="14"></div></div>
         </div></div>
       </div></div></div></div>
@@ -127,12 +127,6 @@ SCREENS['new-employee'] = async function(root){
   }
   async function activate(){
     draft.roles=[]; capture();
-    if(!draft.roles.length){
-      const banner=root.querySelector('[data-staff-onboarding-error]');
-      if(banner){ banner.hidden=false; banner.querySelector('span').textContent=t('staff.validationRole'); }
-      root.querySelector('input[name="neRole"]')?.focus();
-      return;
-    }
     const button=$('#neNext'); button.disabled=true;
     try{
       const created=await window.ErpSystemData.createStaffAccount({

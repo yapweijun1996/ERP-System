@@ -95,6 +95,21 @@ describe('atomic staff onboarding', () => {
     ))).toHaveLength(1);
   });
 
+  it('allows activation with only the managed Employee base role', async () => {
+    const { db, session } = await fixture();
+    const draft = await createStaffOnboardingDraft(db, session, {
+      employee: { ...employeeInput, employeeNo: 'EMP-BASE-ONLY', fullName: 'Base Role Staff' },
+      username: 'base.role.staff', email: 'base.role.staff@example.test', roleIds: [],
+    }, 'base-only-draft');
+    const activated = await activateStaffOnboarding(
+      db, session, draft.id, draft.version, generateEmployeeCredential(Buffer.alloc(32, 7)), 'base-only-activate',
+    );
+    const [employeeRole] = await db.select({ id: role.roleId }).from(role).where(and(
+      eq(role.masterFn, 'M1'), eq(role.companyFn, 'C-SG'), eq(role.name, 'Employee'),
+    ));
+    expect(activated.roleIds).toEqual([employeeRole.id]);
+  });
+
   it('links an existing organization identity across companies without resetting its password', async () => {
     const { db, session, roleId } = await fixture('C-MY');
     const [identity] = await db.select().from(appUser).where(eq(appUser.username, 'viewer'));

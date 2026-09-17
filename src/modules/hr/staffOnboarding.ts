@@ -54,8 +54,8 @@ function normalizeDraft(input: StaffOnboardingDraftInput) {
   const errors: Record<string, string> = {};
   if (!isValidUsername(username)) errors.username = 'Use a valid organization username.';
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Enter a valid work email.';
-  if (!roleIds.length || roleIds.some((id) => !Number.isSafeInteger(id) || id <= 0)) {
-    errors.roleIds = 'Select at least one valid company role.';
+  if (roleIds.some((id) => !Number.isSafeInteger(id) || id <= 0)) {
+    errors.roleIds = 'Select valid company roles.';
   }
   if (!input.employee || typeof input.employee !== 'object') errors.employee = 'Employee details are required.';
   if (Object.keys(errors).length) {
@@ -65,6 +65,7 @@ function normalizeDraft(input: StaffOnboardingDraftInput) {
 }
 
 async function assertCompanyRoles(exec: DB, session: SessionData, roleIds: number[]) {
+  if (!roleIds.length) return;
   const rows = await exec.select({ id: role.roleId }).from(role).where(and(
     eq(role.masterFn, session.masterFn),
     eq(role.companyFn, session.activeCompanyFn),

@@ -1515,6 +1515,7 @@
   "staff.passwordHint": "Mật khẩu an toàn được tạo tự động. HR hoặc Superadmin có quyền có thể sao chép mật khẩu và mẫu email nhân viên.",
   "staff.companyRoles": "Vai trò công ty",
   "staff.roleHint": "Vai trò chỉ áp dụng cho {company}. Nhiều vai trò hợp nhất thao tác được phép và dùng phạm vi dữ liệu rộng nhất.",
+  "staff.baseRoleHint": "Quyền cơ bản Employee được cấp tự động. Chỉ thêm vai trò khác khi người này cần quyền bổ sung.",
   "staff.customRole": "Vai trò công ty tùy chỉnh",
   "staff.noRoles": "Không có vai trò công ty để gán.",
   "staff.stepCount": "Bước {step} trên 3",

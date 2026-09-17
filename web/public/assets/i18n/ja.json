@@ -1515,6 +1515,7 @@
   "staff.passwordHint": "安全なパスワードが自動生成されます。権限のある HR または Superadmin はパスワードと従業員向けメールをコピーできます。",
   "staff.companyRoles": "会社ロール",
   "staff.roleHint": "ロールは {company} にのみ適用されます。複数ロールは許可操作を統合し、最も広いデータ範囲を採用します。",
+  "staff.baseRoleHint": "Employee 基本アクセスは自動的に付与されます。追加権限が必要な場合のみ、別のロールを追加してください。",
   "staff.customRole": "会社カスタムロール",
   "staff.noRoles": "割り当て可能な会社ロールがありません。",
   "staff.stepCount": "3ステップ中 {step}",
