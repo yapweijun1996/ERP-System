@@ -11,6 +11,7 @@ import {
   bumpAuthorizationVersionWithin,
   bumpMasterAuthorizationVersionsWithin,
 } from './authorizationVersion';
+import { setTenantContext } from '../data/tenantTransaction';
 import {
   PLATFORM_PERMISSIONS,
   PlatformAccessError,
@@ -116,7 +117,7 @@ export async function listMasterEntitlements(db: DB, session: PlatformSessionDat
   });
 }
 
-export async function listCompanyAllocations(
+async function listCompanyAllocationsWithin(
   db: DB, session: PlatformSessionData, masterFn: string, companyFn: string,
 ) {
   requirePlatformPermission(session, PLATFORM_PERMISSIONS.modulesRead);
@@ -137,6 +138,19 @@ export async function listCompanyAllocations(
       effectiveEnabled: entitlement.masterEnabled && companyAllocated,
       version: allocation?.version ?? 0,
     } satisfies PlatformModuleState;
+  });
+}
+
+export async function listCompanyAllocations(
+  db: DB, session: PlatformSessionData, masterFn: string, companyFn: string,
+) {
+  return db.transaction(async (transaction) => {
+    const exec = transaction as unknown as DB;
+    // The allocation table is tenant-scoped under PostgreSQL FORCE RLS. Reads
+    // from the independent Platform realm still need the selected target
+    // scope, but must not rely on a tenant login session.
+    await setTenantContext(exec, { masterFn, companyFn });
+    return listCompanyAllocationsWithin(exec, session, masterFn, companyFn);
   });
 }
 
@@ -206,6 +220,10 @@ export async function setCompanyAllocation(
   return db.transaction(async (transaction) => {
     const exec = transaction as unknown as DB;
     await requireCompany(exec, input.masterFn, input.companyFn);
+    // Company allocations are tenant-scoped and protected by PostgreSQL FORCE
+    // RLS. Platform authorization is independent from tenant identity, so
+    // establish the target scope explicitly before the first write.
+    await setTenantContext(exec, { masterFn: input.masterFn, companyFn: input.companyFn });
     const [current] = await exec.select().from(companyModule).where(and(
       eq(companyModule.masterFn, input.masterFn), eq(companyModule.companyFn, input.companyFn),
       eq(companyModule.moduleKey, definition.key),
@@ -246,7 +264,7 @@ export async function setCompanyAllocation(
       platformPrincipalId: session.principalId, requestId, entity: 'company_module', entityId: definition.key,
       action: 'platform_set_allocation', before: current ? { allocated: current.enabled, version: current.version } : null,
       after: { moduleKey: definition.key, allocated: Boolean(input.allocated), version: nextVersion } });
-    return (await listCompanyAllocations(exec, session, input.masterFn, input.companyFn))
+    return (await listCompanyAllocationsWithin(exec, session, input.masterFn, input.companyFn))
       .find((item) => item.moduleKey === definition.key)!;
   });
 }
