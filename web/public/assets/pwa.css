@@ -119,9 +119,6 @@ html,body{
   [data-list-filters] .chip{padding:10px 12px;}
   .rowact{opacity:1;}
   .rowact .transaction-row-menu{width:44px;height:44px;min-width:44px;min-height:44px;border-radius:10px;}
-  .modal{width:min(540px,calc(100vw - 16px));max-height:calc(100dvh - 16px);}
-  .modal-foot{flex-wrap:wrap;}
-  .modal-foot .btn{min-width:110px;justify-content:center;}
   .tabbar{
     min-height:calc(var(--mobile-tabbar-base) + var(--safe-bottom));
     padding:6px max(8px,var(--safe-right)) var(--safe-bottom) max(8px,var(--safe-left));

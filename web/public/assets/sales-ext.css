@@ -334,19 +334,10 @@
 
 /* ---- new enquiry: mobile-first sheet matching the sales capture flow ---- */
 .modal.sales-enquiry-modal{
-  display:flex;
-  flex-direction:column;
-  width:min(560px,calc(100vw - 24px));
-  max-width:calc(100vw - 24px);
-  max-height:min(860px,calc(100vh - 24px));
-  max-height:min(860px,calc(100dvh - 24px - var(--safe-top) - var(--safe-bottom)));
   padding:0;
-  overflow:hidden;
   border-radius:22px;
   background:var(--surface);
 }
-.modal.sales-enquiry-modal:not(.show){transform:translate(-50%,-47%) scale(.975);}
-.modal.sales-enquiry-modal.show{transform:translate(-50%,-50%) scale(1);}
 .sales-enquiry-modal-head{
   display:flex;
   align-items:flex-start;
@@ -526,24 +517,16 @@
 
 @media(max-width:560px){
   .modal.sales-enquiry-modal{
-    top:auto;
-    bottom:calc(8px + var(--safe-bottom));
-    width:calc(100vw - 24px);
-    max-width:calc(100vw - 24px);
-    max-height:calc(100vh - 8px - var(--safe-top) - var(--safe-bottom));
-    max-height:calc(100dvh - 8px - var(--safe-top) - var(--safe-bottom));
-    border-radius:20px;
+    border-radius:0;
   }
-  .modal.sales-enquiry-modal:not(.show){transform:translate(-50%,12px) scale(.98);}
-  .modal.sales-enquiry-modal.show{transform:translate(-50%,0) scale(1);}
   .sales-enquiry-modal-head{padding:calc(14px + var(--safe-top)) 16px 12px;}
   .sales-enquiry-modal-scroll{padding:0 12px 12px;}
   .sales-enquiry-card{gap:17px;padding:17px 12px 18px;border-radius:15px;}
   .sales-enquiry-modal-foot{padding:12px 12px calc(12px + var(--safe-bottom));}
-  .sales-enquiry-modal-foot{display:grid;grid-template-columns:minmax(96px,.7fr) minmax(0,1fr);}
-  .sales-enquiry-create{grid-column:1/-1;grid-row:1;}
-  .sales-enquiry-cancel{grid-column:1;grid-row:2;min-width:0;}
-  .sales-enquiry-save{grid-column:2;grid-row:2;}
+  .sales-enquiry-modal-foot{display:flex;flex-direction:column;align-items:stretch;gap:8px;}
+  .sales-enquiry-modal-foot .btn{width:100%;min-width:0;}
+  .sales-enquiry-create{order:-1;}
+  .sales-enquiry-cancel,.sales-enquiry-save{min-width:0;}
   .sales-enquiry-control,.sales-enquiry-amount-control{min-height:53px;}
   .sales-enquiry-customer-combo .combo-in{height:53px;font-size:16px;}
   .sales-enquiry-control input,.sales-enquiry-control select,.sales-enquiry-amount-control input{height:51px;font-size:16px;}

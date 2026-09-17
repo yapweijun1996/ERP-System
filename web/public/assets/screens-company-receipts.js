@@ -560,13 +560,12 @@
       if(!assistantSession.opened){
         assistantSession.opened=true;assistantSession.scopeKey=assistantScopeKey();assistantSession.draft='';assistantSession.search=filters.search||'';assistantSession.dateFrom=filters.dateFrom||'';assistantSession.dateTo=filters.dateTo||'';assistantSession.state='draft';assistantSession.result=null;assistantSession.error=null;
       }
-      appModal({icon:'comment',title:a.title,width:'min(980px, calc(100vw - 24px))',body:assistantBody(a),actions:assistantActions(a),onClose:()=>{
+      appModal({icon:'comment',title:a.title,width:'min(980px, calc(100vw - 24px))',maxWidth:'calc(100vw - 24px)',height:'min(820px,calc(100dvh - 24px))',maxHeight:'calc(100dvh - 24px)',className:'receipt-assistant-modal',body:assistantBody(a),actions:assistantActions(a),onClose:()=>{
         clearAssistantEvidence();
         if(assistantSession.pdfUrl){URL.revokeObjectURL(assistantSession.pdfUrl);assistantSession.pdfUrl=null;}
         if(assistantSession.state==='running'&&assistantSession.busy&&!assistantSession.executionStarted){assistantSession.state='cancelled';assistantSession.error={code:'assistant_cancelled',message:assistantCopy().cancellationNotice};assistantSession.busy=false;assistantSession.controller?.abort();assistantSession.controller=null;}
       }});
       const modal=$('#modalEl');
-      modal?.classList.add('receipt-assistant-modal');
       modal?.setAttribute('data-receipt-assistant-modal','true');
       bindAssistantModal();
     }

@@ -453,14 +453,14 @@
       <option value="email">${esc(s('email'))}</option><option value="phone">${esc(s('phone'))}</option>
       <option value="web">${esc(s('web'))}</option>`;
     openModal(`
-      <div class="sales-enquiry-modal-head">
+      <div class="modal-head sales-enquiry-modal-head">
         <button type="button" class="sales-enquiry-close" data-enquiry-close aria-label="${esc(s('cancel'))}">${ic('x')}</button>
         <div class="sales-enquiry-titleblock">
-          <h2>${esc(s('newEnquiry'))}</h2>
+          <h2 id="sales-enquiry-modal-title">${esc(s('newEnquiry'))}</h2>
           <div class="sales-enquiry-docmeta"><span>${ic('file')}${esc(s('enquiryNo'))}</span><b aria-hidden="true">·</b><span>${esc(s('assignedOnCreate'))}</span></div>
         </div>
       </div>
-      <div class="sales-enquiry-modal-scroll">
+      <div class="modal-body sales-enquiry-modal-scroll">
         <div class="sales-enquiry-card">
           <section class="sales-enquiry-section">
             <div class="sales-enquiry-label-row">
@@ -513,14 +513,13 @@
           </section>
         </div>
       </div>
-      <div class="sales-enquiry-modal-foot">
+      <div class="modal-foot sales-enquiry-modal-foot">
         <button type="button" class="btn soft sales-enquiry-cancel" data-enquiry-cancel>${esc(s('cancel'))}</button>
         <button type="button" class="btn soft sales-enquiry-save" data-enquiry-save>${esc(s('saveEnquiry'))}</button>
         <button type="button" class="btn primary sales-enquiry-create" data-enquiry-save-open>${ic('plus')}<span>${esc(s('saveOpenDetails'))}</span></button>
       </div>
-    `);
+    `,{className:'sales-enquiry-modal',ariaLabel:s('newEnquiry'),labelledBy:'sales-enquiry-modal-title',width:560,maxWidth:'calc(100vw - 24px)',maxHeight:'min(860px, calc(100dvh - 24px))',mobileMode:'fullscreen'});
     const modal=document.querySelector('#modalEl');
-    modal?.classList.add('sales-enquiry-modal');
     const query=selector=>modal?.querySelector(selector);
     const customerPicker=query('[data-enquiry-customer-picker]');
     let customer=null;

@@ -2642,9 +2642,17 @@ function openShortcuts(){
     <div class="kshead">${esc(g.head)}${g.sub?`<span>${esc(g.sub)}</span>`:''}</div>
     ${g.rows.map(r=>`<div class="ksrow"><span class="kslabel">${esc(r.label)}</span><span class="kskeys">${r.keys.map(k=>`<kbd class="kbd">${esc(k)}</kbd>`).join('')}</span></div>`).join('')}
   </section>`).join('');
-  openModal(`<div class="modal-head">${ic('keyboard')}<h3>Keyboard shortcuts</h3><button class="iconbtn x" onclick="closeModal()">${ic('x')}</button></div>
+  openModal(`<div class="modal-head">${ic('keyboard')}<h3 id="keyboard-shortcuts-modal-title">Keyboard shortcuts</h3><button class="iconbtn x" onclick="closeModal()" aria-label="Close">${ic('x')}</button></div>
     <div class="modal-body kssheet">${groups}</div>
-    <div class="ksfoot">Tip · press <kbd class="kbd">?</kbd> anywhere to reopen this</div>`);
+    <div class="modal-foot ksfoot">Tip · press <kbd class="kbd">?</kbd> anywhere to reopen this</div>`,{
+      className:'keyboard-shortcuts-modal',
+      ariaLabel:'Keyboard shortcuts',
+      labelledBy:'keyboard-shortcuts-modal-title',
+      width:680,
+      maxWidth:'94vw',
+      maxHeight:'78dvh',
+      mobileMode:'fullscreen',
+    });
 }
 let gArmed=0;
 function inField(e){ const el=e.target; return !!(el&&(el.isContentEditable||(el.matches&&el.matches('input,textarea,select')))); }

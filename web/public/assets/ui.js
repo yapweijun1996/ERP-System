@@ -194,6 +194,7 @@ function initTooltip(){
 /* ---- modal ---- */
 let modalCloseHandler=null;
 let modalReturnFocus=null;
+let modalHeadingSequence=0;
 const modalFocusableSelector='button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href],[contenteditable="true"],[tabindex]:not([tabindex="-1"])';
 function modalFocusableElements(modal){
   return [...modal.querySelectorAll(modalFocusableSelector)].filter(element=>!element.hidden&&element.getClientRects().length);
@@ -207,7 +208,11 @@ function focusModalControl(modal){
     try{target.focus({preventScroll:true});}catch{target.focus();}
   }
 }
-function openModal(html,{onClose=null}={}){
+function modalSizeValue(value){
+  if(value==null||value==='') return null;
+  return typeof value==='number'?`${value}px`:String(value);
+}
+function openModal(html,{onClose=null,className='',ariaLabel='Dialog',labelledBy='',width,maxWidth,height,maxHeight,mobileMode='fullscreen'}={}){
   // A new modal replaces the current one synchronously. closeModal() deliberately
   // keeps its node for the exit animation, which would otherwise leave duplicate
   // modalEl/modalScrim ids and let immediate follow-up actions bind to the old DOM.
@@ -220,7 +225,20 @@ function openModal(html,{onClose=null}={}){
   modalCloseHandler=typeof onClose==='function'?onClose:null;
   const scrim=document.createElement('div'); scrim.className='scrim show'; scrim.id='modalScrim';
   scrim.style.zIndex=110;
-  const m=document.createElement('div'); m.className='modal'; m.id='modalEl'; m.setAttribute('role','dialog'); m.setAttribute('aria-modal','true'); m.tabIndex=-1; m.innerHTML=html;
+  const classes=['modal',...String(className||'').split(/\s+/).filter(Boolean)];
+  const m=document.createElement('div'); m.className=classes.join(' '); m.id='modalEl'; m.setAttribute('role','dialog'); m.setAttribute('aria-modal','true');
+  m.setAttribute('aria-label',ariaLabel||'Dialog');
+  if(labelledBy) m.setAttribute('aria-labelledby',labelledBy);
+  m.dataset.mobileMode=mobileMode==='inset'?'inset':'fullscreen';
+  const styleValues={
+    '--modal-width':modalSizeValue(width),
+    '--modal-max-width':modalSizeValue(maxWidth),
+    '--modal-height':modalSizeValue(height),
+    '--modal-max-height':modalSizeValue(maxHeight),
+  };
+  Object.entries(styleValues).forEach(([property,value])=>{if(value)m.style.setProperty(property,value);});
+  m.tabIndex=-1; m.innerHTML=html;
+  document.body.classList.add('modal-open');
   document.body.appendChild(scrim); document.body.appendChild(m);
   requestAnimationFrame(()=>{m.classList.add('show');focusModalControl(m);});
   m.addEventListener('keydown',event=>{
@@ -239,6 +257,7 @@ function closeModal(){
   modalCloseHandler=null;
   modalReturnFocus=null;
   if(m){m.classList.remove('show');setTimeout(()=>m.remove(),200);} if(s)s.remove();
+  document.body.classList.remove('modal-open');
   if(typeof onClose==='function') onClose();
   if(restore&&restore.isConnected){
     requestAnimationFrame(()=>{
@@ -252,18 +271,14 @@ function closeModal(){
 /* ---- standard modal builder (SINGLE SOURCE OF TRUTH for modal chrome) ----
    appModal({icon,title,body,actions,width}) renders the head/body/foot shell.
    confirmModal(...) is the standard confirm dialog built on top of it. */
-function appModal({icon, title, body='', actions='', width, onClose}={}){
+function appModal({icon, title, body='', actions='', width, maxWidth, height, maxHeight, className='', mobileMode='fullscreen', onClose}={}){
   const closeLabel=typeof t==='function'?t('common.close'):'Close';
-  openModal(`<div class="modal-head">${icon?ic(icon):''}<h3>${esc(title)}</h3><button class="iconbtn x" onclick="closeModal()" aria-label="${esc(closeLabel)}">${ic('x')}</button></div>
+  const titleId=`modal-title-${++modalHeadingSequence}`;
+  openModal(`<div class="modal-head">${icon?ic(icon):''}<h3 id="${titleId}">${esc(title)}</h3><button class="iconbtn x" onclick="closeModal()" aria-label="${esc(closeLabel)}">${ic('x')}</button></div>
     <div class="modal-body">${body}</div>
-    ${actions?`<div class="modal-foot">${actions}</div>`:''}`,{onClose});
-  if(width){
-    const m=$('#modalEl');
-    if(m){
-      m.style.width=typeof width==='number'?`min(${width}px, calc(100vw - 24px))`:width;
-      m.style.maxWidth='calc(100vw - 24px)';
-    }
-  }
+    <div class="modal-foot">${actions}</div>`,{
+      onClose,className,ariaLabel:closeLabel,labelledBy:titleId,width,maxWidth,height,maxHeight,mobileMode,
+    });
 }
 /* confirm dialog — pass a GLOBAL fn name string for onConfirm so the inline handler can reach it */
 function confirmModal({icon='warn', title, message, confirmLabel='Confirm', cancelLabel='Cancel', danger=false, onConfirm}){

@@ -47,6 +47,7 @@ html,body{height:100%;margin:0;}
 body{font-family:var(--sans);background:var(--bg);color:var(--fg);
   -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
   font-size:calc(14px * var(--fs,1));line-height:1.45;overflow:hidden;}
+body.modal-open{overscroll-behavior:none;}
 .tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum";}
 .mono{font-family:var(--mono);}
 button{font:inherit;color:inherit;cursor:pointer;border:none;background:none;}
@@ -678,14 +679,46 @@ body.palette-open{overflow:hidden;overscroll-behavior:none;}
 .palette-foot{display:flex;gap:14px;padding:8px 16px;border-top:1px solid var(--hairline);color:var(--muted);font-size:calc(11.5px * var(--fs,1));}
 .palette-foot span{display:flex;align-items:center;gap:5px;}
 
-/* ===== modal ===== */
-.modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-46%) scale(.97);z-index:120;width:min(540px,94vw);max-height:88vh;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-l);box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:opacity .2s var(--ease),transform .2s var(--ease);}
+/* ===== modal =====
+   Shared modal SSOT: the shell owns the viewport and only the body scrolls.
+   Header/footer remain visible through grid rows instead of competing sticky
+   elements inside a scrolling parent. */
+.modal{
+  --modal-width:540px;
+  --modal-max-width:94vw;
+  --modal-height:auto;
+  --modal-max-height:88dvh;
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-46%) scale(.97);z-index:120;
+  display:grid;grid-template-rows:auto minmax(0,1fr) auto;
+  width:min(var(--modal-width),var(--modal-max-width));height:var(--modal-height);max-height:var(--modal-max-height);
+  overflow:hidden;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-l);
+  box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;
+  transition:opacity .2s var(--ease),transform .2s var(--ease);
+}
 .modal.show{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1);}
-.modal-head{display:flex;align-items:center;gap:10px;padding:18px 20px 12px;}
-.modal-head h3{margin:0;font-size:calc(17px * var(--fs,1));font-weight:600;}
-.modal-head .x{margin-left:auto;}
-.modal-body{padding:4px 20px 16px;}
-.modal-foot{display:flex;gap:9px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--hairline);position:sticky;bottom:0;background:var(--surface);}
+.modal-head{display:flex;align-items:center;gap:10px;min-width:0;padding:18px 20px 12px;border-bottom:1px solid var(--hairline);background:var(--surface);z-index:1;}
+.modal-head h3{min-width:0;margin:0;font-size:calc(17px * var(--fs,1));font-weight:600;overflow-wrap:anywhere;}
+.modal-head .x{margin-left:auto;flex:none;}
+.modal-body{min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:16px 20px 20px;background:var(--surface);}
+.modal-foot{display:flex;align-items:center;gap:9px;justify-content:flex-end;min-width:0;padding:14px 20px calc(14px + var(--safe-bottom));border-top:1px solid var(--hairline);background:var(--surface);z-index:1;}
+.modal-foot:empty{display:none;}
+
+@media (max-width:760px){
+  .modal[data-mobile-mode="fullscreen"]{
+    top:0;left:0;width:100vw;max-width:none;height:100dvh;max-height:100dvh;
+    border:0;border-radius:0;transform:translateY(0) scale(1);
+  }
+  .modal[data-mobile-mode="fullscreen"].show{transform:translateY(0) scale(1);}
+  .modal[data-mobile-mode="fullscreen"] .modal-head{padding:calc(14px + var(--safe-top)) 16px 12px;}
+  .modal[data-mobile-mode="fullscreen"] .modal-body{padding:16px 16px calc(20px + var(--safe-bottom));}
+  .modal[data-mobile-mode="fullscreen"] .modal-foot{flex-direction:column;align-items:stretch;gap:8px;padding:10px 16px calc(10px + var(--safe-bottom));}
+  .modal[data-mobile-mode="fullscreen"] .modal-foot .btn{width:100%;min-width:0;min-height:44px;justify-content:center;}
+  .modal[data-mobile-mode="inset"]{max-height:calc(100dvh - 16px);}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .modal{transition:none;}
+}
 
 /* A persistent, high-contrast boundary for audited Superadmin employee
  * workspace sessions. It remains available even when the employee's module

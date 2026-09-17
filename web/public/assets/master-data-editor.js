@@ -80,6 +80,9 @@
       (options.note?'<div class="callout info master-data-editor-note">'+(typeof ic==='function'?ic('info'):'')+'<span>'+esc(options.note)+'</span></div>':'')+
       '<div class="auth-error master-data-editor-error" data-master-editor-root-error role="alert" hidden></div>'+
       '</div>';
+    var modalClass=modalClassNames.join(' ').split(/\s+/).filter(function(className){
+      return /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(className);
+    }).join(' ');
     var actionAttrs='data-master-editor-save="1"';
     if(options.saveTestId) actionAttrs+=' data-testid="'+esc(options.saveTestId)+'"';
     if(typeof appModal!=='function') throw new Error('MasterDataEditor requires appModal.');
@@ -90,14 +93,12 @@
       actions:(typeof btn==='function'?btn(cancelLabel,{cls:'soft',attrs:'data-master-editor-cancel="1"'}):'<button type="button" data-master-editor-cancel="1">'+esc(cancelLabel)+'</button>')+
         (typeof btn==='function'?btn(saveLabel,{icon:'check',cls:'primary',attrs:actionAttrs}):'<button type="button" data-master-editor-save="1">'+esc(saveLabel)+'</button>'),
       width:options.width||720,
+      height:'min(80dvh,760px)',
+      maxHeight:'calc(100dvh - 16px)',
+      className:modalClass,
     });
     var modal=document.querySelector('#modalEl');
     if(!modal) return null;
-    if(modalClassNames.length){
-      modalClassNames.join(' ').split(/\s+/).filter(function(className){
-        return /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(className);
-      }).forEach(function(className){modal.classList.add(className);});
-    }
     var saveButton=modal.querySelector('[data-master-editor-save]');
     var cancelButton=modal.querySelector('[data-master-editor-cancel]');
     var rootError=modal.querySelector('[data-master-editor-root-error]');

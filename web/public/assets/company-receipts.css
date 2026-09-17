@@ -19,16 +19,10 @@
    its body scrolls so the title, status and recovery actions remain reachable. */
 :where([hidden]){display:none!important;}
 .modal.receipt-assistant-modal{
-  display:grid;grid-template-rows:auto minmax(0,1fr) auto;
-  height:min(820px,calc(100dvh - 24px));max-height:calc(100dvh - 24px);
-  overflow:hidden;
 }
 .modal.receipt-assistant-modal .modal-head{min-width:0;}
 .modal.receipt-assistant-modal .modal-head h3{min-width:0;overflow-wrap:anywhere;}
-.modal.receipt-assistant-modal .modal-body{
-  min-height:0;overflow:auto;overscroll-behavior:contain;
-  -webkit-overflow-scrolling:touch;padding:4px 20px 20px;
-}
+.modal.receipt-assistant-modal .modal-body{padding:4px 20px 20px;}
 .modal.receipt-assistant-modal .modal-foot{
   position:static;flex-wrap:wrap;align-items:center;
   padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));
@@ -96,11 +90,11 @@
   .company-receipt-filters>input[type="search"],.company-receipt-filters>select{grid-column:1/-1;min-width:0;width:100%}
   .company-receipt-filters>.btn{width:100%;justify-content:center;}
   .company-receipt-filters>.btn:last-child:nth-child(odd){grid-column:1/-1;}
-  .modal.receipt-assistant-modal{width:calc(100vw - 16px);height:calc(100dvh - 16px);max-height:calc(100dvh - 16px);}
+  .modal.receipt-assistant-modal{width:100vw;height:100dvh;max-height:100dvh;border-radius:0;}
   .modal.receipt-assistant-modal .modal-head{padding:14px 16px 10px;}
   .modal.receipt-assistant-modal .modal-head .x{width:44px;height:44px;min-width:44px;}
   .modal.receipt-assistant-modal .modal-body{padding:4px 16px 16px;}
-  .modal.receipt-assistant-modal .modal-foot{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));}
+  .modal.receipt-assistant-modal .modal-foot{display:flex;flex-direction:column;gap:8px;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));}
   .modal.receipt-assistant-modal .modal-foot .btn{width:100%;min-width:0;min-height:44px;}
   .receipt-assistant-context,.receipt-assistant-section-title{align-items:flex-start;flex-direction:column;}
   .receipt-assistant-section-title .hint{text-align:left;}

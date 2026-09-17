@@ -1480,12 +1480,11 @@ function calendarWorkspacePage(root,config){
     appModal({
       icon:cfg.detailModalIcon||'calendar',title:modalTitle,body:modalDetail||'',
       actions:modalActions,width:cfg.detailModalWidth||'min(560px, calc(100vw - 24px))',
+      maxWidth:'calc(100vw - 24px)',height:'min(76dvh,680px)',maxHeight:'calc(100dvh - 24px)',
+      className:'calendar-detail-modal',
       onClose:()=>cfg.onDetailClose?.(selected),
     });
     const modal=$('#modalEl');
-    modal?.classList.add('calendar-detail-modal');
-    modal?.setAttribute('role','dialog');
-    modal?.setAttribute('aria-modal','true');
     modal?.querySelector('[data-calendar-modal-close]')?.addEventListener('click',closeModal);
     modal?.querySelectorAll('[data-calendar-modal-action]').forEach(button=>button.addEventListener('click',()=>{
       const action=modalActionList[Number(button.dataset.calendarModalAction)];

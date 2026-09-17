@@ -431,15 +431,6 @@ table.lines tr.editing td{background:var(--accent-tint);}
  * This keeps the title/close action and save bar reachable on touch devices. */
 .modal.master-data-editor-modal{
   box-sizing:border-box;
-  display:grid;
-  grid-template-rows:auto minmax(0,1fr) auto;
-  height:min(80vh,760px);
-  height:min(80dvh,760px);
-  min-height:min(520px,calc(100vh - 16px));
-  min-height:min(520px,calc(100dvh - 16px));
-  max-height:calc(100vh - 16px);
-  max-height:calc(100dvh - 16px);
-  overflow:hidden;
 }
 .modal.master-data-editor-modal .modal-head{
   min-height:64px;
@@ -448,11 +439,6 @@ table.lines tr.editing td{background:var(--accent-tint);}
   border-bottom:1px solid var(--hairline);
 }
 .modal.master-data-editor-modal .modal-body{
-  min-height:0;
-  overflow-x:hidden;
-  overflow-y:auto;
-  overscroll-behavior:contain;
-  -webkit-overflow-scrolling:touch;
   padding:18px 20px 22px;
 }
 .modal.master-data-editor-modal .master-data-editor-body{min-height:0;}
@@ -1001,14 +987,11 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
   .master-data-editor-grid{grid-template-columns:1fr;gap:12px;}
   .master-data-editor-field-span-2{grid-column:auto;}
   .modal.master-data-editor-modal{
-    width:calc(100vw - 16px)!important;
-    height:min(88vh,760px);
-    height:min(88dvh,760px);
-    min-height:min(480px,calc(100vh - 16px));
-    min-height:min(480px,calc(100dvh - 16px));
-    max-height:calc(100vh - 16px);
-    max-height:calc(100dvh - 16px);
-    border-radius:16px;
+    width:100vw!important;
+    height:100dvh;
+    min-height:0;
+    max-height:100dvh;
+    border-radius:0;
   }
   .modal.master-data-editor-modal .modal-head{
     min-height:60px;
@@ -1020,7 +1003,7 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
     gap:8px;
     padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));
   }
-  .modal.master-data-editor-modal .modal-foot .btn{min-width:0;flex:1 1 0;}
+  .modal.master-data-editor-modal .modal-foot .btn{width:100%;min-width:0;flex:0 0 auto;}
   .employee-history-changes{grid-template-columns:1fr;}
   .asset-detail-policy-facts{grid-template-columns:1fr;margin:12px;}
   .master-detail-editor-actions{bottom:calc(58px + env(safe-area-inset-bottom));margin-left:-1px;margin-right:-1px;flex-wrap:wrap;justify-content:flex-end;}
@@ -1259,7 +1242,7 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
 @media (max-width:760px){ .set-rail{display:none;} .set-grid{grid-template-columns:1fr;} .set-row-c select{min-width:150px;} }
 
 /* ===== keyboard shortcuts sheet ===== */
-.modal:has(.kssheet){width:min(680px,94vw);}
+.modal:has(.kssheet){--modal-width:680px;}
 .kssheet{display:grid;grid-template-columns:1fr 1fr;gap:4px 34px;padding:6px 20px 18px;}
 .ksgroup{break-inside:avoid;}
 .kshead{display:flex;align-items:baseline;gap:8px;font-size:calc(10.5px * var(--fs,1));text-transform:uppercase;letter-spacing:.06em;color:var(--faint);font-weight:700;padding:12px 2px 4px;}
@@ -1268,8 +1251,12 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
 .kslabel{font-size:calc(13px * var(--fs,1));color:var(--fg);}
 .kskeys{display:flex;gap:4px;flex:none;}
 .kskeys .kbd{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;font-size:calc(12px * var(--fs,1));font-family:var(--sans);}
-.ksfoot{padding:11px 20px;border-top:1px solid var(--hairline);color:var(--muted);font-size:calc(12px * var(--fs,1));display:flex;align-items:center;gap:7px;}
+.ksfoot{padding:11px 20px calc(11px + var(--safe-bottom));color:var(--muted);font-size:calc(12px * var(--fs,1));display:flex;align-items:center;gap:7px;}
 .ksfoot .kbd{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;}
+@media (max-width:760px){
+  .modal:has(.kssheet){--modal-width:100vw;}
+  .ksfoot{padding:10px 16px calc(10px + var(--safe-bottom));}
+}
 @media (max-width:640px){ .kssheet{grid-template-columns:1fr;gap:0;} }
 
 .so-tablewrap .rowact{opacity:.5;}
@@ -1433,9 +1420,7 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
 .calendar-detail-modal-context .sub{min-width:0;color:var(--muted);font-size:calc(13px * var(--fs,1));line-height:1.4}
 .calendar-detail-modal-content{display:flex;flex-direction:column;gap:12px}
 .calendar-detail-modal-content .alert,.calendar-detail-modal-content .card{margin:0}
-.modal.calendar-detail-modal{display:grid;grid-template-rows:auto minmax(0,1fr) auto;width:min(560px,calc(100vw - 24px))!important;height:min(76vh,680px);max-height:calc(100vh - 24px);overflow:hidden}
-.modal.calendar-detail-modal .modal-body{min-height:0;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-.modal.calendar-detail-modal .modal-foot{position:static;flex-wrap:wrap;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+.modal.calendar-detail-modal .modal-foot{flex-wrap:wrap;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
 [data-hr-calendar] .calendar-list-row b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 [data-hr-calendar] .calendar-list-row .cap{white-space:nowrap}
 .calendar-workspace-actions{border:1px solid var(--line);border-radius:12px;padding:10px 12px}
@@ -1455,11 +1440,11 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
 }
 
 @media(max-width:760px){
-  .modal.calendar-detail-modal{width:calc(100vw - 16px)!important;height:min(84dvh,760px);max-height:calc(100dvh - 16px);border-radius:18px}
+  .modal.calendar-detail-modal{width:100vw!important;height:100dvh;max-height:100dvh;border-radius:0}
   .modal.calendar-detail-modal .modal-head{padding:16px 16px 12px}
   .modal.calendar-detail-modal .modal-body{padding:14px 16px 18px}
   .modal.calendar-detail-modal .modal-foot{gap:8px;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px))}
-  .modal.calendar-detail-modal .modal-foot .btn{min-width:0;flex:1 1 auto}
+  .modal.calendar-detail-modal .modal-foot .btn{width:100%;min-width:0;flex:0 0 auto}
 }
 
 @media(max-width:760px){
