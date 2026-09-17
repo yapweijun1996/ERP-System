@@ -143,8 +143,8 @@ html,body{
 @media (max-width:560px){
   .topbar{
     flex-wrap:nowrap;
-    justify-content:center;
-    column-gap:clamp(0px,1.2vw,6px);
+    justify-content:flex-start;
+    column-gap:clamp(4px,2vw,10px);
     padding-top:calc(6px + var(--safe-top));
     padding-bottom:6px;
     overflow:hidden;
@@ -152,28 +152,33 @@ html,body{
   .topbar .spacer{display:none;}
   .topbar .search,
   .topbar .iconbtn,
-  .topbar .popwrap{
-    flex:1 1 0;
-    width:auto;
-    max-width:64px;
-  }
+  .topbar .popwrap{flex:0 0 44px;width:44px;max-width:none;}
   .topbar .iconbtn,
   .topbar .popwrap{
     min-width:44px;
+  }
+  .topbar .iconbtn{
+    height:44px;
+    border:1px solid var(--hairline);
+    border-radius:50%;
+    background:var(--surface-2);
   }
   .topbar .popwrap{
     display:flex;
     align-items:center;
     justify-content:center;
+    margin-left:auto;
   }
   .topbar .search{
-    flex:1 1 0;
-    width:auto;
+    flex:0 0 44px;
+    width:44px;
     min-width:44px;
     height:44px;
     padding:0;
     gap:0;
     border-radius:50%;
+    border:1px solid var(--hairline);
+    background:var(--surface-2);
     justify-content:center;
     text-align:center;
   }
@@ -181,6 +186,7 @@ html,body{
   .topbar .popwrap .avatar{
     flex:0 0 44px;
     width:44px;
+    height:44px;
     max-width:none;
   }
   .topbar .search-label,.topbar .search .kbd{display:none;}
@@ -191,7 +197,7 @@ html,body{
      narrowest supported layout, Quick Create remains available in the
      command palette and can yield its slot to the primary navigation. */
   .topbar #qcBtn{display:none;}
-  .topbar{column-gap:0;}
+  .topbar{column-gap:4px;}
 }
 
 @media (max-width:520px){
