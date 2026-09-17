@@ -5,6 +5,7 @@
 import express from 'express';
 import type { Server } from 'node:http';
 import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { chromium } from 'playwright';
@@ -355,6 +356,10 @@ async function main(): Promise<void> {
       page.locator('#platformCompanyDownloadCredentials').click(),
     ]);
     assert(companyAccountDetailsDownload.suggestedFilename() === 'aria-erp-layout-download-company-account-details.txt', 'Company account details filename is incorrect');
+    const companyAccountDetailsPath = await companyAccountDetailsDownload.path();
+    assert(companyAccountDetailsPath, 'Company account details download has no readable path');
+    const companyAccountDetails = await readFile(companyAccountDetailsPath, 'utf8');
+    assert(companyAccountDetails.includes('Organization code: LAYOUT'), 'Company account details download is missing the Master organization code');
     assert((await page.locator('#platformCompanyPasswordStatus').textContent())?.includes('Account details downloaded') === true, 'Company account details download status is missing');
     await page.locator('#provisionMasterAdminPasswordToggle').click();
     assert(await page.locator('#provisionMasterAdminPassword').getAttribute('type') === 'text', 'Company Master Admin password cannot be revealed');

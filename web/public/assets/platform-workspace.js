@@ -99,6 +99,7 @@
   function downloadCompanyAccountDetails(root){
     var companyName=provisioningFieldValue(root,'provisionCompanyName').trim();
     var country=provisioningFieldValue(root,'provisionCompanyCountry').trim();
+    var organizationCode=String((currentMaster()||{}).loginCode||'').trim();
     var masterAdminPasswordField=root&&root.querySelector('#provisionMasterAdminPassword');
     var masterAdmin=masterAdminPasswordField?{
       name:provisioningFieldValue(root,'provisionMasterAdminName').trim(),
@@ -113,11 +114,12 @@
       password:provisioningFieldValue(root,'provisionCompanyOwnerPassword'),
     };
     var accounts=(masterAdmin?[masterAdmin]:[]).concat([companyOwner]);
-    if(!companyName||!country||accounts.some(function(account){ return !account.name||!account.username||!account.email||!account.password; })) throw new Error('account_details_missing');
+    if(!organizationCode||!companyName||!country||accounts.some(function(account){ return !account.name||!account.username||!account.email||!account.password; })) throw new Error('account_details_missing');
     if(typeof Blob!=='function'||!window.URL||typeof window.URL.createObjectURL!=='function') throw new Error('download_unavailable');
     var signInUrl=new URL('./',window.location.href).href;
     var content=['Aria ERP — Company account details','',
       'Sign-in URL: '+signInUrl,
+      'Organization code: '+organizationCode,
       'Company: '+companyName,
       'Country: '+country,
       ''];
