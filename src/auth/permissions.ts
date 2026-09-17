@@ -14,6 +14,7 @@ import { permissionCandidates } from './permissionRegistry';
 import { activeRoleAssignmentCondition } from './roleAssignmentState';
 import { authorize, principalFromSession } from './authorization';
 import { getAuthorizationVersionWithin } from './authorizationVersion';
+import { withTenantTransaction } from '../data/tenantTransaction';
 
 export { PERMISSIONS } from './permissionKeys';
 
@@ -69,140 +70,146 @@ export async function effectiveCapabilities(
   session: SessionData,
   now = new Date(),
 ): Promise<EffectiveCapability> {
-  const [authorizationVersion, isCompanyOwner] = await Promise.all([
-    getAuthorizationVersionWithin(db, {
-      masterFn: session.masterFn,
-      companyFn: session.activeCompanyFn,
-    }),
-    isCompanyOwnerSession(db, session, now),
-  ]);
-  const overrides = await db.select().from(userPermissionOverride).where(and(
-    eq(userPermissionOverride.masterFn, session.masterFn),
-    eq(userPermissionOverride.companyFn, session.activeCompanyFn),
-    eq(userPermissionOverride.userId, session.userId),
-    lte(userPermissionOverride.validFrom, now),
-    or(isNull(userPermissionOverride.validUntil), gt(userPermissionOverride.validUntil, now)),
-    isNull(userPermissionOverride.revokedAt),
-  ));
-  // Capabilities are a UX/session snapshot, not the authorization source of
-  // truth. A scoped deny is conservatively removed from the snapshot as a
-  // whole so the UI cannot advertise access that the central decision service
-  // will reject. Record-level evaluation remains in authorize().
-  const deniedKeys = new Set(overrides
-    .filter((row) => row.effect === 'deny')
-    .flatMap((row) => permissionCandidates(row.permissionKey)));
-  const allowedKeys = new Set(overrides
-    .filter((row) => row.effect === 'allow')
-    .flatMap((row) => permissionCandidates(row.permissionKey)));
-  const permissions = await db.select({ permissionKey: rolePermission.permissionKey })
-    .from(userCompanyRole)
-    .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
-    .innerJoin(rolePermission, eq(rolePermission.roleId, role.roleId))
-    .where(and(
-      eq(userCompanyRole.userId, session.userId),
-      eq(userCompanyRole.companyFn, session.activeCompanyFn),
-      eq(role.masterFn, session.masterFn),
-      or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
-      eq(rolePermission.allowed, true),
-      activeRoleAssignmentCondition(now),
+  return withTenantTransaction(db, {
+    masterFn: session.masterFn,
+    companyFn: session.activeCompanyFn,
+  }, async (exec) => {
+    const [authorizationVersion, isCompanyOwner] = await Promise.all([
+      getAuthorizationVersionWithin(exec, {
+        masterFn: session.masterFn,
+        companyFn: session.activeCompanyFn,
+      }),
+      isCompanyOwnerSession(exec, session, now),
+    ]);
+    const overrides = await exec.select().from(userPermissionOverride).where(and(
+      eq(userPermissionOverride.masterFn, session.masterFn),
+      eq(userPermissionOverride.companyFn, session.activeCompanyFn),
+      eq(userPermissionOverride.userId, session.userId),
+      lte(userPermissionOverride.validFrom, now),
+      or(isNull(userPermissionOverride.validUntil), gt(userPermissionOverride.validUntil, now)),
+      isNull(userPermissionOverride.revokedAt),
     ));
-  const assignmentScopeRows = await db.select({
-    resourceKey: userCompanyRoleScope.resourceKey,
-    scope: userCompanyRoleScope.scope,
-    targetType: userCompanyRoleScope.targetType,
-    targetId: userCompanyRoleScope.targetId,
-  }).from(userCompanyRole)
-    .innerJoin(userCompanyRoleScope, eq(
-      userCompanyRoleScope.assignmentId,
-      userCompanyRole.assignmentId,
-    ))
-    .where(and(
-      eq(userCompanyRole.userId, session.userId),
-      eq(userCompanyRole.companyFn, session.activeCompanyFn),
-      eq(userCompanyRoleScope.masterFn, session.masterFn),
-      eq(userCompanyRoleScope.companyFn, session.activeCompanyFn),
-      activeRoleAssignmentCondition(now),
-    ));
-  const legacyScopeRows = await db.select({
-    resourceKey: roleResourceScope.resourceKey,
-    scope: roleResourceScope.scope,
-    targetType: roleResourceScope.resourceKey,
-    targetId: roleResourceScope.resourceKey,
-  }).from(userCompanyRole)
-    .innerJoin(roleResourceScope, and(
-      eq(roleResourceScope.roleId, userCompanyRole.roleId),
-      eq(roleResourceScope.masterFn, session.masterFn),
-      eq(roleResourceScope.companyFn, session.activeCompanyFn),
-    ))
-    .where(and(
-      eq(userCompanyRole.userId, session.userId),
-      eq(userCompanyRole.companyFn, session.activeCompanyFn),
-      isNull(userCompanyRole.scopeBackfilledAt),
-      activeRoleAssignmentCondition(now),
-    ));
-  const scopeRows: ScopeGrantRow[] = [
-    ...assignmentScopeRows.map((row) => ({
-      resourceKey: row.resourceKey,
-      scope: row.scope,
-      targetType: row.targetType,
-      targetId: row.targetId,
-    })),
-    ...legacyScopeRows.map((row) => ({
-      resourceKey: row.resourceKey,
-      scope: row.scope,
-      targetType: 'none',
-      targetId: '',
-    })),
-  ];
-  const capabilityPermissions = permissions.map((row) => row.permissionKey);
-  const visiblePermissions = [...new Set([
-    ...capabilityPermissions.filter((permissionKey) => permissionKey === '*' || !deniedKeys.has(permissionKey)),
-    ...allowedKeys,
-  ])].sort();
-  const scopes: Record<string, DataScope> = {};
-  const scopeGrants: Record<string, ScopeGrant[]> = {};
-  for (const row of scopeRows) {
-    const value = row.scope as DataScope;
-    const current = scopes[row.resourceKey];
-    if (!current || SCOPE_RANK[value] > SCOPE_RANK[current]) scopes[row.resourceKey] = value;
-    const grants = scopeGrants[row.resourceKey] ?? [];
-    if (!grants.some((grant) =>
-      grant.scope === value
-      && grant.targetType === row.targetType
-      && grant.targetId === (row.targetId || null))) {
-      grants.push({
-        scope: value,
+    // Capabilities are a UX/session snapshot, not the authorization source of
+    // truth. A scoped deny is conservatively removed from the snapshot as a
+    // whole so the UI cannot advertise access that the central decision service
+    // will reject. Record-level evaluation remains in authorize().
+    const deniedKeys = new Set(overrides
+      .filter((row) => row.effect === 'deny')
+      .flatMap((row) => permissionCandidates(row.permissionKey)));
+    const allowedKeys = new Set(overrides
+      .filter((row) => row.effect === 'allow')
+      .flatMap((row) => permissionCandidates(row.permissionKey)));
+    const permissions = await exec.select({ permissionKey: rolePermission.permissionKey })
+      .from(userCompanyRole)
+      .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
+      .innerJoin(rolePermission, eq(rolePermission.roleId, role.roleId))
+      .where(and(
+        eq(userCompanyRole.userId, session.userId),
+        eq(userCompanyRole.companyFn, session.activeCompanyFn),
+        eq(role.masterFn, session.masterFn),
+        or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
+        eq(rolePermission.allowed, true),
+        activeRoleAssignmentCondition(now),
+      ));
+    const assignmentScopeRows = await exec.select({
+      resourceKey: userCompanyRoleScope.resourceKey,
+      scope: userCompanyRoleScope.scope,
+      targetType: userCompanyRoleScope.targetType,
+      targetId: userCompanyRoleScope.targetId,
+    }).from(userCompanyRole)
+      .innerJoin(userCompanyRoleScope, eq(
+        userCompanyRoleScope.assignmentId,
+        userCompanyRole.assignmentId,
+      ))
+      .where(and(
+        eq(userCompanyRole.userId, session.userId),
+        eq(userCompanyRole.companyFn, session.activeCompanyFn),
+        eq(userCompanyRoleScope.masterFn, session.masterFn),
+        eq(userCompanyRoleScope.companyFn, session.activeCompanyFn),
+        activeRoleAssignmentCondition(now),
+      ));
+    const legacyScopeRows = await exec.select({
+      resourceKey: roleResourceScope.resourceKey,
+      scope: roleResourceScope.scope,
+      targetType: roleResourceScope.resourceKey,
+      targetId: roleResourceScope.resourceKey,
+    }).from(userCompanyRole)
+      .innerJoin(roleResourceScope, and(
+        eq(roleResourceScope.roleId, userCompanyRole.roleId),
+        eq(roleResourceScope.masterFn, session.masterFn),
+        eq(roleResourceScope.companyFn, session.activeCompanyFn),
+      ))
+      .where(and(
+        eq(userCompanyRole.userId, session.userId),
+        eq(userCompanyRole.companyFn, session.activeCompanyFn),
+        isNull(userCompanyRole.scopeBackfilledAt),
+        activeRoleAssignmentCondition(now),
+      ));
+    const scopeRows: ScopeGrantRow[] = [
+      ...assignmentScopeRows.map((row) => ({
+        resourceKey: row.resourceKey,
+        scope: row.scope,
         targetType: row.targetType,
-        targetId: row.targetId || null,
-      });
+        targetId: row.targetId,
+      })),
+      ...legacyScopeRows.map((row) => ({
+        resourceKey: row.resourceKey,
+        scope: row.scope,
+        targetType: 'none',
+        targetId: '',
+      })),
+    ];
+    const capabilityPermissions = permissions.map((row) => row.permissionKey);
+    const visiblePermissions = [...new Set([
+      ...capabilityPermissions.filter((permissionKey) => permissionKey === '*' || !deniedKeys.has(permissionKey)),
+      ...allowedKeys,
+    ])].sort();
+    const scopes: Record<string, DataScope> = {};
+    const scopeGrants: Record<string, ScopeGrant[]> = {};
+    for (const row of scopeRows) {
+      const value = row.scope as DataScope;
+      const current = scopes[row.resourceKey];
+      if (!current || SCOPE_RANK[value] > SCOPE_RANK[current]) scopes[row.resourceKey] = value;
+      const grants = scopeGrants[row.resourceKey] ?? [];
+      if (!grants.some((grant) =>
+        grant.scope === value
+        && grant.targetType === row.targetType
+        && grant.targetId === (row.targetId || null))) {
+        grants.push({
+          scope: value,
+          targetType: row.targetType,
+          targetId: row.targetId || null,
+        });
+      }
+      scopeGrants[row.resourceKey] = grants;
     }
-    scopeGrants[row.resourceKey] = grants;
-  }
-  for (const row of overrides.filter((override) => override.effect === 'allow')) {
-    const resourceKey = row.resourceKey || '*';
-    const value = row.scope as DataScope;
-    const current = scopes[resourceKey];
-    if (!current || SCOPE_RANK[value] > SCOPE_RANK[current]) scopes[resourceKey] = value;
-    const grants = scopeGrants[resourceKey] ?? [];
-    if (!grants.some((grant) =>
-      grant.scope === value
-      && grant.targetType === row.targetType
-      && grant.targetId === (row.targetId || null))) {
-      grants.push({
-        scope: value,
-        targetType: row.targetType,
-        targetId: row.targetId || null,
-      });
+    for (const row of overrides.filter((override) => override.effect === 'allow')) {
+      const resourceKey = row.resourceKey || '*';
+      const value = row.scope as DataScope;
+      const current = scopes[resourceKey];
+      if (!current || SCOPE_RANK[value] > SCOPE_RANK[current]) scopes[resourceKey] = value;
+      const grants = scopeGrants[resourceKey] ?? [];
+      if (!grants.some((grant) =>
+        grant.scope === value
+        && grant.targetType === row.targetType
+        && grant.targetId === (row.targetId || null))) {
+        grants.push({
+          scope: value,
+          targetType: row.targetType,
+          targetId: row.targetId || null,
+        });
+      }
+      scopeGrants[resourceKey] = grants;
     }
-    scopeGrants[resourceKey] = grants;
-  }
-  return {
-    authorizationVersion,
-    isCompanyOwner,
-    permissions: visiblePermissions,
-    scopes,
-    scopeGrants,
-  };
+
+    return {
+      authorizationVersion,
+      isCompanyOwner,
+      permissions: visiblePermissions,
+      scopes,
+      scopeGrants,
+    };
+  });
 }
 
 interface ScopeGrantRow {
