@@ -39,6 +39,152 @@
   .report-list-customer{width:100%;min-width:0;order:-1;}
   .transaction-list-pagination{justify-content:space-between;}
 }
+
+/* My Receipts capture shell. Keep capture guidance, consent and actions in one
+   visual group while leaving the shared transaction-list behavior untouched. */
+[data-receipt-capture="canonical"]{
+  min-width:0;
+  padding:6px clamp(16px,3vw,32px) 72px;
+}
+[data-receipt-capture="canonical"]>.so-kpibar{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+  width:min(100%,640px);
+  padding:0 0 16px;
+}
+[data-receipt-capture="canonical"]>.so-kpibar .so-kpi{
+  min-width:0;
+  min-height:82px;
+  padding:13px 16px;
+  justify-content:center;
+  background:var(--surface);
+}
+[data-receipt-capture="canonical"]>.toolbar{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  align-items:stretch;
+  gap:12px;
+  margin:0;
+  padding:16px;
+  border:1px solid var(--hairline);
+  border-radius:var(--r-l);
+  background:var(--surface);
+  box-shadow:var(--shadow-sm);
+}
+[data-receipt-capture="canonical"]>.toolbar>.grow{display:none;}
+[data-receipt-capture="canonical"]>.toolbar>.transaction-list-note{
+  grid-column:1/-1;
+  margin:0;
+  color:var(--muted);
+  font-size:calc(12px * var(--fs,1));
+  line-height:1.45;
+}
+[data-receipt-capture="canonical"] .receipt-capture-consent{
+  grid-column:1/-1;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  align-items:start;
+  gap:10px;
+  min-width:0;
+  min-height:44px;
+  margin:0;
+  padding:11px 12px;
+  border:1px solid var(--hairline);
+  border-radius:var(--r-m);
+  background:var(--surface-2);
+  color:var(--fg);
+  cursor:pointer;
+}
+[data-receipt-capture="canonical"] .receipt-capture-consent:focus-within{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-tint);
+}
+[data-receipt-capture="canonical"] .receipt-capture-consent>input{
+  width:20px;
+  height:20px;
+  margin:1px 0 0;
+  accent-color:var(--accent);
+}
+[data-receipt-capture="canonical"] .receipt-capture-consent>span{
+  min-width:0;
+  font-size:calc(13px * var(--fs,1));
+  line-height:1.45;
+}
+[data-receipt-capture="canonical"]>[data-offline-draft-warning]{
+  display:flex;
+  align-items:flex-start;
+  gap:9px;
+  min-width:0;
+  margin:14px 0 0;
+  padding:12px 14px;
+  border:1px solid color-mix(in srgb,var(--warn) 28%,var(--hairline));
+  border-radius:var(--r-m);
+  background:var(--warn-tint);
+  color:var(--fg);
+  font-size:calc(12.5px * var(--fs,1));
+  line-height:1.45;
+}
+[data-receipt-capture="canonical"]>[data-offline-draft-warning]>.ico{
+  width:17px;
+  height:17px;
+  flex:none;
+  margin-top:1px;
+  color:var(--warn);
+}
+[data-receipt-capture="canonical"]>[data-list-table]{
+  margin-top:14px;
+  border-radius:var(--r-l);
+}
+[data-receipt-capture="canonical"]>[data-list-table] [data-list-empty]{
+  height:auto;
+  min-height:220px;
+  padding:42px 24px;
+  gap:11px;
+}
+[data-receipt-capture="canonical"]>[data-list-table] [data-list-empty] p{
+  max-width:42ch;
+  font-size:calc(13px * var(--fs,1));
+}
+[data-receipt-capture="canonical"]>[data-list-table] [data-list-empty] .ic{
+  width:46px;
+  height:46px;
+}
+[data-receipt-capture="canonical"]>[data-list-table] [data-list-empty] .ic svg{
+  width:22px;
+  height:22px;
+}
+[data-receipt-capture="canonical"]>[data-list-table] [data-list-empty] h3{
+  font-size:calc(17px * var(--fs,1));
+}
+[data-receipt-capture="canonical"]>.toolbar>[data-list-toolbar-action]{
+  width:100%;
+  min-width:0;
+  min-height:44px;
+  justify-content:center;
+}
+
+@media(max-width:760px){
+  [data-receipt-capture="canonical"]{
+    padding-inline:16px;
+    padding-bottom:calc(86px + var(--safe-bottom,0px));
+  }
+  [data-receipt-capture="canonical"]>.toolbar{
+    padding:14px;
+  }
+  [data-receipt-capture="canonical"]>[data-list-table] [data-list-empty]{
+    min-height:210px;
+    padding:36px 20px;
+  }
+}
+
+@media(max-width:360px){
+  [data-receipt-capture="canonical"]>.so-kpibar{gap:8px;}
+  [data-receipt-capture="canonical"]>.so-kpibar .so-kpi{padding-inline:12px;}
+  [data-receipt-capture="canonical"]>.toolbar{gap:10px;padding:12px;}
+  [data-receipt-capture="canonical"] .receipt-capture-consent>span{font-size:calc(12.5px * var(--fs,1));}
+}
+
 .master-detail-register-workspace{
   display:grid;
   grid-template-columns:minmax(0,1fr) 360px;

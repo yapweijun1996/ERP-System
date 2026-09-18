@@ -153,6 +153,55 @@ try {
       || await page.locator('[data-receipt-file]').count() !== 1) {
       throw new Error('Authorized employee receipt capture controls are missing');
     }
+    const receiptLayout = await page.evaluate(() => {
+      const shell = document.querySelector('[data-receipt-capture="canonical"]');
+      const scroller = document.querySelector('.scrollarea');
+      const consent = shell?.querySelector('.receipt-capture-consent');
+      const actions = [...(shell?.querySelectorAll('[data-list-toolbar-action]') || [])]
+        .filter((element) => element.getClientRects().length)
+        .map((element) => element.getBoundingClientRect());
+      const shellStyle = shell ? getComputedStyle(shell) : null;
+      return {
+        shell: Boolean(shell),
+        consentHeight: consent?.getBoundingClientRect().height || 0,
+        actionHeights: actions.map((rect) => rect.height),
+        documentOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        shellOverflow: shell ? shell.scrollWidth - shell.clientWidth : Number.POSITIVE_INFINITY,
+        shellPaddingBottom: shellStyle ? parseFloat(shellStyle.paddingBottom) : 0,
+        verticalScrollOwners: shell
+          ? [scroller, shell, ...shell.querySelectorAll('*')].filter(Boolean).filter((element) => {
+            const overflow = getComputedStyle(element).overflowY;
+            return (overflow === 'auto' || overflow === 'scroll')
+              && element.scrollHeight > element.clientHeight + 1;
+          }).length
+          : 0,
+      };
+    });
+    if (!receiptLayout.shell || receiptLayout.documentOverflow > 1 || receiptLayout.shellOverflow > 1) {
+      throw new Error(`Receipt capture shell overflows at ${width}px: ${JSON.stringify(receiptLayout)}`);
+    }
+    if (width <= 980 && (receiptLayout.consentHeight < 44
+      || receiptLayout.actionHeights.some((height) => height < 44)
+      || receiptLayout.shellPaddingBottom < 70
+      || receiptLayout.verticalScrollOwners !== 1)) {
+      throw new Error(`Receipt capture touch/scroll layout regressed at ${width}px: ${JSON.stringify(receiptLayout)}`);
+    }
+    await page.evaluate(() => {
+      const scroller = document.querySelector('.scrollarea');
+      if (scroller) scroller.scrollTop = scroller.scrollHeight;
+    });
+    const receiptBottom = await page.evaluate(() => {
+      const scroller = document.querySelector('.scrollarea');
+      const empty = document.querySelector('[data-receipt-capture="canonical"] [data-list-empty]');
+      if (!scroller || !empty) return null;
+      return {
+        emptyBottom: empty.getBoundingClientRect().bottom,
+        scrollAreaBottom: scroller.getBoundingClientRect().bottom,
+      };
+    });
+    if (width <= 980 && (!receiptBottom || receiptBottom.emptyBottom > receiptBottom.scrollAreaBottom + 1)) {
+      throw new Error(`Receipt empty state is hidden behind mobile navigation at ${width}px: ${JSON.stringify(receiptBottom)}`);
+    }
     if (await page.locator('#activationForm').count()) throw new Error('Activation form still exists');
     if (await page.getByRole('heading', { name: 'Employee self service is unavailable' }).count()) throw new Error('Employee link missing');
     if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error('Horizontal overflow');

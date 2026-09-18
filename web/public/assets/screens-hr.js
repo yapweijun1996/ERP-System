@@ -2152,7 +2152,7 @@ SCREENS['my-receipts']=async function(root){
     ]:[],
     toolbarContent:canWriteReceipts?`<input hidden type="file" accept="image/jpeg,image/png,image/heic,image/heif,application/pdf,.jpg,.jpeg,.png,.heic,.heif,.pdf" capture="environment" data-receipt-camera>
       <input hidden type="file" accept="image/jpeg,image/png,image/heic,image/heif,application/pdf,.jpg,.jpeg,.png,.heic,.heif,.pdf" data-receipt-file>
-      <label class="checkline"><input type="checkbox" data-receipt-auto-authorize> <span>${esc(s('autoAuthorize'))}</span></label>`:'',
+      <label class="checkline receipt-capture-consent"><input type="checkbox" data-receipt-auto-authorize> <span>${esc(s('autoAuthorize'))}</span></label>`:'',
     kpis:[{label:s('offline'),value:drafts.length,accent:drafts.length>0},{label:s('stored'),value:stored.length}],
     columns:[
       {key:'name',label:s('file'),primary:true},
