@@ -1084,7 +1084,7 @@ function myLeaveCopy(){
   const packs={
     en:{
       newLeave:'New leave',applicationTitle:'Leave application',applicationDescription:'Maintain one governed leave application and its immutable history.',
-      leaveType:'Leave type',startDate:'Start date',endDate:'End date',unit:'Duration',fullDay:'Full day',halfDay:'Half day',halfMorning:'Morning half-day',halfAfternoon:'Afternoon half-day',reason:'Private reason',changeReason:'Reason for change',
+      leaveType:'Leave type',noLeaveTypes:'No leave types available',noLeaveTypesBody:'Leave types are unavailable until an active type has a confirmed policy. Ask your HR administrator to review the current company setup.',startDate:'Start date',endDate:'End date',unit:'Duration',fullDay:'Full day',halfDay:'Half day',halfMorning:'Morning half-day',halfAfternoon:'Afternoon half-day',reason:'Private reason',changeReason:'Reason for change',
       saveDraft:'Save draft',amend:'Amend',submit:'Submit',withdraw:'Withdraw',voidDraft:'Void application',requestCancellation:'Request cancellation',cancel:'Cancel',confirm:'Confirm',
       submitTitle:'Submit leave application?',submitBody:'Submitting reserves paid leave balance and starts the approval workflow.',
       withdrawTitle:'Withdraw pending leave',voidTitle:'Void this application',cancelTitle:'Request cancellation of approved leave',
@@ -1099,6 +1099,8 @@ function myLeaveCopy(){
   "applicationTitle": "Permohonan cuti",
   "applicationDescription": "Urus satu permohonan cuti terkawal dan sejarah kekalnya.",
   "leaveType": "Jenis cuti",
+  "noLeaveTypes": "Tiada jenis cuti tersedia",
+  "noLeaveTypesBody": "Jenis cuti tidak tersedia sehingga jenis aktif mempunyai polisi yang disahkan. Minta pentadbir HR menyemak persediaan syarikat semasa.",
   "startDate": "Tarikh mula",
   "endDate": "Tarikh akhir",
   "unit": "Tempoh",
@@ -1159,7 +1161,7 @@ function myLeaveCopy(){
 },
     zh:{
       newLeave:'新建请假',applicationTitle:'请假申请',applicationDescription:'维护一项受治理的请假申请及其不可变历史。',
-      leaveType:'假期类型',startDate:'开始日期',endDate:'结束日期',unit:'时长',fullDay:'整天',halfDay:'半天',halfMorning:'上午半天',halfAfternoon:'下午半天',reason:'私人原因',changeReason:'变更原因',
+      leaveType:'假期类型',noLeaveTypes:'暂无可用假期类型',noLeaveTypesBody:'只有启用的假期类型拥有已确认的政策时，才可申请。请联系 HR 管理员检查当前公司的设置。',startDate:'开始日期',endDate:'结束日期',unit:'时长',fullDay:'整天',halfDay:'半天',halfMorning:'上午半天',halfAfternoon:'下午半天',reason:'私人原因',changeReason:'变更原因',
       saveDraft:'保存草稿',amend:'修改',submit:'提交',withdraw:'撤回',voidDraft:'Void 申请',requestCancellation:'申请取消',cancel:'取消',confirm:'确认',
       submitTitle:'提交请假申请？',submitBody:'提交后将预留有薪假余额，并进入审批流程。',
       withdrawTitle:'撤回待审批请假',voidTitle:'Void 这项申请',cancelTitle:'申请取消已批准请假',
@@ -1174,6 +1176,8 @@ function myLeaveCopy(){
   "applicationTitle": "休暇申請",
   "applicationDescription": "統制された休暇申請と不変の履歴を管理します。",
   "leaveType": "休暇種別",
+  "noLeaveTypes": "利用可能な休暇種別がありません",
+  "noLeaveTypesBody": "有効な休暇種別に承認済みポリシーが設定されるまで、休暇を申請できません。HR 管理者に現在の会社設定を確認してもらってください。",
   "startDate": "開始日",
   "endDate": "終了日",
   "unit": "期間",
@@ -1237,6 +1241,8 @@ function myLeaveCopy(){
   "applicationTitle": "Đơn nghỉ phép",
   "applicationDescription": "Quản lý một đơn nghỉ phép được kiểm soát và lịch sử bất biến.",
   "leaveType": "Loại nghỉ",
+  "noLeaveTypes": "Không có loại nghỉ khả dụng",
+  "noLeaveTypesBody": "Chưa thể dùng loại nghỉ cho đến khi loại đang hoạt động có chính sách được xác nhận. Hãy nhờ quản trị viên HR kiểm tra thiết lập công ty hiện tại.",
   "startDate": "Ngày bắt đầu",
   "endDate": "Ngày kết thúc",
   "unit": "Thời lượng",
@@ -1443,14 +1449,17 @@ function myLeaveEventLabel(eventType,copy){
     rejected:copy('status_rejected'),
   }[eventType]||String(eventType||'—');
 }
-function myLeaveTypeOptions(context,selectedId){
+function myLeaveTypeOptions(context,selectedId,copy=myLeaveCopy()){
   const types=Array.isArray(context&&context.leaveTypes)?context.leaveTypes:[];
+  if(!types.length) return `<option value="" selected disabled>${esc(copy('noLeaveTypes'))}</option>`;
   return types.map(type=>`<option value="${type.id}" ${String(type.id)===String(selectedId)?'selected':''}>
     ${esc(type.name)}
   </option>`).join('');
 }
 function openMyLeaveForm(context,current,onSaved){
   const copy=myLeaveCopy();
+  const leaveTypes=Array.isArray(context&&context.leaveTypes)?context.leaveTypes:[];
+  const noLeaveTypes=leaveTypes.length===0;
   const revision=current&&current.revisions&&current.revisions[0];
   const editing=Boolean(current);
   const start=revision&&revision.startDate||hrToday();
@@ -1460,8 +1469,9 @@ function openMyLeaveForm(context,current,onSaved){
     title:editing?copy('amend'):copy('newLeave'),
     width:640,
     body:`<div class="alert danger" data-my-leave-form-error hidden>${ic('warn')}<span></span></div>
-      <div class="fld"><span>${esc(copy('leaveType'))}</span>
-        <select data-my-leave-type>${myLeaveTypeOptions(context,revision&&revision.leaveTypeId)}</select>
+      <div class="fld" data-my-leave-type-field><span>${esc(copy('leaveType'))}</span>
+        <select data-my-leave-type ${noLeaveTypes?'disabled aria-describedby="my-leave-type-empty"':''}>${myLeaveTypeOptions(context,revision&&revision.leaveTypeId,copy)}</select>
+        ${noLeaveTypes?`<span class="hint bad" id="my-leave-type-empty" data-my-leave-type-empty>${esc(copy('noLeaveTypesBody'))}</span>`:''}
       </div>
       <div class="fldrow c2">
         <div class="fld"><span>${esc(copy('startDate'))}</span><input type="date" value="${esc(dateValue(start))}" data-my-leave-start></div>
@@ -1476,7 +1486,7 @@ function openMyLeaveForm(context,current,onSaved){
       </div>
       <div class="fld"><span>${esc(copy('reason'))}</span><textarea rows="3" data-my-leave-reason>${esc(revision&&revision.reason||'')}</textarea></div>
       ${editing?`<div class="fld"><span>${esc(copy('changeReason'))}</span><textarea rows="2" data-my-leave-change></textarea></div>`:''}`,
-    actions:`${btn(copy('cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(editing?copy('amend'):copy('saveDraft'),{icon:'check',cls:'primary',attrs:'data-my-leave-save'})}`,
+    actions:`${btn(copy('cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(editing?copy('amend'):copy('saveDraft'),{icon:'check',cls:'primary',attrs:`data-my-leave-save${noLeaveTypes?' disabled aria-disabled="true"':''}`})}`,
   });
   const modal=$('#modalEl');
   const save=modal&&modal.querySelector('[data-my-leave-save]');

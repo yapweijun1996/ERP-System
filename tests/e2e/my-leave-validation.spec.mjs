@@ -146,7 +146,7 @@ async function main() {
         calls.push(payload);
         return { data: { id: 71, status: 'draft', version: 1 }, meta: { actorDerived: true } };
       };
-      window.__myLeaveE2E = { calls };
+      window.__myLeaveE2E = { calls, context };
       navigate('my-leave');
     });
 
@@ -174,8 +174,26 @@ async function main() {
     assert(payload?.reason === 'asdasdsa', 'valid private reason was not sent to createLeaveDraft');
     assert(payload?.startDate === '2026-08-21' && payload?.endDate === '2026-08-22',
       'valid leave dates were not sent to createLeaveDraft');
+
+    await page.evaluate(() => {
+      window.__myLeaveE2E.context.leaveTypes = [];
+      navigate('my-leave');
+    });
+    await page.getByRole('button', { name: 'New leave', exact: true }).click();
+    const emptyModal = page.locator('#modalEl');
+    const emptyLeaveType = emptyModal.locator('[data-my-leave-type]');
+    const emptySave = emptyModal.getByRole('button', { name: 'Save draft', exact: true });
+    assert(await emptyLeaveType.isDisabled(), 'empty leave type select must be disabled');
+    assert(await emptyLeaveType.locator('option').count() === 1,
+      'empty leave type select must expose one explanatory placeholder');
+    assert(await emptyModal.locator('[data-my-leave-type-empty]').isVisible(),
+      'empty leave type state must explain how to resolve the configuration');
+    assert(await emptySave.isDisabled(), 'save draft must be disabled without leave types');
+    assert(await page.evaluate(() => window.__myLeaveE2E.calls.length === 1),
+      'empty leave type state must not create another leave draft');
+
     assert(browserErrors.length === 0, `browser errors detected:\n${browserErrors.join('\n')}`);
-    console.log('PASS My Leave validation E2E: reversed dates show date error and valid 8-character reason saves');
+    console.log('PASS My Leave validation E2E: valid flow saves and empty leave types fail closed');
   } finally {
     await context.close();
     await browser.close();
