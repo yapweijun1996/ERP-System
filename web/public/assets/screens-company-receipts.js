@@ -749,9 +749,12 @@
             <button type="button" class="company-receipt-search-clear" data-receipt-search-clear aria-label="${esc(c.clearSearch)}" title="${esc(c.clearSearch)}" ${filters.search?'':'hidden'}>${ic('x')}</button>
           </span>
         </div>
-        <select data-receipt-preset aria-label="${esc(c.period)}">${[['allDates',c.allDates],['thisMonth',c.thisMonth],['lastMonth',c.lastMonth],['thisQuarter',c.thisQuarter],['thisYear',c.thisYear],['custom',c.custom]].map(([value,label])=>`<option value="${value}" ${filters.preset===value?'selected':''}>${esc(label)}</option>`).join('')}</select>
-        <label><span>${esc(c.from)}</span><input type="date" data-receipt-from value="${esc(filters.dateFrom||'')}"></label>
-        <label><span>${esc(c.to)}</span><input type="date" data-receipt-to value="${esc(filters.dateTo||'')}"></label>
+        <label class="company-receipt-filter-field company-receipt-period-field">
+          <span>${esc(c.period)}</span>
+          <select data-receipt-preset aria-label="${esc(c.period)}">${[['allDates',c.allDates],['thisMonth',c.thisMonth],['lastMonth',c.lastMonth],['thisQuarter',c.thisQuarter],['thisYear',c.thisYear],['custom',c.custom]].map(([value,label])=>`<option value="${value}" ${filters.preset===value?'selected':''}>${esc(label)}</option>`).join('')}</select>
+        </label>
+        <label class="company-receipt-filter-field"><span>${esc(c.from)}</span><input type="date" data-receipt-from value="${esc(filters.dateFrom||'')}"></label>
+        <label class="company-receipt-filter-field"><span>${esc(c.to)}</span><input type="date" data-receipt-to value="${esc(filters.dateTo||'')}"></label>
         ${btn(c.apply,{icon:'search',cls:'primary',attrs:'type="submit"'})}${btn(c.clear,{cls:'soft',attrs:'type="button" data-receipt-clear'})}
         ${can('create')&&typeof adapter.companyReceiptConfirmation==='function'&&typeof adapter.createCompanyReceipt==='function'?btn(c.confirm,{icon:'check',cls:'soft',attrs:'type="button" data-company-receipt-confirm'}):''}
         ${can('create')&&typeof adapter.receiptAssistant==='function'?btn(assistantCopy().open,{icon:'comment',cls:'soft',attrs:'type="button" data-receipt-assistant-open'}):''}

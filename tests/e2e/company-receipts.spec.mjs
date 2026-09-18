@@ -300,14 +300,18 @@ async function main(){
         inputLabel: input?.getAttribute('aria-label'),
         controlHeight: controlRect?.height||0,
         shellWidth: shellRect?.width||0,
+        periodLabel: document.querySelector('.company-receipt-period-field>span')?.textContent?.trim(),
+        periodHeight: document.querySelector('[data-receipt-preset]')?.getBoundingClientRect().height||0,
+        dateHeights: Array.from(document.querySelectorAll('[data-receipt-from],[data-receipt-to]')).map(node=>node.getBoundingClientRect().height),
         viewportWidth: window.innerWidth,
         documentOverflow: document.documentElement.scrollWidth>document.documentElement.clientWidth,
       };
     });
     assert(searchLayout.label==='Search receipts'&&searchLayout.inputLabel==='Search receipts',
       'Company Receipts search must expose a visible and accessible label');
-    assert(searchLayout.controlHeight>=48&&searchLayout.shellWidth>0&&!searchLayout.documentOverflow,
-      'Company Receipts search shell must have the standard touch height without page overflow');
+    assert(searchLayout.periodLabel==='Period'&&searchLayout.controlHeight>=48&&searchLayout.periodHeight>=48
+      &&searchLayout.dateHeights.every(height=>height>=48)&&searchLayout.shellWidth>0&&!searchLayout.documentOverflow,
+    'Company Receipts filters must share visible labels, touch height and overflow-free layout');
     await page.locator('[data-receipt-search]').fill('server needle');
     assert(await page.locator('[data-receipt-search-clear]').isVisible(),
       'search clear action must appear when a search term is entered');
@@ -381,13 +385,16 @@ async function main(){
       return {
         width:shellRect?.width||0,
         controlHeight:controlRect?.height||0,
+        periodHeight:document.querySelector('[data-receipt-preset]')?.getBoundingClientRect().height||0,
+        dateHeights:Array.from(document.querySelectorAll('[data-receipt-from],[data-receipt-to]')).map(node=>node.getBoundingClientRect().height),
         viewportWidth:window.innerWidth,
         documentOverflow:document.documentElement.scrollWidth>document.documentElement.clientWidth,
       };
     });
     assert(mobileSearchLayout.width<=mobileSearchLayout.viewportWidth
-      &&mobileSearchLayout.controlHeight>=48&&!mobileSearchLayout.documentOverflow,
-    'mobile Company Receipts search must remain full-width, touch-sized and overflow-free');
+      &&mobileSearchLayout.controlHeight>=48&&mobileSearchLayout.periodHeight>=48
+      &&mobileSearchLayout.dateHeights.every(height=>height>=48)&&!mobileSearchLayout.documentOverflow,
+    'mobile Company Receipts filters must remain touch-sized and overflow-free');
     assert(await page.locator('.dt-body .dt-r').count()===25,'mobile first page must remain bounded');
     assert(await page.locator('.dt-body .dt-r').first().locator('.dt-c[data-label]').count()===8,
       'mobile receipt card must expose all eight labelled facts');
