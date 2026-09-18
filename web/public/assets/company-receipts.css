@@ -8,10 +8,22 @@
 [data-company-receipt-register] .transaction-list-pagination[hidden]{display:none;}
 [data-list-route="company-receipts"]>.toolbar>.grow{display:none;}
 .company-receipt-filters{display:flex;align-items:end;gap:8px;flex:1 1 100%;flex-wrap:wrap;width:100%;min-width:0;}
-.company-receipt-filters>input[type="search"]{min-width:220px;flex:1}
+.company-receipt-filters>.company-receipt-search{flex:1 1 260px;min-width:220px;width:100%;}
 .company-receipt-filters label{display:grid;gap:3px;min-width:0;font-size:11px;color:var(--muted)}
 .company-receipt-filters input,.company-receipt-filters select{min-height:36px}
 .company-receipt-filters input,.company-receipt-filters select,.company-receipt-filters .btn{min-width:0;max-width:100%;}
+.company-receipt-search{display:grid;gap:4px;min-width:0;}
+.company-receipt-search-label{color:var(--muted);font-size:calc(11px * var(--fs,1));font-weight:650;letter-spacing:.04em;text-transform:uppercase;}
+.company-receipt-search-control{display:flex;align-items:center;gap:8px;min-width:0;min-height:48px;padding:0 8px 0 13px;border:1px solid var(--hairline);border-radius:var(--r-s);background:var(--surface);transition:border-color .14s,box-shadow .14s;}
+.company-receipt-search-control:focus-within{border-color:color-mix(in srgb,var(--accent-action) 60%,var(--hairline));box-shadow:0 0 0 3px color-mix(in srgb,var(--accent-action) 18%,transparent);}
+.company-receipt-search-control>.ico{width:18px;height:18px;flex:none;color:var(--muted);}
+.company-receipt-search-control>input[type="search"]{flex:1 1 auto;min-width:0;width:100%;min-height:44px;padding:0;border:0;background:transparent;color:var(--fg);outline:0;}
+.company-receipt-search-control>input[type="search"]::placeholder{color:var(--muted);opacity:1;}
+.company-receipt-search-control>input[type="search"]::-webkit-search-cancel-button{display:none;}
+.company-receipt-search-clear{display:inline-flex;align-items:center;justify-content:center;flex:0 0 40px;width:40px;min-width:40px;height:40px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--muted);cursor:pointer;}
+.company-receipt-search-clear:hover,.company-receipt-search-clear:focus-visible{background:var(--surface-2);color:var(--fg);}
+.company-receipt-search-clear .ico{width:17px;height:17px;}
+.company-receipt-search-clear:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 .company-receipt-pack-frame{width:min(92vw,1100px);height:min(78vh,900px);background:#eef2f7}
 .company-receipt-pack-frame iframe{width:100%;height:100%;border:0;background:#fff}
 
@@ -87,7 +99,7 @@
   [data-company-receipt-register] .dt-body .dt-c:nth-child(2){grid-column:1/-1;}
   [data-company-receipt-register] .transaction-list-pagination{flex-wrap:wrap;padding:10px 0;}
   .company-receipt-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;}
-  .company-receipt-filters>input[type="search"],.company-receipt-filters>select{grid-column:1/-1;min-width:0;width:100%}
+  .company-receipt-filters>.company-receipt-search,.company-receipt-filters>select{grid-column:1/-1;min-width:0;width:100%}
   .company-receipt-filters>.btn{width:100%;justify-content:center;}
   .company-receipt-filters>.btn:last-child:nth-child(odd){grid-column:1/-1;}
   .modal.receipt-assistant-modal{width:100vw;height:100dvh;max-height:100dvh;border-radius:0;}
@@ -106,7 +118,7 @@
 
 @media(max-width:420px){
   .company-receipt-filters{grid-template-columns:minmax(0,1fr);}
-  .company-receipt-filters>input[type="search"],.company-receipt-filters>select,
+  .company-receipt-filters>.company-receipt-search,.company-receipt-filters>select,
   .company-receipt-filters>label,.company-receipt-filters>.btn{grid-column:1;}
 }
 

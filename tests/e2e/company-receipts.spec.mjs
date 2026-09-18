@@ -12,7 +12,7 @@ import path from 'node:path';
 const ROOT=path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
 const WEB_DIR=path.join(ROOT,'web');
 const PORT=process.env.COMPANY_RECEIPTS_E2E_PORT||'4318';
-const BASE_URL=`http://localhost:${PORT}`;
+const BASE_URL=`http://127.0.0.1:${PORT}`;
 const TIMEOUT=60000;
 
 function assert(condition,message){if(!condition) throw new Error(message);}
@@ -29,7 +29,7 @@ async function main(){
     throw new Error('web/dist/index.html not found. Run npm run build:demo first.');
   }
   const preview=spawn(path.join(WEB_DIR,'node_modules','.bin','vite'),
-    ['preview','--port',PORT,'--strictPort'],{cwd:WEB_DIR,stdio:['ignore','pipe','pipe']});
+    ['preview','--host','127.0.0.1','--port',PORT,'--strictPort'],{cwd:WEB_DIR,stdio:['ignore','pipe','pipe']});
   const browserErrors=[];
   let browser;
   let context;
@@ -289,7 +289,28 @@ async function main(){
     await page.waitForFunction(()=>document.querySelectorAll('.dt-body .dt-r').length===26);
     assert(await page.locator('[data-company-receipts-more]').count()===0,
       'next-page action must disappear at the end of the cursor');
+    const searchLayout=await page.evaluate(()=>{
+      const shell=document.querySelector('[data-company-receipt-search]');
+      const control=shell?.querySelector('.company-receipt-search-control');
+      const input=shell?.querySelector('[data-receipt-search]');
+      const shellRect=shell?.getBoundingClientRect();
+      const controlRect=control?.getBoundingClientRect();
+      return {
+        label: shell?.querySelector('label')?.textContent?.trim(),
+        inputLabel: input?.getAttribute('aria-label'),
+        controlHeight: controlRect?.height||0,
+        shellWidth: shellRect?.width||0,
+        viewportWidth: window.innerWidth,
+        documentOverflow: document.documentElement.scrollWidth>document.documentElement.clientWidth,
+      };
+    });
+    assert(searchLayout.label==='Search receipts'&&searchLayout.inputLabel==='Search receipts',
+      'Company Receipts search must expose a visible and accessible label');
+    assert(searchLayout.controlHeight>=48&&searchLayout.shellWidth>0&&!searchLayout.documentOverflow,
+      'Company Receipts search shell must have the standard touch height without page overflow');
     await page.locator('[data-receipt-search]').fill('server needle');
+    assert(await page.locator('[data-receipt-search-clear]').isVisible(),
+      'search clear action must appear when a search term is entered');
     await page.locator('[data-company-receipt-filters] button.primary').click();
     await page.waitForFunction(()=>document.querySelectorAll('.dt-body .dt-r').length===1);
     assert((await page.locator('.dt-body .dt-r').first().innerText()).includes('Server Search Result'),
@@ -303,6 +324,14 @@ async function main(){
     await page.waitForFunction(()=>window.__receiptQueries.at(-1)?.dateFrom==='2026-08-11');
     assert(await page.evaluate(()=>window.__receiptQueries.at(-1).dateTo)==='2026-08-11',
       'same-day inclusive range must be sent query-side');
+    await page.locator('[data-receipt-search]').fill('server needle');
+    await page.locator('[data-receipt-search-clear]').click();
+    await page.waitForFunction(()=>window.__receiptQueries.at(-1)?.search==='');
+    assert(await page.locator('[data-receipt-search]').inputValue()===''
+      &&await page.locator('[data-receipt-from]').inputValue()==='2026-08-11'
+      &&await page.locator('[data-receipt-to]').inputValue()==='2026-08-11'
+      &&await page.locator('[data-receipt-search-clear]').isHidden(),
+    'search clear must clear only the search term and preserve the active date range');
     await page.evaluate(()=>{
       window.__receiptOriginalDate=Date;
       const OriginalDate=Date,fixed=OriginalDate.parse('2026-08-31T16:30:00.000Z');
@@ -344,6 +373,21 @@ async function main(){
     await page.setViewportSize({width:390,height:844});
     await page.evaluate(()=>navigate('company-receipts'));
     await page.locator('[data-company-receipt-register="canonical"]').waitFor({timeout:TIMEOUT});
+    const mobileSearchLayout=await page.evaluate(()=>{
+      const shell=document.querySelector('[data-company-receipt-search]');
+      const control=shell?.querySelector('.company-receipt-search-control');
+      const shellRect=shell?.getBoundingClientRect();
+      const controlRect=control?.getBoundingClientRect();
+      return {
+        width:shellRect?.width||0,
+        controlHeight:controlRect?.height||0,
+        viewportWidth:window.innerWidth,
+        documentOverflow:document.documentElement.scrollWidth>document.documentElement.clientWidth,
+      };
+    });
+    assert(mobileSearchLayout.width<=mobileSearchLayout.viewportWidth
+      &&mobileSearchLayout.controlHeight>=48&&!mobileSearchLayout.documentOverflow,
+    'mobile Company Receipts search must remain full-width, touch-sized and overflow-free');
     assert(await page.locator('.dt-body .dt-r').count()===25,'mobile first page must remain bounded');
     assert(await page.locator('.dt-body .dt-r').first().locator('.dt-c[data-label]').count()===8,
       'mobile receipt card must expose all eight labelled facts');

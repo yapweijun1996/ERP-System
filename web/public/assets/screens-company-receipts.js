@@ -13,11 +13,11 @@
     ja:{title:'会社領収書',sub:'許可された範囲の確認済み領収書レコードです。',date:'日付',merchant:'加盟店',number:'領収書番号',category:'カテゴリ',amount:'金額',currency:'通貨',uploader:'アップロード者',status:'状態',empty:'会社領収書はありません',emptyBody:'確認済みの領収書がここに表示されます。',more:'さらに読み込む',loading:'読み込み中…',own:'自分の領収書',company:'会社台帳',loaded:'件読込',confirm:'領収書を確認',review:'対象証憑を選択',noEvidence:'対象となる領収書証憑がありません。先に管理された「自分の領収書」からアップロードまたは撮影してください。',purpose:'事業目的',notes:'メモ',save:'領収書を保存',close:'閉じる',detail:'領収書詳細',edit:'メタデータを編集',void:'領収書を無効化',voidReason:'無効化理由',voidConfirm:'会社領収書を無効化',version:'バージョン',originalFile:'元の証憑',hash:'証憑 SHA-256',searchEvidence:'証憑ファイル名を検索',moreEvidence:'証憑をさらに読み込む',emptyEvidence:'検索に一致する対象証憑はありません。',notReady:'この証憑はまだ確認できません。'},
   };
   const FILTER_COPY={
-    en:{search:'Search merchant, receipt no., notes or category',period:'Period',thisMonth:'This Month',lastMonth:'Last Month',thisQuarter:'This Quarter',thisYear:'This Year',custom:'Custom',allDates:'All Dates',from:'Date From',to:'Date To',apply:'Apply',clear:'Clear',invalid:'Date From must be on or before Date To.',missing:'Missing Date',missingHelp:'Open this receipt to add the transaction date; dated ranges exclude it.'},
-    zh:{search:'搜索商户、收据编号、备注或类别',period:'期间',thisMonth:'本月',lastMonth:'上月',thisQuarter:'本季度',thisYear:'本年',custom:'自定义',allDates:'全部日期',from:'开始日期',to:'结束日期',apply:'应用',clear:'清除',invalid:'开始日期不得晚于结束日期。',missing:'缺少日期',missingHelp:'打开此收据补充交易日期；日期范围会排除此记录。'},
-    ms:{search:'Cari peniaga, no. resit, nota atau kategori',period:'Tempoh',thisMonth:'Bulan Ini',lastMonth:'Bulan Lepas',thisQuarter:'Suku Ini',thisYear:'Tahun Ini',custom:'Tersuai',allDates:'Semua Tarikh',from:'Tarikh Dari',to:'Tarikh Hingga',apply:'Guna',clear:'Kosongkan',invalid:'Tarikh Dari mesti sebelum atau sama dengan Tarikh Hingga.',missing:'Tarikh Tiada',missingHelp:'Buka resit ini untuk menambah tarikh transaksi; julat bertarikh mengecualikannya.'},
-    vi:{search:'Tìm nhà cung cấp, số biên lai, ghi chú hoặc danh mục',period:'Kỳ',thisMonth:'Tháng này',lastMonth:'Tháng trước',thisQuarter:'Quý này',thisYear:'Năm nay',custom:'Tùy chỉnh',allDates:'Mọi ngày',from:'Từ ngày',to:'Đến ngày',apply:'Áp dụng',clear:'Xóa',invalid:'Từ ngày phải trước hoặc bằng Đến ngày.',missing:'Thiếu ngày',missingHelp:'Mở biên lai này để thêm ngày giao dịch; khoảng ngày sẽ loại bản ghi này.'},
-    ja:{search:'加盟店、領収書番号、メモ、カテゴリを検索',period:'期間',thisMonth:'今月',lastMonth:'先月',thisQuarter:'今四半期',thisYear:'今年',custom:'カスタム',allDates:'全期間',from:'開始日',to:'終了日',apply:'適用',clear:'クリア',invalid:'開始日は終了日以前にしてください。',missing:'日付なし',missingHelp:'この領収書を開いて取引日を追加してください。日付範囲では除外されます。'},
+    en:{search:'Search merchant, receipt no., notes or category',searchLabel:'Search receipts',clearSearch:'Clear search',period:'Period',thisMonth:'This Month',lastMonth:'Last Month',thisQuarter:'This Quarter',thisYear:'This Year',custom:'Custom',allDates:'All Dates',from:'Date From',to:'Date To',apply:'Apply',clear:'Clear',invalid:'Date From must be on or before Date To.',missing:'Missing Date',missingHelp:'Open this receipt to add the transaction date; dated ranges exclude it.'},
+    zh:{search:'搜索商户、收据编号、备注或类别',searchLabel:'搜索收据',clearSearch:'清除搜索',period:'期间',thisMonth:'本月',lastMonth:'上月',thisQuarter:'本季度',thisYear:'本年',custom:'自定义',allDates:'全部日期',from:'开始日期',to:'结束日期',apply:'应用',clear:'清除',invalid:'开始日期不得晚于结束日期。',missing:'缺少日期',missingHelp:'打开此收据补充交易日期；日期范围会排除此记录。'},
+    ms:{search:'Cari peniaga, no. resit, nota atau kategori',searchLabel:'Cari resit',clearSearch:'Kosongkan carian',period:'Tempoh',thisMonth:'Bulan Ini',lastMonth:'Bulan Lepas',thisQuarter:'Suku Ini',thisYear:'Tahun Ini',custom:'Tersuai',allDates:'Semua Tarikh',from:'Tarikh Dari',to:'Tarikh Hingga',apply:'Guna',clear:'Kosongkan',invalid:'Tarikh Dari mesti sebelum atau sama dengan Tarikh Hingga.',missing:'Tarikh Tiada',missingHelp:'Buka resit ini untuk menambah tarikh transaksi; julat bertarikh mengecualikannya.'},
+    vi:{search:'Tìm nhà cung cấp, số biên lai, ghi chú hoặc danh mục',searchLabel:'Tìm biên lai',clearSearch:'Xóa tìm kiếm',period:'Kỳ',thisMonth:'Tháng này',lastMonth:'Tháng trước',thisQuarter:'Quý này',thisYear:'Năm nay',custom:'Tùy chỉnh',allDates:'Mọi ngày',from:'Từ ngày',to:'Đến ngày',apply:'Áp dụng',clear:'Xóa',invalid:'Từ ngày phải trước hoặc bằng Đến ngày.',missing:'Thiếu ngày',missingHelp:'Mở biên lai này để thêm ngày giao dịch; khoảng ngày sẽ loại bản ghi này.'},
+    ja:{search:'加盟店、領収書番号、メモ、カテゴリを検索',searchLabel:'領収書を検索',clearSearch:'検索をクリア',period:'期間',thisMonth:'今月',lastMonth:'先月',thisQuarter:'今四半期',thisYear:'今年',custom:'カスタム',allDates:'全期間',from:'開始日',to:'終了日',apply:'適用',clear:'クリア',invalid:'開始日は終了日以前にしてください。',missing:'日付なし',missingHelp:'この領収書を開いて取引日を追加してください。日付範囲では除外されます。'},
   };
   const PACK_COPY={
     en:{preview:'Preview Pack',pdf:'PDF',print:'Print',packTitle:'Company Receipt Pack',packRange:'Choose both Date From and Date To before creating a Receipt Pack.',packBusy:'Building Receipt Pack…',packError:'Receipt Pack could not be created.',reviewTitle:'Review Receipt Pack',reviewIntro:'Review the selected evidence and totals. Nothing will be created until you confirm.',selected:'Selected evidence',total:'Totals',filters:'Filters',pending:'Pending action',confirmCreate:'Confirm and create',cancel:'Cancel',selectionChanged:'The eligible receipt selection changed. Review the latest selection before confirming.',close:'Close'},
@@ -741,7 +741,14 @@
       rowId:row=>row.id,onOpen:row=>receiptDetails(row),count:()=>rows.length,
       kpis:[{label:scopeLabel,value:()=>rows.length}],
       toolbarContent:()=>`<form class="company-receipt-filters" data-company-receipt-filters>
-        <input type="search" data-receipt-search value="${esc(filters.search)}" placeholder="${esc(c.search)}" aria-label="${esc(c.search)}">
+        <div class="company-receipt-search" data-company-receipt-search>
+          <label class="company-receipt-search-label" for="company-receipt-search-input">${esc(c.searchLabel)}</label>
+          <span class="company-receipt-search-control">
+            ${ic('search')}
+            <input id="company-receipt-search-input" type="search" data-receipt-search value="${esc(filters.search)}" placeholder="${esc(c.search)}" aria-label="${esc(c.searchLabel)}" autocomplete="off" spellcheck="false">
+            <button type="button" class="company-receipt-search-clear" data-receipt-search-clear aria-label="${esc(c.clearSearch)}" title="${esc(c.clearSearch)}" ${filters.search?'':'hidden'}>${ic('x')}</button>
+          </span>
+        </div>
         <select data-receipt-preset aria-label="${esc(c.period)}">${[['allDates',c.allDates],['thisMonth',c.thisMonth],['lastMonth',c.lastMonth],['thisQuarter',c.thisQuarter],['thisYear',c.thisYear],['custom',c.custom]].map(([value,label])=>`<option value="${value}" ${filters.preset===value?'selected':''}>${esc(label)}</option>`).join('')}</select>
         <label><span>${esc(c.from)}</span><input type="date" data-receipt-from value="${esc(filters.dateFrom||'')}"></label>
         <label><span>${esc(c.to)}</span><input type="date" data-receipt-to value="${esc(filters.dateTo||'')}"></label>
@@ -797,6 +804,18 @@
           filters.preset=event.currentTarget.value;
           [filters.dateFrom,filters.dateTo]=presetRange(filters.preset);
           page.render();
+        });
+        const searchInput=screenRoot.querySelector('[data-receipt-search]');
+        const searchClear=screenRoot.querySelector('[data-receipt-search-clear]');
+        const syncSearchClear=()=>{if(searchClear) searchClear.hidden=!searchInput?.value;};
+        searchInput?.addEventListener('input',syncSearchClear);
+        searchClear?.addEventListener('click',async()=>{
+          if(!searchInput?.value) return;
+          filters.search='';
+          loadError='';
+          try{await reload();}catch(error){loadError=String(error&&error.message||error);}
+          page.render();
+          requestAnimationFrame(()=>screenRoot.querySelector('[data-receipt-search]')?.focus());
         });
         screenRoot.querySelector('[data-company-receipt-filters]')?.addEventListener('submit',async event=>{
           event.preventDefault();
