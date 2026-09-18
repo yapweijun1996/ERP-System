@@ -46,9 +46,9 @@ SCREENS['new-employee'] = async function(root){
           <p class="hint">${esc(t('staff.passwordHint'))}</p>
         </div></div>
         <div class="panel" ${step===3?'':'hidden'}><div class="panel-h">${ic('shield')}<h3>${esc(t('staff.companyRoles'))}</h3></div><div class="panel-body">
-          <div class="callout info">${esc(t('staff.roleHint',{company:DB.company.name}))}<br>${esc(t('staff.baseRoleHint'))}</div>
-          <div class="check-grid">${roles.length?roles.map(role=>`<label class="check-row"><input type="checkbox" name="neRole" value="${role.roleId}"><span><b>${esc(roleDisplayName(role))}</b><small>${esc(roleDisplayKey(role))}</small></span></label>`).join(''):`<div class="empty-state">${esc(t('staff.baseRoleHint'))}</div>`}</div>
-          <div class="fldrow c2" style="margin-top:12px"><div class="fld"><span>${esc(s('fieldAnnualDays'))}</span><input type="number" id="neLeave" min="0" max="40" value="14"></div></div>
+          <div class="callout info staff-onboarding-role-callout">${esc(t('staff.roleHint',{company:DB.company.name}))}<br>${esc(t('staff.baseRoleHint'))}</div>
+          <div class="check-grid staff-onboarding-role-grid">${roles.length?roles.map(role=>`<label class="check-row staff-onboarding-role-option"><input type="checkbox" name="neRole" value="${role.roleId}"><span><b>${esc(roleDisplayName(role))}</b><small>${esc(roleDisplayKey(role))}</small></span></label>`).join(''):`<div class="empty-state">${esc(t('staff.baseRoleHint'))}</div>`}</div>
+          <div class="fldrow c2 staff-onboarding-leave-row"><div class="fld"><span>${esc(s('fieldAnnualDays'))}</span><input type="number" id="neLeave" min="0" max="40" value="14"></div></div>
         </div></div>
       </div></div></div></div>
       <div class="set-savebar"><div class="staff-onboarding-save-context"><b>${t('staff.stepCount',{step})}</b><small>${esc(steps[step-1])}</small></div><div class="grow"></div>

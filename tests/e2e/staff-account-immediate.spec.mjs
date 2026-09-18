@@ -17,7 +17,7 @@ try {
     await new Promise(resolve => setTimeout(resolve, 250));
   }
   browser = await chromium.launch();
-  for (const width of [1280, 375]) {
+  for (const width of [1280, 445, 390, 375]) {
     const context = await browser.newContext({ viewport: { width, height: 844 }, permissions: ['clipboard-read', 'clipboard-write'] });
     const page = await context.newPage();
     const errors = [];
@@ -41,6 +41,41 @@ try {
     if (await page.locator('#nePassword').count()) throw new Error('Manual password input still exists');
     if (await page.getByText('First use or 7 days', { exact: true }).count()) throw new Error('Obsolete activation expiry shown');
     await page.locator('#neNext').click();
+    const onboardingLayout = await page.evaluate(() => {
+      const stepper = document.querySelector('.staff-onboarding-progress .stepper');
+      const steps = [...(stepper?.querySelectorAll('.step') || [])];
+      const roleGrid = document.querySelector('.staff-onboarding-role-grid');
+      const roleOptions = [...(roleGrid?.querySelectorAll('.staff-onboarding-role-option') || [])];
+      const rects = roleOptions.map(option => option.getBoundingClientRect());
+      return {
+        stepCount: steps.length,
+        stepRows: new Set(steps.map(step => Math.round(step.getBoundingClientRect().top))).size,
+        stepOverflow: stepper ? stepper.scrollWidth - stepper.clientWidth : Number.POSITIVE_INFINITY,
+        roleColumns: roleGrid ? getComputedStyle(roleGrid).gridTemplateColumns.split(/\s+/).filter(Boolean).length : 0,
+        roleCount: roleOptions.length,
+        roleMinHeight: rects.length ? Math.min(...rects.map(rect => rect.height)) : 0,
+        roleBottom: rects.length ? Math.max(...rects.map(rect => rect.bottom)) : 0,
+        documentOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      };
+    });
+    if (onboardingLayout.stepCount !== 3
+      || onboardingLayout.stepRows !== 1
+      || onboardingLayout.stepOverflow > 1
+      || onboardingLayout.roleCount < 1
+      || onboardingLayout.roleMinHeight < 44
+      || onboardingLayout.documentOverflow > 1) {
+      throw new Error(`Onboarding layout regressed at ${width}px: ${JSON.stringify(onboardingLayout)}`);
+    }
+    if (width <= 560 && onboardingLayout.roleColumns !== 1) {
+      throw new Error(`Mobile role options should be one column at ${width}px: ${JSON.stringify(onboardingLayout)}`);
+    }
+    await page.locator('input[name="neRole"]').first().focus();
+    const focusState = await page.evaluate(() => {
+      const input = document.querySelector('input[name="neRole"]:focus');
+      const option = input?.closest('.staff-onboarding-role-option');
+      return { focused: Boolean(input), focusRing: option ? getComputedStyle(option).boxShadow !== 'none' : false };
+    });
+    if (!focusState.focused || !focusState.focusRing) throw new Error(`Role focus state is not visible at ${width}px`);
     const viewer = page.locator('.check-row').filter({ hasText: 'Viewer' });
     if (await viewer.count()) await viewer.first().locator('input').check();
     else await page.locator('input[name="neRole"]').first().check();
