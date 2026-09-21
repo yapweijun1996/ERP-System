@@ -114,7 +114,7 @@ async function main(): Promise<void> {
     assert(await page.locator('#provisionMasterLoginCode').inputValue() === 'ACME', 'master login-code autofill is incorrect');
     assert(await page.locator('#platformCreateMasterAction').innerText() === 'Next: Create Master', 'master button copy is incorrect');
     assert(await page.locator('[data-provision-module]:checked').count() > 0, 'commercial module defaults were not checked');
-    assert(await page.locator('[data-provision-module="expenses_tax"]').isChecked() === false, 'expenses_tax default unexpectedly enabled');
+    assert(await page.locator('[data-provision-module="expenses_tax"]').isChecked() === true, 'expenses_tax default was not enabled');
 
     await page.locator('#provisionMasterName').fill('Edited Acme Group');
     await page.evaluate(() => {
@@ -282,15 +282,15 @@ async function main(): Promise<void> {
     assert(await page.locator('#provisionCompanyOwnerEmail').inputValue() === 'owner3@acme.co', 'third Company owner email autofill is incorrect');
     assert(await page.locator('#provisionCompanyOwnerPassword').inputValue() === 'demo1234', 'third Company owner password autofill is incorrect');
 
-    // A backend uniqueness conflict must keep the panel and edited values so
-    // the operator can correct them; selecting a Company then closes it.
-    await page.locator('#provisionCompanyOwnerEmail').fill('owner@acme.co');
+    // A backend username uniqueness conflict must keep the panel and edited
+    // values so the operator can correct them; selecting a Company then closes it.
+    await page.locator('#provisionCompanyOwnerUsername').fill('owner');
     page.on('request', companyRequestListener);
     await page.locator('#platformCreateCompanyAction').click();
     await page.locator('#platformCreateCompanyError').waitFor({ state: 'visible', timeout: TIMEOUT });
     page.off('request', companyRequestListener);
     assert(/already exists/i.test(await page.locator('#platformCreateCompanyError').innerText()), 'duplicate owner conflict did not reach the inline alert');
-    assert(await page.locator('#provisionCompanyOwnerEmail').inputValue() === 'owner@acme.co', 'conflict retry did not preserve the edited email');
+    assert(await page.locator('#provisionCompanyOwnerUsername').inputValue() === 'owner', 'conflict retry did not preserve the edited username');
     assert(await page.locator('#platformCreateCompanyForm').count() === 1, 'conflict closed the Company panel');
     assert(await page.locator('#platformCompanySelect option').count() === 2, 'conflict created an extra Company');
     const firstCompanyFn = await page.locator('#platformCompanySelect option').first().getAttribute('value');
@@ -324,6 +324,80 @@ async function main(): Promise<void> {
     // cookies; the shortcut only supplies the public sample credentials.
     await page.locator('#platformLogoutBtn').click();
     await waitFor(page, '#platformAwareLoginForm');
+    const assertRealmLayout = async (label: string) => {
+      const layout = await page.evaluate(() => {
+        const tabs = [...document.querySelectorAll<HTMLElement>('.platform-realm-tab')];
+        const rects = tabs.map((tab) => tab.getBoundingClientRect());
+        const tablist = document.querySelector<HTMLElement>('#platformRealmTabs')?.getBoundingClientRect();
+        return {
+          documentWidth: document.documentElement.scrollWidth,
+          viewportWidth: window.innerWidth,
+          sameRow: rects.length === 2 && Math.abs(rects[0].top - rects[1].top) <= 1,
+          equalWidth: rects.length === 2 && Math.abs(rects[0].width - rects[1].width) <= 1,
+          tablistInsideViewport: Boolean(tablist && tablist.left >= -1 && tablist.right <= window.innerWidth + 1),
+          labelsFit: tabs.every((tab) => tab.scrollWidth <= tab.clientWidth + 1),
+          active: document.querySelector<HTMLElement>('.platform-realm-tab[aria-selected="true"]')?.dataset.realm,
+          tenantControls: document.querySelector('#tenantRealmTab')?.getAttribute('aria-controls'),
+          platformControls: document.querySelector('#platformRealmTab')?.getAttribute('aria-controls'),
+        };
+      });
+      assert(layout.documentWidth <= layout.viewportWidth + 1, `${label}: realm chooser introduced horizontal overflow`);
+      assert(layout.sameRow, `${label}: realm tabs are not on one row`);
+      assert(layout.equalWidth, `${label}: realm tabs are not equal width`);
+      assert(layout.tablistInsideViewport, `${label}: realm chooser escapes the viewport`);
+      assert(layout.labelsFit, `${label}: realm tab label is clipped`);
+      assert(layout.active === 'tenant', `${label}: Tenant is not the initial selected realm`);
+      assert(layout.tenantControls === 'tenantCredentials', `${label}: Tenant tabpanel association is missing`);
+      assert(layout.platformControls === 'platformCredentials', `${label}: Platform tabpanel association is missing`);
+    };
+    for (const viewport of [
+      { label: 'mobile', width: 390, height: 844 },
+      { label: 'short-mobile', width: 375, height: 667 },
+    ]) {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await assertRealmLayout(viewport.label);
+      await page.locator('#platformRealmTab').click();
+      assert(await page.locator('#tenantCredentials').isHidden(), `${viewport.label}: Tenant fields remain visible in Platform realm`);
+      assert(await page.locator('#platformCredentials').isVisible(), `${viewport.label}: Platform fields are hidden after selection`);
+      assert(await page.locator('#tenantRememberDeviceRow').isHidden(), `${viewport.label}: Remember Me remains visible in Platform realm`);
+      await page.locator('#tenantRealmTab').click();
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.locator('#tenantRealmTab').focus();
+    await page.keyboard.press('ArrowRight');
+    assert(await page.evaluate(() => document.activeElement?.id) === 'platformRealmTab', 'ArrowRight did not move focus to Platform realm');
+    assert(await page.locator('[data-realm="platform"]').getAttribute('aria-selected') === 'true', 'ArrowRight did not select Platform realm');
+    await page.keyboard.press('ArrowLeft');
+    assert(await page.evaluate(() => document.activeElement?.id) === 'tenantRealmTab', 'ArrowLeft did not move focus back to Tenant realm');
+    assert(await page.locator('[data-realm="tenant"]').getAttribute('aria-selected') === 'true', 'ArrowLeft did not select Tenant realm');
+    await page.keyboard.press('ArrowDown');
+    assert(await page.evaluate(() => document.activeElement?.id) === 'platformRealmTab', 'ArrowDown did not move focus to Platform realm');
+    await page.keyboard.press('Home');
+    assert(await page.evaluate(() => document.activeElement?.id) === 'tenantRealmTab', 'Home did not move focus to Tenant realm');
+    await page.keyboard.press('End');
+    assert(await page.evaluate(() => document.activeElement?.id) === 'platformRealmTab', 'End did not move focus to Platform realm');
+    await page.keyboard.press('ArrowUp');
+    assert(await page.evaluate(() => document.activeElement?.id) === 'tenantRealmTab', 'ArrowUp did not move focus back to Tenant realm');
+    await page.evaluate(() => {
+      const platform = window as unknown as {
+        ErpPlatformWorkspace?: { renderLogin?: (realm: string, setupStatus: { hasPlatformAdmin: boolean }) => void };
+      };
+      platform.ErpPlatformWorkspace?.renderLogin?.('platform', { hasPlatformAdmin: true });
+    });
+    await waitFor(page, '#platformCredentials');
+    assert(await page.locator('#platformRealmTab').getAttribute('aria-selected') === 'true', 'Platform initial realm was not selected when requested');
+    assert(await page.locator('#tenantCredentials').isHidden(), 'Tenant panel was not hidden for an initial Platform realm');
+    await page.waitForFunction(() => document.activeElement?.id === 'platformPrincipalKey');
+    await page.evaluate(() => {
+      const platform = window as unknown as {
+        ErpPlatformWorkspace?: { renderLogin?: (realm: string, setupStatus: { hasPlatformAdmin: boolean }) => void };
+      };
+      platform.ErpPlatformWorkspace?.renderLogin?.('tenant', { hasPlatformAdmin: true });
+    });
+    await waitFor(page, '#tenantRecoveryButton');
+    const recoveryWidth = await page.locator('#tenantRecoveryButton').evaluate((button) => button.getBoundingClientRect().width);
+    const formWidth = await page.locator('#platformAwareLoginForm').evaluate((form) => form.getBoundingClientRect().width);
+    assert(recoveryWidth < formWidth, 'Tenant recovery still occupies the full primary-action width');
     assert(await page.locator('#tenantRememberDeviceRow').isVisible(), 'tenant Remember Me row is not visible in tenant realm');
     const rememberAfterPassword = await page.evaluate(() => {
       const password = document.querySelector('#realmPassword');

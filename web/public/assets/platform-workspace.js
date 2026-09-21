@@ -508,20 +508,20 @@
     var view=authView();
     var demoPlatformLoginAvailable=demoAutofillEnabled()&&Boolean(setupStatus&&setupStatus.hasPlatformAdmin);
     view.setAttribute('aria-label',pt('login.ariaLabel','Sign in'));
-    view.innerHTML=`<section class="auth-panel">
+    view.innerHTML=`<section class="auth-panel platform-login-panel">
       <div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>${esc(pt('login.brandSubtitle','Secure workspace'))}</small></span></div>
       <div class="auth-copy"><h1>${esc(pt('login.title','Sign in'))}</h1><p>${esc(pt('login.body','Choose the tenant workspace or the independent Platform Superadmin realm.'))}</p></div>
-      <div class="platform-realm-tabs" role="tablist" aria-label="${esc(pt('login.realm','Sign-in realm'))}">
-        <button type="button" class="btn soft active" data-realm="tenant" role="tab" aria-selected="true">${esc(pt('login.tenantWorkspace','Tenant workspace'))}</button>
-        <button type="button" class="btn soft" data-realm="platform" role="tab" aria-selected="false">${esc(pt('step.platform','Platform Superadmin'))}</button>
+      <div class="platform-realm-tabs" id="platformRealmTabs" role="tablist" aria-label="${esc(pt('login.realm','Sign-in realm'))}">
+        <button type="button" class="platform-realm-tab active" id="tenantRealmTab" data-realm="tenant" role="tab" aria-selected="true" aria-controls="tenantCredentials" tabindex="0">${esc(pt('login.tenantWorkspace','Tenant workspace'))}</button>
+        <button type="button" class="platform-realm-tab" id="platformRealmTab" data-realm="platform" role="tab" aria-selected="false" aria-controls="platformCredentials" tabindex="-1">${esc(pt('step.platform','Platform Superadmin'))}</button>
       </div>
       <form class="auth-form" id="platformAwareLoginForm" autocomplete="off">
-        <div id="tenantCredentials">
-          <button type="button" class="btn soft" id="tenantRecoveryButton">${esc(window.tf('recovery.title','Recover account'))}</button>
+        <div id="tenantCredentials" class="auth-realm-panel" role="tabpanel" aria-labelledby="tenantRealmTab">
           <div class="fld"><label class="fldlabel" for="tenantOrganizationCode">${esc(pt('field.organizationCode','Organization code'))}</label><input id="tenantOrganizationCode" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="${esc(pt('field.organizationPlaceholder','e.g. ACME'))}"></div>
           <div class="fld"><label class="fldlabel" for="tenantUsername">${esc(pt('field.username','Username'))}</label><input id="tenantUsername" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="${esc(pt('field.usernamePlaceholder','e.g. admin'))}"></div>
+          <div class="auth-realm-recovery" id="tenantRecoveryAction"><button type="button" class="btn plain" id="tenantRecoveryButton">${esc(window.tf('recovery.title','Recover account'))}</button></div>
         </div>
-        <div id="platformCredentials" hidden>
+        <div id="platformCredentials" class="auth-realm-panel" role="tabpanel" aria-labelledby="platformRealmTab" hidden>
           ${demoPlatformLoginAvailable?`<div class="platform-demo-login"><button type="button" class="btn primary" id="platformDemoLoginButton">${esc(pt('login.demoButton','Log in as Platform Admin (Demo)'))}</button><small>${esc(pt('login.demoBody','Uses the public platform-admin sample account. Demo only.'))}</small></div>`:''}
           <div class="fld"><label class="fldlabel" for="platformPrincipalKey">${esc(pt('field.platformPrincipalKey','Platform principal key'))}</label><input id="platformPrincipalKey" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="${esc(pt('field.platformPrincipalPlaceholder','e.g. platform-admin'))}"></div>
           <p class="auth-help">${esc(pt('login.platformSessionHelp','Platform sessions are limited to one hour. Remember Me is not available.'))}</p>
@@ -537,21 +537,36 @@
       if(window.ErpTenantRecovery) window.ErpTenantRecovery.render();
     });
     var realm=initialRealm==='platform'?'platform':'tenant';
-    function toggle(next){
+    var realmTabs=view.querySelectorAll('.platform-realm-tab');
+    function toggle(next,focusField){
       realm=next;
       view.querySelector('#tenantCredentials').hidden=realm!=='tenant';
       view.querySelector('#platformCredentials').hidden=realm!=='platform';
       view.querySelector('#tenantRememberDeviceRow').hidden=realm!=='tenant';
-      view.querySelectorAll('[data-realm]').forEach(function(button){
+      realmTabs.forEach(function(button){
         var active=button.dataset.realm===realm;
-        button.classList.toggle('active',active); button.setAttribute('aria-selected',String(active));
+        button.classList.toggle('active',active);
+        button.setAttribute('aria-selected',String(active));
+        button.tabIndex=active?0:-1;
       });
-      setTimeout(function(){
-        var field=view.querySelector(realm==='platform'?'#platformPrincipalKey':'#tenantOrganizationCode');
-        if(field) field.focus();
-      },0);
+      if(focusField===false) return;
+      var field=view.querySelector(realm==='platform'?'#platformPrincipalKey':'#tenantOrganizationCode');
+      if(field) field.focus({preventScroll:true});
     }
-    view.querySelectorAll('[data-realm]').forEach(function(button){ button.addEventListener('click',function(){ toggle(button.dataset.realm); }); });
+    realmTabs.forEach(function(button){ button.addEventListener('click',function(){ toggle(button.dataset.realm); }); });
+    view.querySelector('#platformRealmTabs').addEventListener('keydown',function(event){
+      var current=Array.prototype.indexOf.call(realmTabs,document.activeElement);
+      if(current<0) return;
+      var next;
+      if(event.key==='ArrowRight'||event.key==='ArrowDown') next=(current+1)%realmTabs.length;
+      else if(event.key==='ArrowLeft'||event.key==='ArrowUp') next=(current-1+realmTabs.length)%realmTabs.length;
+      else if(event.key==='Home') next=0;
+      else if(event.key==='End') next=realmTabs.length-1;
+      else return;
+      event.preventDefault();
+      toggle(realmTabs[next].dataset.realm,false);
+      realmTabs[next].focus();
+    });
     view.querySelector('#platformAwareLoginForm').addEventListener('submit',async function(event){
       event.preventDefault(); setError('');
       var password=view.querySelector('#realmPassword').value;
