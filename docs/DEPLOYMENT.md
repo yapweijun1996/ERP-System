@@ -1,5 +1,16 @@
 # Deployment
 
+Latest production UI release — 2026-09-23: application revision
+`ef4cb06d9d1acec9ba0ee36d074ee7856e966d08` is live at
+`https://gmb01.xyz/erp/`. The application-only release recreated API, Web and
+calendar-worker in `erp-system-production-fresh`; local and public release
+verification matched the API health revision and Web `release.json`, with all 126
+manifest asset hashes passing. PostgreSQL remained healthy with the same container
+identity before and after release; no migration, seed or database restart ran. The
+authenticated browser session was not available for a post-release visual check, so
+the focused Platform workspace E2E is the evidence for the signed-in mobile labels.
+Evidence: [TASK-243 production verification](ai-native/evidence/TASK-243-2026-09-23.md).
+
 Public Tunnel recovery — 2026-09-11: `https://gmb01.xyz/erp/` is available.
 The system Tunnel now routes ERP to `127.0.0.1:18791`; public health returns 200
 and the complete release verifier matches revision
@@ -58,7 +69,7 @@ reset; this is not proof that 0103 or the current HEAD is deployed. Production R
 the override/company tables; the application central evaluator remains authoritative for
 decision semantics.
 
-### Current deployment checkpoint — 2026-09-11
+### Previous deployment checkpoint — 2026-09-11
 
 The current application-only release is
 `03487b13ce838407d97cd00697bd2b54b4a7c918`. API, Web, calendar-worker and

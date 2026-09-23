@@ -2701,7 +2701,7 @@ reviving a login-capable tenant Superadmin or legacy authorization bypass:
 | TASK-207 | Done | Tenant authorization, switching, break-glass and dual-attribution/adversarial proof |
 | TASK-208 | Done | Platform/Tenant workspace UX, Employee-mode integration and five-language browser proof |
 | TASK-209 | Blocked | PostgreSQL/RLS, current-HEAD CI, release, documentation and KB proof; current CI is complete, but deployed/production evidence remains |
-| TASK-243 | In Progress | Localized mobile Platform overview and tenant-context labels |
+| TASK-243 | Done | Localized mobile Platform overview and tenant-context labels |
 
 Source for TASK-206–208 is present; TASK-203's current-HEAD CI gate is complete. TASK-206's focused PGlite/API and disposable
 PostgreSQL hidden actor/session proof passes, but this is not a production-ready or

@@ -562,7 +562,7 @@ and attempting `localhost:6859`, where the connection was refused. The prepared
 candidate changed only the `/erp` path to the healthy production proxy at
 `127.0.0.1:18791`.
 
-Current production renderer release — 2026-09-11: release `03487b13ce838407d97cd00697bd2b54b4a7c918`
+Production renderer release — 2026-09-11: release `03487b13ce838407d97cd00697bd2b54b4a7c918`
 recreated the API, Web and calendar-worker containers with the database preserved.
 All four Compose services are healthy and the API health revision equals the Web
 `release.json` revision. The Receipt Pack renderer now treats PNG/JPEG sources below
@@ -576,6 +576,15 @@ image/PDF remain open. The release script now uses `--force-recreate` so API/Web
 silently remain on different revisions after an application rebuild. The local release
 verifier also passed root, health, setup status, manifest, all 126 asset hashes, revision
 matching and final URL checks for the loopback `/erp` origin.
+
+Current production UI release — 2026-09-23: revision
+`ef4cb06d9d1acec9ba0ee36d074ee7856e966d08` is live in the
+`erp-system-production-fresh` Compose project. The application-only release rebuilt
+API, Web and calendar-worker; local and public release verification passed health,
+setup status, revision matching and all 126 asset hashes. PostgreSQL remained healthy
+and its container identity was unchanged; no migration, seed or database restart ran.
+The authenticated Chrome session was unavailable for a post-release visual check.
+See [TASK-243 production evidence](ai-native/evidence/TASK-243-2026-09-23.md).
 
 
 
