@@ -7,8 +7,9 @@ calendar-worker in `erp-system-production-fresh`; local and public release
 verification matched the API health revision and Web `release.json`, with all 126
 manifest asset hashes passing. PostgreSQL remained healthy with the same container
 identity before and after release; no migration, seed or database restart ran. The
-authenticated browser session was not available for a post-release visual check, so
-the focused Platform workspace E2E is the evidence for the signed-in mobile labels.
+authenticated Chrome view at 732px confirmed the Platform shell header, user identity
+and Sign out control render without overlap. The 390px mobile-only disclosure labels
+are verified by the focused Platform workspace E2E.
 Evidence: [TASK-243 production verification](ai-native/evidence/TASK-243-2026-09-23.md).
 
 Public Tunnel recovery — 2026-09-11: `https://gmb01.xyz/erp/` is available.

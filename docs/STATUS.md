@@ -583,7 +583,9 @@ Current production UI release — 2026-09-23: revision
 API, Web and calendar-worker; local and public release verification passed health,
 setup status, revision matching and all 126 asset hashes. PostgreSQL remained healthy
 and its container identity was unchanged; no migration, seed or database restart ran.
-The authenticated Chrome session was unavailable for a post-release visual check.
+An authenticated Chrome view at 732px confirmed the Platform shell header, user
+identity and Sign out control render without overlap; the focused E2E verifies the
+mobile-only disclosure labels at 390px.
 See [TASK-243 production evidence](ai-native/evidence/TASK-243-2026-09-23.md).
 
 
