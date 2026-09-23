@@ -391,6 +391,71 @@ async function main(): Promise<void> {
     assert(await page.locator('#platformMasterTab').getAttribute('aria-selected') === 'true', 'Master controls is not the default entitlement tab');
     assert(await page.locator('#platformCompanyPanel').isHidden(), 'inactive Company allocation panel is not hidden');
 
+    async function assertCompletedIntroLayout(width: number, height: number): Promise<void> {
+      await page.setViewportSize({ width, height });
+      await page.waitForTimeout(50);
+      const metrics = await page.evaluate(() => {
+        const intro = document.querySelector<HTMLElement>('.platform-shell-intro');
+        const copy = document.querySelector<HTMLElement>('.platform-shell-intro .auth-copy');
+        const heading = document.querySelector<HTMLElement>('.platform-shell-intro h1');
+        const toolbarContext = document.querySelector<HTMLDetailsElement>('.platform-shell-toolbar-context');
+        const body = document.querySelector<HTMLElement>('.platform-shell-body');
+        if (!intro || !copy || !heading || !toolbarContext || !body) return null;
+        const introRect = intro.getBoundingClientRect();
+        const copyRect = copy.getBoundingClientRect();
+        const headingRect = heading.getBoundingClientRect();
+        const toolbarContextRect = toolbarContext.getBoundingClientRect();
+        return {
+          display: getComputedStyle(intro).display,
+          hasToolbar: intro.classList.contains('has-toolbar'),
+          hasProgress: intro.classList.contains('has-progress'),
+          contextOpen: toolbarContext.open,
+          intro: { top: introRect.top, bottom: introRect.bottom, right: introRect.right },
+          copy: { top: copyRect.top, bottom: copyRect.bottom, left: copyRect.left, right: copyRect.right },
+          heading: { width: headingRect.width },
+          toolbarContext: { top: toolbarContextRect.top, bottom: toolbarContextRect.bottom, left: toolbarContextRect.left, right: toolbarContextRect.right },
+          bodyHeight: body.clientHeight,
+          documentWidth: document.documentElement.scrollWidth,
+          viewportWidth: document.documentElement.clientWidth,
+        };
+      });
+      assert(metrics, `completed intro metrics missing at ${width}x${height}`);
+      assert(metrics.hasToolbar && !metrics.hasProgress, `completed intro has the wrong state classes at ${width}x${height}`);
+      assert(metrics.heading.width >= 240, `completed workspace heading was squeezed to ${metrics.heading.width}px at ${width}x${height}`);
+      assert(metrics.toolbarContext.right <= metrics.intro.right + 1, `completed tenant context exceeded the intro width at ${width}x${height}`);
+      assert(metrics.bodyHeight >= 160, `completed workspace body was compressed to ${metrics.bodyHeight}px at ${width}x${height}`);
+      assert(metrics.documentWidth - metrics.viewportWidth <= 1, `completed intro overflowed horizontally at ${width}x${height}`);
+
+      if (width <= 600) {
+        assert(metrics.display === 'block', `mobile completed intro did not use the compact block layout at ${width}x${height}`);
+        assert(!metrics.contextOpen, `mobile completed tenant context is expanded by default at ${width}x${height}`);
+        assert(metrics.intro.bottom - metrics.intro.top <= 240, `mobile completed intro retained excessive collapsed height at ${width}x${height}`);
+        assert(metrics.toolbarContext.top >= metrics.copy.bottom - 1, `mobile completed tenant context overlaps intro copy at ${width}x${height}`);
+      } else if (width <= 1100) {
+        assert(metrics.display === 'flex', `tablet completed intro did not stack at ${width}x${height}`);
+        assert(metrics.contextOpen, `tablet completed tenant context is collapsed at ${width}x${height}`);
+        assert(metrics.toolbarContext.top >= metrics.copy.bottom - 1, `tablet completed tenant context overlaps intro copy at ${width}x${height}`);
+        assert(metrics.intro.bottom - metrics.intro.top <= 300, `tablet completed intro retained excessive height at ${width}x${height}`);
+      } else {
+        assert(metrics.display === 'grid', `desktop completed intro lost its two-column grid at ${width}x${height}`);
+        assert(metrics.contextOpen, `desktop completed tenant context is collapsed at ${width}x${height}`);
+        assert(metrics.toolbarContext.left >= metrics.copy.right - 1, `desktop completed tenant context overlaps intro copy at ${width}x${height}`);
+        assert(metrics.intro.bottom - metrics.intro.top <= 260, `desktop completed intro retained excessive height at ${width}x${height}`);
+      }
+    }
+
+    for (const [width, height] of [[1440, 900], [1280, 800], [1101, 780], [1100, 780], [1024, 768], [768, 1024], [601, 844], [600, 844], [390, 844], [375, 812]] as const) {
+      await assertCompletedIntroLayout(width, height);
+    }
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.locator('.platform-shell-toolbar-context > summary').click();
+    assert(await page.locator('#platformMasterSelect').isVisible(), 'mobile completed context did not reveal the Master selector');
+    assert(await page.locator('#platformCompanySelect').isVisible(), 'mobile completed context did not reveal the Company selector');
+    assert(await page.locator('#platformOpenCompanyCreate').isVisible(), 'mobile completed context did not reveal the Create Company action');
+    assert(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth <= 1), 'expanded mobile completed context overflowed horizontally');
+    await page.locator('.platform-shell-toolbar-context > summary').click();
+
     for (const [width, height] of [[1440, 900], [1280, 800], [1024, 768]] as const) {
       await page.setViewportSize({ width, height });
       await page.waitForTimeout(40);

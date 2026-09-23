@@ -678,14 +678,14 @@
   }
   function entitlementBadge(kind,label){ return `<span class="platform-status-badge ${esc(kind)}">${esc(label)}</span>`; }
   function dependencyMarkup(dependencies){
-    if(!dependencies||!dependencies.length) return '<span class="platform-dependency-empty">—</span>';
+    if(!dependencies||!dependencies.length) return `<span class="platform-dependency-empty">${esc(pt('entitlement.noDependencies','No dependencies'))}</span>`;
     return `<span class="platform-dependency-list">${dependencies.map(function(item){ return `<span>${esc(item)}</span>`; }).join('')}</span>`;
   }
   function switchControl(className,checked,label){
     return `<label class="platform-switch"><input class="${className}" role="switch" type="checkbox" aria-label="${esc(label)}" ${checked?'checked':''}><span class="platform-switch-track" aria-hidden="true"><span></span></span><span class="platform-switch-label">${esc(checked?pt('status.enabled','Enabled'):pt('status.disabled','Disabled'))}</span></label>`;
   }
   function rowActions(type){
-    return `<div class="platform-row-actions"><span class="platform-row-unsaved" hidden>${esc(pt('action.unsaved','Unsaved'))}</span><button type="button" class="btn soft platform-reset-${type}" hidden>${esc(pt('action.reset','Reset'))}</button><button type="button" class="btn soft platform-save-${type}" disabled>${esc(pt('action.save','Save'))}</button></div><div class="platform-row-feedback" role="status" aria-live="polite" tabindex="-1"></div><div class="platform-row-error" role="alert" aria-live="assertive" tabindex="-1"></div><button type="button" class="btn soft platform-reload-${type}" hidden>${esc(pt('action.reloadRow','Reload row'))}</button>`;
+    return `<div class="platform-row-actions"><span class="platform-row-clean" aria-hidden="true">—</span><span class="platform-row-unsaved" hidden>${esc(pt('action.unsaved','Unsaved'))}</span><button type="button" class="btn soft platform-reset-${type}" hidden>${esc(pt('action.reset','Reset'))}</button><button type="button" class="btn soft platform-save-${type}" hidden disabled>${esc(pt('action.save','Save'))}</button></div><div class="platform-row-feedback" role="status" aria-live="polite" tabindex="-1"></div><div class="platform-row-error" role="alert" aria-live="assertive" tabindex="-1"></div><button type="button" class="btn soft platform-reload-${type}" hidden>${esc(pt('action.reloadRow','Reload row'))}</button>`;
   }
   function masterSummaryMarkup(){
     var enabled=(state.masterModules||[]).filter(function(item){ return item.masterEnabled; }).length;
@@ -706,7 +706,7 @@
     var allocation=new Map((state.companyModules||[]).map(function(item){ return [item.moduleKey,item]; }));
     var masterRows=(state.masterModules||[]).map(function(item){
       var search=[item.name,item.moduleKey].concat(item.dependencies||[]).join(' ').toLowerCase();
-      return `<tr data-module="${esc(item.moduleKey)}" data-version="${Number(item.version)||0}" data-master-enabled="${item.masterEnabled?'true':'false'}" data-master-default="${item.defaultCompanyAllocated?'true':'false'}" data-search="${esc(search)}"><th scope="row" data-label="${esc(pt('table.module','Module'))}"><b>${esc(item.name)}</b><small>${esc(item.moduleKey)}</small></th><td data-label="${esc(pt('table.dependencies','Dependencies'))}">${dependencyMarkup(item.dependencies)}</td><td data-label="${esc(pt('table.masterEntitlement','Master entitlement'))}">${switchControl('platform-master-enabled',item.masterEnabled,pt('aria.masterEntitlement','Master entitlement for {module}',{module:item.name}))}</td><td data-label="${esc(pt('table.defaultCompany','Default for new Companies'))}">${switchControl('platform-master-default',item.defaultCompanyAllocated,pt('aria.defaultCompany','Default Company allocation for {module}',{module:item.name}))}</td><td data-label="${esc(pt('table.action','Action'))}">${rowActions('master')}</td></tr>`;
+      return `<tr data-module="${esc(item.moduleKey)}" data-version="${Number(item.version)||0}" data-master-enabled="${item.masterEnabled?'true':'false'}" data-master-default="${item.defaultCompanyAllocated?'true':'false'}" data-search="${esc(search)}"><th scope="row" data-label="${esc(pt('table.module','Module'))}"><b>${esc(item.name)}</b><small>${esc(item.moduleKey)}</small></th><td class="platform-module-dependencies" data-label="${esc(pt('table.dependencies','Dependencies'))}">${dependencyMarkup(item.dependencies)}</td><td data-label="${esc(pt('table.masterEntitlement','Master entitlement'))}">${switchControl('platform-master-enabled',item.masterEnabled,pt('aria.masterEntitlement','Master entitlement for {module}',{module:item.name}))}</td><td data-label="${esc(pt('table.defaultCompany','Default for new Companies'))}">${switchControl('platform-master-default',item.defaultCompanyAllocated,pt('aria.defaultCompany','Default Company allocation for {module}',{module:item.name}))}</td><td data-label="${esc(pt('table.action','Action'))}">${rowActions('master')}</td></tr>`;
     }).join('');
     var companyRows=(state.masterModules||[]).map(function(item){
       var row=allocation.get(item.moduleKey)||{};
@@ -716,8 +716,9 @@
     }).join('');
     var masterSelected=state.entitlementTab!=='company';
     return `<section class="platform-entitlement-card platform-entitlement-workspace platform-entitlement-grid" aria-labelledby="platformEntitlementHeading"><div class="platform-entitlement-heading"><div><h2 id="platformEntitlementHeading">${esc(pt('entitlement.title','Module access'))}</h2><p>${esc(pt('entitlement.intro','Master entitlement masks Company allocation without overwriting the saved allocation.'))}</p></div></div><div class="platform-entitlement-tabs" role="tablist" aria-label="${esc(pt('entitlement.scope','Module access scope'))}"><button type="button" class="platform-entitlement-tab" id="platformMasterTab" role="tab" aria-selected="${masterSelected?'true':'false'}" aria-controls="platformMasterPanel" tabindex="${masterSelected?'0':'-1'}" data-tab="master"><span>${esc(pt('entitlement.masterControls','Master controls'))}</span><small id="platformMasterSummary">${esc(masterSummaryMarkup())}</small></button><button type="button" class="platform-entitlement-tab" id="platformCompanyTab" role="tab" aria-selected="${masterSelected?'false':'true'}" aria-controls="platformCompanyPanel" tabindex="${masterSelected?'-1':'0'}" data-tab="company"><span>${esc(pt('entitlement.companyAllocation','Company allocation'))}</span><small id="platformCompanySummary">${esc(companySummaryMarkup())}</small></button></div>
+      <div class="platform-entitlement-guidance" role="note"><span class="platform-entitlement-guidance-mark" aria-hidden="true">i</span><div><p>${esc(pt('entitlement.effectiveHint','Module availability requires both Master entitlement and Company allocation.'))}</p><small>${esc(pt('entitlement.userAccessHint','User access also requires permission, data scope, and workflow authority.'))}</small></div></div>
       <section class="platform-entitlement-panel" id="platformMasterPanel" role="tabpanel" aria-labelledby="platformMasterTab" ${masterSelected?'':'hidden'}>${entitlementTools('master')}<div class="platform-table-wrap"><table><thead><tr><th>${esc(pt('table.module','Module'))}</th><th>${esc(pt('table.dependencies','Dependencies'))}</th><th>${esc(pt('table.masterEntitlement','Master entitlement'))}</th><th>${esc(pt('table.defaultCompany','Default for new Companies'))}</th><th>${esc(pt('table.action','Action'))}</th></tr></thead><tbody>${masterRows}</tbody></table><p class="platform-entitlement-empty" hidden>${esc(pt('entitlement.noMatches','No modules match this filter.'))}</p></div></section>
-      <section class="platform-entitlement-panel" id="platformCompanyPanel" role="tabpanel" aria-labelledby="platformCompanyTab" ${masterSelected?'hidden':''}><div class="platform-entitlement-context"><strong>${esc((currentCompany()||{}).name||state.companyFn)}</strong><span>${esc(pt('entitlement.effectiveHint','Effective access requires both Master entitlement and Company allocation.'))}</span></div>${entitlementTools('company')}<div class="platform-table-wrap"><table><thead><tr><th>${esc(pt('table.module','Module'))}</th><th>${esc(pt('table.masterStatus','Master status'))}</th><th>${esc(pt('table.companyAllocation','Company allocation'))}</th><th>${esc(pt('table.effectiveAccess','Effective access'))}</th><th>${esc(pt('table.action','Action'))}</th></tr></thead><tbody>${companyRows}</tbody></table><p class="platform-entitlement-empty" hidden>${esc(pt('entitlement.noMatches','No modules match this filter.'))}</p></div></section>
+      <section class="platform-entitlement-panel" id="platformCompanyPanel" role="tabpanel" aria-labelledby="platformCompanyTab" ${masterSelected?'hidden':''}><div class="platform-entitlement-context"><span>${esc(pt('field.company','Company'))}</span><strong>${esc((currentCompany()||{}).name||state.companyFn)}</strong></div>${entitlementTools('company')}<div class="platform-table-wrap"><table><thead><tr><th>${esc(pt('table.module','Module'))}</th><th>${esc(pt('table.masterStatus','Master status'))}</th><th>${esc(pt('table.companyAllocation','Company allocation'))}</th><th>${esc(pt('table.effectiveAccess','Effective access'))}</th><th>${esc(pt('table.action','Action'))}</th></tr></thead><tbody>${companyRows}</tbody></table><p class="platform-entitlement-empty" hidden>${esc(pt('entitlement.noMatches','No modules match this filter.'))}</p></div></section>
     </section>`;
   }
   function boolData(value){ return String(value)==='true'; }
@@ -752,11 +753,13 @@
     }
     row.classList.toggle('is-dirty',dirty);
     var unsaved=row.querySelector('.platform-row-unsaved');
+    var clean=row.querySelector('.platform-row-clean');
     var reset=row.querySelector('.platform-reset-'+type);
     var save=row.querySelector('.platform-save-'+type);
     if(unsaved) unsaved.hidden=!dirty;
+    if(clean) clean.hidden=dirty;
     if(reset) reset.hidden=!dirty;
-    if(save) save.disabled=!dirty;
+    if(save){ save.hidden=!dirty; save.disabled=!dirty; }
     if(clearFeedback&&dirty){
       var feedback=row.querySelector('.platform-row-feedback');
       var error=row.querySelector('.platform-row-error');
