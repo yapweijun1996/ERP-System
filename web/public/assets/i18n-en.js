@@ -1783,6 +1783,7 @@ window.__ERP_I18N_EN__=Object.freeze({
   "platform.workspace.loading": "Loading platform workspace…",
   "platform.workspace.mobileContextLabel": "Setup progress",
   "platform.workspace.mobileContextControls": "Workspace context",
+  "platform.workspace.mobilePageOverview": "Page overview",
   "platform.workspace.mobileContextStep": "Step {step} of {total} · {label}",
   "platform.workspace.provisionIntro": "Create the first Master, configure its commercial defaults, then create its first Company and administrators.",
   "platform.workspace.startProvisioning": "Start tenant provisioning",

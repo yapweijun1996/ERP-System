@@ -1808,6 +1808,7 @@
   "platform.workspace.loading": "Đang tải không gian làm việc Platform…",
   "platform.workspace.mobileContextLabel": "Tiến độ thiết lập",
   "platform.workspace.mobileContextControls": "Ngữ cảnh không gian làm việc",
+  "platform.workspace.mobilePageOverview": "Tổng quan trang",
   "platform.workspace.mobileContextStep": "Bước {step} trên {total} · {label}",
   "platform.workspace.provisionIntro": "Tạo Master đầu tiên, cấu hình mặc định thương mại, sau đó tạo Công ty và quản trị viên đầu tiên.",
   "platform.workspace.startProvisioning": "Bắt đầu cấp phát tenant",

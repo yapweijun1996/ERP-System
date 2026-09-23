@@ -58,6 +58,13 @@ async function main(): Promise<void> {
   if (!existsSync(path.join(WEB_DIST, 'index.html'))) {
     throw new Error('web/dist/index.html not found. Run npm run build first.');
   }
+  for (const locale of ['en', 'zh', 'ms', 'ja', 'vi'] as const) {
+    const pack = JSON.parse(await readFile(path.join(ROOT, 'web', 'public', 'assets', 'i18n', `${locale}.json`), 'utf8')) as Record<string, string>;
+    const overviewLabel = pack['platform.workspace.mobilePageOverview'];
+    const tenantContextLabel = pack['platform.workspace.mobileContextControls'];
+    assert(Boolean(overviewLabel?.trim()), `${locale} mobile overview label is missing`);
+    assert(overviewLabel !== tenantContextLabel, `${locale} mobile overview and tenant-context labels are ambiguous`);
+  }
 
   let db: DB | undefined;
   let server: Server | undefined;
@@ -616,6 +623,10 @@ async function main(): Promise<void> {
     }
 
     await page.setViewportSize({ width: 390, height: 844 });
+    const overviewLabel = (await page.locator('.platform-intro-context-label').textContent())?.trim();
+    const tenantContextLabel = (await page.locator('.platform-toolbar-context-label').textContent())?.trim();
+    assert(overviewLabel === 'Page overview', `mobile platform description uses a distinct overview label, got "${overviewLabel}"`);
+    assert(tenantContextLabel === 'Workspace context', `mobile tenant selectors retain the workspace context label, got "${tenantContextLabel}"`);
     const completedMetrics = await page.evaluate(() => {
       const shell = document.querySelector<HTMLElement>('.platform-shell');
       const simulation = document.querySelector<HTMLElement>('.platform-simulation-panel');

@@ -1808,6 +1808,7 @@
   "platform.workspace.loading": "Memuatkan ruang kerja Platform…",
   "platform.workspace.mobileContextLabel": "Kemajuan persediaan",
   "platform.workspace.mobileContextControls": "Konteks ruang kerja",
+  "platform.workspace.mobilePageOverview": "Ringkasan halaman",
   "platform.workspace.mobileContextStep": "Langkah {step} daripada {total} · {label}",
   "platform.workspace.provisionIntro": "Cipta Master pertama, konfigurasikan lalai komersialnya, kemudian cipta Company dan pentadbir pertamanya.",
   "platform.workspace.startProvisioning": "Mulakan peruntukan tenant",

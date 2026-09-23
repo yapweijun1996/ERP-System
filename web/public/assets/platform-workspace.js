@@ -174,7 +174,7 @@
   function platformIntroContextMarkup(stage,description,demo,progress){
     var currentStep=Math.min(Math.max(Number(stage)||1,1),3);
     var currentLabel=currentStep===1?pt('step.platformShort','Platform'):currentStep===2?pt('step.masterShort','Master'):pt('step.companyShort','Company');
-    var contextLabel=progress?pt('workspace.mobileContextLabel','Setup progress'):pt('workspace.mobileContextControls','Workspace context');
+    var contextLabel=progress?pt('workspace.mobileContextLabel','Setup progress'):pt('workspace.mobilePageOverview','Page overview');
     var summary=progress
       ?pt('workspace.mobileContextStep','Step {step} of {total} · {label}',{step:currentStep,total:3,label:currentLabel})
       :pt('workspace.tenantControl','Platform tenant control');
