@@ -581,10 +581,20 @@ SCREENS['agent-mgmt'] = async function(root){
     });
   }
   async function openGrant(agent){
-    appModal({icon:'plus',title:s('agentGrant'),body:`<div class="set-grid"><div class="fld"><span>${esc(s('agentAction'))}</span><select id="agentGrantAction"><option value="receipt.search">receipt.search</option></select></div><div class="fld"><span>${esc(s('agentPermission'))}</span><select id="agentGrantPermission"><option value="expenses.company_receipts.read_company">expenses.company_receipts.read_company</option></select></div><div class="fld"><span>${esc(s('agentFields'))}</span><input id="agentGrantFields" value="id,merchant" maxlength="500"></div></div>`,actions:`${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('agentGrant'),{icon:'check',cls:'primary',attrs:'data-agent-grant-confirm="1"'})}`});
+    const grantPresets={
+      'receipt.search':{permission:'expenses.company_receipts.read_company',resource:'expenses/company_receipts',scope:'company',targetType:'none',targetId:'',fields:'id,merchant'},
+      'product_case.submit':{permission:'product.cases.submit',resource:'product/cases',scope:'company',targetType:'none',targetId:'',fields:'id,caseType,title,description,routeKey,referenceId,status,version,createdAt'},
+      'product_case.read_own':{permission:'product.cases.read_own',resource:'product/cases',scope:'self',targetType:'employee',targetId:String(agent.ownerUserId),fields:'id,caseType,title,description,routeKey,referenceId,status,resolution,version,createdAt,updatedAt,events'},
+    };
+    appModal({icon:'plus',title:s('agentGrant'),body:`<div class="set-grid"><div class="fld"><span>${esc(s('agentAction'))}</span><select id="agentGrantAction"><option value="receipt.search">receipt.search</option><option value="product_case.submit">product_case.submit</option><option value="product_case.read_own">product_case.read_own</option></select></div><div class="fld"><span>${esc(s('agentPermission'))}</span><input id="agentGrantPermission" readonly value="expenses.company_receipts.read_company"></div><div class="fld"><span>${esc(s('agentFields'))}</span><input id="agentGrantFields" value="id,merchant" maxlength="500"></div></div>`,actions:`${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('agentGrant'),{icon:'check',cls:'primary',attrs:'data-agent-grant-confirm="1"'})}`});
+    $('#agentGrantAction').addEventListener('change',()=>{
+      const preset=grantPresets[$('#agentGrantAction').value];
+      $('#agentGrantPermission').value=preset.permission;
+      $('#agentGrantFields').value=preset.fields;
+    });
     $('#modalEl').querySelector('[data-agent-grant-confirm="1"]').addEventListener('click',async()=>{
       const save=$('#modalEl').querySelector('[data-agent-grant-confirm="1"]'); save.disabled=true;
-      try{ await adapter.create('admin/agents/'+agent.id+'/grants',{actionName:$('#agentGrantAction').value,permissionKey:$('#agentGrantPermission').value,resourceKey:'expenses/company_receipts',scope:'company',targetType:'none',targetId:'',fieldAllowlist:$('#agentGrantFields').value.split(',').map(value=>value.trim()).filter(Boolean)}); closeModal(); toast(s('agentGrantSaved'),'ok'); await reload(); }
+      try{ const preset=grantPresets[$('#agentGrantAction').value]; await adapter.create('admin/agents/'+agent.id+'/grants',{actionName:$('#agentGrantAction').value,permissionKey:preset.permission,resourceKey:preset.resource,scope:preset.scope,targetType:preset.targetType,targetId:preset.targetId,fieldAllowlist:$('#agentGrantFields').value.split(',').map(value=>value.trim()).filter(Boolean)}); closeModal(); toast(s('agentGrantSaved'),'ok'); await reload(); }
       catch(error){ save.disabled=false; toast(error&&error.message?error.message:s('agentGrantError'),'danger'); }
     });
   }
@@ -611,6 +621,65 @@ SCREENS['agent-mgmt'] = async function(root){
       body:statePanel({icon:'warn',title:error&&error.message?error.message:s('agentError')}),
     });
   }
+};
+
+/* ---------------- PRODUCT FEEDBACK AND TICKETS ---------------- */
+SCREENS['product-cases'] = async function(root){
+  const adapter=window.ErpSystemData;
+  const packs={
+    en:{title:'Product cases',subtitle:'Feedback and support tickets submitted by ERP Agents.',apiOnly:'Product cases are available in API mode.',all:'All',feedback:'Feedback',ticket:'Ticket',submitted:'Submitted',triaged:'Triaged',in_progress:'In progress',resolved:'Resolved',closed:'Closed',type:'Type',status:'Status',empty:'No product cases match these filters.',loadMore:'Load more',details:'Details',history:'History',reference:'Reference',route:'Route',resolution:'Resolution',transition:'Update status',save:'Save status',reason:'Resolution or reason',reasonRequired:'Enter a resolution to resolve or close a case.',stale:'The case changed. Reload it and try again.',error:'Product cases could not be loaded.'},
+    ms:{title:'Kes produk',subtitle:'Maklum balas dan tiket sokongan yang dihantar oleh Ejen ERP.',apiOnly:'Kes produk tersedia dalam mod API.',all:'Semua',feedback:'Maklum balas',ticket:'Tiket',submitted:'Dihantar',triaged:'Disaring',in_progress:'Dalam proses',resolved:'Diselesaikan',closed:'Ditutup',type:'Jenis',status:'Status',empty:'Tiada kes produk yang sepadan.',loadMore:'Muat lagi',details:'Butiran',history:'Sejarah',reference:'Rujukan',route:'Laluan',resolution:'Penyelesaian',transition:'Kemas kini status',save:'Simpan status',reason:'Penyelesaian atau sebab',reasonRequired:'Masukkan penyelesaian untuk menyelesaikan atau menutup kes.',stale:'Kes telah berubah. Muat semula dan cuba lagi.',error:'Kes produk tidak dapat dimuatkan.'},
+    zh:{title:'产品工单',subtitle:'ERP Agent 提交的反馈与支持工单。',apiOnly:'产品工单仅在 API 模式可用。',all:'全部',feedback:'反馈',ticket:'工单',submitted:'已提交',triaged:'已分类',in_progress:'处理中',resolved:'已解决',closed:'已关闭',type:'类型',status:'状态',empty:'没有符合条件的产品工单。',loadMore:'加载更多',details:'详情',history:'历史',reference:'参考编号',route:'页面',resolution:'处理结果',transition:'更新状态',save:'保存状态',reason:'处理结果或原因',reasonRequired:'解决或关闭工单时须填写处理结果。',stale:'工单已变更，请刷新后重试。',error:'无法加载产品工单。'},
+    ja:{title:'製品ケース',subtitle:'ERP エージェントからのフィードバックとサポートチケット。',apiOnly:'製品ケースは API モードで利用できます。',all:'すべて',feedback:'フィードバック',ticket:'チケット',submitted:'提出済み',triaged:'分類済み',in_progress:'対応中',resolved:'解決済み',closed:'終了',type:'種類',status:'状態',empty:'該当する製品ケースはありません。',loadMore:'さらに表示',details:'詳細',history:'履歴',reference:'参照',route:'画面',resolution:'解決内容',transition:'状態を更新',save:'状態を保存',reason:'解決内容または理由',reasonRequired:'解決または終了するには内容を入力してください。',stale:'ケースが変更されました。再読み込みしてください。',error:'製品ケースを読み込めませんでした。'},
+    vi:{title:'Vụ việc sản phẩm',subtitle:'Phản hồi và phiếu hỗ trợ do Tác nhân ERP gửi.',apiOnly:'Vụ việc sản phẩm chỉ có trong chế độ API.',all:'Tất cả',feedback:'Phản hồi',ticket:'Phiếu',submitted:'Đã gửi',triaged:'Đã phân loại',in_progress:'Đang xử lý',resolved:'Đã giải quyết',closed:'Đã đóng',type:'Loại',status:'Trạng thái',empty:'Không có vụ việc phù hợp.',loadMore:'Tải thêm',details:'Chi tiết',history:'Lịch sử',reference:'Tham chiếu',route:'Trang',resolution:'Kết quả',transition:'Cập nhật trạng thái',save:'Lưu trạng thái',reason:'Kết quả hoặc lý do',reasonRequired:'Nhập kết quả trước khi giải quyết hoặc đóng.',stale:'Vụ việc đã thay đổi. Vui lòng tải lại.',error:'Không thể tải vụ việc sản phẩm.'},
+  };
+  const copy=i18nLegacy(packs);
+  const s=key=>copy[key]||packs.en[key]||key;
+  const closeDetails={en:'Close details',ms:'Tutup butiran',zh:'关闭详情',ja:'詳細を閉じる',vi:'Đóng chi tiết'}[typeof window.getLang==='function'?window.getLang():'en']||'Close details';
+  if(!adapter||adapter.mode!=='api'||typeof adapter.productCases!=='function'){
+    root.innerHTML=modulePage({module:'admin',route:'product-cases',title:s('title'),body:statePanel({icon:'list',title:s('apiOnly')})});
+    return;
+  }
+  let rows=[];
+  let selected=null;
+  let nextCursor=null;
+  let canManage=false;
+  let typeFilter='';
+  let statusFilter='';
+  const transitions={submitted:['triaged','closed'],triaged:['in_progress','closed'],in_progress:['resolved','triaged'],resolved:['closed','in_progress'],closed:['triaged']};
+  function render(){
+    const filters=`<div class="set-grid" style="padding:0 24px 16px"><label class="fld"><span>${esc(s('type'))}</span><select id="productCaseType"><option value="">${esc(s('all'))}</option><option value="feedback" ${typeFilter==='feedback'?'selected':''}>${esc(s('feedback'))}</option><option value="ticket" ${typeFilter==='ticket'?'selected':''}>${esc(s('ticket'))}</option></select></label><label class="fld"><span>${esc(s('status'))}</span><select id="productCaseStatus"><option value="">${esc(s('all'))}</option>${['submitted','triaged','in_progress','resolved','closed'].map(value=>`<option value="${value}" ${statusFilter===value?'selected':''}>${esc(s(value))}</option>`).join('')}</select></label></div>`;
+    const cards=rows.map(row=>`<article class="panel" style="margin:0 0 10px;padding:16px"><div style="display:flex;justify-content:space-between;gap:12px;align-items:start;flex-wrap:wrap"><div><strong>#${row.id} · ${esc(row.title)}</strong><div class="muted">${esc(s(row.caseType))} · ${esc(s(row.status))}</div></div><button class="btn soft sm" type="button" data-case-id="${row.id}">${esc(s('details'))}</button></div><p style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(row.description)}</p></article>`).join('');
+    const detail=selected?`<section class="panel" style="margin:16px 24px;padding:20px" aria-label="${esc(s('details'))}"><h3>#${selected.id} · ${esc(selected.title)}</h3><p style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(selected.description)}</p><p>${esc(s('status'))}: ${esc(s(selected.status))} · v${selected.version}</p>${selected.routeKey?`<p>${esc(s('route'))}: ${esc(selected.routeKey)}</p>`:''}${selected.referenceId?`<p>${esc(s('reference'))}: ${esc(selected.referenceId)}</p>`:''}${selected.resolution?`<p>${esc(s('resolution'))}: ${esc(selected.resolution)}</p>`:''}<h4>${esc(s('history'))}</h4><ol>${(selected.events||[]).map(event=>`<li>${esc(s(event.toStatus))} · ${esc(new Date(event.occurredAt).toLocaleString())}</li>`).join('')}</ol>${canManage?`<div class="set-grid"><label class="fld"><span>${esc(s('transition'))}</span><select id="productCaseNextStatus">${(transitions[selected.status]||[]).map(value=>`<option value="${value}">${esc(s(value))}</option>`).join('')}</select></label><label class="fld"><span>${esc(s('reason'))}</span><textarea id="productCaseResolution" maxlength="1000" rows="3"></textarea></label></div><button class="btn primary" type="button" id="productCaseSave">${esc(s('save'))}</button>`:''}</section>`:'';
+    root.innerHTML=modulePage({module:'admin',route:'product-cases',title:s('title'),sub:s('subtitle'),count:rows.length,body:`${filters}${selected?`<div style="padding:0 24px;text-align:right"><button class="btn soft sm" type="button" id="productCaseClose">${esc(closeDetails)}</button></div>`:''}${detail}<div style="padding:0 24px 24px">${cards||`<div class="panel" style="padding:20px">${esc(s('empty'))}</div>`}${nextCursor?`<button class="btn soft" id="productCaseLoadMore" type="button">${esc(s('loadMore'))}</button>`:''}</div>`});
+    root.querySelector('#productCaseType').addEventListener('change',event=>{typeFilter=event.target.value;selected=null;reload();});
+    root.querySelector('#productCaseStatus').addEventListener('change',event=>{statusFilter=event.target.value;selected=null;reload();});
+    root.querySelector('#productCaseClose')?.addEventListener('click',()=>{const previousId=selected.id;selected=null;render();root.querySelector(`[data-case-id="${previousId}"]`)?.focus();});
+    root.querySelectorAll('[data-case-id]').forEach(button=>button.addEventListener('click',async()=>{
+      try{selected=(await adapter.productCase(button.dataset.caseId)).data; render(); root.querySelector('section[aria-label="'+s('details')+'"]')?.scrollIntoView({block:'nearest'});}
+      catch(error){toast(error&&error.message||s('error'),'danger');}
+    }));
+    root.querySelector('#productCaseLoadMore')?.addEventListener('click',()=>reload(true));
+    root.querySelector('#productCaseSave')?.addEventListener('click',async event=>{
+      const button=event.currentTarget;
+      const status=root.querySelector('#productCaseNextStatus').value;
+      const resolution=root.querySelector('#productCaseResolution').value.trim();
+      if((status==='resolved'||status==='closed')&&!resolution){toast(s('reasonRequired'),'danger');return;}
+      button.disabled=true;
+      try{await adapter.transitionProductCase(selected.id,{status,expectedVersion:selected.version,resolution});selected=(await adapter.productCase(selected.id)).data;await reload();}
+      catch(error){button.disabled=false;toast(error&&error.status===409?s('stale'):error&&error.message||s('error'),'danger');}
+    });
+  }
+  async function reload(append){
+    try{
+      const response=await adapter.productCases({limit:50,caseType:typeFilter,status:statusFilter,...(append&&nextCursor?{afterId:nextCursor}:{})});
+      rows=append?rows.concat(response.data||[]):response.data||[];
+      nextCursor=response.nextCursor||null;
+      canManage=response.canManage===true;
+      render();
+    }catch(error){root.innerHTML=modulePage({module:'admin',route:'product-cases',title:s('title'),body:statePanel({icon:'warn',title:error&&error.message||s('error')})});}
+  }
+  await reload();
 };
 
 /* ---------------- AUDIT LOG (report) ---------------- */

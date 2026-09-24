@@ -48,6 +48,7 @@ import { createOnboardingRouter } from './routes/onboarding';
 import { createPlatformRouter } from './routes/platform';
 import { createCompanyReceiptsRouter } from './routes/companyReceipts';
 import { createAgentRouter } from './routes/agent';
+import { createProductCasesRouter } from './routes/productCases';
 import { createAssistantRouter, type ReceiptAssistantRouterOptions } from './routes/assistant';
 import { createKnowledgeRouter } from './routes/knowledge';
 import type { AgentCredentialAuthenticator } from '../auth/agentAuthentication';
@@ -85,6 +86,11 @@ export interface AppOptions {
   mcpResourceUri?: string;
   /** Process-local development guard; production should enforce the same policy at a shared gateway/store. */
   mcpRateLimit?: McpRateLimitPolicy;
+  /** Bounded pilot intake; process-local limits require a single API instance. */
+  productCaseRateLimit?: {
+    perAgent?: McpRateLimitPolicy;
+    perCompany?: McpRateLimitPolicy;
+  };
   /** Exact server-approved egress hosts for OpenAI-compatible Agent providers. */
   agentAllowedEgressHosts?: readonly string[];
   /** Server-owned Receipt assistant adapter; absent means the assistant is unavailable. */
@@ -100,6 +106,7 @@ const CSRF_EXEMPT_PATHS = new Set([
   '/api/setup/platform-superadmin/actions/complete',
   // Agent calls use their own bearer issuer and never use browser CSRF state.
   '/api/agent/actions',
+  '/api/agent/cases',
   // MCP calls use their own bearer issuer and never use browser CSRF state.
   '/api/mcp/v1',
 ]);
@@ -125,6 +132,7 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
     res.setHeader('x-request-id', requestId);
     next();
   });
+  app.use('/api/agent/cases', express.json({ limit: '8kb' }));
   app.use(express.json({ limit: '1mb' }));
 
   // A valid platform session gains tenant access only through one explicit,
@@ -255,6 +263,7 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
   // and checks the module entitlement inside the same tenant transaction.
   app.use('/api/agent', createAgentRouter(db, {
     authenticator: options.agentAuthenticator,
+    caseRateLimit: options.productCaseRateLimit,
   }));
   app.use('/api/knowledge', createKnowledgeRouter(db));
   // MCP follows the same independent bearer boundary as Agent. The route
@@ -270,6 +279,7 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
   app.use(createTenantModuleEntitlementGate(db));
   app.use('/api/assistant', createAssistantRouter(db, options.receiptAssistant));
   app.use('/api/admin', createAdminAgentsRouter(db));
+  app.use('/api/product-cases', createProductCasesRouter(db));
   app.use('/api/admin', createAdminRouter(db, { lifecycle }));
   app.use('/api/account', createAccountRouter(db));
   app.use('/api/integration', createIntegrationRouter(db, lifecycle?.tokenEncryptionKey, {
@@ -327,13 +337,19 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
     res: express.Response,
     _next: express.NextFunction,
   ) => {
-    console.error(`[erp-system-api] request ${context(res).requestId} failed`, error);
     if (!res.headersSent) {
       const httpError = error as { status?: number; type?: string };
       if (httpError.status === 400 && httpError.type === 'entity.parse.failed') {
         apiError(res, 400, 'invalid_json', 'Request body is not valid JSON.');
         return;
       }
+      if (httpError.status === 413 && httpError.type === 'entity.too.large') {
+        apiError(res, 413, 'request_too_large', 'Request body exceeds the allowed size.');
+        return;
+      }
+    }
+    console.error(`[erp-system-api] request ${context(res).requestId} failed`, error);
+    if (!res.headersSent) {
       apiError(res, 500, 'internal_error', 'The request could not be completed.');
     }
   });

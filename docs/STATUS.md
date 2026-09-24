@@ -1,4 +1,22 @@
-# Project Status — reviewed 2026-09-15
+# Project Status — reviewed 2026-09-24
+
+Product Feedback planning addendum — 2026-09-24: EPIC-069 and TASK-244–249
+are registered for a governed Agent feedback API, human triage and a linked
+fix/release/verification loop. Production revision
+`b8c0208aae430d26d672ce10f2a62ad88f068f71` now has
+Company-scoped case/event tables, separate ERP Agent submit/read-own grants
+and Bearer API, idempotent submission, human triage API and API-mode Admin
+screen. Focused API tests, a disposable PostgreSQL non-bypass RLS proof and a
+local desktop/mobile browser walkthrough passed. Hosted CI and the public
+release verifier passed; an isolated production-backup restore and migration
+rehearsal, production RLS/trigger checks and post-release database read-back
+also passed. Single-instance pilot rate limits and an append-only production
+event trigger are deployed. No Agent principal or product-case grant has been
+issued in production, so the internal cohort is not activated. Evidence append,
+distributed rate limits, task/release/independent verification links and human
+acceptance remain open. The [implementation and remaining plan](PRODUCT_FEEDBACK_PLAN.md) and the
+machine-readable task registry own the scope and dependencies; historical
+task counts elsewhere in this document remain dated snapshots.
 
 PWA and first-run wizard correction — 2026-09-15: PWA v279 now activates a waiting
 service worker silently and reloads once after `controllerchange`; the product no longer
@@ -562,7 +580,7 @@ and attempting `localhost:6859`, where the connection was refused. The prepared
 candidate changed only the `/erp` path to the healthy production proxy at
 `127.0.0.1:18791`.
 
-Current production renderer release — 2026-09-11: release `03487b13ce838407d97cd00697bd2b54b4a7c918`
+Production renderer release — 2026-09-11: release `03487b13ce838407d97cd00697bd2b54b4a7c918`
 recreated the API, Web and calendar-worker containers with the database preserved.
 All four Compose services are healthy and the API health revision equals the Web
 `release.json` revision. The Receipt Pack renderer now treats PNG/JPEG sources below
@@ -576,6 +594,15 @@ image/PDF remain open. The release script now uses `--force-recreate` so API/Web
 silently remain on different revisions after an application rebuild. The local release
 verifier also passed root, health, setup status, manifest, all 126 asset hashes, revision
 matching and final URL checks for the loopback `/erp` origin.
+
+Current production UI release — 2026-09-24: revision
+`1ff580c5ebc7334f238c238f7d2f51904dae8225` is live in the
+`erp-system-production-fresh` Compose project. The application-only release rebuilt
+API, Web and calendar-worker; local and public release verification passed health,
+setup status, revision matching and all 126 asset hashes. PostgreSQL remained healthy
+with the same container identity; no migration, seed or database restart ran. The
+mobile Platform workspace now uses a compact-on-scroll header while retaining the
+tenant summary and Sign out action. See [production release evidence](ai-native/evidence/PLATFORM-WORKSPACE-2026-09-24.md).
 
 
 

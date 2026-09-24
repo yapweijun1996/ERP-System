@@ -27,3 +27,4 @@ export * from './taxEvidence';
 export * from './accessOnboarding';
 export * from './authorization';
 export * from './agent';
+export * from './productFeedback';

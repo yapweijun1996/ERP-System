@@ -15,6 +15,8 @@ Usage: ./deploy/release.sh
 Rebuild and restart the production web/api containers without touching the
 PostgreSQL schema or volumes. Database migrations are a separate, explicit
 operation: CONFIRM_DATABASE_CHANGE=YES ./deploy/migrate.sh
+Set ERP_DEPLOY_ENV_FILE to an existing protected Compose environment file when
+the deployment configuration is held outside this checkout.
 USAGE
   exit 0
 fi
@@ -24,8 +26,9 @@ if [[ $# -ne 0 ]]; then
   exit 2
 fi
 
-if [[ ! -f .env ]]; then
-  echo "ERROR: .env is required. Run ./scripts/setup.sh once, then review it." >&2
+deploy_env_file="${ERP_DEPLOY_ENV_FILE:-.env}"
+if [[ ! -f "$deploy_env_file" ]]; then
+  echo "ERROR: deployment environment file is required. Run ./scripts/setup.sh once, then review it." >&2
   exit 1
 fi
 if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
@@ -33,7 +36,7 @@ if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>
   exit 1
 fi
 
-compose=(docker compose -f docker-compose.yml -f docker-compose.production.yml)
+compose=(docker compose --env-file "$deploy_env_file" -f docker-compose.yml -f docker-compose.production.yml)
 release_commit="$(git rev-parse HEAD 2>/dev/null || true)"
 if [[ -z "$release_commit" ]]; then
   echo "ERROR: release must run from a Git checkout so the deployed revision is traceable." >&2
@@ -45,6 +48,13 @@ if [[ -n "${ERP_RELEASE_COMMIT:-}" && "$ERP_RELEASE_COMMIT" != "$release_commit"
 fi
 export ERP_RELEASE_COMMIT="$release_commit"
 "${compose[@]}" config --quiet
+if [[ -n "${ERP_EXPECTED_DB_CONTAINER_ID:-}" ]]; then
+  actual_db_container_id="$("${compose[@]}" ps -q db)"
+  if [[ "$actual_db_container_id" != "$ERP_EXPECTED_DB_CONTAINER_ID" ]]; then
+    echo "ERROR: selected Compose project does not own the expected database container." >&2
+    exit 2
+  fi
+fi
 
 echo "==> Releasing application containers only (database is preserved)"
 # Recreate every application container after the build. Compose can otherwise keep

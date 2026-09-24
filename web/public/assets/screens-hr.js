@@ -4258,6 +4258,7 @@ SCREENS['payroll-run'] = async function(root){
       icon:'coins',
       title:s('newRunButton'),
       width:620,
+      mobileMode:'inset',
       body:`<p class="h1sub payroll-run-modal-description">${esc(s('newRunDescription'))}</p>
         <div class="alert danger payroll-run-modal-error" data-payroll-create-error hidden>${ic('warn')}<span></span></div>
         <div class="set-grid payroll-run-form">

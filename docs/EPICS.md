@@ -2701,6 +2701,7 @@ reviving a login-capable tenant Superadmin or legacy authorization bypass:
 | TASK-207 | Done | Tenant authorization, switching, break-glass and dual-attribution/adversarial proof |
 | TASK-208 | Done | Platform/Tenant workspace UX, Employee-mode integration and five-language browser proof |
 | TASK-209 | Blocked | PostgreSQL/RLS, current-HEAD CI, release, documentation and KB proof; current CI is complete, but deployed/production evidence remains |
+| TASK-243 | Done | Localized mobile Platform overview and tenant-context labels |
 
 Source for TASK-206–208 is present; TASK-203's current-HEAD CI gate is complete. TASK-206's focused PGlite/API and disposable
 PostgreSQL hidden actor/session proof passes, but this is not a production-ready or
@@ -2742,3 +2743,31 @@ AI interprets and orchestrates; shared ERP commands own authorization, calculati
 transactions and final facts. TASK-239 consumes the eight inherited open tasks
 without duplicating them. This epic neither certifies all modules nor authorizes
 deployment, spending or bypassing human approval.
+
+## EPIC-069 — Product Feedback and Agent Issue Intake ⬜
+
+Create a governed feedback loop for authorized ERP Agents: evidence-backed
+submission, human triage, a linked engineering fix, an actual release revision,
+independent post-release verification and a reporter-visible outcome. The
+[implementation and target contract](PRODUCT_FEEDBACK_PLAN.md) define the boundary.
+The Agent intake, case storage and human triage slice exists locally, but the
+task exit criteria and production release are still open. Company
+feedback is separate from customer warranty Service ticket records and from
+the receipt-only Agent action dispatcher. A later end-user submission channel
+may reuse the case model; it is outside this epic's v1.
+
+| Task | Status | Owner role | Depends on | Scope |
+| --- | --- | --- | --- | --- |
+| TASK-244 | Todo | Product Manager / Tech Lead | TASK-171, TASK-232 | Approve API, role/visibility, privacy, state and triage contracts |
+| TASK-245 | Todo | Backend/Data Engineer | TASK-244 | Tenant schema, migration, idempotency, append-only history and audit |
+| TASK-246 | Todo | Agent/API Engineer | TASK-245 | Governed Agent submit/read/evidence API and negative-path proof |
+| TASK-247 | Todo | Platform/Frontend Engineer | TASK-245 | Human triage queue, decisions, duplicate linking and accessibility |
+| TASK-248 | Todo | QA / Release Engineer | TASK-246, TASK-247 | Link fix, actual release, independent verification and outcome |
+| TASK-249 | Todo | Product Operations / SRE | TASK-248 | Internal canary, metrics, disable/recovery and owner handover |
+
+Exit criteria: the original observation is traceable through a scoped case,
+reviewed engineering task, deployed revision and independent verification;
+the reporting Agent can read the reasoned outcome; cross-Company and revoked
+access remain denied; retry and audit invariants hold; and pilot owners
+approve or defer wider rollout from measured evidence. Registration of these
+tasks is planning only: no runtime feature or release is claimed.
