@@ -1,7 +1,7 @@
 # Deployment
 
 Latest production UI release — 2026-09-24: application revision
-`201cde537186f1fb46de0d97cad932c6f6469794` is live at
+`1ff580c5ebc7334f238c238f7d2f51904dae8225` is live at
 `https://gmb01.xyz/erp/`. The application-only release recreated API, Web and
 calendar-worker in `erp-system-production-fresh`; local and public release
 verification matched the API health revision and Web `release.json`, with all 126

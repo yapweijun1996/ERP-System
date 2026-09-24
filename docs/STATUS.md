@@ -578,7 +578,7 @@ verifier also passed root, health, setup status, manifest, all 126 asset hashes,
 matching and final URL checks for the loopback `/erp` origin.
 
 Current production UI release — 2026-09-24: revision
-`201cde537186f1fb46de0d97cad932c6f6469794` is live in the
+`1ff580c5ebc7334f238c238f7d2f51904dae8225` is live in the
 `erp-system-production-fresh` Compose project. The application-only release rebuilt
 API, Web and calendar-worker; local and public release verification passed health,
 setup status, revision matching and all 126 asset hashes. PostgreSQL remained healthy
