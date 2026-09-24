@@ -1524,6 +1524,7 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
 .platform-shell-header .auth-brand{min-width:0;}
 .platform-shell-header .auth-brand>span:last-child{min-width:0;}
 .platform-shell-header .auth-brand small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.platform-shell-header-compact-user{display:none;}
 .platform-shell-header .btn{width:auto;flex:none;}
 .platform-shell-intro{
   position:sticky;
@@ -1805,8 +1806,10 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
   .platform-workspace-view .platform-shell{height:calc(100dvh - 36px - var(--safe-top,0px) - var(--safe-bottom,0px));border-radius:14px;}
   .platform-shell-header{align-items:flex-start;gap:10px;padding:16px 16px 0;}
   .platform-shell-header .auth-brand{align-items:flex-start;gap:9px;}
-  .platform-shell-header .auth-brand small{white-space:normal;}
-  .platform-shell-header .btn{padding-inline:11px;}
+  .platform-shell-header .auth-brand>span:last-child{flex:1 1 auto;overflow:hidden;}
+  .platform-shell-header .auth-brand small{max-width:100%;white-space:nowrap;font-size:calc(11px * var(--fs,1));line-height:1.15;}
+  .platform-shell-header-compact-user{display:none;}
+  .platform-shell-header .btn{min-height:44px;padding:9px 11px;}
   .platform-shell-intro,.platform-shell-intro.has-progress,.platform-shell-intro.has-toolbar{display:block;padding:12px 16px 13px;}
   .platform-shell-intro .auth-copy h1{font-size:calc(22px * var(--fs,1));line-height:1.15;}
   .platform-intro-context{margin-top:8px;}
@@ -1817,12 +1820,23 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
   .platform-intro-context-body{padding:0 2px;}
   .platform-intro-context-body>p{margin-top:10px;font-size:calc(13px * var(--fs,1));}
   .platform-shell-toolbar-context{margin-top:8px;}
-  .platform-shell-toolbar-context>summary{min-height:42px;padding:7px 10px;line-height:1.2;}
+  .platform-shell-toolbar-context>summary{min-height:44px;padding:7px 10px;line-height:1.2;}
   .platform-toolbar-context-summary{grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto;column-gap:7px;row-gap:1px;align-items:baseline;}
   .platform-toolbar-context-label{grid-column:1;grid-row:1;flex:none;font-size:calc(9px * var(--fs,1));line-height:1.1;}
   .platform-toolbar-context-summary strong{grid-column:2;grid-row:1;font-size:calc(11px * var(--fs,1));line-height:1.2;}
   .platform-toolbar-context-company{grid-column:2;grid-row:2;font-size:calc(10px * var(--fs,1));line-height:1.15;}
   .platform-shell-toolbar-context-body{padding:0 2px;}
+  .platform-shell.has-entitlement-workspace.platform-shell--scroll-compact .platform-shell-header{align-items:center;padding-top:5px;}
+  .platform-shell.has-entitlement-workspace.platform-shell--scroll-compact .platform-shell-header .auth-brand{align-items:center;}
+  .platform-shell.has-entitlement-workspace.platform-shell--scroll-compact .platform-shell-header .auth-brand .mark{width:32px;height:32px;border-radius:9px;}
+  .platform-shell.has-entitlement-workspace.platform-shell--scroll-compact .platform-shell-header .auth-brand small{max-width:100%;white-space:nowrap;font-size:calc(10px * var(--fs,1));line-height:1.15;}
+  .platform-shell.has-entitlement-workspace.platform-shell--scroll-compact .platform-shell-header-full-subtitle{display:none;}
+  .platform-shell.has-entitlement-workspace.platform-shell--scroll-compact .platform-shell-header-compact-user{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .platform-shell.has-entitlement-workspace.platform-shell--scroll-compact .platform-shell-intro{padding:4px 16px 6px;}
+  .platform-shell.has-entitlement-workspace.platform-shell--scroll-compact .platform-shell-intro .auth-copy h1{font-size:calc(18px * var(--fs,1));line-height:1.1;}
+  .platform-shell.has-entitlement-workspace.platform-shell--scroll-compact .platform-intro-context{display:none;}
+  .platform-shell.has-entitlement-workspace.platform-shell--scroll-compact .platform-shell-toolbar-context{margin-top:4px;}
+  .platform-shell.has-entitlement-workspace.platform-shell--scroll-compact .platform-shell-toolbar-context>summary{min-height:44px;padding:5px 9px;}
   .platform-shell-toolbar-context .platform-shell-toolbar{margin-top:10px;}
   .platform-shell-progress{width:100%;}
   .platform-stepper{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:12px;}

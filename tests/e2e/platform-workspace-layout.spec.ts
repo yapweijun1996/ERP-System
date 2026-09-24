@@ -94,7 +94,7 @@ async function main(): Promise<void> {
     });
     assert(downloadBeforeSubmit, 'account details download is not positioned before the bootstrap submit action');
     await bootstrapPage.locator('#bootstrapPrincipalKey').fill('layout-platform-admin');
-    await bootstrapPage.locator('#bootstrapDisplayName').fill('Layout Platform Admin');
+    await bootstrapPage.locator('#bootstrapDisplayName').fill('Layout Platform Administrator With An Exceptionally Long Display Name');
     await bootstrapPage.locator('#bootstrapEmail').fill('layout-platform@example.test');
     await bootstrapPage.locator('#bootstrapGeneratePassword').click();
     const generatedPassword = await bootstrapPage.locator('#bootstrapPassword').inputValue();
@@ -119,7 +119,7 @@ async function main(): Promise<void> {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         principalKey: 'layout-platform-admin',
-        displayName: 'Layout Platform Admin',
+        displayName: 'Layout Platform Administrator With An Exceptionally Long Display Name',
         email: 'layout-platform@example.test',
         password: 'layout-platform-password-123',
       }),
@@ -407,7 +407,8 @@ async function main(): Promise<void> {
         const heading = document.querySelector<HTMLElement>('.platform-shell-intro h1');
         const toolbarContext = document.querySelector<HTMLDetailsElement>('.platform-shell-toolbar-context');
         const body = document.querySelector<HTMLElement>('.platform-shell-body');
-        if (!intro || !copy || !heading || !toolbarContext || !body) return null;
+        const compactBrandName = document.querySelector<HTMLElement>('.platform-shell-header-compact-user');
+        if (!intro || !copy || !heading || !toolbarContext || !body || !compactBrandName) return null;
         const introRect = intro.getBoundingClientRect();
         const copyRect = copy.getBoundingClientRect();
         const headingRect = heading.getBoundingClientRect();
@@ -417,6 +418,7 @@ async function main(): Promise<void> {
           hasToolbar: intro.classList.contains('has-toolbar'),
           hasProgress: intro.classList.contains('has-progress'),
           contextOpen: toolbarContext.open,
+          compactBrandNameHidden: getComputedStyle(compactBrandName).display === 'none',
           intro: { top: introRect.top, bottom: introRect.bottom, right: introRect.right },
           copy: { top: copyRect.top, bottom: copyRect.bottom, left: copyRect.left, right: copyRect.right },
           heading: { width: headingRect.width },
@@ -428,6 +430,7 @@ async function main(): Promise<void> {
       });
       assert(metrics, `completed intro metrics missing at ${width}x${height}`);
       assert(metrics.hasToolbar && !metrics.hasProgress, `completed intro has the wrong state classes at ${width}x${height}`);
+      assert(metrics.compactBrandNameHidden, `compact Platform identity appeared outside the scrolled mobile state at ${width}x${height}`);
       assert(metrics.heading.width >= 240, `completed workspace heading was squeezed to ${metrics.heading.width}px at ${width}x${height}`);
       assert(metrics.toolbarContext.right <= metrics.intro.right + 1, `completed tenant context exceeded the intro width at ${width}x${height}`);
       assert(metrics.bodyHeight >= 160, `completed workspace body was compressed to ${metrics.bodyHeight}px at ${width}x${height}`);
@@ -456,12 +459,77 @@ async function main(): Promise<void> {
     }
 
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.locator('.platform-shell-toolbar-context > summary').click();
+    const workspaceShell = page.locator('.platform-shell.has-entitlement-workspace');
+    const workspaceBody = page.locator('.platform-shell-body');
+    const overviewContext = page.locator('.platform-intro-context');
+    const tenantContext = page.locator('.platform-shell-toolbar-context');
+    const tenantContextSummary = tenantContext.locator('summary');
+    const fullBrandSubtitle = workspaceShell.locator('.platform-shell-header-full-subtitle');
+    const compactBrandName = workspaceShell.locator('.platform-shell-header-compact-user');
+    assert(await fullBrandSubtitle.isVisible(), 'mobile header did not show the full Platform identity at scroll top');
+    assert(await compactBrandName.isHidden(), 'mobile header showed the compact identity before scrolling');
+    const bodyTopBeforeCompact = await workspaceBody.evaluate((node) => node.getBoundingClientRect().top);
+    await workspaceBody.evaluate((node) => {
+      node.scrollTop = 80;
+      node.dispatchEvent(new Event('scroll'));
+    });
+    await page.waitForFunction(() => document.querySelector('.platform-shell')?.classList.contains('platform-shell--scroll-compact'));
+    assert(await overviewContext.isHidden(), 'mobile compact header retained the redundant Page overview disclosure');
+    assert(await page.locator('.platform-shell-intro h1').isVisible(), 'mobile compact header hid the page title');
+    assert(await page.locator('#platformLogoutBtn').isVisible(), 'mobile compact header hid Sign out');
+    assert(await tenantContextSummary.isVisible(), 'mobile compact header hid the selected tenant summary');
+    assert(await compactBrandName.isVisible(), 'mobile compact header did not preserve the Platform user name');
+    assert(await fullBrandSubtitle.isHidden(), 'mobile compact header retained the longer Platform subtitle');
+    const compactBrandMetrics = await workspaceShell.evaluate((node) => {
+      const brand = node.querySelector<HTMLElement>('.platform-shell-header .auth-brand');
+      const signOut = node.querySelector<HTMLElement>('#platformLogoutBtn');
+      const name = node.querySelector<HTMLElement>('.platform-shell-header-compact-user');
+      const small = node.querySelector<HTMLElement>('.platform-shell-header small');
+      if (!brand || !signOut || !name || !small) return null;
+      return {
+        brandRight: brand.getBoundingClientRect().right,
+        signOutLeft: signOut.getBoundingClientRect().left,
+        signOutHeight: signOut.getBoundingClientRect().height,
+        nameText: name.textContent?.trim() ?? '',
+        nameWidth: name.clientWidth,
+        nameScrollWidth: name.scrollWidth,
+        nameOverflow: getComputedStyle(name).textOverflow,
+        fullSubtitle: small.title,
+        documentOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      };
+    });
+    assert(compactBrandMetrics, 'compact Platform identity metrics are missing');
+    assert(compactBrandMetrics.brandRight <= compactBrandMetrics.signOutLeft + 1, 'long mobile Platform name collided with Sign out');
+    assert(compactBrandMetrics.signOutHeight >= 44, 'mobile Sign out target is smaller than 44px');
+    assert(compactBrandMetrics.nameText === 'Layout Platform Administrator With An Exceptionally Long Display Name', 'compact Platform identity did not show the full source name');
+    assert(compactBrandMetrics.nameScrollWidth > compactBrandMetrics.nameWidth && compactBrandMetrics.nameOverflow === 'ellipsis', 'long mobile Platform name was not visibly ellipsized');
+    assert(compactBrandMetrics.fullSubtitle.includes(compactBrandMetrics.nameText), 'mobile identity tooltip omitted the full Platform user name');
+    assert(compactBrandMetrics.documentOverflow <= 1, 'long mobile Platform name caused horizontal overflow');
+    const bodyTopAfterCompact = await workspaceBody.evaluate((node) => node.getBoundingClientRect().top);
+    assert(bodyTopBeforeCompact - bodyTopAfterCompact >= 50, 'mobile compact header did not return at least 50px of vertical space to the workspace');
+    await workspaceBody.evaluate((node) => {
+      node.scrollTop = 30;
+      node.dispatchEvent(new Event('scroll'));
+    });
+    await page.waitForTimeout(20);
+    assert(await workspaceShell.evaluate((node) => node.classList.contains('platform-shell--scroll-compact')), 'mobile compact header flickered off while scrolling within the hysteresis range');
+
+    await tenantContextSummary.click();
     assert(await page.locator('#platformMasterSelect').isVisible(), 'mobile completed context did not reveal the Master selector');
     assert(await page.locator('#platformCompanySelect').isVisible(), 'mobile completed context did not reveal the Company selector');
     assert(await page.locator('#platformOpenCompanyCreate').isVisible(), 'mobile completed context did not reveal the Create Company action');
     assert(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth <= 1), 'expanded mobile completed context overflowed horizontally');
-    await page.locator('.platform-shell-toolbar-context > summary').click();
+    await tenantContextSummary.click();
+    await workspaceBody.evaluate((node) => {
+      node.scrollTop = 0;
+      node.dispatchEvent(new Event('scroll'));
+    });
+    await page.waitForFunction(() => !document.querySelector('.platform-shell')?.classList.contains('platform-shell--scroll-compact'));
+    assert(await overviewContext.isVisible(), 'mobile Page overview disclosure did not return after scrolling to the top');
+    assert(await fullBrandSubtitle.isVisible(), 'full Platform identity did not return after scrolling to the top');
+    assert(await compactBrandName.isHidden(), 'compact Platform identity remained visible at scroll top');
+    const bodyTopAfterRestore = await workspaceBody.evaluate((node) => node.getBoundingClientRect().top);
+    assert(Math.abs(bodyTopBeforeCompact - bodyTopAfterRestore) <= 1, 'mobile header did not restore its original layout at scroll top');
 
     for (const [width, height] of [[1440, 900], [1280, 800], [1024, 768]] as const) {
       await page.setViewportSize({ width, height });

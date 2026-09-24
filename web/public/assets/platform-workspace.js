@@ -923,8 +923,10 @@
       var notice=state.notice;
       var description=state.masterFn?pt('workspace.controlIntro','Platform-only Master and Company controls with audited tenant identity provisioning.'):pt('workspace.provisionIntro','Create the first Master, configure its commercial defaults, then create its first Company and administrators.');
       var introContext=platformIntroContextMarkup(stage,description,demoBannerMarkup(),progress);
+      var displayName=state.session&&state.session.displayName||'';
+      var brandSubtitle=pt('workspace.subtitleWithUser','Platform Superadmin workspace · {name}',{name:displayName});
       state.notice='';
-      view.innerHTML=`<section class="auth-panel platform-shell"><header class="platform-shell-header"><div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small>${esc(pt('workspace.subtitleWithUser','Platform Superadmin workspace · {name}',{name:state.session&&state.session.displayName||''}))}</small></span></div><button type="button" class="btn soft" id="platformLogoutBtn">${esc(pt('action.signOut','Sign out'))}</button></header><div class="platform-shell-intro${progress?' has-progress':''}${state.masterFn?' has-toolbar':''}"><div class="auth-copy"><h1 tabindex="-1">${esc(state.masterFn?(hasCompany?pt('workspace.tenantControl','Platform tenant control'):pt('workspace.finishProvisioning','Finish tenant provisioning')):pt('workspace.startProvisioning','Start tenant provisioning'))}</h1>${introContext}</div>${state.masterFn?switchMarkup(hasExistingCompany):''}</div><div class="platform-shell-body"><div class="auth-error" id="platformWorkspaceError" role="alert" aria-live="assertive" tabindex="-1"></div>${notice?`<div class="platform-workspace-status" id="platformCompanyCreatedStatus" role="status" tabindex="-1">${esc(notice)}</div>`:''}${provisioning?`<div class="platform-workspace-grid">${provisioning}</div>`:''}${hasCompany?modulesMarkup()+simulationMarkup():''}</div>${provisioningActionMarkup(hasExistingCompany)}</section>`;
+      view.innerHTML=`<section class="auth-panel platform-shell${hasCompany?' has-entitlement-workspace':''}"><header class="platform-shell-header"><div class="auth-brand"><span class="mark brand-logo-mark">${typeof window.erpBrandLogo==='function'?window.erpBrandLogo():''}</span><span><b>Aria ERP</b><small title="${esc(brandSubtitle)}"><span class="platform-shell-header-full-subtitle">${esc(brandSubtitle)}</span><span class="platform-shell-header-compact-user">${esc(displayName)}</span></small></span></div><button type="button" class="btn soft" id="platformLogoutBtn">${esc(pt('action.signOut','Sign out'))}</button></header><div class="platform-shell-intro${progress?' has-progress':''}${state.masterFn?' has-toolbar':''}"><div class="auth-copy"><h1 tabindex="-1">${esc(state.masterFn?(hasCompany?pt('workspace.tenantControl','Platform tenant control'):pt('workspace.finishProvisioning','Finish tenant provisioning')):pt('workspace.startProvisioning','Start tenant provisioning'))}</h1>${introContext}</div>${state.masterFn?switchMarkup(hasExistingCompany):''}</div><div class="platform-shell-body"><div class="auth-error" id="platformWorkspaceError" role="alert" aria-live="assertive" tabindex="-1"></div>${notice?`<div class="platform-workspace-status" id="platformCompanyCreatedStatus" role="status" tabindex="-1">${esc(notice)}</div>`:''}${provisioning?`<div class="platform-workspace-grid">${provisioning}</div>`:''}${hasCompany?modulesMarkup()+simulationMarkup():''}</div>${provisioningActionMarkup(hasExistingCompany)}</section>`;
       if(view.querySelector('#platformCreateMasterForm')||view.querySelector('#platformCreateCompanyForm')){
         applyDemoDefaults(view,draftStage,state.workspaceStage===WORKSPACE_STAGE.COMPANY?!(currentMaster()&&currentMaster().hasMasterAdmin):false);
         restoreDraft(view,draftStage);
@@ -932,6 +934,7 @@
       wireWorkspace(view);
       var body=view.querySelector('.platform-shell-body');
       if(body) body.scrollTop=0;
+      wireWorkspaceScrollDensity(view.querySelector('.platform-shell'),body);
       if(state.pendingFocus==='company-create-opener'){
         var toolbarContext=view.querySelector('.platform-shell-toolbar-context');
         if(toolbarContext) toolbarContext.open=true;
@@ -959,6 +962,17 @@
       else if(typeof mobile.addListener==='function') mobile.addListener(sync);
       wirePlatformIntroContext.bound=true;
     }
+  }
+  function wireWorkspaceScrollDensity(shell,body){
+    if(!shell||!body||!shell.classList.contains('has-entitlement-workspace')) return;
+    var compact=false;
+    body.addEventListener('scroll',function(){
+      var top=body.scrollTop;
+      var next=compact?top>12:top>=48;
+      if(next===compact) return;
+      compact=next;
+      shell.classList.toggle('platform-shell--scroll-compact',compact);
+    },{passive:true});
   }
   function wireWorkspace(view){
     wireDemoBanner(view);
