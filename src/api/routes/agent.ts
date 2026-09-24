@@ -18,6 +18,12 @@ import {
   type AuthenticatedAgentIdentity,
 } from '../../auth/agentAuthentication';
 import { apiError, context } from '../http';
+import { McpRateLimiter, type McpRateLimitPolicy } from '../mcpRateLimit';
+import {
+  ProductCaseError,
+  readAgentProductCase,
+  submitAgentProductCase,
+} from '../../modules/product/productCase';
 
 const FORBIDDEN_IDENTITY_KEYS = new Set([
   'masterfn', 'companyfn', 'tenant', 'tenantid', 'masterid', 'companyid',
@@ -65,6 +71,10 @@ function validIdentity(value: AuthenticatedAgentIdentity): boolean {
 }
 
 function handleAgentError(res: express.Response, error: unknown): void {
+  if (error instanceof ProductCaseError) {
+    apiError(res, error.status, error.code, error.message);
+    return;
+  }
   if (error instanceof ActionDispatchError || error instanceof AuthLifecycleError) {
     apiError(res, error.status, error.code, error.message);
     return;
@@ -93,6 +103,10 @@ function sendAgentResult(res: express.Response, result: AgentActionDispatchResul
 
 export interface AgentRouterOptions {
   authenticator?: AgentCredentialAuthenticator;
+  caseRateLimit?: {
+    perAgent?: McpRateLimitPolicy;
+    perCompany?: McpRateLimitPolicy;
+  };
 }
 
 /**
@@ -104,6 +118,76 @@ export interface AgentRouterOptions {
 export function createAgentRouter(db: DB, options: AgentRouterOptions = {}): Router {
   const router = Router();
   const authenticator = options.authenticator ?? createDatabaseAgentCredentialAuthenticator(db);
+  const agentCaseLimiter = new McpRateLimiter(options.caseRateLimit?.perAgent ?? {
+    maxRequests: 10, windowMs: 60_000,
+  });
+  const companyCaseLimiter = new McpRateLimiter(options.caseRateLimit?.perCompany ?? {
+    maxRequests: 50, windowMs: 60_000,
+  });
+
+  async function authenticateAgent(req: express.Request, res: express.Response) {
+    const requestId = context(res).requestId;
+    try {
+      const identity = await authenticator.authenticate({
+        bearerToken: bearerAgentToken(req),
+        requestId,
+        method: req.method,
+        path: req.path,
+      });
+      if (identity && validIdentity(identity)) return identity;
+    } catch {
+      // Issuer details must never be reflected to the caller.
+    }
+    apiError(res, 401, 'agent_not_authenticated', 'A valid Agent credential is required.');
+    return null;
+  }
+
+  router.post('/cases', async (req, res) => {
+    const suppliedIdentity = identityPath(req.body);
+    if (suppliedIdentity) {
+      apiError(res, 400, 'agent_identity_in_body', 'Agent and tenant identity must come from the issuer.', { path: suppliedIdentity });
+      return;
+    }
+    const identity = await authenticateAgent(req, res);
+    if (!identity) return;
+    const agentLimit = agentCaseLimiter.check(
+      `${identity.masterFn}\0${identity.companyFn}\0${identity.agentPrincipalId}`,
+    );
+    const companyLimit = agentLimit.allowed
+      ? companyCaseLimiter.check(`${identity.masterFn}\0${identity.companyFn}`)
+      : null;
+    res.setHeader('RateLimit-Limit', String(agentLimit.limit));
+    res.setHeader('RateLimit-Remaining', String(agentLimit.remaining));
+    const limited = !agentLimit.allowed ? agentLimit : companyLimit && !companyLimit.allowed ? companyLimit : null;
+    if (limited) {
+      res.setHeader('Retry-After', String(limited.retryAfterSeconds));
+      apiError(res, 429, 'product_case_rate_limited', 'Product case intake rate limit exceeded.');
+      return;
+    }
+    try {
+      const result = await runWithAuditAttribution({
+        agentPrincipalId: identity.agentPrincipalId,
+      }, () => submitAgentProductCase(
+        db, identity, req.body, req.header('idempotency-key'), context(res).requestId,
+      ));
+      res.setHeader('Cache-Control', 'no-store');
+      res.status(result.replayed ? 200 : 201).json(result);
+    } catch (error) {
+      handleAgentError(res, error);
+    }
+  });
+
+  router.get('/cases/:id', async (req, res) => {
+    const identity = await authenticateAgent(req, res);
+    if (!identity) return;
+    try {
+      const data = await readAgentProductCase(db, identity, req.params.id);
+      res.setHeader('Cache-Control', 'no-store');
+      res.json({ data });
+    } catch (error) {
+      handleAgentError(res, error);
+    }
+  });
 
   router.post('/actions', async (req, res) => {
     const suppliedIdentity = identityPath(req.body);

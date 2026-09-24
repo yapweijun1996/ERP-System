@@ -216,6 +216,16 @@ origin and require their revision to match the intended commit before recording 
 as complete. The repository now provides a bounded read-only verifier for this release
 evidence:
 
+For a host whose protected Compose environment file is outside the checkout, set
+`ERP_DEPLOY_ENV_FILE` to its absolute path when running `deploy/migrate.sh` and
+`deploy/release.sh`; do not copy credentials into the repository. Set the intended
+`COMPOSE_PROJECT_NAME` explicitly and obtain the current database container ID from
+that selected project. Pass it as `ERP_EXPECTED_DB_CONTAINER_ID` to both scripts so a
+project mismatch fails before schema or application changes. A schema release still
+requires a verified restorable backup, isolated migration/RLS rehearsal and the
+separate `CONFIRM_DATABASE_CHANGE=YES` migration gate. These flags identify a target;
+they do not replace release approval or post-release verification.
+
 ```bash
 npm run verify:release -- <public-origin> --expected-revision <commit>
 ```

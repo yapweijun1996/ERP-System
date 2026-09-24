@@ -1243,6 +1243,7 @@
   "route.receipt-tax-evidence": "收据与税务证据",
   "route.company-receipts": "公司收据",
   "route.agent-mgmt": "Agent 治理",
+  "route.product-cases": "产品工单",
   "receiptAssistant.open": "打开收据助手",
   "receiptAssistant.title": "收据助手",
   "receiptAssistant.description": "查看获准的收据事实，并准备准确的公司收据包。",

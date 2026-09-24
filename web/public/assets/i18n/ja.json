@@ -1243,6 +1243,7 @@
   "route.receipt-tax-evidence": "領収書・税務証憑",
   "route.company-receipts": "会社領収書",
   "route.agent-mgmt": "Agent ガバナンス",
+  "route.product-cases": "製品ケース",
   "receiptAssistant.open": "領収書アシスタントを開く",
   "receiptAssistant.title": "領収書アシスタント",
   "receiptAssistant.description": "許可された領収書の事実を確認し、正確な会社領収書パックを準備します。",

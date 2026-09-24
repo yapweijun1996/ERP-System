@@ -1243,6 +1243,7 @@
   "route.receipt-tax-evidence": "Biên lai & Chứng từ thuế",
   "route.company-receipts": "Biên lai công ty",
   "route.agent-mgmt": "Quản trị tác nhân",
+  "route.product-cases": "Vụ việc sản phẩm",
   "receiptAssistant.open": "Mở trợ lý biên lai",
   "receiptAssistant.title": "Trợ lý biên lai",
   "receiptAssistant.description": "Xem các dữ kiện biên lai được phép và chuẩn bị Gói biên lai công ty chính xác.",

@@ -1218,6 +1218,7 @@ window.__ERP_I18N_EN__=Object.freeze({
   "route.receipt-tax-evidence": "Receipt & Tax Evidence",
   "route.company-receipts": "Company Receipts",
   "route.agent-mgmt": "Agent Governance",
+  "route.product-cases": "Product Cases",
   "receiptAssistant.open": "Open receipt assistant",
   "receiptAssistant.title": "Receipt assistant",
   "receiptAssistant.description": "Review permitted receipt facts and prepare an exact Company Receipt Pack.",

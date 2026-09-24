@@ -880,7 +880,7 @@ const SUBROUTES = {
   integration:['integration','integration-logs','data-import'],
   finance:['gl','account-ledger','journal-entry','new-journal-entry','payment-voucher','new-payment-voucher','bank-rec','pnl','ar-aging','company-receipts'], hr:['leave-approval','leave-workflow','hr-directory','employee','new-employee','hr-calendar','staff-calendar','payroll-run','payslip'],
   mywork:['my-leave','leave-application','my-claims','expense-claim','my-receipts','company-receipts','receipt-tax-evidence','team-calendar','my-approvals'],
-  workflow:['approval-inbox'], bi:['bi-dashboard','sales-analysis','stock-aging'], admin:['role-permission','master-control','user-mgmt','agent-mgmt','audit-log','sys-settings','company-onboarding','notifications'],
+  workflow:['approval-inbox'], bi:['bi-dashboard','sales-analysis','stock-aging'], admin:['role-permission','master-control','user-mgmt','agent-mgmt','product-cases','audit-log','sys-settings','company-onboarding','notifications'],
 };
 DB.nav.forEach(g=>g.items.forEach(m=>{ ROUTE_MODULE[m.route]=m.id; }));
 Object.entries(SUBROUTES).forEach(([mod,routes])=>routes.forEach(r=>{ if(!ROUTE_MODULE[r]) ROUTE_MODULE[r]=mod; }));
@@ -910,7 +910,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'debit-notes','price-lists','discount-mgmt','credit-control',
   'item-master','crm-customer',
   'asset-register','asset-detail','depreciation',
-  'user-mgmt','audit-log','role-permission','company-onboarding',
+  'user-mgmt','audit-log','role-permission','company-onboarding','product-cases',
   'hr-directory','employee','new-employee','leave-approval','leave-workflow','hr-calendar','staff-calendar','payroll-run','payslip',
   'project-pl','project-detail','timesheet',
   'my-leave','leave-application','my-claims','expense-claim','my-receipts','company-receipts','receipt-tax-evidence','team-calendar','my-approvals',
@@ -930,7 +930,7 @@ const CANONICAL_SCREEN_ROUTES = new Set([
   'bank-rec',
   'bi-dashboard','sales-analysis','stock-aging',
   'my-activity','notifications',
-  'integration','master-control','sys-settings','agent-mgmt',
+  'integration','master-control','sys-settings','agent-mgmt','product-cases',
 ]);
 const CANONICAL_DATA_PREVIEW_ROUTES = new Set([]);
 const API_SCREEN_ROUTES = new Set([
@@ -953,7 +953,7 @@ const API_SCREEN_ROUTES = new Set([
   'debit-notes','price-lists','discount-mgmt','credit-control',
   'item-master','crm-customer',
   'asset-register','asset-detail','depreciation',
-  'user-mgmt','audit-log','role-permission','company-onboarding',
+  'user-mgmt','audit-log','role-permission','company-onboarding','product-cases',
   'hr-directory','employee','new-employee','leave-approval','leave-workflow','hr-calendar','staff-calendar','payroll-run','payslip',
   'project-pl','project-detail','timesheet',
   'integration-logs','data-import',
@@ -973,7 +973,7 @@ const API_SCREEN_ROUTES = new Set([
   'sales-home','sales-reports','report-sales-customer','report-sales-rep','report-quote-conversion','report-generic','sales-commission','txn-view',
   'my-activity',
   'notifications',
-  'integration','master-control','sys-settings','agent-mgmt',
+  'integration','master-control','sys-settings','agent-mgmt','product-cases',
   'my-leave','leave-application','my-claims','expense-claim','my-receipts','company-receipts','receipt-tax-evidence','team-calendar','my-approvals',
 ]);
 const SCREEN_ACTIVE_ALIASES = {
@@ -1069,7 +1069,7 @@ const MODULE_DEFS = {
   ]},
   admin:{ labelKey:'nav.admin', home:'user-mgmt', items:[
     ['user-mgmt','Users','people'],['role-permission','Roles & Permissions','shield'],
-    ['agent-mgmt','Agent Governance','shield','route.agent-mgmt'],['master-control','Master Control','grid'],['audit-log','Audit Log','history'],
+    ['agent-mgmt','Agent Governance','shield','route.agent-mgmt'],['product-cases','Product Cases','list','route.product-cases'],['master-control','Master Control','grid'],['audit-log','Audit Log','history'],
     ['sys-settings','System Settings','gear'],['company-onboarding','Company Onboarding','check'],
   ]},
 };
@@ -1093,7 +1093,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'purchase-returns','supplier-credit-notes','supplier-debit-notes','po-approvals',
     'supplier-price-lists','landed-cost','stock-movement','work-orders',
     'qc-inspection','gl','hr-directory','project-pl','timesheet','service-ticket',
-    'service-contracts','asset-register','user-mgmt',
+    'service-contracts','asset-register','user-mgmt','product-cases',
     'my-leave','my-claims','my-receipts','company-receipts','approval-inbox',
   ],
   'master-detail-register-v1':[
@@ -1152,7 +1152,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
   workspace:[
     'bank-rec','data-import','integration','master-control',
     'company-onboarding','mrp',
-    'sales-commission','settings','sys-settings','agent-mgmt',
+    'sales-commission','settings','sys-settings','agent-mgmt','product-cases',
   ],
   board:['crm-pipeline'],
   'activity-feed':['integration-logs','my-activity','notifications'],

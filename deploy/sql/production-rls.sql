@@ -92,6 +92,7 @@ DECLARE
     'tax_evidence_pack_legal_hold_event',
     'project', 'progress_claim', 'project_time_entry',
     'service_contract', 'service_ticket',
+    'product_case', 'product_case_event',
     'payroll_run', 'payroll_run_line', 'payroll_leave_source', 'payroll_run_leave_source',
     'app_notification',
     'integration_connector',
@@ -166,6 +167,19 @@ BEGIN
     );
   END LOOP;
 END $$;
+
+-- Case history is append-only even if a runtime role has generic table DML.
+-- Reapplying this overlay after migrations preserves the guard.
+CREATE OR REPLACE FUNCTION reject_product_case_event_mutation()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'product_case_event is append-only' USING ERRCODE = '55000';
+END;
+$$;
+DROP TRIGGER IF EXISTS product_case_event_immutable ON product_case_event;
+CREATE TRIGGER product_case_event_immutable
+BEFORE UPDATE OR DELETE ON product_case_event
+FOR EACH ROW EXECUTE FUNCTION reject_product_case_event_mutation();
 
 -- The generic tenant_scope policy intentionally excludes these tenant-keyed
 -- security/configuration/control-plane tables. Keep every exemption explicit;

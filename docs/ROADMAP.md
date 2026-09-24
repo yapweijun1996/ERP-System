@@ -1393,3 +1393,32 @@ Exit criteria: no hidden actor is login-capable or tenant-manageable; Admin mode
 only MAC-effective modules and cannot bypass workflow/business authority; Employee mode
 never gains Platform power; PostgreSQL/FORCE-RLS, browser, access-matrix and CI evidence
 all pass; docs and the existing MAC KB item distinguish source-present from deployed.
+
+## Phase 50 — Product Feedback and Agent Issue Intake ⬜
+
+EPIC-069 is separate from the receipt-to-Pack AI Native goal. A local Agent
+submit/read and human triage slice is implemented but not deployed; evidence,
+release verification and production gates remain open. Use the
+[Product Feedback plan](PRODUCT_FEEDBACK_PLAN.md) and TASK-244–249 in the task
+registry for the target contract and acceptance criteria.
+
+1. **Contract and policy** (TASK-244): Product Manager and Tech Lead approve the
+   dedicated Agent feedback API, explicit grants, Company/privacy boundary,
+   bounded evidence, idempotent retry and human triage ownership.
+2. **Durable record** (TASK-245): Backend/Data Engineering adds a Company-scoped
+   case and append-only evidence/history with atomic audit, generated shared
+   migrations and independent PostgreSQL RLS proof.
+3. **Submission and triage** (TASK-246/247, parallel after TASK-245): Agent/API
+   Engineering exposes submit, own-case read and evidence append; Platform
+   Engineering and Product Support deliver the human classification queue.
+4. **Verified outcome** (TASK-248): QA and Release Engineering bind the accepted
+   report to a tracked fix, actual deployed revision, independent post-release
+   result and reporter-visible resolution or reopening.
+5. **Pilot and handover** (TASK-249): Product Operations/SRE canary internal
+   Agents, measure valid findings and recurrence, and rehearse intake disable
+   without losing existing cases.
+
+Exit criteria: a real Agent observation reaches a reasoned, auditable outcome
+after release and verification; revoked/cross-Company access, unsafe evidence,
+duplicate retries and failed audit writes remain contained. This phase is
+planning only; none of its tasks is implemented or deployed.

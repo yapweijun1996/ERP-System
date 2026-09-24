@@ -39,13 +39,17 @@ const SCOPE_RANK: Record<AgentGrantScope, number> = {
   company: 3,
 };
 
-const ACTION_RESOURCE_KEYS: Readonly<Record<AgentActionName, string>> = {
+type AgentGrantActionName = AgentActionName | 'product_case.submit' | 'product_case.read_own';
+
+const ACTION_RESOURCE_KEYS: Readonly<Record<AgentGrantActionName, string>> = {
   'receipt.search': 'expenses/company_receipts',
   'receipt.get': 'expenses/company_receipts',
   'receipt_pack.prepare': 'expenses/company_receipt_packs',
   'receipt_pack.create': 'expenses/company_receipt_packs',
   'receipt_pack.get': 'expenses/company_receipt_packs',
   'receipt_pack.export': 'expenses/company_receipt_packs',
+  'product_case.submit': 'product/cases',
+  'product_case.read_own': 'product/cases',
 };
 
 /** Current ERP field authority for the pilot resources. Role permissions are
@@ -63,6 +67,10 @@ const RESOURCE_FIELDS: Readonly<Record<string, readonly string[]>> = {
     'id', 'packKey', 'visibility', 'locale', 'filters', 'rows', 'totals',
     'sourceSha256', 'rowCount', 'documentCount', 'retentionUntil', 'legalHold',
     'recordVersion', 'createdByUserId', 'createdAt',
+  ],
+  'product/cases': [
+    'id', 'caseType', 'title', 'description', 'routeKey', 'referenceId',
+    'status', 'resolution', 'version', 'createdAt', 'updatedAt', 'events',
   ],
 };
 
@@ -206,7 +214,7 @@ export interface ResolvedAgentGrant {
   principalVersion: number;
   grantId: number;
   grantVersion: number;
-  actionName: AgentActionName;
+  actionName: AgentGrantActionName;
   permissionKey: string;
   resourceKey: string;
   scope: AgentGrantScope;
@@ -264,8 +272,9 @@ function principalKind(value: unknown): AgentPrincipalKind {
   return kind as AgentPrincipalKind;
 }
 
-function actionName(value: unknown): AgentActionName {
+function actionName(value: unknown): AgentGrantActionName {
   const action = textValue(value, 'actionName', 120);
+  if (action === 'product_case.submit' || action === 'product_case.read_own') return action;
   try {
     return getAgentActionContract(action).name;
   } catch (error) {
@@ -276,17 +285,21 @@ function actionName(value: unknown): AgentActionName {
   }
 }
 
-function permissionKey(value: unknown, action: AgentActionName): string {
+function permissionKey(value: unknown, action: AgentGrantActionName): string {
   const permission = textValue(value, 'permissionKey', 160);
-  const contract = getAgentActionContract(action);
+  const allowed = action === 'product_case.submit'
+    ? [PERMISSIONS.productCasesSubmit]
+    : action === 'product_case.read_own'
+      ? [PERMISSIONS.productCasesReadOwn]
+      : getAgentActionContract(action).permissions.anyOf;
   if (!isAssignableTenantPermission(permission)
-    || !contract.permissions.anyOf.includes(permission)) {
+    || !allowed.includes(permission)) {
     fail(400, 'agent_permission_invalid', 'The permission is not assignable to this Agent action.');
   }
   return permission;
 }
 
-function resourceKey(value: unknown, action: AgentActionName): string {
+function resourceKey(value: unknown, action: AgentGrantActionName): string {
   const resource = textValue(value, 'resourceKey', 128);
   if (!RESOURCE_KEY_PATTERN.test(resource)
     || resource !== ACTION_RESOURCE_KEYS[action]
@@ -851,7 +864,7 @@ async function validateGrantInput(
   now: Date,
 ): Promise<{
   principalId: number;
-  action: AgentActionName;
+  action: AgentGrantActionName;
   permission: string;
   resource: string;
   scopeTarget: AuthorizationScopeTarget;

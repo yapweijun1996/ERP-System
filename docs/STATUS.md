@@ -1,5 +1,19 @@
 # Project Status — reviewed 2026-09-15
 
+Product Feedback planning addendum — 2026-09-24: EPIC-069 and TASK-244–249
+are registered for a governed Agent feedback API, human triage and a linked
+fix/release/verification loop. A local, uncommitted implementation now has
+Company-scoped case/event tables, separate ERP Agent submit/read-own grants
+and Bearer API, idempotent submission, human triage API and API-mode Admin
+screen. Focused API tests, a disposable PostgreSQL non-bypass RLS proof and a
+local desktop/mobile browser walkthrough passed. Single-instance pilot rate
+limits and an append-only production event trigger are implemented.
+Evidence append, distributed rate limits, task/release/independent verification
+links and production rollout remain open; this is
+not a deployed capability. The [implementation and remaining plan](PRODUCT_FEEDBACK_PLAN.md) and the
+machine-readable task registry own the scope and dependencies; historical
+task counts elsewhere in this document remain dated snapshots.
+
 PWA and first-run wizard correction — 2026-09-15: PWA v279 now activates a waiting
 service worker silently and reloads once after `controllerchange`; the product no longer
 renders an update toast or **Update now** button. The Demo setup wizard also re-renders

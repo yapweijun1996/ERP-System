@@ -19,7 +19,7 @@ step to a single viewport. TASK-226 adds the trusted Module Activation choice be
 TASK-215 is documentation
 reconciliation, not runtime completion.
 
-Reviewed: **2026-09-13**
+Task registry reviewed: **2026-09-24**
 
 The machine-readable task source of truth is
 [`../tasks/tasks.jsonl`](../tasks/tasks.jsonl). This file is a human-readable index,
@@ -27,12 +27,33 @@ not a second task registry.
 
 ## Current totals
 
-- Done: **227**
+- Done: **230**
 - In progress: **6**
-- Todo: **4**
+- Todo: **10**
 - Blocked: **3**
-- Total: **240**
-- Pending: **13** (8 inherited + 5 AI Native delivery tasks)
+- Total: **249**
+- Pending: **19** (13 prior open tasks + 6 planned Product Feedback tasks)
+
+These counts include completed TASK-241–243 and open, partly implemented
+TASK-244–249. The local Agent intake/human triage slice does not satisfy the
+remaining task acceptance or production-release gates. AI Native goal acceptance counts are tracked separately and are
+not changed by the new feedback plan.
+
+## Product feedback programme (local slice; acceptance open)
+
+[EPIC-069](EPICS.md) and the [Product Feedback plan](PRODUCT_FEEDBACK_PLAN.md)
+define an Agent-submitted feedback case, human triage and a verified release
+outcome. The task registry is authoritative; the roles below are intended
+owners, not named assignees.
+
+| Task | Status | Owner role | Dependency |
+| --- | --- | --- | --- |
+| TASK-244 | Todo | Product Manager / Tech Lead | TASK-171, TASK-232 |
+| TASK-245 | Todo | Backend/Data Engineer | TASK-244 |
+| TASK-246 | Todo | Agent/API Engineer | TASK-245 |
+| TASK-247 | Todo | Platform/Frontend Engineer | TASK-245 |
+| TASK-248 | Todo | QA / Release Engineer | TASK-246, TASK-247 |
+| TASK-249 | Todo | Product Operations / SRE | TASK-248 |
 
 ## Current release-quality note
 
@@ -47,10 +68,10 @@ release-manifest publication, adds a bounded read-only release evidence verifier
 aligns the configured `/erp/` public path across Vite, nginx and the service worker locally; production,
 CI, device and external-service gates remain separate.
 
-Current snapshot (2026-09-13): the registry is **227 Done / 6 In Progress / 4 Todo /
+Historical snapshot (2026-09-13): the registry is **227 Done / 6 In Progress / 4 Todo /
 3 Blocked / 240 Total**; AI acceptance is **7/12 workstreams**, **35/48 criteria**
 and **44/60 checkpoints**. Candidate revision `b695a83` passed remote CI run
-`34746493412`; current public availability and exact release identity are tracked by
+`34746493412`; at that checkpoint, public availability and release identity were tracked by
 TASK-199, while production/provider and owner-acceptance gates remain separate.
 
 TASK-194 audited historical HEAD `00e2533`. The historical EPIC-067 snapshot recorded 104 migrations
