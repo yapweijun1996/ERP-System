@@ -7,6 +7,7 @@ import {
 import { seedDemo } from '../data/seed';
 import { freshDb } from '../test/helpers';
 import {
+  COMPANY_OWNER_PERMISSION_KEYS,
   COMPANY_OWNER_ROLE_TEMPLATE_KEY,
 } from './accessCatalog';
 import { explainAuthorization, principalFromSession } from './authorization';
@@ -49,9 +50,13 @@ describe('Company Owner cutover', () => {
 
     expect(legacyRole).toMatchObject({ isSuperadmin: false, sourceTemplateKey: 'legacy_superadmin' });
     expect(ownerRoles).toHaveLength(2);
-    // The current seed includes Company Receipt grants and four Product Case
-    // permissions; 0089 remains a historical, idempotent cutover.
-    expect(ownerPermissions.length).toBe(121);
+    // The historical cutover may retain an older explicit grant, but must not
+    // silently add newly restricted product-case authority.
+    const ownerKeys = ownerPermissions.map((entry) => entry.permissionKey);
+    for (const key of COMPANY_OWNER_PERMISSION_KEYS) expect(ownerKeys).toContain(key);
+    expect(ownerKeys).not.toContain('product.cases.verify');
+    expect(ownerKeys).not.toContain('product.cases.release');
+    expect(ownerKeys).not.toContain('product.cases.evidence_append');
     expect(sg.authorizationVersion).toBe(2);
     expect(legacyAssignments).toHaveLength(0);
   });

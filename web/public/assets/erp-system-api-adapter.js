@@ -228,6 +228,11 @@
       method:'POST',body:payload,
     });
   }
+  function productCaseCommand(id,command,payload){
+    return apiRequest('product-cases/'+encodeURIComponent(id)+'/'+command,{
+      method:'POST',body:payload,
+    });
+  }
   var financeReports={
     arAgingOptions:function(){
       return apiRequest('finance/reports/ar-aging/options');
@@ -997,6 +1002,11 @@
     productCases:productCases,
     productCase:productCase,
     transitionProductCase:transitionProductCase,
+    triageProductCase:function(id,payload){return productCaseCommand(id,'triage',payload);},
+    linkProductCaseTask:function(id,payload){return productCaseCommand(id,'tasks',payload);},
+    appendProductCaseEvidence:function(id,payload){return productCaseCommand(id,'evidence',payload);},
+    releaseProductCase:function(id,payload){return productCaseCommand(id,'releases',payload);},
+    verifyProductCaseRelease:function(id,payload){return productCaseCommand(id,'verifications',payload);},
     session:fetchSession,
     employeeWorkspaceTargets:employeeWorkspaceTargets,
     financeReports:financeReports,

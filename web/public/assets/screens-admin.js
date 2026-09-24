@@ -584,9 +584,10 @@ SCREENS['agent-mgmt'] = async function(root){
     const grantPresets={
       'receipt.search':{permission:'expenses.company_receipts.read_company',resource:'expenses/company_receipts',scope:'company',targetType:'none',targetId:'',fields:'id,merchant'},
       'product_case.submit':{permission:'product.cases.submit',resource:'product/cases',scope:'company',targetType:'none',targetId:'',fields:'id,caseType,title,description,routeKey,referenceId,status,version,createdAt'},
-      'product_case.read_own':{permission:'product.cases.read_own',resource:'product/cases',scope:'self',targetType:'employee',targetId:String(agent.ownerUserId),fields:'id,caseType,title,description,routeKey,referenceId,status,resolution,version,createdAt,updatedAt,events'},
+      'product_case.read_own':{permission:'product.cases.read_own',resource:'product/cases',scope:'self',targetType:'employee',targetId:String(agent.ownerUserId),fields:'id,caseType,title,description,routeKey,referenceId,status,resolution,resolutionCode,releaseRevision,verifiedAt,version,createdAt,updatedAt,events,evidence'},
+      'product_case.append_evidence':{permission:'product.cases.evidence_append',resource:'product/cases',scope:'company',targetType:'none',targetId:'',fields:'id,kind,summary,contentDigest,createdAt'},
     };
-    appModal({icon:'plus',title:s('agentGrant'),body:`<div class="set-grid"><div class="fld"><span>${esc(s('agentAction'))}</span><select id="agentGrantAction"><option value="receipt.search">receipt.search</option><option value="product_case.submit">product_case.submit</option><option value="product_case.read_own">product_case.read_own</option></select></div><div class="fld"><span>${esc(s('agentPermission'))}</span><input id="agentGrantPermission" readonly value="expenses.company_receipts.read_company"></div><div class="fld"><span>${esc(s('agentFields'))}</span><input id="agentGrantFields" value="id,merchant" maxlength="500"></div></div>`,actions:`${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('agentGrant'),{icon:'check',cls:'primary',attrs:'data-agent-grant-confirm="1"'})}`});
+    appModal({icon:'plus',title:s('agentGrant'),body:`<div class="set-grid"><div class="fld"><span>${esc(s('agentAction'))}</span><select id="agentGrantAction"><option value="receipt.search">receipt.search</option><option value="product_case.submit">product_case.submit</option><option value="product_case.read_own">product_case.read_own</option><option value="product_case.append_evidence">product_case.append_evidence</option></select></div><div class="fld"><span>${esc(s('agentPermission'))}</span><input id="agentGrantPermission" readonly value="expenses.company_receipts.read_company"></div><div class="fld"><span>${esc(s('agentFields'))}</span><input id="agentGrantFields" value="id,merchant" maxlength="500"></div></div>`,actions:`${btn(t('common.cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(s('agentGrant'),{icon:'check',cls:'primary',attrs:'data-agent-grant-confirm="1"'})}`});
     $('#agentGrantAction').addEventListener('change',()=>{
       const preset=grantPresets[$('#agentGrantAction').value];
       $('#agentGrantPermission').value=preset.permission;
@@ -635,6 +636,14 @@ SCREENS['product-cases'] = async function(root){
   };
   const copy=i18nLegacy(packs);
   const s=key=>copy[key]||packs.en[key]||key;
+  const workflowCopy={
+    en:{needs_info:'Needs information',accepted:'Accepted',released:'Released',verified:'Verified',category:'Category',defect:'Defect',usability:'Usability',improvement:'Improvement',assignee:'Assignee user ID (optional)',triage:'Save triage',task:'Engineering task key',linkTask:'Link task',evidence:'Reproduction evidence',addEvidence:'Add evidence',release:'Record verified release',releaseWarning:'This checks the public deployment before recording a release.',verification:'Post-release observation',passed:'Passed',failed:'Failed',verify:'Record independent verification',closureCode:'Closure reason',fixed:'Fixed',duplicate:'Duplicate',not_reproducible:'Not reproducible',declined:'Declined',answered:'Answered',duplicateId:'Original case ID',outcome:'Outcome',emptyValue:'Not set',commandSaved:'Case updated.',historyNote:'Audit history',evidenceHistory:'Evidence history'},
+    ms:{needs_info:'Perlu maklumat',accepted:'Diterima',released:'Dikeluarkan',verified:'Disahkan',category:'Kategori',defect:'Kecacatan',usability:'Kebolehgunaan',improvement:'Penambahbaikan',assignee:'ID pengguna penanggungjawab (pilihan)',triage:'Simpan saringan',task:'Kunci tugas kejuruteraan',linkTask:'Pautkan tugas',evidence:'Bukti penghasilan semula',addEvidence:'Tambah bukti',release:'Rekod keluaran disahkan',releaseWarning:'Deployment awam disemak sebelum keluaran direkodkan.',verification:'Pemerhatian selepas keluaran',passed:'Lulus',failed:'Gagal',verify:'Rekod pengesahan bebas',closureCode:'Sebab penutupan',fixed:'Dibaiki',duplicate:'Pendua',not_reproducible:'Tidak dapat dihasilkan semula',declined:'Ditolak',answered:'Dijawab',duplicateId:'ID kes asal',outcome:'Hasil',emptyValue:'Belum ditetapkan',commandSaved:'Kes dikemas kini.',historyNote:'Sejarah audit',evidenceHistory:'Sejarah bukti'},
+    zh:{needs_info:'待补充信息',accepted:'已接受',released:'已发布',verified:'已验证',category:'分类',defect:'缺陷',usability:'易用性',improvement:'改进建议',assignee:'负责人用户 ID（选填）',triage:'保存分类',task:'工程任务编号',linkTask:'关联任务',evidence:'复现证据',addEvidence:'添加证据',release:'登记已验证发布',releaseWarning:'登记发布前会核验公开部署。',verification:'发布后验证记录',passed:'通过',failed:'未通过',verify:'登记独立验证',closureCode:'结案原因',fixed:'已修复',duplicate:'重复',not_reproducible:'无法复现',declined:'不采纳',answered:'已答复',duplicateId:'原工单 ID',outcome:'结果',emptyValue:'未填写',commandSaved:'工单已更新。',historyNote:'审计历史',evidenceHistory:'证据历史'},
+    ja:{needs_info:'追加情報が必要',accepted:'受理済み',released:'公開済み',verified:'検証済み',category:'分類',defect:'不具合',usability:'使いやすさ',improvement:'改善提案',assignee:'担当ユーザー ID（任意）',triage:'分類を保存',task:'開発タスクキー',linkTask:'タスクを関連付け',evidence:'再現証拠',addEvidence:'証拠を追加',release:'検証済み公開を記録',releaseWarning:'記録前に公開環境を確認します。',verification:'公開後の確認結果',passed:'合格',failed:'不合格',verify:'独立検証を記録',closureCode:'終了理由',fixed:'修正済み',duplicate:'重複',not_reproducible:'再現不可',declined:'不採用',answered:'回答済み',duplicateId:'元のケース ID',outcome:'結果',emptyValue:'未設定',commandSaved:'ケースを更新しました。',historyNote:'監査履歴',evidenceHistory:'証拠履歴'},
+    vi:{needs_info:'Cần thêm thông tin',accepted:'Đã chấp nhận',released:'Đã phát hành',verified:'Đã xác minh',category:'Phân loại',defect:'Lỗi',usability:'Khả năng sử dụng',improvement:'Đề xuất cải tiến',assignee:'ID người phụ trách (tùy chọn)',triage:'Lưu phân loại',task:'Mã công việc kỹ thuật',linkTask:'Liên kết công việc',evidence:'Bằng chứng tái hiện',addEvidence:'Thêm bằng chứng',release:'Ghi nhận bản phát hành đã xác minh',releaseWarning:'Bản triển khai công khai được kiểm tra trước khi ghi nhận.',verification:'Quan sát sau phát hành',passed:'Đạt',failed:'Không đạt',verify:'Ghi nhận xác minh độc lập',closureCode:'Lý do đóng',fixed:'Đã sửa',duplicate:'Trùng lặp',not_reproducible:'Không tái hiện được',declined:'Từ chối',answered:'Đã trả lời',duplicateId:'ID vụ việc gốc',outcome:'Kết quả',emptyValue:'Chưa đặt',commandSaved:'Đã cập nhật vụ việc.',historyNote:'Lịch sử kiểm toán',evidenceHistory:'Lịch sử bằng chứng'},
+  };
+  const w=key=>(workflowCopy[typeof window.getLang==='function'?window.getLang():'en']||workflowCopy.en)[key]||workflowCopy.en[key]||s(key);
   const closeDetails={en:'Close details',ms:'Tutup butiran',zh:'关闭详情',ja:'詳細を閉じる',vi:'Đóng chi tiết'}[typeof window.getLang==='function'?window.getLang():'en']||'Close details';
   if(!adapter||adapter.mode!=='api'||typeof adapter.productCases!=='function'){
     root.innerHTML=modulePage({module:'admin',route:'product-cases',title:s('title'),body:statePanel({icon:'list',title:s('apiOnly')})});
@@ -644,13 +653,30 @@ SCREENS['product-cases'] = async function(root){
   let selected=null;
   let nextCursor=null;
   let canManage=false;
+  let canRelease=false;
+  let canVerify=false;
   let typeFilter='';
   let statusFilter='';
-  const transitions={submitted:['triaged','closed'],triaged:['in_progress','closed'],in_progress:['resolved','triaged'],resolved:['closed','in_progress'],closed:['triaged']};
+  const transitions={submitted:['triaged','needs_info','closed'],triaged:['accepted','needs_info','in_progress','closed'],needs_info:['triaged','closed'],accepted:['in_progress','closed'],in_progress:['resolved','triaged'],resolved:['in_progress'],released:[],verified:['closed'],closed:['triaged']};
+  function detailPanel(){
+    if(!selected) return '';
+    const item=selected;
+    const statuses=transitions[item.status]||[];
+    const workflow=['triaged','accepted','in_progress','resolved'].includes(item.status);
+    const triage=['submitted','triaged','needs_info','accepted'].includes(item.status);
+    const closureCodes=item.status==='verified'?['fixed']:['duplicate','not_reproducible','declined','answered'];
+    const field=(id,label,value,max)=>`<label class="fld"><span>${esc(label)}</span><input id="${id}" value="${esc(value||'')}" maxlength="${max}"></label>`;
+    const actions=`${canManage&&triage?`<div class="set-grid"><label class="fld"><span>${esc(w('category'))}</span><select id="productCaseCategory">${['defect','usability','improvement'].map(value=>`<option value="${value}" ${item.category===value?'selected':''}>${esc(w(value))}</option>`).join('')}</select></label>${field('productCaseAssignee',w('assignee'),item.assignedUserId,20)}</div><button class="btn soft" type="button" data-case-command="triage">${esc(w('triage'))}</button>`:''}
+      ${canManage&&workflow?`<div class="set-grid">${field('productCaseTask',w('task'),item.taskReference,160)}</div><button class="btn soft" type="button" data-case-command="task">${esc(w('linkTask'))}</button><label class="fld"><span>${esc(w('evidence'))}</span><textarea id="productCaseEvidence" maxlength="1000" rows="3"></textarea></label><button class="btn soft" type="button" data-case-command="evidence">${esc(w('addEvidence'))}</button>`:''}
+      ${canRelease&&item.status==='resolved'?`<p class="muted">${esc(w('releaseWarning'))}</p><button class="btn primary" type="button" data-case-command="release">${esc(w('release'))}</button>`:''}
+      ${canVerify&&item.status==='released'?`<label class="fld"><span>${esc(w('verification'))}</span><textarea id="productCaseVerification" maxlength="1000" rows="3"></textarea></label><div class="set-grid"><label class="fld"><span>${esc(s('status'))}</span><select id="productCaseVerificationResult"><option value="passed">${esc(w('passed'))}</option><option value="failed">${esc(w('failed'))}</option></select></label></div><button class="btn primary" type="button" data-case-command="verify">${esc(w('verify'))}</button>`:''}
+      ${canManage&&statuses.length?`<div class="set-grid"><label class="fld"><span>${esc(s('transition'))}</span><select id="productCaseNextStatus">${statuses.map(value=>`<option value="${value}">${esc(w(value))}</option>`).join('')}</select></label><label class="fld"><span>${esc(s('reason'))}</span><textarea id="productCaseResolution" maxlength="1000" rows="3"></textarea></label><label class="fld"><span>${esc(w('closureCode'))}</span><select id="productCaseClosureCode"><option value="">${esc(w('emptyValue'))}</option>${closureCodes.map(value=>`<option value="${value}">${esc(w(value))}</option>`).join('')}</select></label>${field('productCaseDuplicateId',w('duplicateId'),'',20)}</div><button class="btn primary" type="button" data-case-command="transition">${esc(s('save'))}</button>`:''}`;
+    return `<section class="panel" style="margin:16px 24px;padding:20px;display:grid;gap:8px" aria-label="${esc(s('details'))}"><h3 style="margin:0">#${item.id} · ${esc(item.title)}</h3><p style="margin:0;white-space:pre-wrap;overflow-wrap:anywhere">${esc(item.description)}</p><p style="margin:0">${esc(s('status'))}: ${esc(w(item.status))} · v${item.version}</p>${item.routeKey?`<p style="margin:0">${esc(s('route'))}: ${esc(item.routeKey)}</p>`:''}${item.referenceId?`<p style="margin:0">${esc(s('reference'))}: ${esc(item.referenceId)}</p>`:''}<p style="margin:0">${esc(w('category'))}: ${esc(item.category?w(item.category):w('emptyValue'))}</p><p style="margin:0">${esc(w('task'))}: ${esc(item.taskReference||w('emptyValue'))}</p><p style="margin:0">${esc(w('release'))}: ${esc(item.releaseRevision||w('emptyValue'))}</p>${item.resolution?`<p style="margin:0">${esc(w('outcome'))}: ${esc(item.resolution)}${item.resolutionCode?' · '+esc(w(item.resolutionCode)):''}</p>`:''}${actions}<h4 style="margin:0">${esc(w('evidenceHistory'))}</h4><ol>${(item.evidence||[]).map(entry=>`<li>${esc(entry.kind)} · ${esc(entry.summary)} · ${esc(new Date(entry.createdAt).toLocaleString())}</li>`).join('')}</ol><h4 style="margin:0">${esc(w('historyNote'))}</h4><ol>${(item.events||[]).map(event=>`<li>${esc(event.eventType)} · ${esc(w(event.toStatus))} · ${esc(new Date(event.occurredAt).toLocaleString())}</li>`).join('')}</ol></section>`;
+  }
   function render(){
-    const filters=`<div class="set-grid" style="padding:0 24px 16px"><label class="fld"><span>${esc(s('type'))}</span><select id="productCaseType"><option value="">${esc(s('all'))}</option><option value="feedback" ${typeFilter==='feedback'?'selected':''}>${esc(s('feedback'))}</option><option value="ticket" ${typeFilter==='ticket'?'selected':''}>${esc(s('ticket'))}</option></select></label><label class="fld"><span>${esc(s('status'))}</span><select id="productCaseStatus"><option value="">${esc(s('all'))}</option>${['submitted','triaged','in_progress','resolved','closed'].map(value=>`<option value="${value}" ${statusFilter===value?'selected':''}>${esc(s(value))}</option>`).join('')}</select></label></div>`;
-    const cards=rows.map(row=>`<article class="panel" style="margin:0 0 10px;padding:16px"><div style="display:flex;justify-content:space-between;gap:12px;align-items:start;flex-wrap:wrap"><div><strong>#${row.id} · ${esc(row.title)}</strong><div class="muted">${esc(s(row.caseType))} · ${esc(s(row.status))}</div></div><button class="btn soft sm" type="button" data-case-id="${row.id}">${esc(s('details'))}</button></div><p style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(row.description)}</p></article>`).join('');
-    const detail=selected?`<section class="panel" style="margin:16px 24px;padding:20px" aria-label="${esc(s('details'))}"><h3>#${selected.id} · ${esc(selected.title)}</h3><p style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(selected.description)}</p><p>${esc(s('status'))}: ${esc(s(selected.status))} · v${selected.version}</p>${selected.routeKey?`<p>${esc(s('route'))}: ${esc(selected.routeKey)}</p>`:''}${selected.referenceId?`<p>${esc(s('reference'))}: ${esc(selected.referenceId)}</p>`:''}${selected.resolution?`<p>${esc(s('resolution'))}: ${esc(selected.resolution)}</p>`:''}<h4>${esc(s('history'))}</h4><ol>${(selected.events||[]).map(event=>`<li>${esc(s(event.toStatus))} · ${esc(new Date(event.occurredAt).toLocaleString())}</li>`).join('')}</ol>${canManage?`<div class="set-grid"><label class="fld"><span>${esc(s('transition'))}</span><select id="productCaseNextStatus">${(transitions[selected.status]||[]).map(value=>`<option value="${value}">${esc(s(value))}</option>`).join('')}</select></label><label class="fld"><span>${esc(s('reason'))}</span><textarea id="productCaseResolution" maxlength="1000" rows="3"></textarea></label></div><button class="btn primary" type="button" id="productCaseSave">${esc(s('save'))}</button>`:''}</section>`:'';
+    const filters=`<div class="set-grid" style="padding:0 24px 16px"><label class="fld"><span>${esc(s('type'))}</span><select id="productCaseType"><option value="">${esc(s('all'))}</option><option value="feedback" ${typeFilter==='feedback'?'selected':''}>${esc(s('feedback'))}</option><option value="ticket" ${typeFilter==='ticket'?'selected':''}>${esc(s('ticket'))}</option></select></label><label class="fld"><span>${esc(s('status'))}</span><select id="productCaseStatus"><option value="">${esc(s('all'))}</option>${['submitted','triaged','needs_info','accepted','in_progress','resolved','released','verified','closed'].map(value=>`<option value="${value}" ${statusFilter===value?'selected':''}>${esc(w(value))}</option>`).join('')}</select></label></div>`;
+    const cards=rows.map(row=>`<article class="panel" style="margin:0 0 10px;padding:16px"><div style="display:flex;justify-content:space-between;gap:12px;align-items:start;flex-wrap:wrap"><div><strong>#${row.id} · ${esc(row.title)}</strong><div class="muted">${esc(s(row.caseType))} · ${esc(w(row.status))}</div></div><button class="btn soft sm" type="button" data-case-id="${row.id}">${esc(s('details'))}</button></div><p style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(row.description)}</p></article>`).join('');
+    const detail=detailPanel();
     root.innerHTML=modulePage({module:'admin',route:'product-cases',title:s('title'),sub:s('subtitle'),count:rows.length,body:`${filters}${selected?`<div style="padding:0 24px;text-align:right"><button class="btn soft sm" type="button" id="productCaseClose">${esc(closeDetails)}</button></div>`:''}${detail}<div style="padding:0 24px 24px">${cards||`<div class="panel" style="padding:20px">${esc(s('empty'))}</div>`}${nextCursor?`<button class="btn soft" id="productCaseLoadMore" type="button">${esc(s('loadMore'))}</button>`:''}</div>`});
     root.querySelector('#productCaseType').addEventListener('change',event=>{typeFilter=event.target.value;selected=null;reload();});
     root.querySelector('#productCaseStatus').addEventListener('change',event=>{statusFilter=event.target.value;selected=null;reload();});
@@ -660,15 +686,28 @@ SCREENS['product-cases'] = async function(root){
       catch(error){toast(error&&error.message||s('error'),'danger');}
     }));
     root.querySelector('#productCaseLoadMore')?.addEventListener('click',()=>reload(true));
-    root.querySelector('#productCaseSave')?.addEventListener('click',async event=>{
+    root.querySelectorAll('[data-case-command]').forEach(button=>button.addEventListener('click',async event=>{
       const button=event.currentTarget;
-      const status=root.querySelector('#productCaseNextStatus').value;
-      const resolution=root.querySelector('#productCaseResolution').value.trim();
-      if((status==='resolved'||status==='closed')&&!resolution){toast(s('reasonRequired'),'danger');return;}
+      const command=button.dataset.caseCommand;
+      const value=id=>root.querySelector('#'+id)?.value.trim()||'';
+      const version=selected.version;
+      let run;
+      if(command==='triage') run=()=>adapter.triageProductCase(selected.id,{expectedVersion:version,category:value('productCaseCategory'),assignedUserId:value('productCaseAssignee')||null});
+      if(command==='task') run=()=>adapter.linkProductCaseTask(selected.id,{expectedVersion:version,taskReference:value('productCaseTask')});
+      if(command==='evidence') run=()=>adapter.appendProductCaseEvidence(selected.id,{expectedVersion:version,summary:value('productCaseEvidence')});
+      if(command==='release') run=()=>adapter.releaseProductCase(selected.id,{expectedVersion:version});
+      if(command==='verify') run=()=>adapter.verifyProductCaseRelease(selected.id,{expectedVersion:version,result:value('productCaseVerificationResult'),observation:value('productCaseVerification')});
+      if(command==='transition'){
+        const status=value('productCaseNextStatus');
+        const resolution=value('productCaseResolution');
+        if(['resolved','closed','needs_info'].includes(status)&&!resolution){toast(s('reasonRequired'),'danger');return;}
+        run=()=>adapter.transitionProductCase(selected.id,{status,expectedVersion:version,resolution:resolution||null,...(status==='closed'?{resolutionCode:value('productCaseClosureCode'),duplicateOfCaseId:value('productCaseDuplicateId')||null}:{})});
+      }
+      if(!run) return;
       button.disabled=true;
-      try{await adapter.transitionProductCase(selected.id,{status,expectedVersion:selected.version,resolution});selected=(await adapter.productCase(selected.id)).data;await reload();}
+      try{await run();selected=(await adapter.productCase(selected.id)).data;await reload();toast(w('commandSaved'),'ok');}
       catch(error){button.disabled=false;toast(error&&error.status===409?s('stale'):error&&error.message||s('error'),'danger');}
-    });
+    }));
   }
   async function reload(append){
     try{
@@ -676,6 +715,8 @@ SCREENS['product-cases'] = async function(root){
       rows=append?rows.concat(response.data||[]):response.data||[];
       nextCursor=response.nextCursor||null;
       canManage=response.canManage===true;
+      canRelease=response.canRelease===true;
+      canVerify=response.canVerify===true;
       render();
     }catch(error){root.innerHTML=modulePage({module:'admin',route:'product-cases',title:s('title'),body:statePanel({icon:'warn',title:error&&error.message||s('error')})});}
   }

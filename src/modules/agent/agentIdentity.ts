@@ -39,7 +39,7 @@ const SCOPE_RANK: Record<AgentGrantScope, number> = {
   company: 3,
 };
 
-type AgentGrantActionName = AgentActionName | 'product_case.submit' | 'product_case.read_own';
+type AgentGrantActionName = AgentActionName | 'product_case.submit' | 'product_case.read_own' | 'product_case.append_evidence';
 
 const ACTION_RESOURCE_KEYS: Readonly<Record<AgentGrantActionName, string>> = {
   'receipt.search': 'expenses/company_receipts',
@@ -50,6 +50,7 @@ const ACTION_RESOURCE_KEYS: Readonly<Record<AgentGrantActionName, string>> = {
   'receipt_pack.export': 'expenses/company_receipt_packs',
   'product_case.submit': 'product/cases',
   'product_case.read_own': 'product/cases',
+  'product_case.append_evidence': 'product/cases',
 };
 
 /** Current ERP field authority for the pilot resources. Role permissions are
@@ -70,7 +71,8 @@ const RESOURCE_FIELDS: Readonly<Record<string, readonly string[]>> = {
   ],
   'product/cases': [
     'id', 'caseType', 'title', 'description', 'routeKey', 'referenceId',
-    'status', 'resolution', 'version', 'createdAt', 'updatedAt', 'events',
+    'status', 'resolution', 'resolutionCode', 'releaseRevision', 'verifiedAt',
+    'version', 'createdAt', 'updatedAt', 'events', 'evidence', 'kind', 'summary', 'contentDigest',
   ],
 };
 
@@ -274,7 +276,7 @@ function principalKind(value: unknown): AgentPrincipalKind {
 
 function actionName(value: unknown): AgentGrantActionName {
   const action = textValue(value, 'actionName', 120);
-  if (action === 'product_case.submit' || action === 'product_case.read_own') return action;
+  if (action === 'product_case.submit' || action === 'product_case.read_own' || action === 'product_case.append_evidence') return action;
   try {
     return getAgentActionContract(action).name;
   } catch (error) {
@@ -291,6 +293,8 @@ function permissionKey(value: unknown, action: AgentGrantActionName): string {
     ? [PERMISSIONS.productCasesSubmit]
     : action === 'product_case.read_own'
       ? [PERMISSIONS.productCasesReadOwn]
+      : action === 'product_case.append_evidence'
+        ? [PERMISSIONS.productCasesEvidenceAppend]
       : getAgentActionContract(action).permissions.anyOf;
   if (!isAssignableTenantPermission(permission)
     || !allowed.includes(permission)) {

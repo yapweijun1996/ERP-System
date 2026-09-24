@@ -83,6 +83,32 @@ suite('product case PostgreSQL runtime isolation', () => {
       email: 'case.admin@postgres.example',
       fullName: 'Case Administrator',
     };
+    const [operatorRole] = await ownerDb.insert(schema.role).values({
+      masterFn: setup.masterFn,
+      companyFn: setup.companyFn,
+      name: 'Product Case Evidence Operator',
+      isSuperadmin: false,
+    }).returning({ roleId: schema.role.roleId });
+    await ownerDb.insert(schema.rolePermission).values({
+      masterFn: setup.masterFn,
+      roleId: operatorRole.roleId,
+      permissionKey: 'product.cases.evidence_append',
+    });
+    await ownerDb.insert(schema.roleResourceScope).values({
+      masterFn: setup.masterFn,
+      companyFn: setup.companyFn,
+      roleId: operatorRole.roleId,
+      resourceKey: '*',
+      scope: 'company',
+    });
+    await ownerDb.insert(schema.userCompanyRole).values({
+      userId: setup.userId,
+      companyFn: setup.companyFn,
+      roleId: operatorRole.roleId,
+      validFrom: new Date('2026-01-01T00:00:00Z'),
+      assignedByUserId: setup.userId,
+      assignmentSource: 'system',
+    });
     const principal = await createAgentPrincipal(ownerDb, session, {
       principalKey: 'case-proof-agent',
       displayName: 'Case Proof Agent',
@@ -93,16 +119,18 @@ suite('product case PostgreSQL runtime isolation', () => {
         ['id', 'caseType', 'title', 'description', 'routeKey', 'referenceId', 'status', 'version', 'createdAt']],
       ['product_case.read_own', 'product.cases.read_own',
         ['id', 'caseType', 'title', 'description', 'routeKey', 'referenceId', 'status', 'resolution',
-          'version', 'createdAt', 'updatedAt', 'events']],
+          'version', 'createdAt', 'updatedAt', 'events', 'evidence']],
+      ['product_case.append_evidence', 'product.cases.evidence_append',
+        ['id', 'kind', 'summary', 'createdAt']],
     ] as const) {
       await createAgentGrant(ownerDb, session, {
         agentPrincipalId: principal.id,
         actionName,
         permissionKey,
         resourceKey: 'product/cases',
-        scope: actionName === 'product_case.submit' ? 'company' : 'self',
-        targetType: actionName === 'product_case.submit' ? 'none' : 'employee',
-        targetId: actionName === 'product_case.submit' ? '' : String(setup.userId),
+        scope: actionName === 'product_case.read_own' ? 'self' : 'company',
+        targetType: actionName === 'product_case.read_own' ? 'employee' : 'none',
+        targetId: actionName === 'product_case.read_own' ? String(setup.userId) : '',
         fieldAllowlist: [...fields],
       }, `pg-case-grant-${actionName}`);
     }
@@ -155,6 +183,17 @@ suite('product case PostgreSQL runtime isolation', () => {
     expect(event).toBeDefined();
     const [caseRow] = await ownerDb.select().from(schema.productCase).where(eq(schema.productCase.id, data.id));
     expect(caseRow.status).toBe('submitted');
+    const evidenceResponse = await fetch(`${baseUrl}/api/agent/cases/${data.id}/evidence`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+        'idempotency-key': 'postgres-evidence-intent-0001',
+      },
+      body: JSON.stringify({ kind: 'observation', summary: 'The public form did not save.' }),
+    });
+    expect(evidenceResponse.status).toBe(201);
+    const { data: evidenceData } = await evidenceResponse.json() as { data: { id: number } };
 
     const client = await apiPool.connect();
     try {
@@ -163,6 +202,8 @@ suite('product case PostgreSQL runtime isolation', () => {
       await client.query("select set_config('app.company_fn', 'C-OTHER', true)");
       const foreign = await client.query('select count(*)::integer as count from product_case');
       expect(foreign.rows[0].count).toBe(0);
+      const foreignEvidence = await client.query('select count(*)::integer as count from product_case_evidence');
+      expect(foreignEvidence.rows[0].count).toBe(0);
       await client.query('rollback');
 
       await client.query('begin');
@@ -179,10 +220,28 @@ suite('product case PostgreSQL runtime isolation', () => {
       await expect(client.query('delete from product_case_event where id = $1', [event.id]))
         .rejects.toMatchObject({ code: '55000' });
       await client.query('rollback');
+
+      await client.query('begin');
+      await client.query("select set_config('app.master_fn', $1, true)", [scope.masterFn]);
+      await client.query("select set_config('app.company_fn', $1, true)", [scope.companyFn]);
+      await expect(client.query('update product_case_evidence set summary = $1 where id = $2', [
+        'tampered', evidenceData.id,
+      ])).rejects.toMatchObject({ code: '55000' });
+      await client.query('rollback');
+
+      await client.query('begin');
+      await client.query("select set_config('app.master_fn', $1, true)", [scope.masterFn]);
+      await client.query("select set_config('app.company_fn', $1, true)", [scope.companyFn]);
+      await expect(client.query('delete from product_case_evidence where id = $1', [evidenceData.id]))
+        .rejects.toMatchObject({ code: '55000' });
+      await client.query('rollback');
     } finally {
       client.release();
     }
     const [after] = await ownerDb.select().from(schema.productCaseEvent).where(eq(schema.productCaseEvent.id, event.id));
     expect(after.note).toBeNull();
+    const [savedEvidence] = await ownerDb.select().from(schema.productCaseEvidence)
+      .where(eq(schema.productCaseEvidence.id, evidenceData.id));
+    expect(savedEvidence.summary).toBe('The public form did not save.');
   }, 60_000);
 });

@@ -39,6 +39,9 @@ const COMPANY_OWNER_RESTRICTED_PERMISSION_KEYS = new Set([
   PERMISSIONS.expensesTaxEvidenceAccess,
   PERMISSIONS.expensesTaxEvidenceGovernance,
   PERMISSIONS.expensesCompanyReceiptsReadOwn,
+  PERMISSIONS.productCasesEvidenceAppend,
+  PERMISSIONS.productCasesRelease,
+  PERMISSIONS.productCasesVerify,
 ]);
 
 export const COMPANY_OWNER_PERMISSION_KEYS = Object.freeze(

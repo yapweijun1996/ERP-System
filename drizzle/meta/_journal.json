@@ -820,6 +820,13 @@
       "when": 1790232832184,
       "tag": "0116_majestic_prowler",
       "breakpoints": true
+    },
+    {
+      "idx": 117,
+      "version": "7",
+      "when": 1790288356350,
+      "tag": "0117_overconfident_tyger_tiger",
+      "breakpoints": true
     }
   ]
 }

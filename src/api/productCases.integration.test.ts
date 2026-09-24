@@ -2,7 +2,7 @@ import type { Server } from 'node:http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { and, eq } from 'drizzle-orm';
 import type { DB } from '../data/db';
-import { appUser, auditLog, productCase, productCaseEvent } from '../data/schema';
+import { appUser, auditLog, productCase, productCaseEvidence, productCaseEvent, role, rolePermission } from '../data/schema';
 import { seedDemo } from '../data/seed';
 import { freshDb } from '../test/helpers';
 import type { SessionData } from '../auth/session';
@@ -12,7 +12,10 @@ import {
   rotateAgentCredential,
   setAgentPrincipalStatus,
 } from '../modules/agent/agentIdentity';
-import { listProductCases, readProductCase, transitionProductCase } from '../modules/product/productCase';
+import {
+  linkProductCaseTask, listProductCases, readProductCase,
+  triageProductCase, transitionProductCase, verifyProductCaseRelease,
+} from '../modules/product/productCase';
 import { createApp } from './app';
 
 describe('product feedback and ticket intake', () => {
@@ -47,7 +50,10 @@ describe('product feedback and ticket intake', () => {
       ]],
       ['product_case.read_own', 'product.cases.read_own', [
         'id', 'caseType', 'title', 'description', 'routeKey', 'referenceId', 'status', 'resolution',
-        'version', 'createdAt', 'updatedAt', 'events',
+        'resolutionCode', 'releaseRevision', 'verifiedAt', 'version', 'createdAt', 'updatedAt', 'events', 'evidence',
+      ]],
+      ['product_case.append_evidence', 'product.cases.evidence_append', [
+        'id', 'kind', 'summary', 'contentDigest', 'createdAt',
       ]],
     ] as const) {
       await createAgentGrant(db, session, {
@@ -66,7 +72,10 @@ describe('product feedback and ticket intake', () => {
       expectedVersion: principal.version,
     }, 'product-intake-credential');
     token = rotated.token;
-    server = createApp(db).listen(0, '127.0.0.1');
+    server = createApp(db, {
+      revision: 'a'.repeat(40),
+      productCaseReleaseVerifier: async (revision) => ({ revision, proofDigest: 'b'.repeat(64) }),
+    }).listen(0, '127.0.0.1');
     await new Promise<void>((resolve) => server.once('listening', resolve));
     const address = server.address();
     if (!address || typeof address === 'string') throw new Error('No test server address.');
@@ -87,6 +96,54 @@ describe('product feedback and ticket intake', () => {
       },
       body: JSON.stringify(body),
     });
+  }
+
+  function appendEvidence(id: number, body: unknown, key: string, bearer = token) {
+    return fetch(`${baseUrl}/api/agent/cases/${id}/evidence`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${bearer}`,
+        'content-type': 'application/json',
+        'idempotency-key': key,
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
+  async function login() {
+    const response = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ organizationCode: 'ACME', username: 'admin', password: 'demo1234' }),
+    });
+    expect(response.status).toBe(200);
+    const headers = response.headers as Headers & { getSetCookie?: () => string[] };
+    const values = headers.getSetCookie?.() ?? [headers.get('set-cookie') ?? ''];
+    const pairs = values.flatMap((value) => Array.from(
+      value.matchAll(/(?:^|,\s*)(erp_(?:session|csrf))=([^;,\s]+)/g),
+      (match) => `${match[1]}=${match[2]}`,
+    ));
+    const csrf = pairs.find((pair) => pair.startsWith('erp_csrf='));
+    if (!csrf) throw new Error('Missing CSRF cookie.');
+    return { cookie: pairs.join('; '), csrf: decodeURIComponent(csrf.slice('erp_csrf='.length)) };
+  }
+
+  async function independentVerifier(): Promise<SessionData> {
+    const [viewer] = await db.select().from(appUser).where(eq(appUser.username, 'viewer'));
+    const [viewerRole] = await db.select().from(role).where(eq(role.name, 'Viewer'));
+    await db.insert(rolePermission).values({
+      masterFn: viewer.masterFn,
+      roleId: viewerRole.roleId,
+      permissionKey: 'product.cases.verify',
+    });
+    return {
+      userId: viewer.userId,
+      masterFn: viewer.masterFn,
+      activeCompanyFn: 'C-SG',
+      username: viewer.username,
+      email: viewer.email,
+      fullName: viewer.fullName,
+    };
   }
 
   const feedback = {
@@ -210,30 +267,126 @@ describe('product feedback and ticket intake', () => {
     const { data } = await response.json() as { data: { id: number } };
     const listed = await listProductCases(db, session, { caseType: 'ticket' });
     expect(listed.data).toHaveLength(1);
-    const triaged = await transitionProductCase(db, session, data.id, {
-      status: 'triaged', expectedVersion: 1,
+    const triaged = await triageProductCase(db, session, data.id, {
+      category: 'defect', expectedVersion: 1,
     }, 'triage-ticket');
     expect(triaged.version).toBe(2);
     await expect(transitionProductCase(db, session, data.id, {
       status: 'closed', expectedVersion: 1, resolution: 'Stale change',
     }, 'stale-ticket')).rejects.toMatchObject({ code: 'product_case_version_stale' });
+    const task = await linkProductCaseTask(db, session, data.id, {
+      expectedVersion: triaged.version, taskReference: 'TASK-250',
+    }, 'link-ticket-task');
     const working = await transitionProductCase(db, session, data.id, {
-      status: 'in_progress', expectedVersion: 2,
+      status: 'in_progress', expectedVersion: task.version,
     }, 'work-ticket');
     const resolved = await transitionProductCase(db, session, data.id, {
       status: 'resolved', expectedVersion: working.version, resolution: 'Fixed in candidate revision.',
     }, 'resolve-ticket');
-    await transitionProductCase(db, session, data.id, {
+    await expect(transitionProductCase(db, session, data.id, {
       status: 'closed', expectedVersion: resolved.version, resolution: 'Verified in deployed revision.',
+      resolutionCode: 'fixed',
+    }, 'early-close-ticket')).rejects.toMatchObject({ code: 'product_case_transition_invalid' });
+    const auth = await login();
+    const releaseResponse = await fetch(`${baseUrl}/api/product-cases/${data.id}/releases`, {
+      method: 'POST',
+      headers: { cookie: auth.cookie, 'x-csrf-token': auth.csrf, 'content-type': 'application/json' },
+      body: JSON.stringify({ expectedVersion: resolved.version }),
+    });
+    expect(releaseResponse.status).toBe(200);
+    const { data: released } = await releaseResponse.json() as { data: { version: number } };
+    await expect(verifyProductCaseRelease(db, session, data.id, {
+      expectedVersion: released.version, result: 'passed', observation: 'Reproduced after release.',
+    }, 'self-verify-ticket')).rejects.toMatchObject({ code: 'product_case_self_verification_denied' });
+    const verifier = await independentVerifier();
+    const verified = await verifyProductCaseRelease(db, verifier, data.id, {
+      expectedVersion: released.version, result: 'passed', observation: 'Quotation save succeeded on the public release.',
+    }, 'verify-ticket');
+    const closed = await transitionProductCase(db, session, data.id, {
+      status: 'closed', expectedVersion: verified.version,
+      resolution: 'Verified in deployed revision.', resolutionCode: 'fixed',
     }, 'close-ticket');
     const human = await readProductCase(db, session, data.id);
-    expect(human.events).toHaveLength(5);
+    expect(human.events).toHaveLength(8);
+    expect(human.evidence).toMatchObject([{ kind: 'post_release_verification' }]);
     const read = await fetch(`${baseUrl}/api/agent/cases/${data.id}`, {
       headers: { authorization: `Bearer ${token}` },
     });
     expect(await read.json()).toMatchObject({ data: {
-      status: 'closed', resolution: 'Verified in deployed revision.',
+      status: 'closed', resolution: 'Verified in deployed revision.', resolutionCode: 'fixed',
+      releaseRevision: 'a'.repeat(40),
     } });
+    const reopened = await transitionProductCase(db, session, data.id, {
+      status: 'triaged', expectedVersion: closed.version,
+    }, 'reopen-ticket');
+    expect(reopened).toMatchObject({ status: 'triaged', taskReference: null, releaseRevision: null, verifiedAt: null });
+    const afterReopen = await readProductCase(db, session, data.id);
+    expect(afterReopen.events).toHaveLength(9);
+    expect(afterReopen.events.some((event) => event.eventType === 'released')).toBe(true);
+    expect(afterReopen.evidence).toMatchObject([{ kind: 'post_release_verification' }]);
+  });
+
+  it('accepts bounded Agent evidence with exact replay, then rejects mutation after closure', async () => {
+    const response = await submit(feedback, 'evidence-intake-0001');
+    const { data } = await response.json() as { data: { id: number } };
+    const payload = { kind: 'reproduction', summary: 'Filter disappears below the fold at 390px.' };
+    const first = await appendEvidence(data.id, payload, 'evidence-intent-0001');
+    expect(first.status).toBe(201);
+    const second = await appendEvidence(data.id, payload, 'evidence-intent-0001');
+    expect(second.status).toBe(200);
+    expect(await second.json()).toMatchObject({ replayed: true });
+    const changed = await appendEvidence(data.id, { ...payload, summary: 'Different observation' }, 'evidence-intent-0001');
+    expect(changed.status).toBe(409);
+    expect((await appendEvidence(data.id, { ...payload, summary: 'api_key=verySecretCredential123' }, 'evidence-intent-0002')).status).toBe(400);
+    expect(await db.select().from(productCaseEvidence)).toHaveLength(1);
+    const read = await fetch(`${baseUrl}/api/agent/cases/${data.id}`, { headers: { authorization: `Bearer ${token}` } });
+    expect(await read.json()).toMatchObject({ data: { evidence: [{ kind: 'agent_reproduction', summary: payload.summary }] } });
+    await transitionProductCase(db, session, data.id, {
+      status: 'closed', expectedVersion: 1, resolution: 'Answered in support.', resolutionCode: 'answered',
+    }, 'close-feedback');
+    expect((await appendEvidence(data.id, payload, 'evidence-intent-0001')).status).toBe(200);
+    expect((await appendEvidence(data.id, payload, 'evidence-intent-0003')).status).toBe(409);
+  });
+
+  it('converges concurrent Agent evidence retries on one immutable event and audit record', async () => {
+    const response = await submit(feedback, 'concurrent-evidence-case-0001');
+    const { data } = await response.json() as { data: { id: number } };
+    const calls = await Promise.all(Array.from({ length: 3 }, () => appendEvidence(data.id, {
+      kind: 'observation', summary: 'Filter is not visible on a 375px screen.',
+    }, 'concurrent-evidence-intent-0001')));
+    expect(calls.map((call) => call.status).sort()).toEqual([200, 200, 201]);
+    expect(await db.select().from(productCaseEvidence)).toHaveLength(1);
+    const events = await db.select().from(productCaseEvent);
+    expect(events.filter((event) => event.eventType === 'evidence_added')).toHaveLength(1);
+    const audits = await db.select().from(auditLog).where(eq(auditLog.action, 'append_evidence'));
+    expect(audits).toHaveLength(1);
+  });
+
+  it('rejects cross-Company duplicate linkage without exposing the foreign case', async () => {
+    const malaysiaSession = { ...session, activeCompanyFn: 'C-MY' };
+    const foreignAgent = await createAgentPrincipal(db, malaysiaSession, {
+      principalKey: 'malaysia-case-agent',
+      displayName: 'Malaysia Case Agent',
+      ownerUserId: session.userId,
+    }, 'malaysia-case-principal');
+    const [foreignCase] = await db.insert(productCase).values({
+      masterFn: session.masterFn,
+      companyFn: 'C-MY',
+      caseType: 'ticket',
+      title: 'Foreign Company observation',
+      description: 'Separate tenant issue.',
+      submittedByAgentId: foreignAgent.id,
+      accountableOwnerUserId: session.userId,
+      idempotencyHash: 'c'.repeat(64),
+      payloadDigest: 'd'.repeat(64),
+    }).returning();
+    const response = await submit(feedback, 'duplicate-company-case-0001');
+    const { data } = await response.json() as { data: { id: number } };
+    await expect(transitionProductCase(db, session, data.id, {
+      status: 'closed', expectedVersion: 1, resolution: 'Duplicate report.',
+      resolutionCode: 'duplicate', duplicateOfCaseId: foreignCase.id,
+    }, 'foreign-duplicate')).rejects.toMatchObject({ status: 404, code: 'product_case_duplicate_not_found' });
+    expect((await readProductCase(db, session, data.id)).status).toBe('submitted');
   });
 
   it('rejects body identity overrides and a revoked Agent without creating another case', async () => {

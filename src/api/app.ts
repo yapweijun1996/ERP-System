@@ -49,6 +49,7 @@ import { createPlatformRouter } from './routes/platform';
 import { createCompanyReceiptsRouter } from './routes/companyReceipts';
 import { createAgentRouter } from './routes/agent';
 import { createProductCasesRouter } from './routes/productCases';
+import type { VerifiedProductRelease } from '../modules/product/productCase';
 import { createAssistantRouter, type ReceiptAssistantRouterOptions } from './routes/assistant';
 import { createKnowledgeRouter } from './routes/knowledge';
 import type { AgentCredentialAuthenticator } from '../auth/agentAuthentication';
@@ -91,6 +92,8 @@ export interface AppOptions {
     perAgent?: McpRateLimitPolicy;
     perCompany?: McpRateLimitPolicy;
   };
+  /** Test-only release verifier; production uses the public release manifest and asset verifier. */
+  productCaseReleaseVerifier?: (revision: string) => Promise<VerifiedProductRelease>;
   /** Exact server-approved egress hosts for OpenAI-compatible Agent providers. */
   agentAllowedEgressHosts?: readonly string[];
   /** Server-owned Receipt assistant adapter; absent means the assistant is unavailable. */
@@ -174,6 +177,7 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
       ['GET', 'HEAD', 'OPTIONS'].includes(req.method)
       || !req.path.startsWith('/api/')
       || CSRF_EXEMPT_PATHS.has(req.path)
+      || /^\/api\/agent\/cases\/\d+\/evidence$/.test(req.path)
     ) {
       next();
       return;
@@ -279,7 +283,11 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
   app.use(createTenantModuleEntitlementGate(db));
   app.use('/api/assistant', createAssistantRouter(db, options.receiptAssistant));
   app.use('/api/admin', createAdminAgentsRouter(db));
-  app.use('/api/product-cases', createProductCasesRouter(db));
+  app.use('/api/product-cases', createProductCasesRouter(db, {
+    releaseRevision,
+    publicUrl: options.publicUrl,
+    releaseVerifier: options.productCaseReleaseVerifier,
+  }));
   app.use('/api/admin', createAdminRouter(db, { lifecycle }));
   app.use('/api/account', createAccountRouter(db));
   app.use('/api/integration', createIntegrationRouter(db, lifecycle?.tokenEncryptionKey, {

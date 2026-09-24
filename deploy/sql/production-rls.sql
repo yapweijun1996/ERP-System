@@ -92,7 +92,7 @@ DECLARE
     'tax_evidence_pack_legal_hold_event',
     'project', 'progress_claim', 'project_time_entry',
     'service_contract', 'service_ticket',
-    'product_case', 'product_case_event',
+    'product_case', 'product_case_evidence', 'product_case_event',
     'payroll_run', 'payroll_run_line', 'payroll_leave_source', 'payroll_run_leave_source',
     'app_notification',
     'integration_connector',
@@ -180,6 +180,17 @@ DROP TRIGGER IF EXISTS product_case_event_immutable ON product_case_event;
 CREATE TRIGGER product_case_event_immutable
 BEFORE UPDATE OR DELETE ON product_case_event
 FOR EACH ROW EXECUTE FUNCTION reject_product_case_event_mutation();
+
+CREATE OR REPLACE FUNCTION reject_product_case_evidence_mutation()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'product_case_evidence is append-only' USING ERRCODE = '55000';
+END;
+$$;
+DROP TRIGGER IF EXISTS product_case_evidence_immutable ON product_case_evidence;
+CREATE TRIGGER product_case_evidence_immutable
+BEFORE UPDATE OR DELETE ON product_case_evidence
+FOR EACH ROW EXECUTE FUNCTION reject_product_case_evidence_mutation();
 
 -- The generic tenant_scope policy intentionally excludes these tenant-keyed
 -- security/configuration/control-plane tables. Keep every exemption explicit;

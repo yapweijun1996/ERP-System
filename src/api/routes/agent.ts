@@ -21,6 +21,7 @@ import { apiError, context } from '../http';
 import { McpRateLimiter, type McpRateLimitPolicy } from '../mcpRateLimit';
 import {
   ProductCaseError,
+  appendAgentProductCaseEvidence,
   readAgentProductCase,
   submitAgentProductCase,
 } from '../../modules/product/productCase';
@@ -184,6 +185,39 @@ export function createAgentRouter(db: DB, options: AgentRouterOptions = {}): Rou
       const data = await readAgentProductCase(db, identity, req.params.id);
       res.setHeader('Cache-Control', 'no-store');
       res.json({ data });
+    } catch (error) {
+      handleAgentError(res, error);
+    }
+  });
+
+  router.post('/cases/:id/evidence', async (req, res) => {
+    const suppliedIdentity = identityPath(req.body);
+    if (suppliedIdentity) {
+      apiError(res, 400, 'agent_identity_in_body', 'Agent and tenant identity must come from the issuer.', { path: suppliedIdentity });
+      return;
+    }
+    const identity = await authenticateAgent(req, res);
+    if (!identity) return;
+    const agentLimit = agentCaseLimiter.check(
+      `${identity.masterFn}\0${identity.companyFn}\0${identity.agentPrincipalId}`,
+    );
+    const companyLimit = agentLimit.allowed
+      ? companyCaseLimiter.check(`${identity.masterFn}\0${identity.companyFn}`)
+      : null;
+    const limited = !agentLimit.allowed ? agentLimit : companyLimit && !companyLimit.allowed ? companyLimit : null;
+    if (limited) {
+      res.setHeader('Retry-After', String(limited.retryAfterSeconds));
+      apiError(res, 429, 'product_case_rate_limited', 'Product case intake rate limit exceeded.');
+      return;
+    }
+    try {
+      const result = await runWithAuditAttribution({
+        agentPrincipalId: identity.agentPrincipalId,
+      }, () => appendAgentProductCaseEvidence(
+        db, identity, req.params.id, req.body, req.header('idempotency-key'), context(res).requestId,
+      ));
+      res.setHeader('Cache-Control', 'no-store');
+      res.status(result.replayed ? 200 : 201).json(result);
     } catch (error) {
       handleAgentError(res, error);
     }

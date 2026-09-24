@@ -1,30 +1,45 @@
 # ERP-System Project Logic
 
-Product feedback initial production contract — 2026-09-24: `src/data/schema/productFeedback.ts`
-defines Company-scoped `product_case` and `product_case_event` records, separate
+Product feedback implementation candidate — 2026-09-25: `src/data/schema/productFeedback.ts`
+defines Company-scoped `product_case`, append-only `product_case_evidence` and
+`product_case_event` records, separate
 from the customer warranty `service_ticket`. An authenticated ERP Agent with
 active owner-backed `product_case.submit` permission/grant can submit a bounded
 feedback or ticket through `POST /api/agent/cases` with an idempotency key;
-the same Agent requires `product_case.read_own` to read its own result. Agent
+the same Agent requires `product_case.read_own` to read its own result and a
+separate `product_case.append_evidence` grant to add bounded text observations
+or reproduction notes with idempotent retries. Agent
 identity and tenant are derived from its ERP-issued Bearer credential, never
 from request body fields or an AI-provider key. `src/modules/product/productCase.ts`
 owns creation, own-case visibility, Company-scoped human reads, optimistic
-status transitions and atomic case-event/central-audit writes. The human
+status transitions and atomic case/evidence/event/central-audit writes. The human
 `product.cases.read` and `product.cases.manage` permissions back the API-mode
-Admin > Product Cases queue. Demo mode does not emulate these governed writes.
-The current states are `submitted`, `triaged`, `in_progress`, `resolved` and
-`closed`. Evidence append, task/release linkage, independent post-release
-verification and full product acceptance remain open. Production revision
+Admin > Product Cases queue. Separate `product.cases.release` and
+`product.cases.verify` permissions distinguish recording a public-deployment
+proof from independent post-release verification. The three new evidence,
+release and verify permissions require explicit role assignment and are not
+part of the default Company Owner bundle. Demo mode does not emulate
+these governed writes. The candidate states are `submitted`, `triaged`,
+`needs_info`, `accepted`, `in_progress`, `resolved`, `released`, `verified` and
+`closed`. A fixed case cannot close before task linkage, a server-verified
+public revision, and verification by a different human from the task linker
+and releaser. Non-fix closure requires a reason code; duplicate links must
+stay in the same Company. Reopen preserves append-only history while clearing
+the current release projection. This is a source candidate, not production
+acceptance. Production revision
 `b8c0208aae430d26d672ce10f2a62ad88f068f71` has the schema, API and UI,
 but zero Agent principals/grants and no live case submission; see
 [the feedback plan](PRODUCT_FEEDBACK_PLAN.md) and
 `src/api/productCases.integration.test.ts` for the tested boundary.
 The internal intake pilot adds an 8 KiB JSON body boundary and process-local
 10-per-Agent/50-per-Company per-minute limits; these are not distributed quotas.
-The PostgreSQL-only RLS overlay prevents direct mutation of product-case event
-history. `src/api/productCases.postgres.integration.test.ts` proves the
-non-bypass role can submit but cannot read another Company or edit/delete
-existing events.
+The PostgreSQL-only RLS overlay protects Company scope and prevents direct
+UPDATE/DELETE of case evidence and event history. The PostgreSQL integration
+test covers these boundaries when a disposable local PostgreSQL instance is
+available. Text evidence does not support arbitrary attachments; engineering
+task keys are human-linked references, not automatically verified against an
+external tracker. Reporter readback is pull-based; notification delivery and
+internal pilot acceptance remain separate work.
 
 Background style preference — 2026-09-15: the first-run wizard exposes four fixed styles
 (Aurora, Mist, Paper and Night sky) alongside language selection. The choice is applied

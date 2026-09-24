@@ -1,4 +1,20 @@
-# Project Status — reviewed 2026-09-24
+# Project Status — reviewed 2026-09-25
+
+Product Feedback source candidate — 2026-09-25: the current branch adds
+Company-scoped append-only case evidence, Agent evidence append and scoped
+readback, human classification/assignment, engineering task reference,
+server-verified public release proof, independent post-release verification,
+reason-coded closure and reopen. The Admin module now exposes these actions.
+This is not deployed and does not supersede the production revision below.
+The engineering task key is human asserted; no external task tracker is
+verified. Notification delivery, distributed throttling, retention approval,
+named operations ownership and an activated internal pilot remain open. See
+[the contract and gates](PRODUCT_FEEDBACK_PLAN.md).
+PGlite API and disposable PostgreSQL RLS/immutable-evidence tests, targeted
+permission regressions, lint/type checks, Demo proof, API/Demo builds and
+desktop/375px browser flow passed for this candidate. The full 220-file suite
+was not completed; the unrelated Python MCP interoperability test lacks the
+local `mcp` dependency. This candidate has no production release evidence.
 
 Product Feedback planning addendum — 2026-09-24: EPIC-069 and TASK-244–249
 are registered for a governed Agent feedback API, human triage and a linked
