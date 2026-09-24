@@ -604,6 +604,7 @@ SCREENS['depreciation'] = async function(root){
       icon:'play',
       title:s('newRunTitle'),
       width:620,
+      mobileMode:'inset',
       body:`<p class="depreciation-run-modal-description">${esc(s('noRunBody'))}</p>
         <div class="alert danger depreciation-run-modal-error" data-depreciation-create-error role="alert" hidden></div>
         <div class="depreciation-run-modal-facts">
