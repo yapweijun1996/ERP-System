@@ -1,6 +1,6 @@
 # ERP-System Project Logic
 
-Product feedback local contract — 2026-09-24: `src/data/schema/productFeedback.ts`
+Product feedback initial production contract — 2026-09-24: `src/data/schema/productFeedback.ts`
 defines Company-scoped `product_case` and `product_case_event` records, separate
 from the customer warranty `service_ticket`. An authenticated ERP Agent with
 active owner-backed `product_case.submit` permission/grant can submit a bounded
@@ -14,7 +14,9 @@ status transitions and atomic case-event/central-audit writes. The human
 Admin > Product Cases queue. Demo mode does not emulate these governed writes.
 The current states are `submitted`, `triaged`, `in_progress`, `resolved` and
 `closed`. Evidence append, task/release linkage, independent post-release
-verification and production acceptance remain open; see
+verification and full product acceptance remain open. Production revision
+`b8c0208aae430d26d672ce10f2a62ad88f068f71` has the schema, API and UI,
+but zero Agent principals/grants and no live case submission; see
 [the feedback plan](PRODUCT_FEEDBACK_PLAN.md) and
 `src/api/productCases.integration.test.ts` for the tested boundary.
 The internal intake pilot adds an 8 KiB JSON body boundary and process-local

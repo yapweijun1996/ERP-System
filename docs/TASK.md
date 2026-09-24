@@ -35,11 +35,11 @@ not a second task registry.
 - Pending: **19** (13 prior open tasks + 6 planned Product Feedback tasks)
 
 These counts include completed TASK-241–243 and open, partly implemented
-TASK-244–249. The local Agent intake/human triage slice does not satisfy the
-remaining task acceptance or production-release gates. AI Native goal acceptance counts are tracked separately and are
+TASK-244–249. The deployed but unactivated Agent intake/human triage slice does not satisfy the
+remaining task acceptance or complete feedback-loop gates. AI Native goal acceptance counts are tracked separately and are
 not changed by the new feedback plan.
 
-## Product feedback programme (local slice; acceptance open)
+## Product feedback programme (initial slice deployed; acceptance open)
 
 [EPIC-069](EPICS.md) and the [Product Feedback plan](PRODUCT_FEEDBACK_PLAN.md)
 define an Agent-submitted feedback case, human triage and a verified release

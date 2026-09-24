@@ -1,7 +1,24 @@
 # Deployment
 
-Latest production UI release — 2026-09-24: application revision
-`1ff580c5ebc7334f238c238f7d2f51904dae8225` is live at
+Product feedback initial release — 2026-09-24: revision
+`b8c0208aae430d26d672ce10f2a62ad88f068f71` is live at
+`https://gmb01.xyz/erp/` in Compose project `erp-system-production-fresh`.
+An isolated restore of the pre-release production backup successfully rehearsed
+migration `0116_majestic_prowler` and the production RLS overlay before the
+guarded production migration. The live database now has 117 migration records
+and 265 public tables; both product-case tables have forced RLS, and the case
+event immutability trigger is enabled. Company, user and audit counts were
+unchanged; the database container was not recreated. API, Web and calendar-worker
+were recreated, and the public verifier matched the release revision and all
+126 asset hashes. Post-release case/event and Agent-principal/grant counts were
+all zero. The code is deployed, but the Agent pilot is not activated; a named
+owner and private credential destination are needed before issuing a grant.
+The complete feedback-to-release loop remains open in
+[the product feedback plan](PRODUCT_FEEDBACK_PLAN.md). This release supersedes
+the application revision described in the next checkpoint.
+
+Previous production UI release — 2026-09-24: application revision
+`1ff580c5ebc7334f238c238f7d2f51904dae8225` was live at
 `https://gmb01.xyz/erp/`. The application-only release recreated API, Web and
 calendar-worker in `erp-system-production-fresh`; local and public release
 verification matched the API health revision and Web `release.json`, with all 126
@@ -41,9 +58,9 @@ deployment and Docker is the production deployment:
 2. **Production** → Docker Compose (`web` + `api` + PostgreSQL), targeting 100–800 GB; measured sizing, load and recovery proof remains TASK-201.
    Use `docker-compose.production.yml` on a client server so only `web` is exposed.
 
-Current code schema boundary: migration
+Historical code schema boundary at the earlier checkpoint: migration
 `0111_immediate_account_access` (112 journal entries, schema version 111, 261 public
-tables). The fresh local production instance matches this boundary. Migration 0111
+tables). The fresh local production instance matched this boundary then. Migration 0111
 removes mandatory account activation; it does not re-enable disabled accounts or
 change passwords. Migrations 0104–0110 add the governed Agent, MCP, knowledge and
 provider configuration foundations. Migrations 0084–0085 add the separate platform support control plane and exact
