@@ -429,16 +429,28 @@ SCREENS['settings'] = async function(root, params){
   const sections=[...root.querySelectorAll('.set-sec')];
   const navItems=[...root.querySelectorAll('.set-navitem')];
   const topOf=element=>element.getBoundingClientRect().top-scroller.getBoundingClientRect().top+scroller.scrollTop;
+  const setActiveSection=id=>navItems.forEach(item=>{
+    const active=item.dataset.target===id;
+    item.classList.toggle('on',active);
+    if(active) item.setAttribute('aria-current','location');
+    else item.removeAttribute('aria-current');
+  });
   function spy(){
     const scrollTop=scroller.scrollTop+40;
     let current=sections[0]&&sections[0].id;
     sections.forEach(section=>{ if(topOf(section)<=scrollTop) current=section.id; });
-    navItems.forEach(item=>item.classList.toggle('on',item.dataset.target===current));
+    const maxScroll=scroller.scrollHeight-scroller.clientHeight;
+    if(maxScroll>2&&scroller.scrollTop>=maxScroll-2) current=sections[sections.length-1].id;
+    setActiveSection(current);
+  }
+  function scrollToSection(section){
+    scroller.scrollTop=Math.max(0,topOf(section)-8);
+    spy();
   }
   scroller.addEventListener('scroll',spy);
   navItems.forEach(item=>item.addEventListener('click',()=>{
     const section=root.querySelector('#'+item.dataset.target);
-    if(section) scroller.scrollTop=Math.max(0,topOf(section)-8);
+    if(section) scrollToSection(section);
   }));
 
   root.querySelectorAll('.seg[data-seg]').forEach(control=>{
@@ -519,6 +531,6 @@ SCREENS['settings'] = async function(root, params){
   if(params&&params.section){
     const item=navItems.find(candidate=>candidate.dataset.target===params.section);
     const section=item&&root.querySelector('#'+params.section);
-    if(section) scroller.scrollTop=Math.max(0,topOf(section)-8);
+    if(section) scrollToSection(section);
   }
 };
