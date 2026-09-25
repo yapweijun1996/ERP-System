@@ -19,6 +19,7 @@ import {
   isSensitivePlatformMutation,
 } from '../auth/platformTenantAccess';
 import { PERMISSIONS, hasPermission } from '../auth/permissions';
+import { isModuleEnabled } from '../auth/moduleAccess';
 import { buildDashboard } from './dashboard';
 import { apiError, context, requireSession } from './http';
 import { createAdminRouter } from './routes/admin';
@@ -329,8 +330,17 @@ export function createApp(db: DB, options: AppOptions = {}): Express {
       masterFn: session.masterFn,
       companyFn: session.activeCompanyFn,
     };
-    res.json(await withTenantTransaction(db, scope, (tx) =>
-      buildDashboard(tx, scope.masterFn, scope.companyFn)));
+    const salesRead = await hasPermission(db, session, PERMISSIONS.salesRead);
+    const financeRead = await hasPermission(db, session, PERMISSIONS.financeRead);
+    const inventoryRead = await hasPermission(db, session, PERMISSIONS.inventoryRead);
+    res.json(await withTenantTransaction(db, scope, async (tx) => {
+      const access = {
+        sales: salesRead && await isModuleEnabled(tx, scope.masterFn, scope.companyFn, 'sales'),
+        finance: financeRead && await isModuleEnabled(tx, scope.masterFn, scope.companyFn, 'finance'),
+        inventory: inventoryRead && await isModuleEnabled(tx, scope.masterFn, scope.companyFn, 'inventory'),
+      };
+      return buildDashboard(tx, scope.masterFn, scope.companyFn, access);
+    }));
   });
 
   app.use('/api', createResourceRouter(db));

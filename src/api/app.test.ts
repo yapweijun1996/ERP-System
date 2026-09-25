@@ -441,6 +441,37 @@ describe('production API security contract', () => {
     expect(users.status).toBe(200);
   });
 
+  it('redacts dashboard facts when their commercial modules are disabled', async () => {
+    const cookies = await login(running.baseUrl);
+    const readDashboard = async () => {
+      const response = await fetch(`${running.baseUrl}/api/dashboard`, {
+        headers: { cookie: cookies.header },
+      });
+      expect(response.status).toBe(200);
+      return response.json();
+    };
+    const enabled = await readDashboard();
+    expect(typeof enabled.metrics.openOrderValue).toBe('number');
+    expect(typeof enabled.metrics.cash).toBe('number');
+
+    await db.update(companyModule).set({ enabled: false }).where(and(
+      eq(companyModule.masterFn, 'M1'), eq(companyModule.companyFn, 'C-SG'),
+      eq(companyModule.moduleKey, 'sales'),
+    ));
+    const withoutSales = await readDashboard();
+    expect(withoutSales.metrics.openOrderValue).toBeNull();
+    expect(withoutSales.metrics.mtdRevenue).toBeNull();
+    expect(typeof withoutSales.metrics.cash).toBe('number');
+
+    await db.update(companyModule).set({ enabled: false }).where(and(
+      eq(companyModule.masterFn, 'M1'), eq(companyModule.companyFn, 'C-SG'),
+      eq(companyModule.moduleKey, 'finance'),
+    ));
+    const withoutFinance = await readDashboard();
+    expect(withoutFinance.metrics.cash).toBeNull();
+    expect(withoutFinance.metrics.arOpen).toBeNull();
+  });
+
   it('fails closed before Company Receipts when its platform entitlement is disabled', async () => {
     const cookies = await login(running.baseUrl);
     const masterDisabled = await fetch(`${running.baseUrl}/api/company-receipts?limit=1`, {
