@@ -1,5 +1,21 @@
 # Deployment
 
+System Settings layout release — 2026-09-25: revision
+`bc9cf0595dbd6a5580e47bad832f7394bf99eeb3` is live at
+`https://gmb01.xyz/erp/` in Compose project `erp-system-production-fresh`.
+The application-only release preserved the healthy PostgreSQL container and ran
+no migration or seed. The loopback verifier passed all seven checks and matched
+all 126 asset hashes. The public manifest reports the same revision, and all
+126 assets matched when requested with that revision as a query parameter.
+Local browser checks of the real screen renderer and stylesheet covered
+320px, 375px, 620px, 842px and 1280px, five languages, long company names,
+dark theme, input focus and page scrolling with no document overflow or console
+errors. Company facts now uses a responsive definition list within one panel;
+policy fields have associated labels, consistent spacing and a separate save
+action. The standard public verifier still reports `asset_bytes_mismatch` for
+Cloudflare's stale unversioned `erp-blocks.css`; the released HTML references
+the verified version-qualified CSS and screen script.
+
 Company onboarding layout release — 2026-09-25: revision
 `9c535505f97e30f6a93cfc9f7c6bc34a9c3f5cf6` is live at
 `https://gmb01.xyz/erp/` in Compose project `erp-system-production-fresh`.
