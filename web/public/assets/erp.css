@@ -129,7 +129,7 @@ body.auth-locked{overflow:auto;}
 .auth-realm-recovery .btn{width:auto;min-width:0;padding:0;color:var(--accent);font-size:calc(12.5px * var(--fs,1));}
 .auth-realm-recovery .btn:hover{background:transparent;color:var(--accent-d);text-decoration:underline;}
 .auth-password-control{display:flex;align-items:stretch;min-width:0;}
-.auth-password-control input{min-width:0;flex:1;border-radius:10px 0 0 10px;}
+.fld .auth-password-control input{min-width:0;flex:1;border-radius:10px 0 0 10px;}
 .auth-password-toggle{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:70px;padding:0 10px;border:1px solid var(--border);border-left:0;border-radius:0 10px 10px 0;background:var(--surface-3);color:var(--muted);font-size:calc(12px * var(--fs,1));font-weight:600;line-height:1;transition:background .12s,color .12s,border-color .12s;}
 .auth-password-toggle:hover{background:var(--accent-tint);color:var(--accent);}
 .auth-password-toggle:focus-visible{position:relative;z-index:1;outline-offset:1px;}
