@@ -1,9 +1,15 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import { listCompanies } from '../data/repo';
 import {
   account, glEntry, invoice, product, salesOrder, stockLevel,
 } from '../data/schema';
+
+export interface DashboardAccess {
+  sales: boolean;
+  finance: boolean;
+  inventory: boolean;
+}
 
 async function countProducts(db: DB, masterFn: string, companyFn: string): Promise<number> {
   const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(product)
@@ -18,7 +24,7 @@ async function openOrders(db: DB, masterFn: string, companyFn: string) {
   }).from(salesOrder).where(and(
     eq(salesOrder.masterFn, masterFn),
     eq(salesOrder.companyFn, companyFn),
-    eq(salesOrder.status, 'draft'),
+    inArray(salesOrder.status, ['draft', 'pending_approval']),
   ));
   return { count: row?.count ?? 0, value: row?.value ?? 0 };
 }
@@ -35,17 +41,43 @@ async function openReceivables(db: DB, masterFn: string, companyFn: string) {
   return { count: row?.count ?? 0, value: row?.value ?? 0 };
 }
 
-async function revenueTotal(db: DB, masterFn: string, companyFn: string): Promise<number> {
+async function monthRevenueTotal(
+  db: DB, masterFn: string, companyFn: string, asOf: Date, timeZone: string,
+): Promise<number> {
+  const localMonth = sql`date_trunc('month', ${asOf.toISOString()}::timestamptz at time zone ${timeZone})`;
   const [row] = await db.select({
     net: sql<number>`coalesce(sum(${glEntry.credit}) - sum(${glEntry.debit}),0)::float`,
   }).from(glEntry)
-    .innerJoin(account, eq(account.id, glEntry.accountId))
+    .innerJoin(account, and(
+      eq(account.id, glEntry.accountId),
+      eq(account.masterFn, glEntry.masterFn),
+      eq(account.companyFn, glEntry.companyFn),
+    ))
     .where(and(
       eq(glEntry.masterFn, masterFn),
       eq(glEntry.companyFn, companyFn),
       eq(account.code, '4000'),
+      sql`${glEntry.postedAt} >= (${localMonth} at time zone ${timeZone})`,
+      sql`${glEntry.postedAt} < ((${localMonth} + interval '1 month') at time zone ${timeZone})`,
     ));
   return row?.net ?? 0;
+}
+
+async function cashPosition(db: DB, masterFn: string, companyFn: string): Promise<number> {
+  const [row] = await db.select({
+    balance: sql<number>`coalesce(sum(${glEntry.debit}) - sum(${glEntry.credit}),0)::float`,
+  }).from(glEntry)
+    .innerJoin(account, and(
+      eq(account.id, glEntry.accountId),
+      eq(account.masterFn, glEntry.masterFn),
+      eq(account.companyFn, glEntry.companyFn),
+    ))
+    .where(and(
+      eq(glEntry.masterFn, masterFn),
+      eq(glEntry.companyFn, companyFn),
+      eq(account.code, '1000'),
+    ));
+  return row?.balance ?? 0;
 }
 
 async function stockAlerts(db: DB, masterFn: string, companyFn: string, threshold = 20) {
@@ -65,28 +97,34 @@ async function stockAlerts(db: DB, masterFn: string, companyFn: string, threshol
     .having(sql`coalesce(sum(${stockLevel.qty}),0) <= ${threshold}`);
 }
 
-export async function buildDashboard(db: DB, masterFn: string, companyFn: string) {
+export async function buildDashboard(
+  db: DB, masterFn: string, companyFn: string, access: DashboardAccess, asOf = new Date(),
+) {
   // `/api/dashboard` runs inside withTenantTransaction(). On PostgreSQL that
   // transaction is backed by one pg Client, so its queries must be awaited in
   // order rather than dispatched through Promise.all(). node-postgres currently
   // queues the concurrent calls but warns that this will be rejected in pg@9.
   const companies = await listCompanies(db, masterFn);
-  const productCount = await countProducts(db, masterFn, companyFn);
-  const orders = await openOrders(db, masterFn, companyFn);
-  const receivables = await openReceivables(db, masterFn, companyFn);
-  const revenue = await revenueTotal(db, masterFn, companyFn);
-  const alerts = await stockAlerts(db, masterFn, companyFn);
+  const timeZone = companies.find((item) => item.companyFn === companyFn)?.timeZone ?? 'UTC';
+  const productCount = access.inventory ? await countProducts(db, masterFn, companyFn) : null;
+  const orders = access.sales ? await openOrders(db, masterFn, companyFn) : null;
+  const receivables = access.finance ? await openReceivables(db, masterFn, companyFn) : null;
+  const revenue = access.sales
+    ? await monthRevenueTotal(db, masterFn, companyFn, asOf, timeZone) : null;
+  const cash = access.finance ? await cashPosition(db, masterFn, companyFn) : null;
+  const alerts = access.inventory ? await stockAlerts(db, masterFn, companyFn) : [];
   return {
     scope: { masterFn, companyFn },
     companies,
     metrics: {
       productCount,
-      openOrders: orders.count,
-      openOrderValue: orders.value,
-      openInvoices: receivables.count,
-      arOpen: receivables.value,
+      openOrders: orders?.count ?? null,
+      openOrderValue: orders?.value ?? null,
+      openInvoices: receivables?.count ?? null,
+      arOpen: receivables?.value ?? null,
+      cash,
       mtdRevenue: revenue,
-      stockAlertCount: alerts.length,
+      stockAlertCount: access.inventory ? alerts.length : null,
     },
     stockAlerts: alerts,
     generatedAt: new Date().toISOString(),
