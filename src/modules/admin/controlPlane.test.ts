@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { accountingPeriod, auditLog, companyPolicy, documentSequence } from '../../data/schema';
+import { accountingPeriod, appUser, auditLog, company, companyPolicy, documentSequence, master, role } from '../../data/schema';
 import { seedDemo } from '../../data/seed';
 import { freshDb } from '../../test/helpers';
 import {
@@ -14,11 +14,30 @@ import {
 describe('tenant control plane', () => {
   it('returns only the session tenant and active-company user facts', async () => {
     const db = await freshDb(); await seedDemo(db);
+    await db.insert(master).values({ masterFn: 'M2', loginCode: 'OTHER', name: 'Other Master' });
+    await db.insert(company).values({
+      masterFn: 'M2', companyFn: 'C-OTHER', name: 'Other Company', country: 'MY',
+      currency: 'MYR', taxRegime: 'SST', locale: 'ms', timeZone: 'Asia/Kuala_Lumpur',
+    });
+    await db.insert(role).values({ masterFn: 'M2', name: 'Other Role', isSuperadmin: false });
     const result = await getMasterControlWithin(db, { masterFn: 'M1', companyFn: 'C-SG' });
     expect(result.master.masterFn).toBe('M1');
     expect(result.companies.map((row) => row.companyFn)).toEqual(['C-MY', 'C-SG']);
     expect(result.users.every((row) => row.companyFn === 'C-SG')).toBe(true);
     expect(result.users).toHaveLength(2);
+    expect(result.summary).toEqual({
+      tenantCompanies: 2,
+      activeCompanyUsers: 2,
+      tenantRoles: result.roles.length,
+    });
+    expect(result.roles.every((row) => row.name !== 'Other Role')).toBe(true);
+    expect(result.companies.find((row) => row.companyFn === 'C-SG')?.userCount).toBe(2);
+    await db.update(appUser).set({ isActive: false }).where(eq(appUser.email, 'viewer@acme.co'));
+    const afterDisable = await getMasterControlWithin(db, { masterFn: 'M1', companyFn: 'C-SG' });
+    expect(afterDisable.summary.activeCompanyUsers).toBe(1);
+    expect(afterDisable.users).toHaveLength(2);
+    expect(afterDisable.users.find((row) => row.email === 'viewer@acme.co')?.isActive).toBe(false);
+    expect(afterDisable.companies.find((row) => row.companyFn === 'C-SG')?.userCount).toBe(2);
   });
 
   it('keeps settings company-scoped and audits every mutation', async () => {
