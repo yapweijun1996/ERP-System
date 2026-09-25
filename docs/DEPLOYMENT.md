@@ -1,7 +1,19 @@
 # Deployment
 
+Dashboard KPI application hotfix — 2026-09-25: revision
+`7332545358942c88d5435da16187a6b5546cf513` is live at
+`https://gmb01.xyz/erp/` in Compose project `erp-system-production-fresh`.
+The application-only release recreated API, Web and calendar-worker without a
+database migration or seed. The PostgreSQL container kept the same ID and is
+healthy. The public release verifier passed root, health, setup status, revision
+matching and all 126 asset hashes. After a fresh browser reload, the employee
+simulation dashboard loaded the new `screens-ops.js` version and hid all three
+monetary KPIs under its effective module access. The KPI values follow Company
+order and ledger facts; see [project logic](PROJECT_LOGIC.md). This release
+supersedes the application revision in the next checkpoint.
+
 Product feedback initial release — 2026-09-24: revision
-`b8c0208aae430d26d672ce10f2a62ad88f068f71` is live at
+`b8c0208aae430d26d672ce10f2a62ad88f068f71` was live at
 `https://gmb01.xyz/erp/` in Compose project `erp-system-production-fresh`.
 An isolated restore of the pre-release production backup successfully rehearsed
 migration `0116_majestic_prowler` and the production RLS overlay before the
