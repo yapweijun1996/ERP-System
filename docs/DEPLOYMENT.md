@@ -1,7 +1,20 @@
 # Deployment
 
+Company onboarding layout release — 2026-09-25: revision
+`9c535505f97e30f6a93cfc9f7c6bc34a9c3f5cf6` is live at
+`https://gmb01.xyz/erp/` in Compose project `erp-system-production-fresh`.
+The application-only release preserved the healthy PostgreSQL container and ran
+no migration or seed. The loopback release verifier matched revision and all
+126 asset hashes. The public release manifest and version-qualified requests
+matched all 126 assets; a fresh authenticated 842px browser reload showed the
+eight onboarding stages in a readable 4-by-2 grid without horizontal overflow.
+The live-status copy now matches the Company state. Cloudflare still serves a
+cached older `erp-blocks.css` at the unversioned URL, so the standard public
+verifier reports `asset_bytes_mismatch`; the HTML references the new CSS and JS
+with release-specific query versions, which were verified publicly.
+
 Dashboard KPI application hotfix — 2026-09-25: revision
-`7332545358942c88d5435da16187a6b5546cf513` is live at
+`7332545358942c88d5435da16187a6b5546cf513` was live at
 `https://gmb01.xyz/erp/` in Compose project `erp-system-production-fresh`.
 The application-only release recreated API, Web and calendar-worker without a
 database migration or seed. The PostgreSQL container kept the same ID and is
