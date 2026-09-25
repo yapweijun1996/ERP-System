@@ -282,7 +282,7 @@ SCREENS['settings'] = async function(root, params){
     },};
   const copy=i18nLegacy(COPY);
   const s=key=>copy[key]||COPY.en[key]||key;
-  const row=(title,desc,control,top=false)=>`<div class="set-row${top?' top':''}">
+  const row=(title,desc,control,top=false,extraClass='')=>`<div class="set-row${top?' top':''}${extraClass?' '+extraClass:''}">
     <div class="set-row-t"><b>${esc(title)}</b>${desc?`<small>${esc(desc)}</small>`:''}</div>
     <div class="set-row-c">${control}</div></div>`;
   const seg=(group,options,current)=>`<div class="seg" data-seg="${group}">${options.map(option=>
@@ -351,7 +351,7 @@ SCREENS['settings'] = async function(root, params){
       `<button class="set-pal ${p.id===storedPalette?'on':''}" data-c="${p.light.accent}" data-name="${p.id}" aria-label="${t(paletteLabelKey[p.id]||'appearance.ariaBlue')}">
         <span class="set-pal-sw">${p.swatches.map(c=>`<i style="background:${c}"></i>`).join('')}</span>
         <span class="set-pal-l">${t(paletteLabelKey[p.id]||'appearance.ariaBlue')}</span></button>`
-    ).join('')}</div>`)}
+    ).join('')}</div>`,false,'set-row-palette')}
     ${row(s('accent'),s('accentDesc'),`<div class="set-swatches">${accents.map(a=>
       `<button class="set-sw ${a[0]===storedAccent?'on':''}" data-c="${a[0]}" style="background:${a[0]}" aria-label="${a[1]}"></button>`
     ).join('')}</div>`)}
