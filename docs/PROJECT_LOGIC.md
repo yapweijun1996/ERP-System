@@ -1564,6 +1564,26 @@ For a code change, also check `docs/STATUS.md`, `docs/SPEC.md`, the API route an
 the Demo/API adapter path affected by the change. For this documentation-only sync,
 the minimum local checks are `git diff --check` and Markdown/link inspection.
 
+### Tenant control summary contract
+
+`getMasterControlWithin` in `src/modules/admin/controlPlane.ts` owns the tenant
+control read model. Both `/api/admin/master-control` and the browser Demo adapter
+call this command with the authenticated/session-derived `masterFn` and active
+`companyFn`; neither frontend path calculates the summary independently.
+
+| Summary field | Scope and meaning |
+| --- | --- |
+| `tenantCompanies` | Companies belonging to the session Master. |
+| `activeCompanyUsers` | Human users assigned to the active Company whose account `isActive` is true. Disabled users remain in the Company user table for administration. |
+| `tenantRoles` | Roles belonging to the session Master, excluding the hidden Platform Tenant Admin template. |
+
+The Company table's `userCount` is the number of human Company memberships,
+including disabled accounts. Its broader meaning is deliberate and is kept
+separate from `activeCompanyUsers`. The UI labels each summary card's scope and
+uses the command's `summary` object directly. Tests in
+`src/modules/admin/controlPlane.test.ts` cover the disabled-user distinction and
+Master/Company isolation.
+
 ## 10. Module Access Control — current logic and approved replacement
 
 Current source truth (verified 2026-08-12):
