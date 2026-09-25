@@ -1709,7 +1709,7 @@ window.__ERP_I18N_EN__=Object.freeze({
   "platform.login.brandSubtitle": "Secure workspace",
   "platform.login.demoBody": "Uses the public platform-admin sample account. Demo only.",
   "platform.login.demoButton": "Log in as Platform Admin (Demo)",
-  "platform.login.platformSessionHelp": "Platform sessions are limited to one hour. Remember Me is not available.",
+  "platform.login.platformSessionHelp": "Platform sessions last one hour unless this device is remembered. Use only on a private device.",
   "platform.login.production": "Production",
   "platform.login.realm": "Sign-in realm",
   "platform.login.realmIsolation": "Credentials and sessions are isolated by realm.",

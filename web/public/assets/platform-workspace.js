@@ -524,10 +524,11 @@
         <div id="platformCredentials" class="auth-realm-panel" role="tabpanel" aria-labelledby="platformRealmTab" hidden>
           ${demoPlatformLoginAvailable?`<div class="platform-demo-login"><button type="button" class="btn primary" id="platformDemoLoginButton">${esc(pt('login.demoButton','Log in as Platform Admin (Demo)'))}</button><small>${esc(pt('login.demoBody','Uses the public platform-admin sample account. Demo only.'))}</small></div>`:''}
           <div class="fld"><label class="fldlabel" for="platformPrincipalKey">${esc(pt('field.platformPrincipalKey','Platform principal key'))}</label><input id="platformPrincipalKey" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="${esc(pt('field.platformPrincipalPlaceholder','e.g. platform-admin'))}"></div>
-          <p class="auth-help">${esc(pt('login.platformSessionHelp','Platform sessions are limited to one hour. Remember Me is not available.'))}</p>
+          <p class="auth-help">${esc(pt('login.platformSessionHelp','Platform sessions last one hour unless this device is remembered. Use only on a private device.'))}</p>
         </div>
         <div class="fld"><label class="fldlabel" for="realmPassword">${esc(pt('field.password','Password'))}</label><div class="auth-password-control"><input id="realmPassword" type="password" autocomplete="current-password"><button type="button" class="auth-password-toggle" id="realmPasswordToggle" aria-controls="realmPassword" aria-label="${esc(pt('password.show','Show password'))}" aria-pressed="false"><span class="auth-password-toggle-icon">${ic('eye')}</span><span>${esc(pt('password.showShort','Show'))}</span></button></div></div>
         <label class="auth-remember" id="tenantRememberDeviceRow" hidden><input id="tenantRememberDevice" type="checkbox"><span>${esc(pt('login.rememberDevice','Remember this device (up to 30 days)'))}</span></label>
+        <label class="auth-remember" id="platformRememberDeviceRow" hidden><input id="platformRememberDevice" type="checkbox"><span>${esc(pt('login.rememberDevice','Remember this device (up to 30 days)'))}</span></label>
         <div class="auth-error" id="loginError" role="alert"></div>
         <button class="btn primary lg" type="submit">${esc(pt('action.signIn','Sign in'))}</button>
       </form>
@@ -543,6 +544,7 @@
       view.querySelector('#tenantCredentials').hidden=realm!=='tenant';
       view.querySelector('#platformCredentials').hidden=realm!=='platform';
       view.querySelector('#tenantRememberDeviceRow').hidden=realm!=='tenant';
+      view.querySelector('#platformRememberDeviceRow').hidden=realm!=='platform';
       realmTabs.forEach(function(button){
         var active=button.dataset.realm===realm;
         button.classList.toggle('active',active);
@@ -577,7 +579,7 @@
         if(realm==='platform'){
           var principalKey=view.querySelector('#platformPrincipalKey').value.trim();
           if(!principalKey) throw new Error(pt('error.platformPrincipalRequired','Platform principal key is required.'));
-          await request('login',{method:'POST',body:{principalKey:principalKey,password:password,rememberDevice:false}});
+          await request('login',{method:'POST',body:{principalKey:principalKey,password:password,rememberDevice:!!view.querySelector('#platformRememberDevice').checked}});
         }else{
           var organizationCode=view.querySelector('#tenantOrganizationCode').value.trim();
           var username=view.querySelector('#tenantUsername').value.trim();
@@ -593,7 +595,7 @@
       setError('');
       demoLogin.disabled=true;
       try{
-        await request('login',{method:'POST',body:{principalKey:DEMO_DEFAULTS.bootstrap.principalKey,password:DEMO_DEFAULTS.bootstrap.password,rememberDevice:false}});
+        await request('login',{method:'POST',body:{principalKey:DEMO_DEFAULTS.bootstrap.principalKey,password:DEMO_DEFAULTS.bootstrap.password,rememberDevice:!!view.querySelector('#platformRememberDevice').checked}});
         location.reload();
       }catch(error){ setError(error&&error.message||pt('error.demoLoginFailed','Demo Platform login failed.')); demoLogin.disabled=false; }
     });

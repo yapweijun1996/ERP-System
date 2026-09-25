@@ -117,11 +117,11 @@ describe('Platform Superadmin password realm, tenant administration and Employee
     return (await response.json()).data as { accessId: number; actorUserId: number };
   }
 
-  it('uses separate password/cookie credentials with no Remember Me', async () => {
+  it('uses separate password/cookie credentials with a short default session', async () => {
     const invalidRemember = await fetch(`${baseUrl}/api/platform/login`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        principalKey: 'platform-test-admin', password: 'platform-test-password', rememberDevice: true,
+        principalKey: 'platform-test-admin', password: 'platform-test-password', rememberDevice: 'yes',
       }),
     });
     expect(invalidRemember.status).toBe(400);
@@ -134,6 +134,31 @@ describe('Platform Superadmin password realm, tenant administration and Employee
 
     // A platform session alone never becomes a tenant session.
     expect((await fetch(`${baseUrl}/api/auth/session`, { headers: headers(auth) })).status).toBe(401);
+  });
+
+  it('persists an opted-in trusted platform device with separate protected cookies', async () => {
+    const response = await fetch(`${baseUrl}/api/platform/login`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        principalKey: 'platform-test-admin', password: 'platform-test-password', rememberDevice: true,
+      }),
+    });
+    expect(response.status).toBe(200);
+    const body = await response.json() as { data: { rememberDevice: boolean; expiresAt: string } };
+    expect(body.data.rememberDevice).toBe(true);
+    expect(new Date(body.data.expiresAt).getTime() - Date.now()).toBeGreaterThan(29 * 24 * 60 * 60 * 1000);
+    const cookies = (response.headers as Headers & { getSetCookie?: () => string[] }).getSetCookie?.() ?? [];
+    expect(cookies).toHaveLength(2);
+    expect(cookies.every((cookie) => cookie.includes('Max-Age=2592000') && cookie.includes('SameSite=Strict'))).toBe(true);
+    expect(cookies.find((cookie) => cookie.startsWith('erp_platform_session='))).toContain('HttpOnly');
+    const auth = platformCookies(response);
+    expect((await fetch(`${baseUrl}/api/platform/session`, { headers: headers(auth) })).status).toBe(200);
+    expect((await fetch(`${baseUrl}/api/auth/session`, { headers: headers(auth) })).status).toBe(401);
+    const logout = await fetch(`${baseUrl}/api/platform/logout`, {
+      method: 'POST', headers: headers(auth, true), body: JSON.stringify({}),
+    });
+    expect(logout.status).toBe(200);
+    expect((await fetch(`${baseUrl}/api/platform/session`, { headers: headers(auth) })).status).toBe(401);
   });
 
   it('classifies the approved sensitive mutation families without locking reads', () => {

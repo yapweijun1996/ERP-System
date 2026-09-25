@@ -1734,7 +1734,7 @@
   "platform.login.brandSubtitle": "Secure workspace",
   "platform.login.demoBody": "Uses the public platform-admin sample account. Demo only.",
   "platform.login.demoButton": "Log in as Platform Admin (Demo)",
-  "platform.login.platformSessionHelp": "Platform sessions are limited to one hour. Remember Me is not available.",
+  "platform.login.platformSessionHelp": "プラットフォームのセッションは通常1時間です。このデバイスを記憶するとログイン状態を維持できます。個人用デバイスでのみ使用してください。",
   "platform.login.production": "Production",
   "platform.login.realm": "Sign-in realm",
   "platform.login.realmIsolation": "Credentials and sessions are isolated by realm.",

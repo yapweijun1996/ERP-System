@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { createHash } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
 import {
   auditLog,
   company,
   master,
   platformPrincipal,
+  platformSession,
   platformRole,
   role,
 } from '../data/schema';
@@ -15,9 +17,14 @@ import {
   createSupportAccessGrant,
   evaluateSupportAccess,
   getPlatformSession,
+  PLATFORM_REMEMBERED_IDLE_TTL_MS,
+  PLATFORM_REMEMBERED_SESSION_TTL_MS,
   PLATFORM_PERMISSIONS,
+  PLATFORM_SESSION_TTL_MS,
   provisionPlatformPrincipal,
+  revokePlatformSession,
   revokeSupportAccessGrant,
+  verifyPlatformCsrfToken,
   type PlatformSessionData,
 } from './platformSupport';
 
@@ -70,6 +77,43 @@ describe('platform principal and support access boundary', () => {
     await seedDemo(db);
     await expect(createPlatformSession(db, 1, { now: NOW }))
       .rejects.toMatchObject({ code: 'platform_principal_inactive' });
+  });
+
+  it('keeps an opted-in platform session until its idle or absolute deadline and revokes it on sign-out', async () => {
+    const { db, principalId } = await platformFixture();
+    await expect(createPlatformSession(db, principalId, {
+      now: NOW, ttlMs: PLATFORM_REMEMBERED_SESSION_TTL_MS,
+    })).rejects.toMatchObject({ code: 'invalid_platform_session_ttl' });
+    await expect(createPlatformSession(db, principalId, {
+      now: NOW, rememberDevice: true, ttlMs: PLATFORM_REMEMBERED_SESSION_TTL_MS + PLATFORM_SESSION_TTL_MS,
+    })).rejects.toMatchObject({ code: 'invalid_platform_session_ttl' });
+    const remembered = await createPlatformSession(db, principalId, {
+      now: NOW, rememberDevice: true,
+    });
+    expect(remembered.expiresAt.getTime() - NOW.getTime()).toBe(PLATFORM_REMEMBERED_SESSION_TTL_MS);
+    const [stored] = await db.select().from(platformSession)
+      .where(eq(platformSession.tokenHash, createHash('sha256').update(remembered.token).digest('hex')));
+    expect(stored.tokenHash).not.toBe(remembered.token);
+
+    const firstTouch = new Date(NOW.getTime() + PLATFORM_REMEMBERED_IDLE_TTL_MS - 1000);
+    expect(await getPlatformSession(db, remembered.token, { now: firstTouch })).not.toBeNull();
+    const afterFirstIdleWindow = new Date(NOW.getTime() + PLATFORM_REMEMBERED_IDLE_TTL_MS + 1000);
+    expect(await getPlatformSession(db, remembered.token, { now: afterFirstIdleWindow, touch: false })).not.toBeNull();
+    expect(await verifyPlatformCsrfToken(db, remembered.token, remembered.csrfToken, afterFirstIdleWindow)).toBe(true);
+
+    const idleExpiry = new Date(firstTouch.getTime() + PLATFORM_REMEMBERED_IDLE_TTL_MS + 1);
+    expect(await getPlatformSession(db, remembered.token, { now: idleExpiry })).toBeNull();
+    expect(await verifyPlatformCsrfToken(db, remembered.token, remembered.csrfToken, idleExpiry)).toBe(false);
+
+    const second = await createPlatformSession(db, principalId, { now: NOW, rememberDevice: true });
+    for (const day of [6, 12, 18, 24, 29]) {
+      expect(await getPlatformSession(db, second.token, {
+        now: new Date(NOW.getTime() + day * 24 * 60 * 60 * 1000),
+      })).not.toBeNull();
+    }
+    expect(await getPlatformSession(db, second.token, { now: second.expiresAt })).toBeNull();
+    await revokePlatformSession(db, second.token, NOW);
+    expect(await getPlatformSession(db, second.token, { now: NOW })).toBeNull();
   });
 
   it('requires an active grant, exact tenant/company scope and read-only enforcement', async () => {

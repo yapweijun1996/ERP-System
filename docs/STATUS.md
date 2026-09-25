@@ -2986,9 +2986,11 @@ TASK-192 later recorded deployment through 0098 and an exact-volume reset.
   `admin.modules.manage` is deprecated/non-assignable and migration 0095 retires its
   existing tenant grants and active overrides.
 - The shared API-mode entry has a separate realm backed by independent
-  `platform_principal.password_hash` credentials and one-hour non-remembered
-  `erp_platform_session`/CSRF cookies; it does not create `app_user` or `erp_session`.
-  No MFA is planned for v1, which remains an explicit high-risk limitation.
+  `platform_principal.password_hash` credentials and `erp_platform_session`/CSRF
+  cookies. The default session lasts one hour; an opted-in trusted device lasts up to
+  30 days with a seven-day idle limit. It does not create `app_user` or `erp_session`.
+  TASK-250 source/browser verification is local; production rollout is pending. No MFA
+  is planned for v1, which remains an explicit high-risk limitation.
 - Platform Superadmin may enter a default-15-minute, bounded, visible simulation of an
   active assigned user in the selected Master/Company. Authority is exactly the target
   user's entitlement, permissions, scope and workflow authority; audit attributes both
@@ -3002,8 +3004,9 @@ audit, task-graph validation, Markdown links and `git diff --check` pass. The fu
 run reached 164 passed files / 654 passed tests and one expected skip; its sole failing
 file was the stale Demo role-permission pack, which was regenerated and then passed its
 focused test. A second 15-minute full-suite run was not repeated.
-TASK-187 focused proof is 3 files / 12 tests: `platformSuperadmin.integration.test.ts`
-proves password realm, no Remember Me, no tenant session, exact target authority,
+At the TASK-187 checkpoint, focused proof was 3 files / 12 tests:
+`platformSuperadmin.integration.test.ts` proved the password realm, the then-disabled
+Remember Me option, no tenant session, exact target authority,
 company/logout lock, platform mutation block and dual audit; the remaining focused
 platform tests, typechecks, schema v96/drift and an API-mode browser login/workspace
 check also pass. TASK-188 completed the remaining full-suite, complete platform browser,

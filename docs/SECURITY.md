@@ -64,7 +64,10 @@ the real platform principal, request correlation and a SHA-256 source-IP digest.
 old anonymous tenant setup endpoint is permanently retired with `410`.
 
 Platform Superadmin sessions use separate password verification and
-`erp_platform_session`/CSRF cookies with a one-hour maximum and no Remember Me. Platform
+`erp_platform_session`/CSRF cookies. The default lifetime is one hour; explicit
+“Remember this device” extends it to a 30-day absolute lifetime with a seven-day idle
+limit. The browser stores no password or bearer token outside the HttpOnly session
+cookie. Signing out revokes the server session. Platform
 mutations additionally require Platform CSRF, an idempotency key, request ID, duplicate
 checks, optimistic versions where defined and append-only before/after audit. A
 `platform_superadmin` role receives `platform.tenants.read/manage`; support roles do not.
@@ -302,8 +305,8 @@ deployment.
 
 Platform end-user simulation may target any active assigned user in the selected
 Master/Company and may perform that user's legitimate writes. TASK-187 implements a
-visible banner, default 15-minute expiry bounded by the one-hour platform session, no
-Remember Me, immediate durable revoke/return, login rate limiting, platform CSRF and dual
+visible banner, default 15-minute expiry bounded by the parent platform session,
+immediate durable revoke/return, login rate limiting, platform CSRF and dual
 `actorUserId`/`platformPrincipalId` audit. Platform permissions are never unioned into
 the target session and MAC writes reject until the operator returns to the platform
 workspace.

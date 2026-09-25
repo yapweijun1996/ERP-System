@@ -89,6 +89,13 @@ export interface PlatformSessionCredentials {
 export const PLATFORM_SESSION_COOKIE = 'erp_platform_session';
 export const PLATFORM_CSRF_COOKIE = 'erp_platform_csrf';
 export const PLATFORM_SESSION_TTL_MS = 60 * 60 * 1000;
+export const PLATFORM_REMEMBERED_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+export const PLATFORM_REMEMBERED_IDLE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const REMEMBERED_PLATFORM_TOKEN_PREFIX = 'pr_';
+
+function isRememberedPlatformToken(token: string): boolean {
+  return token.startsWith(REMEMBERED_PLATFORM_TOKEN_PREFIX);
+}
 
 export interface SupportAccessRestrictions {
   blockedSensitiveFields?: readonly string[];
@@ -308,11 +315,13 @@ export async function provisionPlatformPrincipal(
 export async function createPlatformSession(
   db: DB,
   principalId: number,
-  options: { ttlMs?: number; now?: Date } = {},
+  options: { ttlMs?: number; now?: Date; rememberDevice?: boolean } = {},
 ): Promise<PlatformSessionCredentials> {
   const now = options.now ?? new Date();
-  const ttlMs = options.ttlMs ?? PLATFORM_SESSION_TTL_MS;
-  if (!Number.isFinite(ttlMs) || ttlMs <= 0 || ttlMs > PLATFORM_SESSION_TTL_MS) {
+  const maximumTtlMs = options.rememberDevice
+    ? PLATFORM_REMEMBERED_SESSION_TTL_MS : PLATFORM_SESSION_TTL_MS;
+  const ttlMs = options.ttlMs ?? maximumTtlMs;
+  if (!Number.isFinite(ttlMs) || ttlMs <= 0 || ttlMs > maximumTtlMs) {
     throw new PlatformAccessError(400, 'invalid_platform_session_ttl', 'Platform session TTL is invalid.');
   }
   const [principal] = await db.select({ isActive: platformPrincipal.isActive })
@@ -322,7 +331,7 @@ export async function createPlatformSession(
   if (!principal?.isActive) {
     throw new PlatformAccessError(403, 'platform_principal_inactive', 'Platform principal is inactive.');
   }
-  const token = newToken('p_');
+  const token = newToken(options.rememberDevice ? REMEMBERED_PLATFORM_TOKEN_PREFIX : 'p_');
   const csrfToken = newToken('pc_');
   const expiresAt = new Date(now.getTime() + ttlMs);
   await db.insert(platformSession).values({
@@ -370,6 +379,7 @@ export async function getPlatformSession(
 ): Promise<PlatformSessionData | null> {
   if (!token) return null;
   const now = options.now ?? new Date();
+  const remembered = isRememberedPlatformToken(token);
   const [row] = await db.select({
     principalId: platformPrincipal.principalId,
     principalKey: platformPrincipal.principalKey,
@@ -382,6 +392,7 @@ export async function getPlatformSession(
       eq(platformPrincipal.isActive, true),
       isNull(platformSession.revokedAt),
       gt(platformSession.expiresAt, now),
+      ...(remembered ? [gt(platformSession.lastSeenAt, new Date(now.getTime() - PLATFORM_REMEMBERED_IDLE_TTL_MS))] : []),
     ))
     .limit(1);
   if (!row) return null;
@@ -405,12 +416,14 @@ export async function verifyPlatformCsrfToken(
   now = new Date(),
 ): Promise<boolean> {
   if (!token || !csrfToken) return false;
+  const remembered = isRememberedPlatformToken(token);
   const [row] = await db.select({ csrfHash: platformSession.csrfHash })
     .from(platformSession)
     .where(and(
       eq(platformSession.tokenHash, hashSecret(token)),
       isNull(platformSession.revokedAt),
       gt(platformSession.expiresAt, now),
+      ...(remembered ? [gt(platformSession.lastSeenAt, new Date(now.getTime() - PLATFORM_REMEMBERED_IDLE_TTL_MS))] : []),
     ))
     .limit(1);
   return Boolean(row && secretsMatch(row.csrfHash, csrfToken));

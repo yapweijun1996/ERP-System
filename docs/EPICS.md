@@ -2596,6 +2596,7 @@ Approved flow:
 | TASK-191 | Done | Workspace UX, API/idempotency, browser/security/negative tests |
 | TASK-192 | Done | Deploy, backup/restore rehearsal, exact-volume reset and final production evidence |
 | TASK-193 | Blocked | Administrator email self-service reset; SMTP is not configured |
+| TASK-250 | In Progress | Opt-in Platform trusted-device login is source-verified; production rollout pending |
 
 Core exit criteria for EPIC-065 were met at the TASK-192 checkpoint: it proved migration 0098 and production RLS on
 the deployed release, preserves old data before the reset, validates custom dumps and an

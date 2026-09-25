@@ -15,6 +15,7 @@ import {
   evaluateSupportAccess,
   getPlatformSession,
   PLATFORM_CSRF_COOKIE,
+  PLATFORM_REMEMBERED_SESSION_TTL_MS,
   PLATFORM_SESSION_COOKIE,
   PLATFORM_SESSION_TTL_MS,
   listSupportAccessGrants,
@@ -205,12 +206,11 @@ export function createPlatformRouter(db: DB, options: { secureCookies: boolean }
       apiError(res, 400, 'invalid_request', 'Platform principal key and password are required.');
       return;
     }
-    // The platform realm deliberately has no Remember Me option. Treat an
-    // attempted flag as invalid instead of silently extending a session.
-    if (body.rememberDevice != null && body.rememberDevice !== false) {
-      apiError(res, 400, 'platform_remember_me_not_supported', 'Platform sessions cannot be remembered.');
+    if (body.rememberDevice != null && typeof body.rememberDevice !== 'boolean') {
+      apiError(res, 400, 'invalid_request', 'Remember this device must be a boolean.');
       return;
     }
+    const rememberDevice = body.rememberDevice === true;
     const identifier = loginIdentifierHash(`platform:${body.principalKey.trim().toLowerCase()}`, clientIp(req));
     const rateLimit = await checkLoginRateLimit(db, identifier);
     if (!rateLimit.allowed) {
@@ -226,16 +226,17 @@ export function createPlatformRouter(db: DB, options: { secureCookies: boolean }
       return;
     }
     await clearLoginFailures(db, identifier);
-    const created = await createPlatformSession(db, principal.principalId);
+    const created = await createPlatformSession(db, principal.principalId, { rememberDevice });
+    const cookieTtlMs = rememberDevice ? PLATFORM_REMEMBERED_SESSION_TTL_MS : PLATFORM_SESSION_TTL_MS;
     res.cookie(PLATFORM_SESSION_COOKIE, created.token, {
       ...cookieCommon,
       httpOnly: true,
-      maxAge: PLATFORM_SESSION_TTL_MS,
+      maxAge: cookieTtlMs,
     });
     res.cookie(PLATFORM_CSRF_COOKIE, created.csrfToken, {
       ...cookieCommon,
       httpOnly: false,
-      maxAge: PLATFORM_SESSION_TTL_MS,
+      maxAge: cookieTtlMs,
     });
     res.json({
       data: {
@@ -244,7 +245,7 @@ export function createPlatformRouter(db: DB, options: { secureCookies: boolean }
         principalKey: principal.principalKey,
         displayName: principal.displayName,
         expiresAt: created.expiresAt,
-        rememberDevice: false,
+        rememberDevice,
       },
       meta: {},
     });

@@ -560,7 +560,8 @@ EPIC-064 requires:
   correlation and before/after audit. v1 applies immediately without reason/ticket or
   maker-checker;
 - the shared visual login offers a separate platform realm using independent password
-  credentials and a non-remembered session of at most one hour. It does not create an
+  credentials. Its default session lasts at most one hour; an explicit trusted-device
+  choice permits a 30-day absolute / seven-day idle session. It does not create an
   `app_user` or tenant session;
 - explicit user simulation may target any active user in the selected Master/Company.
   It may perform exactly the target user's allowed writes, never unions platform power,

@@ -1600,7 +1600,8 @@ TASK-185 foundation and TASK-186 tenant-authority cutover:
    TASK-226 adds a one-time trusted initial Platform setup selection (and its static-Demo
    PGlite equivalent) before optional AI; tenant onboarding can no longer select modules.
 5. TASK-187/migration 0096 authenticates Platform Superadmin with independent password
-   credentials, one-hour non-remembered platform cookies and `platform.simulation.manage`.
+   credentials and `platform.simulation.manage`. Current login keeps the one-hour default
+   and offers an opt-in 30-day absolute / seven-day idle trusted-device cookie.
    Explicit simulation of an active assigned tenant user is default-15-minute, cannot
    outlive the platform session, runs with exactly the target authority, remains visibly
    marked/revocable and records both identities; it never provides a MAC bypass.

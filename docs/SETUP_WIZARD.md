@@ -159,10 +159,11 @@ TASK-185 now stores the versioned entitlement/default and exposes the platform-o
 API. TASK-186 applies defaults during trusted Master/Company bootstrap and removes the
 legacy modules stage, so this is now the live setup boundary.
 
-TASK-187 now provides a separate one-hour, no-Remember-Me Platform Superadmin password
+TASK-187 introduced a separate one-hour Platform Superadmin password
 realm, Master/Company workspace and exact-user simulation. It remains outside the
 tenant setup session: a Platform Superadmin returns to the platform workspace before
-switching Company or signing out of a simulated tenant view.
+switching Company or signing out of a simulated tenant view. Login now also offers an
+opt-in trusted-device session with a 30-day absolute and seven-day idle limit.
 
 ## First production identity and provisioning (EPIC-065)
 
@@ -170,8 +171,9 @@ This is an independent platform realm, not a renamed tenant admin. Public regist
 is intentionally available only while all `platform_principal`, Master, Company, tenant
 user, membership/role and setup-state counts are zero. The first successful caller claims
 the database; the accepted residual risk is a first-caller takeover window before the
-operator completes registration. The Platform Superadmin password is hash-only, the
-session is capped at one hour and Remember Me/MFA are not part of v1.
+operator completes registration. The Platform Superadmin password is hash-only. The
+default session lasts one hour; trusted-device sessions are opt-in and bounded to 30
+absolute days and seven idle days. MFA is not part of v1.
 
 After registration:
 
