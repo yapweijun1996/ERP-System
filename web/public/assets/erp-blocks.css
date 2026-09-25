@@ -1128,14 +1128,15 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
 .profile-avatar.profile-avatar svg{width:64%;height:64%;display:block;}
 .profile-avatar.profile-avatar img{width:100%;height:100%;display:block;object-fit:cover;}
 .profile-avatar.profile-avatar [hidden]{display:none;}
-.set-palettes{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
-.set-pal{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 9px 7px;border:1px solid var(--border);border-radius:11px;background:var(--surface-2);transition:border-color .14s var(--ease),box-shadow .14s var(--ease),transform .12s;}
+.set-row-palette{align-items:stretch;flex-direction:column;gap:12px;}
+.set-row-palette .set-row-c{display:block;min-width:0;width:100%;}
+.set-palettes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;width:100%;}
+.set-pal{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;min-height:64px;gap:6px;padding:8px 9px 7px;border:1px solid var(--border);border-radius:11px;background:var(--surface-2);transition:border-color .14s var(--ease),box-shadow .14s var(--ease),transform .12s;}
 .set-pal:hover{transform:translateY(-1px);border-color:var(--muted);}
 .set-pal.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-tint);}
 .set-pal-sw{display:flex;border-radius:5px;overflow:hidden;width:46px;height:18px;}
 .set-pal-sw i{flex:1;}
-.set-pal-l{font-size:calc(11.5px * var(--fs,1));font-weight:600;color:var(--fg);letter-spacing:.01em;}
-@media (max-width:760px){ .set-palettes{justify-content:flex-start;} }
+.set-pal-l{font-size:calc(11.5px * var(--fs,1));font-weight:600;color:var(--fg);letter-spacing:.01em;text-align:center;overflow-wrap:anywhere;}
 .set-swatches{display:flex;gap:11px;}
 .set-sw{width:26px;height:26px;border-radius:50%;position:relative;transition:transform .12s;}
 .set-sw:hover{transform:scale(1.1);}
@@ -1306,7 +1307,15 @@ table.lines tfoot td{border-top:2px solid var(--border);border-bottom:none;paddi
   #setupWizardView .step .sdot{width:34px;height:34px;}
   #setupWizardView .stepline{min-width:8px;margin:0 6px;}
 }
-@media (max-width:760px){ .set-rail{display:none;} .set-grid{grid-template-columns:1fr;} .set-row-c select{min-width:150px;} }
+@media (max-width:760px){
+  .set-rail{display:none;}
+  .set-grid{grid-template-columns:1fr;}
+  .set-sec .set-row:not(.top){flex-direction:column;align-items:stretch;gap:10px;}
+  .set-row-c{min-width:0;width:100%;flex-wrap:wrap;}
+  .set-row-c .seg{flex-wrap:wrap;max-width:100%;}
+  .set-row-c select{min-width:150px;}
+  .set-palettes{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
 
 /* ===== keyboard shortcuts sheet ===== */
 .modal:has(.kssheet){--modal-width:680px;}
