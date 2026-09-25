@@ -2989,8 +2989,10 @@ TASK-192 later recorded deployment through 0098 and an exact-volume reset.
   `platform_principal.password_hash` credentials and `erp_platform_session`/CSRF
   cookies. The default session lasts one hour; an opted-in trusted device lasts up to
   30 days with a seven-day idle limit. It does not create `app_user` or `erp_session`.
-  TASK-250 source/browser verification is local; production rollout is pending. No MFA
-  is planned for v1, which remains an explicit high-risk limitation.
+  TASK-250 is deployed at `dfc654a19a35d6a43a12a72d1bb2534b0e7bb39c`; the public
+  release manifest, asset hashes and unauthenticated login UI are verified. A real
+  Platform account return visit remains unverified. No MFA is planned for v1, which
+  remains an explicit high-risk limitation.
 - Platform Superadmin may enter a default-15-minute, bounded, visible simulation of an
   active assigned user in the selected Master/Company. Authority is exactly the target
   user's entitlement, permissions, scope and workflow authority; audit attributes both
