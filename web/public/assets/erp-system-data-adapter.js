@@ -583,7 +583,7 @@
       "from invoice i join customer c on c.id = i.customer_id " +
       "join sales_order o on o.id = i.order_id where " + wc('i') + " order by i.id");
     var glLegs = await rows(
-      "select g.journal_ref, a.code, a.name, g.debit::float as debit, g.credit::float as credit, g.memo " +
+      "select g.journal_ref, g.posted_at::text as posted_at, a.code, a.name, g.debit::float as debit, g.credit::float as credit, g.memo " +
       "from gl_entry g join account a on a.id = g.account_id " +
       "where " + wc('g') + " order by g.id");
     var movements = await rows(
@@ -724,9 +724,9 @@
       invoices: [{ doc_no: 'INV-SO-1', status: 'unpaid', invoice_date: '2024-06-01', currency: 'SGD',
                    net: 110, tax: 9.9, total: 119.9, customer: 'Beta Pte Ltd', customer_code: 'CUST1', order_no: 'SO-1' }],
       glLegs: [
-        { journal_ref: 'INV-SO-1', code: '1100', name: 'Accounts Receivable', debit: 119.9, credit: 0, memo: 'AR' },
-        { journal_ref: 'INV-SO-1', code: '4000', name: 'Revenue', debit: 0, credit: 110, memo: 'Revenue' },
-        { journal_ref: 'INV-SO-1', code: '2200', name: 'GST Output Tax', debit: 0, credit: 9.9, memo: 'Output tax' },
+        { journal_ref: 'INV-SO-1', posted_at: '2024-06-01T00:00:00Z', code: '1100', name: 'Accounts Receivable', debit: 119.9, credit: 0, memo: 'AR' },
+        { journal_ref: 'INV-SO-1', posted_at: '2024-06-01T00:00:00Z', code: '4000', name: 'Revenue', debit: 0, credit: 110, memo: 'Revenue' },
+        { journal_ref: 'INV-SO-1', posted_at: '2024-06-01T00:00:00Z', code: '2200', name: 'GST Output Tax', debit: 0, credit: 9.9, memo: 'Output tax' },
       ],
       movements: [
         { id: 1, qty: 5, direction: 'out', ref_type: 'sales_order', ref_id: 1, moved_at: '2024-06-01 09:00', sku: 'SG-WIDGET', name: 'Widget (SG)', warehouse: 'WH-SALES' },
@@ -1136,6 +1136,13 @@
     };
     var revAcct = d.accounts.filter(function(a){ return a.code === '4000'; })[0];
     var revenueTotal = revAcct ? Math.round((revAcct.credit - revAcct.debit) * 100) / 100 : orderNet;
+    var cashAcct = d.accounts.filter(function(a){ return a.code === '1000'; })[0];
+    var companyTimeZone = DB.company.timeZone || 'Asia/Singapore';
+    var monthFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: companyTimeZone, year: 'numeric', month: '2-digit' });
+    var currentMonth = monthFormatter.format(new Date());
+    var monthRevenue = d.glLegs.filter(function(l){
+      return l.code === '4000' && l.posted_at && monthFormatter.format(new Date(l.posted_at)) === currentMonth;
+    }).reduce(function(sum, l){ return sum + l.credit - l.debit; }, 0);
     DB.arAging = d.customers.map(function(c){
       return { cust: c.name, code: c.code, cur: c.balance, b30: 0, b60: 0, b90: 0, b90p: 0 };
     });
@@ -1177,10 +1184,10 @@
       goodsReceipts: 0,
       pickTasks: 0,
       leaveRequests: (d.leaveApprovals || []).filter(function(row){ return row.status === 'pending'; }).length,
-      openOrderValue: DB.salesOrders.filter(function(o){ return o.status !== 'Closed' && o.status !== 'Cancelled'; })
+      openOrderValue: DB.salesOrders.filter(function(o){ return o.status === 'Draft' || o.status === 'Pending Approval'; })
         .reduce(function(sum, o){ return sum + o.total; }, 0),
-      cash: 842000,
-      mtdSales: revenueTotal,
+      cash: cashAcct ? Math.round((cashAcct.debit - cashAcct.credit) * 100) / 100 : 0,
+      mtdSales: Math.round(monthRevenue * 100) / 100,
       cleared: 1,
     };
 

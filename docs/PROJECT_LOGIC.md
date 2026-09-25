@@ -1,5 +1,16 @@
 # ERP-System Project Logic
 
+Home monetary KPIs — 2026-09-25: `web/public/assets/screens-ops.js` shows
+Open order value and MTD revenue only for active Sales with `sales.read`, and
+Cash position only for active Finance with `finance.read`. `/api/dashboard`
+checks current permission and effective Company module entitlement before
+reading Sales, Finance or Inventory facts; denied metrics are `null` and
+unavailable values display as `—`, never a fabricated zero. The canonical
+`src/api/dashboard.ts` read model uses Company-scoped draft and pending-approval
+orders, account `1000` debit less credit for cash, and account `4000` credit
+less debit posted in the current month of the Company's IANA time zone. The
+Demo adapter derives the same values from local canonical facts.
+
 Product feedback local contract — 2026-09-24: `src/data/schema/productFeedback.ts`
 defines Company-scoped `product_case` and `product_case_event` records, separate
 from the customer warranty `service_ticket`. An authenticated ERP Agent with
