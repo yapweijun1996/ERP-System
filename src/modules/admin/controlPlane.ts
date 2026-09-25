@@ -87,19 +87,26 @@ export async function getMasterControlWithin(exec: DB, scope: ControlScope) {
     set.add(a.userId);
     counts.set(a.companyFn, set);
   });
+  const companyRows = companies.map((row) => ({ ...row, userCount: counts.get(row.companyFn)?.size ?? 0 }));
+  const companyUsers = users.map((user) => {
+    const grants = rolesByUser.get(user.userId) ?? [];
+    return {
+      ...user,
+      roleId: grants[0]?.roleId ?? null,
+      roleName: grants.map((grant) => grant.roleName).join(', '),
+      roles: grants,
+    };
+  });
   return {
     master: tenant,
     activeCompanyFn: scope.companyFn,
-    companies: companies.map((row) => ({ ...row, userCount: counts.get(row.companyFn)?.size ?? 0 })),
-    users: users.map((user) => {
-      const grants = rolesByUser.get(user.userId) ?? [];
-      return {
-        ...user,
-        roleId: grants[0]?.roleId ?? null,
-        roleName: grants.map((grant) => grant.roleName).join(', '),
-        roles: grants,
-      };
-    }),
+    summary: {
+      tenantCompanies: companyRows.length,
+      activeCompanyUsers: companyUsers.filter((user) => user.isActive).length,
+      tenantRoles: roles.length,
+    },
+    companies: companyRows,
+    users: companyUsers,
     roles,
   };
 }

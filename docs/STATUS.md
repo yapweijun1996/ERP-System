@@ -2028,6 +2028,12 @@ the shared Drizzle/PGlite/PostgreSQL schema to 127 tables. All routes at that mi
 were Canonical and API-capable; TASK-101 subsequently adds Service Contract detail,
 bringing the current registry to **115 Canonical routes with Preview=0**.
 
+As of 2026-09-25, the Master Control summary comes from the shared Demo/API
+control-plane command:
+tenant companies, active human users in the current Company, and tenant roles have
+explicit scopes. Disabled users remain visible in the user table but do not inflate
+the active-user card; the three cards use a dedicated responsive layout.
+
 ## Stable async navigation feedback (TASK-086, 2026-07-23)
 
 The shared async loader and error shell no longer exposes lower-case hash-route slugs.
