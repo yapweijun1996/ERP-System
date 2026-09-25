@@ -351,7 +351,7 @@ SCREENS['settings'] = async function(root, params){
       `<button class="set-pal ${p.id===storedPalette?'on':''}" data-c="${p.light.accent}" data-name="${p.id}" aria-label="${t(paletteLabelKey[p.id]||'appearance.ariaBlue')}">
         <span class="set-pal-sw">${p.swatches.map(c=>`<i style="background:${c}"></i>`).join('')}</span>
         <span class="set-pal-l">${t(paletteLabelKey[p.id]||'appearance.ariaBlue')}</span></button>`
-    ).join('')}</div>`,false,'set-row-palette')}
+    ).join('')}</div>`,false,'set-row-wide')}
     ${row(s('accent'),s('accentDesc'),`<div class="set-swatches">${accents.map(a=>
       `<button class="set-sw ${a[0]===storedAccent?'on':''}" data-c="${a[0]}" style="background:${a[0]}" aria-label="${a[1]}"></button>`
     ).join('')}</div>`)}
@@ -370,7 +370,7 @@ SCREENS['settings'] = async function(root, params){
     .map(item=>[item.code,item.native]);
   const browserTimeZone=Intl.DateTimeFormat().resolvedOptions().timeZone||'—';
   const localization=panel('set-localization','location',s('localization'),`
-    ${row(s('language'),s('languageDesc'),seg('language',languageOptions,lang))}
+    ${row(s('language'),s('languageDesc'),seg('language',languageOptions,lang),false,'set-row-wide')}
     ${row(s('timeZone'),'',cap(browserTimeZone,'accent'))}
     ${row(s('currency'),'',cap(companyCurrency,'accent'))}`);
 
