@@ -888,8 +888,8 @@ SCREENS['company-onboarding'] = async function(root){
     const completed=onboarding&&(onboarding.completedSteps||onboarding.completed_steps)||[];
     const onboardingPanel=onboarding?`<div class="panel" style="margin:0 24px 24px">
       <div class="panel-h"><h3>${esc(t('onboard.title'))}</h3>${cap(t('onboard.status.'+onboardingStatus),onboardingStatus==='live'?'ok':'warn')}</div>
-      <div class="panel-body"><div class="stepper">${stages.map((name,index)=>`<div class="step ${completed.includes(name)?'done':onboardingStage===name?'active':''}"><span>${index+1}</span><b>${esc(t('onboard.stage.'+name))}</b></div>`).join('')}</div>
-      ${onboardingStatus==='live'?`<div class="callout info">${esc(t('onboard.liveHint'))}</div>`:`<div class="callout warn">${esc(t('onboard.setupHint'))}</div>
+      <div class="panel-body"><ol class="company-onboarding-steps" role="list" aria-label="${esc(t('onboard.title'))}">${stages.map((name,index)=>`<li class="company-onboarding-step ${completed.includes(name)?'is-complete':onboardingStage===name?'is-current':''}" ${onboardingStage===name?'aria-current="step"':''}><span class="company-onboarding-step-number" aria-hidden="true">${index+1}</span><span class="company-onboarding-step-label">${esc(t('onboard.stage.'+name))}</span></li>`).join('')}</ol>
+      ${onboardingStatus==='live'?'':`
       ${['import','opening_balance'].includes(onboardingStage)?`<div class="fldrow c3" style="margin-top:12px"><div class="fld"><span>${esc(t('onboard.importTarget'))}</span><select id="obTarget">${['employee','customer','supplier','product','account','warehouse','inventory','ar','ap','gl'].map(item=>`<option value="${item}">${esc(t('onboard.target.'+item))}</option>`).join('')}</select></div><div class="fld"><span>${esc(t('onboard.file'))}</span><input id="obFile" type="file" accept=".csv,.xlsx"></div><div class="fld"><span>${esc(t('onboard.atomicImport'))}</span>${btn(t('onboard.preflightCommit'),{icon:'upload',cls:'soft',attrs:'data-onboarding="import"'})}</div></div>`:''}
       <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">${onboardingStage==='live'?btn(t('onboard.goLive'),{icon:'check',cls:'primary',attrs:'data-onboarding="go-live"'}):btn(t('onboard.completeStage'),{icon:'check',cls:'primary',attrs:'data-onboarding="complete"'})}</div>`}</div>
     </div>`:'';
@@ -897,7 +897,7 @@ SCREENS['company-onboarding'] = async function(root){
       <div class="pagehead">
         ${crumbs([DB.company.name,'Admin',t('onboard.title')])}
         <div class="h1row"><h1>${esc(t('onboard.title'))}</h1><span class="acct-role" style="font-size:11px">${ic('shield')}${esc(DB.user.role)}</span></div>
-        <div class="h1sub">${esc(t('onboard.setupHint'))}</div>
+        <div class="h1sub">${esc(t(onboardingStatus==='live'?'onboard.liveHint':'onboard.setupHint'))}</div>
       </div>
       ${onboardingPanel}
     </div></section></div>`;
