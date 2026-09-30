@@ -1,5 +1,5 @@
 import { OrganizationError, listOrganizationWithin, saveOrganizationWithin, assignEmployeeOrganizationWithin, type OrganizationKind } from '../../modules/hr/organization';
-import { assertHrEmployeeAccessWithin, assertHrEmploymentEndAccessWithin, resolveHrEmployeeAccessWithin } from '../../auth/hrDataAccess';
+import { assertHrEmployeeAccessWithin, assertHrEmploymentEndAccessWithin, assertHrCompanyAccessWithin, resolveHrEmployeeAccessWithin } from '../../auth/hrDataAccess';
 import { Router } from 'express';
 import { and, eq } from 'drizzle-orm';
 import type { DB } from '../../data/db';
@@ -31,7 +31,7 @@ import {
   completeIdempotentRequest,
 } from '../idempotency';
 import { withTenantTransaction } from '../../data/tenantTransaction';
-import { calendarOutboundConnection, employee, leaveRequest, leaveCancellationRequest } from '../../data/schema';
+import { calendarOutboundConnection, employee, leaveRequest, leaveCancellationRequest, staffAppointment } from '../../data/schema';
 import {
   LeaveApplicationError,
   createLeaveDraftWithin,
@@ -173,9 +173,26 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
     const resource = req.path.startsWith('/leave-') ? 'hr/leave-requests' : 'hr/employees';
     const tenantScope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
     const access = await withTenantTransaction(db, tenantScope, tx =>
-      resolveHrEmployeeAccessWithin(tx, session, resource, permission));
+      resolveHrEmployeeAccessWithin(tx, session, resource, permission, {
+        includeInactiveTargets: /^\/employees\/[^/]+\/actions\/end-employment$/.test(req.path),
+      }));
     if (access !== null) {
-      let target = Number(req.params.employeeId ?? req.body?.employeeId ?? 0);
+      // Only declared employee-owned routes may use a request employee subject.
+      // Everything else defaults to Company authority, regardless of extra body fields.
+      const employeeRoute = /^\/(employees|employee-accounts|employee-leave-balances)\/[^/]+(?:\/.*)?$/.test(req.path)
+        && !req.path.endsWith('/actions/offboard');
+      let target = employeeRoute ? Number(req.params.employeeId) : 0;
+      if (req.method === 'POST' && ['/calendar/appointments', '/leave-applications'].includes(req.path)) {
+        target = Number(req.body?.employeeId ?? 0);
+      }
+      let replacementTarget = 0;
+      if (req.params.appointmentId) {
+        const [record] = await withTenantTransaction(db, tenantScope, tx => tx.select({ employeeId: staffAppointment.employeeId })
+          .from(staffAppointment).where(and(eq(staffAppointment.masterFn, tenantScope.masterFn),
+            eq(staffAppointment.companyFn, tenantScope.companyFn), eq(staffAppointment.id, Number(req.params.appointmentId)))).limit(1));
+        target = record?.employeeId ?? 0;
+        if (req.method === 'PUT') replacementTarget = Number(req.body?.employeeId ?? 0);
+      }
       if (req.params.requestId) {
         const [request] = await withTenantTransaction(db, tenantScope, tx => tx.select({ employeeId: leaveRequest.employeeId })
           .from(leaveRequest).where(and(eq(leaveRequest.masterFn, tenantScope.masterFn),
@@ -194,7 +211,7 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
         target = request?.employeeId ?? 0;
       }
       const scopedList = req.method === 'GET' && ['/calendar/staff', '/leave-approval-queue'].includes(req.path);
-      if (!access.length || (!scopedList && (!target || !access.includes(target)))) {
+      if (!access.length || (!scopedList && (!target || !access.includes(target) || replacementTarget > 0 && !access.includes(replacementTarget)))) {
         apiError(res, 403, 'data_scope_denied', 'The current staff scope does not include this operation.'); return null;
       }
       res.locals.hrAllowedEmployeeIds = access;
@@ -688,6 +705,7 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
       await runIdempotent(req, res, session, 'hr.staff-appointment.create', payload, async () => {
         const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
         const data = await withTenantTransaction(db, scope, async (tx) => {
+          await assertHrEmployeeAccessWithin(tx, session, 'hr/employees', PERMISSIONS.hrWrite, payload.employeeId);
           const result = await createStaffAppointmentWithin(tx, scope, payload, session.userId);
           if (result.syncToExternal) {
             await enqueueStaffAppointmentCalendarSyncWithin(tx, scope, {
@@ -734,6 +752,11 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
       }, async () => {
         const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
         const data = await withTenantTransaction(db, scope, async (tx) => {
+          const [stored] = await tx.select({ employeeId: staffAppointment.employeeId }).from(staffAppointment)
+            .where(and(eq(staffAppointment.masterFn, scope.masterFn), eq(staffAppointment.companyFn, scope.companyFn),
+              eq(staffAppointment.id, appointmentId))).limit(1).for('update');
+          await assertHrEmployeeAccessWithin(tx, session, 'hr/employees', PERMISSIONS.hrWrite, stored?.employeeId ?? 0);
+          await assertHrEmployeeAccessWithin(tx, session, 'hr/employees', PERMISSIONS.hrWrite, payload.employeeId);
           const result = await updateStaffAppointmentWithin(
             tx, scope, appointmentId, expectedVersion, payload, session.userId,
           );
@@ -780,6 +803,10 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
       }, async () => {
         const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
         const data = await withTenantTransaction(db, scope, async (tx) => {
+          const [stored] = await tx.select({ employeeId: staffAppointment.employeeId }).from(staffAppointment)
+            .where(and(eq(staffAppointment.masterFn, scope.masterFn), eq(staffAppointment.companyFn, scope.companyFn),
+              eq(staffAppointment.id, appointmentId))).limit(1).for('update');
+          await assertHrEmployeeAccessWithin(tx, session, 'hr/employees', PERMISSIONS.hrWrite, stored?.employeeId ?? 0);
           const result = await cancelStaffAppointmentWithin(
             tx, scope, appointmentId, expectedVersion, session.userId,
           );
@@ -1209,12 +1236,14 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
           masterFn: session.masterFn,
           companyFn: session.activeCompanyFn,
         };
-        const data = await withTenantTransaction(db, scope, (tx) =>
-          offboardEmployeeAccount(tx, scope, {
+        const data = await withTenantTransaction(db, scope, async (tx) => {
+          await assertHrCompanyAccessWithin(tx, session);
+          return offboardEmployeeAccount(tx, scope, {
           ...payload,
           actorUserId: session.userId,
           requestId: context(res).requestId,
-          }));
+          });
+        });
         return { status: 200, data };
       });
     } catch (error) {

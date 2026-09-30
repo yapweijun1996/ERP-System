@@ -10,6 +10,7 @@ import {
   role,
   rolePermission,
   userCompanyRole,
+  userCompanyRoleScope,
 } from '../data/schema';
 import { seedDemo } from '../data/seed';
 import { freshDb } from '../test/helpers';
@@ -103,7 +104,8 @@ describe('employee account API lifecycle', () => {
     const [hrRole] = await db.insert(role).values({masterFn:'M1',companyFn:'C-SG',name:'Credential HR'}).returning();
     await db.insert(rolePermission).values(['hr.read','hr.write'].map(permissionKey=>({masterFn:'M1',roleId:hrRole.roleId,permissionKey})));
     const [hrUser] = await db.select().from(appUser).where(eq(appUser.username,'viewer')).limit(1);
-    await db.insert(userCompanyRole).values({companyFn:'C-SG',userId:hrUser.userId,roleId:hrRole.roleId});
+    const [hrAssignment] = await db.insert(userCompanyRole).values({companyFn:'C-SG',userId:hrUser.userId,roleId:hrRole.roleId,scopeBackfilledAt:new Date()}).returning();
+    await db.insert(userCompanyRoleScope).values({masterFn:'M1',companyFn:'C-SG',assignmentId:hrAssignment.assignmentId,resourceKey:'hr/*',scope:'company',targetType:'company',targetId:'C-SG'});
     const hr = cookies(await login('viewer','viewer1234'));
     const hrReveal = await fetch(revealUrl, {method:'POST',headers:{cookie:hr.header,'x-csrf-token':hr.csrf,'content-type':'application/json'},body:'{}'});
     expect(hrReveal.status).toBe(200);

@@ -637,6 +637,12 @@ async function authorizeDecision(
   }
   const authorizationContext = approvalAuthorizationContext(instance, step, scope);
   if (step.currentAuthorityType === 'permission' && step.currentAuthorityPermissionKey) {
+    const subjectDecision = await authorizeWithin(exec,
+      { userId: actorUserId, masterFn: scope.masterFn, companyFn: scope.companyFn },
+      step.currentAuthorityPermissionKey, {
+        now, resourceKey: authorizationContext.resourceKey, scopeTarget: authorizationContext.scopeTarget,
+        requireScope: true, context: authorizationContext.authorizationContext,
+      });
     const hrLeave = instance.domain === 'leave' && instance.entityType === 'leave_request';
     const staffAccess = hrLeave ? await resolveHrEmployeeAccessWithin(exec, {
       userId: actorUserId, masterFn: scope.masterFn, activeCompanyFn: scope.companyFn,
@@ -647,7 +653,7 @@ async function authorizeDecision(
     const permitted = hrLeave
       ? staffAccess === null || !!instance.subjectEmployeeId && staffAccess.includes(instance.subjectEmployeeId)
       : await hasPermissionWithin(exec, scope, actorUserId, step.currentAuthorityPermissionKey, now, authorizationContext);
-    if (!permitted) {
+    if (subjectDecision.reasonCode === 'DENY_EXPLICIT' || !permitted) {
       throw new ApprovalWorkflowError(
         'approval_authority_required',
         'The signed-in user does not hold the required approval authority.',

@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Server } from 'node:http';
 import { and, eq, isNull, ne } from 'drizzle-orm';
 import type { DB } from '../data/db';
-import { appUser, employee, leaveRequest, leaveType, role, rolePermission, userCompanyRole, userCompanyRoleScope } from '../data/schema';
+import { appUser, employee, customer, userCompany, leaveRequest, leaveType, role, rolePermission, userCompanyRole, userCompanyRoleScope, staffAppointment, calendarHoliday, userPermissionOverride, approvalInstance, approvalInstanceEvent, leaveBalanceEntry } from '../data/schema';
 import { freshDb } from '../test/helpers';
 import { seedDemo } from '../data/seed';
 import { createApp } from './app';
@@ -135,12 +135,121 @@ describe('one HR staff projection across generic and specific API paths',()=>{
       expectedUpdatedAt:scopedManager.updatedAt.toISOString(),reason:'Synthetic scoped handoff',handoffEmployeeId:viewerEmployee,
     },'scoped-end');
     expect(permittedEnd.status).toBe(200);
+    const replayedEnd=await request('/api/hr/employees/'+scopedManager.id+'/actions/end-employment','POST',{
+      expectedUpdatedAt:scopedManager.updatedAt.toISOString(),reason:'Synthetic scoped handoff',handoffEmployeeId:viewerEmployee,
+    },'scoped-end');
+    expect(replayedEnd.status).toBe(200);expect(replayedEnd.headers.get('idempotency-replayed')).toBe('true');
+    await db.update(userCompanyRole).set({revokedAt:new Date()}).where(eq(userCompanyRole.assignmentId,assignmentId));
+    expect((await request('/api/hr/employees/'+scopedManager.id+'/actions/end-employment','POST',{
+      expectedUpdatedAt:scopedManager.updatedAt.toISOString(),reason:'Synthetic scoped handoff',handoffEmployeeId:viewerEmployee,
+    },'scoped-end')).status).toBe(403);
+    await db.update(userCompanyRole).set({revokedAt:null}).where(eq(userCompanyRole.assignmentId,assignmentId));
     expect((await db.select().from(employee).where(eq(employee.id,scopedManager.id)))[0].isActive).toBe(false);
     expect((await db.select().from(employee).where(eq(employee.id,scopedReport.id)))[0].managerId).toBe(viewerEmployee);
 
 
     expect((await request('/api/hr/employees/'+viewerEmployee+'/organization','PUT',{businessUnitId:null,positionId:null,expectedVersion:1,reason:'Cannot widen own authority'})).status).toBe(403);
     expect((await request('/api/hr/organization/business_unit','POST',{code:'NO',name:'No grant',isActive:true,expectedVersion:0})).status).toBe(403);
+  });
+  it('does not combine an unrelated role Company scope with restricted HR permission',async()=>{
+    const [unrelated]=await db.insert(role).values({...scope,name:'Synthetic unrelated company scope'}).returning();
+    await db.insert(rolePermission).values({masterFn:'M1',roleId:unrelated.roleId,permissionKey:'sales.read',allowed:true});
+    const [extra]=await db.insert(userCompanyRole).values({userId:viewerId,companyFn:'C-SG',roleId:unrelated.roleId,assignmentSource:'manual',assignedByUserId:actorId,assignmentReason:'Synthetic mixed-role regression',scopeBackfilledAt:new Date()}).returning();
+    await db.insert(userCompanyRoleScope).values({...scope,assignmentId:extra.assignmentId,resourceKey:'hr/*',scope:'company',targetType:'company',targetId:'C-SG'});
+    const staff=await request('/api/hr/employees');
+    expect(staff.status).toBe(200);
+    expect((await staff.json()).data.map((row:{id:number})=>row.id)).not.toContain(otherId);
+    expect((await request('/api/hr/employees/'+targetId)).status).toBe(200);
+    expect((await request('/api/hr/employees/'+otherId)).status).toBe(404);
+    const [outsideLeave]=await db.insert(leaveRequest).values({...scope,employeeId:otherId,leaveType:'Unpaid',startDate:'2026-12-01',endDate:'2026-12-01',days:'1.00',reason:'Synthetic mixed-role outside Leave',status:'pending'}).returning();
+    const list=await request('/api/hr/leave-requests');expect(list.status).toBe(200);
+    expect((await list.json()).data.map((row:{id:number})=>row.id)).not.toContain(outsideLeave.id);
+    expect((await request('/api/hr/leave-requests/'+outsideLeave.id)).status).toBe(404);
+  });
+  it('denies linked-account offboarding without permission-qualified Company scope and leaves all ownership unchanged',async()=>{
+    const [seedUser]=await db.select().from(appUser).where(eq(appUser.userId,actorId));
+    const [sourceUser]=await db.insert(appUser).values({masterFn:'M1',username:'synthetic-offboard-source',fullName:'Fictional linked manager',passwordHash:seedUser.passwordHash}).returning();
+    const [actorRole]=await db.select().from(userCompanyRole).where(eq(userCompanyRole.assignmentId,assignmentId));
+    await db.insert(userCompany).values({userId:sourceUser.userId,companyFn:'C-SG',roleId:actorRole.roleId});
+    const [sourceStaff]=await db.insert(employee).values({...scope,employeeNo:'QA-LINKED-MANAGER',fullName:'Fictional linked manager',
+      email:'linked@example.invalid',department:'Synthetic',jobTitle:'Synthetic',startDate:'2026-01-01',baseSalary:'1000.00',
+      businessUnitId:unitId,positionId,userId:sourceUser.userId}).returning();
+    await db.update(employee).set({managerId:sourceStaff.id}).where(eq(employee.id,otherId));
+    const [ownedCustomer]=await db.select().from(customer).where(eq(customer.companyFn,'C-SG')).limit(1);
+    await db.update(customer).set({ownerUserId:sourceUser.userId}).where(eq(customer.id,ownedCustomer.id));
+    const beforeRoles=await db.select().from(userCompanyRole).where(eq(userCompanyRole.userId,viewerId));
+    const denied=await request('/api/hr/employee-accounts/'+sourceStaff.id+'/actions/offboard','POST',{
+      targetEmployeeId:viewerEmployee,reason:'Synthetic broad cross-scope handoff',
+    },'deny-broad-offboard');
+    expect(denied.status).toBe(403);
+    expect((await db.select().from(employee).where(eq(employee.id,sourceStaff.id)))[0].isActive).toBe(true);
+    expect((await db.select().from(appUser).where(eq(appUser.userId,sourceUser.userId)))[0].isActive).toBe(true);
+    expect((await db.select().from(employee).where(eq(employee.id,otherId)))[0].managerId).toBe(sourceStaff.id);
+    expect((await db.select().from(customer).where(eq(customer.id,ownedCustomer.id)))[0].ownerUserId).toBe(sourceUser.userId);
+    expect(await db.select().from(userCompanyRole).where(eq(userCompanyRole.userId,viewerId))).toEqual(beforeRoles);
+    await db.update(employee).set({managerId:null}).where(eq(employee.id,otherId));
+  });
+  it('rejects spoofed global subjects and authorizes persisted appointment old and new employees',async()=>{
+    const before=await db.select().from(calendarHoliday);
+    for(const [path,method] of [['/api/hr/calendar/holidays','POST'],['/api/hr/calendar/holidays/1','PUT'],
+      ['/api/hr/calendar/holidays/1/actions/approve','POST'],['/api/hr/leave-workflows/1/actions/confirm','POST'],
+      ['/api/hr/leave-workflows/1/actions/retire','POST']] as const){
+      expect((await request(path,method,{employeeId:targetId,name:'Spoof',date:'2026-12-15',expectedVersion:1})).status).toBe(403);
+    }
+    expect(await db.select().from(calendarHoliday)).toEqual(before);
+    const values={...scope,title:'Fictional appointment',startAt:new Date('2026-12-15T02:00:00Z'),endAt:new Date('2026-12-15T03:00:00Z'),createdByUserId:actorId,updatedByUserId:actorId};
+    const [outside]=await db.insert(staffAppointment).values({...values,employeeId:otherId}).returning();
+    const [inside]=await db.insert(staffAppointment).values({...values,employeeId:targetId}).returning();
+    expect((await request('/api/hr/calendar/appointments/'+outside.id+'/actions/cancel','POST',{employeeId:targetId,expectedVersion:1})).status).toBe(403);
+    expect((await request('/api/hr/calendar/appointments/'+outside.id,'PUT',{employeeId:targetId,expectedVersion:1})).status).toBe(403);
+    expect((await request('/api/hr/calendar/appointments/'+inside.id,'PUT',{employeeId:otherId,expectedVersion:1})).status).toBe(403);
+    expect((await db.select().from(staffAppointment).where(eq(staffAppointment.id,outside.id)))[0]).toEqual(outside);
+    expect((await db.select().from(staffAppointment).where(eq(staffAppointment.id,inside.id)))[0]).toEqual(inside);
+    expect((await request('/api/hr/calendar/appointments/'+inside.id+'/actions/cancel','POST',{expectedVersion:1})).status).toBe(200);
+  });
+  it('retains department, employee and BU subject denies through My approvals without decisions or events',async()=>{
+    const [assignedRole]=await db.select().from(userCompanyRole).where(eq(userCompanyRole.assignmentId,assignmentId));
+    await db.insert(rolePermission).values({masterFn:'M1',roleId:assignedRole.roleId,permissionKey:'employee.self.read',allowed:true});
+    await db.update(userCompanyRoleScope).set({scope:'company',targetType:'company',targetId:'C-SG'}).where(eq(userCompanyRoleScope.assignmentId,assignmentId));
+    const [subject]=await db.select().from(employee).where(eq(employee.id,targetId));
+    const [annual]=await db.select().from(leaveType).where(and(eq(leaveType.companyFn,'C-SG'),eq(leaveType.code,'ANNUAL')));
+    const manager={userId:actorId,canManage:true};
+    const draft=await db.transaction(tx=>createLeaveDraftWithin(tx,scope,manager,targetId,{leaveTypeId:annual.id,startDate:'2026-12-21',endDate:'2026-12-21',unit:'full_day',reason:'Subject deny fixture'}));
+    const submitted=await db.transaction(tx=>submitLeaveApplicationWithin(tx,scope,manager,draft.id,draft.version));
+    const [instance]=await db.select().from(approvalInstance).where(and(eq(approvalInstance.entityId,draft.id),eq(approvalInstance.entityType,'leave_request')));
+    const original=await db.select().from(leaveRequest).where(eq(leaveRequest.id,draft.id));
+    const balances=await db.select().from(leaveBalanceEntry).where(eq(leaveBalanceEntry.employeeId,targetId));
+    const events=await db.select().from(approvalInstanceEvent).where(eq(approvalInstanceEvent.instanceId,instance.id));
+    for(const target of [
+      {scope:'department',targetType:'department',targetId:subject.department},
+      {scope:'self',targetType:'employee',targetId:String(targetId)},
+      {scope:'business_unit',targetType:'business_unit',targetId:String(unitId)},
+    ]){
+      const [deny]=await db.insert(userPermissionOverride).values({...scope,userId:viewerId,permissionKey:'hr.write',resourceKey:'hr/leave-requests',effect:'deny',...target,reason:'Synthetic subject deny',assignedByUserId:actorId}).returning();
+      const response=await request('/api/my/approvals/'+draft.id+'/actions/approve','POST',{expectedVersion:submitted.version,reason:'Must not approve'});
+      expect(response.status,await response.clone().text()).toBe(403);
+      expect(await db.select().from(leaveRequest).where(eq(leaveRequest.id,draft.id))).toEqual(original);
+      expect(await db.select().from(leaveBalanceEntry).where(eq(leaveBalanceEntry.employeeId,targetId))).toEqual(balances);
+      expect(await db.select().from(approvalInstanceEvent).where(eq(approvalInstanceEvent.instanceId,instance.id))).toEqual(events);
+      await db.delete(userPermissionOverride).where(eq(userPermissionOverride.id,deny.id));
+    }
+    const permitted=await request('/api/my/approvals/'+draft.id+'/actions/approve','POST',{expectedVersion:submitted.version,reason:'Subject permission restored'});
+    expect(permitted.status,await permitted.clone().text()).toBe(200);
+    await db.update(userCompanyRoleScope).set({scope:'business_unit',targetType:'business_unit',targetId:String(unitId)}).where(eq(userCompanyRoleScope.assignmentId,assignmentId));
+  });
+  it('accepts canonical-only scoped reads and actions without widening to other staff',async()=>{
+    const [assignedRole]=await db.select().from(userCompanyRole).where(eq(userCompanyRole.assignmentId,assignmentId));
+    await db.delete(rolePermission).where(eq(rolePermission.roleId,assignedRole.roleId));
+    await db.insert(rolePermission).values(['hr.employees.view','hr.leave_requests.view','hr.leave_requests.approve'].map(permissionKey=>({masterFn:'M1',roleId:assignedRole.roleId,permissionKey,allowed:true})));
+    expect((await request('/api/hr/employees/'+targetId)).status).toBe(200);
+    expect((await request('/api/hr/employees/'+otherId)).status).toBe(404);
+    const [inside]=await db.insert(leaveRequest).values({...scope,employeeId:targetId,leaveType:'Unpaid',startDate:'2026-12-18',endDate:'2026-12-18',days:'1.00',reason:'Canonical fixture',status:'pending'}).returning();
+    const [outside]=await db.insert(leaveRequest).values({...scope,employeeId:otherId,leaveType:'Unpaid',startDate:'2026-12-19',endDate:'2026-12-19',days:'1.00',reason:'Canonical fixture',status:'pending'}).returning();
+    expect((await request('/api/hr/leave-requests/'+inside.id)).status).toBe(200);
+    expect((await request('/api/hr/leave-requests/'+inside.id+'/actions/approve','POST',{})).status).toBe(200);
+    expect((await request('/api/hr/leave-requests/'+outside.id+'/actions/approve','POST',{})).status).toBe(404);
+    await db.delete(rolePermission).where(eq(rolePermission.roleId,assignedRole.roleId));
+    await db.insert(rolePermission).values(['hr.read','hr.write'].map(permissionKey=>({masterFn:'M1',roleId:assignedRole.roleId,permissionKey,allowed:true})));
   });
   it('preserves explicit self/team projection and Company boundaries',async()=>{
     await db.update(userCompanyRoleScope).set({scope:'self',targetType:'none',targetId:''}).where(eq(userCompanyRoleScope.assignmentId,assignmentId));
@@ -162,6 +271,11 @@ describe('one HR staff projection across generic and specific API paths',()=>{
   it('supports explicit Position scope and removes access immediately on assignment/role changes',async()=>{
     await db.update(userCompanyRoleScope).set({scope:'position',targetType:'position',targetId:String(positionId)}).where(eq(userCompanyRoleScope.assignmentId,assignmentId));
     expect((await request('/api/hr/employees/'+targetId)).status).toBe(200);
+    const [positionStaff]=await db.insert(employee).values({...scope,employeeNo:'QA-POSITION-END',fullName:'Fictional Position employee',email:'position-end@example.invalid',department:'Synthetic',jobTitle:'Synthetic',startDate:'2026-01-01',baseSalary:'1000.00',businessUnitId:unitId,positionId}).returning();
+    const body={expectedUpdatedAt:positionStaff.updatedAt.toISOString(),reason:'Synthetic Position end'};
+    expect((await request('/api/hr/employees/'+positionStaff.id+'/actions/end-employment','POST',body,'position-end')).status).toBe(200);
+    const replay=await request('/api/hr/employees/'+positionStaff.id+'/actions/end-employment','POST',body,'position-end');
+    expect(replay.status).toBe(200);expect(replay.headers.get('idempotency-replayed')).toBe('true');
     await assign(targetId,unitId,null,1);
     expect((await request('/api/hr/employees/'+targetId)).status).toBe(404);
     expect((await request('/api/hr/employees/'+targetId+'/history')).status).toBe(403);

@@ -461,3 +461,22 @@ export async function explainAuthorization(
 ): Promise<AuthorizationExplanation> {
   return evaluateAuthorization(db, request);
 }
+
+/** Record projections must retain all matching explicit subject denies. */
+export async function explicitDenyMatcherWithin(
+  db: DB, request: Omit<AuthorizationRequest, 'scopeTarget'>,
+) {
+  const now = request.now ?? new Date();
+  const rows = await db.select().from(userPermissionOverride).where(and(
+    eq(userPermissionOverride.masterFn, request.principal.masterFn),
+    eq(userPermissionOverride.companyFn, request.principal.companyFn),
+    eq(userPermissionOverride.userId, request.principal.userId),
+    inArray(userPermissionOverride.permissionKey, [...permissionCandidates(request.permissionKey)]),
+    eq(userPermissionOverride.effect, 'deny'),
+    lte(userPermissionOverride.validFrom, now),
+    or(isNull(userPermissionOverride.validUntil), gt(userPermissionOverride.validUntil, now)),
+    isNull(userPermissionOverride.revokedAt),
+  ));
+  return (targets: AuthorizationScopeTarget[]) => targets.some(scopeTarget =>
+    rows.some(row => overrideMatches(row, { ...request, now, scopeTarget })));
+}

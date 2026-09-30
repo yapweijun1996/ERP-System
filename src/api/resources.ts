@@ -866,11 +866,11 @@ export async function listResource(
     }
     predicates.push(eq(definition.actorUserIdColumn, Number(scope.actorUserId)));
   }
-  if (scope.accessScope && scope.accessScope !== 'company') {
-    if ((definition.table === employee || definition.table === leaveRequest) && scope.allowedEmployeeIds) {
-      predicates.push(scope.allowedEmployeeIds.length
-        ? inArray(definition.table === employee ? employee.id : leaveRequest.employeeId, scope.allowedEmployeeIds) : sql`false`);
-    } else if (!definition.scopeUserIdColumn || !scope.allowedUserIds?.length) {
+  if ((definition.table === employee || definition.table === leaveRequest) && scope.allowedEmployeeIds !== undefined) {
+    predicates.push(scope.allowedEmployeeIds.length
+      ? inArray(definition.table === employee ? employee.id : leaveRequest.employeeId, scope.allowedEmployeeIds) : sql`false`);
+  } else if (scope.accessScope && scope.accessScope !== 'company') {
+    if (!definition.scopeUserIdColumn || !scope.allowedUserIds?.length) {
       predicates.push(sql`false`);
     } else {
       predicates.push(inArray(definition.scopeUserIdColumn, scope.allowedUserIds));
@@ -932,11 +932,11 @@ export async function getResource(db: DB, scope: ApiScope, resource: string, id:
     }
     predicates.push(eq(definition.actorUserIdColumn, Number(scope.actorUserId)));
   }
-  if (scope.accessScope && scope.accessScope !== 'company') {
-    if ((definition.table === employee || definition.table === leaveRequest) && scope.allowedEmployeeIds) {
-      predicates.push(scope.allowedEmployeeIds.length
-        ? inArray(definition.table === employee ? employee.id : leaveRequest.employeeId, scope.allowedEmployeeIds) : sql`false`);
-    } else if (!definition.scopeUserIdColumn || !scope.allowedUserIds?.length) {
+  if ((definition.table === employee || definition.table === leaveRequest) && scope.allowedEmployeeIds !== undefined) {
+    predicates.push(scope.allowedEmployeeIds.length
+      ? inArray(definition.table === employee ? employee.id : leaveRequest.employeeId, scope.allowedEmployeeIds) : sql`false`);
+  } else if (scope.accessScope && scope.accessScope !== 'company') {
+    if (!definition.scopeUserIdColumn || !scope.allowedUserIds?.length) {
       predicates.push(sql`false`);
     } else {
       predicates.push(inArray(definition.scopeUserIdColumn, scope.allowedUserIds));

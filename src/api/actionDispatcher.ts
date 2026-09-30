@@ -92,7 +92,7 @@ export async function dispatchAction(
         if (!request) throw new ActionDispatchError(404, 'record_not_found', 'Leave record unavailable.');
         employeeId = request.employeeId;
       }
-      try { await assertHrEmployeeAccessWithin(tx, context.session, context.resource, definition.permission, employeeId); }
+      try { await assertHrEmployeeAccessWithin(tx, context.session, context.resource, [fineGrainedActionPermission(context.resource, context.action, definition.permission), definition.permission], employeeId); }
       catch { throw new ActionDispatchError(403, 'data_scope_denied', 'Current staff scope does not include this record.'); }
     }
     const operation = `${context.resource}:${context.resourceId}:${context.action}`;

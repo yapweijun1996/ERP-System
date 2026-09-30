@@ -11,6 +11,7 @@ export type OrganizationDataScope = 'business_unit' | 'position';
 export async function resolveOrganizationEmployeeIdsWithin(
   exec: DB, scope: Scope, actorUserId: number, dataScope: OrganizationDataScope,
   verifiedTargetId: number | null = null,
+  includeInactiveTargets = false,
 ): Promise<number[]> {
   const table = dataScope === 'business_unit' ? businessUnit : dataScope === 'position' ? hrPosition : null;
   if (!table || !Number.isSafeInteger(actorUserId) || actorUserId <= 0) return [];
@@ -35,7 +36,7 @@ export async function resolveOrganizationEmployeeIdsWithin(
   const column = dataScope === 'business_unit' ? employee.businessUnitId : employee.positionId;
   const rows = await exec.select({ id: employee.id }).from(employee).where(and(
     eq(employee.masterFn, scope.masterFn), eq(employee.companyFn, scope.companyFn),
-    eq(employee.isActive, true), eq(column, targetId),
+    ...(includeInactiveTargets ? [] : [eq(employee.isActive, true)]), eq(column, targetId),
   )).orderBy(employee.id);
   return rows.map(row => row.id);
 }
