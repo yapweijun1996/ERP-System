@@ -89,3 +89,10 @@ Blank-company and authorization regression run: 2 files/16 tests passed after
 correcting the synthetic Company's required country/currency/tax fields.
 The blank API fixture explicitly enables fictional tenant module allocations and
 asserts data_scope_denied, so module_not_enabled cannot mask the security check.
+
+Final candidate alignment: reproduced Company-scoped legacy hr.write employee
+create passing entry authorization but failing projection with403. Generic create
+and update now pass the exact canonical/compatibility candidate pair accepted by
+entry, matching actions. Company legacy and canonical-only employee creation pass;
+restricted creation remains denied with unchanged staff rows. Authorization/API
+suite: 2 files/17 tests pass. This changes the head and requires new review/CI.

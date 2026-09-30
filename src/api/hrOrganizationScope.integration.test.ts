@@ -307,6 +307,23 @@ describe('one HR staff projection across generic and specific API paths',()=>{
       await db.delete(userPermissionOverride).where(eq(userPermissionOverride.id,deny.id));
     }
   });
+  it('uses the entry candidate permissions for Company creates and still denies restricted creation',async()=>{
+    const [assignedRole]=await db.select().from(userCompanyRole).where(eq(userCompanyRole.assignmentId,assignmentId));
+    await db.update(userCompanyRoleScope).set({scope:'company',targetType:'company',targetId:'C-SG'}).where(eq(userCompanyRoleScope.assignmentId,assignmentId));
+    const payload={employeeNo:'QA-LEGACY-CREATE',fullName:'Fictional Company creation',email:'create@example.invalid',department:'Synthetic',jobTitle:'Synthetic',startDate:'2026-01-01',baseSalary:'1000.00'};
+    const legacy=await request('/api/hr/employees','POST',payload);
+    expect(legacy.status,await legacy.clone().text()).toBe(201);
+    await db.delete(rolePermission).where(and(eq(rolePermission.roleId,assignedRole.roleId),eq(rolePermission.permissionKey,'hr.write')));
+    await db.insert(rolePermission).values({masterFn:'M1',roleId:assignedRole.roleId,permissionKey:'hr.employees.create',allowed:true});
+    const canonical=await request('/api/hr/employees','POST',{...payload,employeeNo:'QA-CANONICAL-CREATE'});
+    expect(canonical.status,await canonical.clone().text()).toBe(201);
+    await db.update(userCompanyRoleScope).set({scope:'business_unit',targetType:'business_unit',targetId:String(unitId)}).where(eq(userCompanyRoleScope.assignmentId,assignmentId));
+    const before=await db.select().from(employee).where(eq(employee.companyFn,'C-SG'));
+    expect((await request('/api/hr/employees','POST',{...payload,employeeNo:'QA-RESTRICTED-CREATE'})).status).toBe(403);
+    expect(await db.select().from(employee).where(eq(employee.companyFn,'C-SG'))).toEqual(before);
+    await db.delete(rolePermission).where(and(eq(rolePermission.roleId,assignedRole.roleId),eq(rolePermission.permissionKey,'hr.employees.create')));
+    await db.insert(rolePermission).values({masterFn:'M1',roleId:assignedRole.roleId,permissionKey:'hr.write',allowed:true});
+  });
   it('accepts canonical-only scoped reads and actions without widening to other staff',async()=>{
     const [assignedRole]=await db.select().from(userCompanyRole).where(eq(userCompanyRole.assignmentId,assignmentId));
     await db.delete(rolePermission).where(eq(rolePermission.roleId,assignedRole.roleId));

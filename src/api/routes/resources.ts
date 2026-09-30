@@ -230,7 +230,7 @@ export function createResourceRouter(db: DB): Router {
           throw new ActionDispatchError(403, 'permission_denied', 'You cannot create this ERP resource.');
         }
         if (resourceDefinition.scopeUserIdColumn || resource === 'hr/employees' || resource === 'hr/leave-requests') {
-          const access = await scopedReadContext(session, resource, tx, createPermissionForResource(resource));
+          const access = await scopedReadContext(session, resource, tx, [createPermissionForResource(resource), createDefinition.permission]);
           if (access.accessScope && access.accessScope !== 'company') {
             const customerId = Number((payload as Record<string, unknown>).customerId);
             if (resource === 'sales/customers') {
@@ -470,7 +470,7 @@ export function createResourceRouter(db: DB): Router {
         masterFn: session.masterFn,
         companyFn: session.activeCompanyFn,
         actorUserId: session.userId,
-        ...await scopedReadContext(session, resource, db, updatePermissionForResource(resource)),
+        ...await scopedReadContext(session, resource, db, [updatePermissionForResource(resource), update.permission]),
       };
       const result = await withTenantTransaction(db, scope, async (tx) => {
         if (!await hasAnyAuthorization(tx, session, [
