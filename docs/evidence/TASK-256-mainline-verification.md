@@ -112,3 +112,7 @@ with422 before SQL; the dedicated HR error mapper preserves the validation statu
 Malformed appointment creates do not write records. Full permission matrix and
 enhanced HR API suite passed2 files/16 tests; root typecheck/lint/docs passed.
 This is a scoped validation repair, with a new head/re-review/CI required.
+
+### Persisted subject not-found contract
+
+Appointment update/cancel and Leave cancellation decisions now explicitly reject a missing tenant-owned persisted subject with the existing indistinguishable `data_scope_denied` 404, before validating its employee ID. Malformed employee inputs retain the 422 guard. Company-scope regressions cover positive nonexistent appointment update/cancel and cancellation approval IDs, with appointment, Leave request and cancellation state unchanged. The permission matrix and HR scope integration suites passed together (2 files, 16 tests); root typecheck, lint and documentation link checks also passed. Production remains untouched; final-head independent review and CI remain merge gates.

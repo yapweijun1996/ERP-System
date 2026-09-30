@@ -103,6 +103,15 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
     return Number.isSafeInteger(id) && id > 0 ? id : null;
   }
 
+  function persistedEmployeeId(record: { employeeId: number } | undefined): number {
+    if (!record) {
+      throw Object.assign(new Error('Current staff scope does not include this record.'), {
+        code: 'data_scope_denied', status: 404,
+      });
+    }
+    return record.employeeId;
+  }
+
   function handleError(res: import('express').Response, error: unknown): void {
     if (error instanceof EmployeeCreateError || error instanceof EmployeeUpdateError) {
       apiError(res, error.status, error.code, error.message, error.fieldErrors);
@@ -758,7 +767,7 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
           const [stored] = await tx.select({ employeeId: staffAppointment.employeeId }).from(staffAppointment)
             .where(and(eq(staffAppointment.masterFn, scope.masterFn), eq(staffAppointment.companyFn, scope.companyFn),
               eq(staffAppointment.id, appointmentId))).limit(1).for('update');
-          await assertHrEmployeeAccessWithin(tx, session, 'hr/employees', PERMISSIONS.hrWrite, stored?.employeeId ?? 0);
+          await assertHrEmployeeAccessWithin(tx, session, 'hr/employees', PERMISSIONS.hrWrite, persistedEmployeeId(stored));
           await assertHrEmployeeAccessWithin(tx, session, 'hr/employees', PERMISSIONS.hrWrite, payload.employeeId);
           const result = await updateStaffAppointmentWithin(
             tx, scope, appointmentId, expectedVersion, payload, session.userId,
@@ -809,7 +818,7 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
           const [stored] = await tx.select({ employeeId: staffAppointment.employeeId }).from(staffAppointment)
             .where(and(eq(staffAppointment.masterFn, scope.masterFn), eq(staffAppointment.companyFn, scope.companyFn),
               eq(staffAppointment.id, appointmentId))).limit(1).for('update');
-          await assertHrEmployeeAccessWithin(tx, session, 'hr/employees', PERMISSIONS.hrWrite, stored?.employeeId ?? 0);
+          await assertHrEmployeeAccessWithin(tx, session, 'hr/employees', PERMISSIONS.hrWrite, persistedEmployeeId(stored));
           const result = await cancelStaffAppointmentWithin(
             tx, scope, appointmentId, expectedVersion, session.userId,
           );
@@ -1553,7 +1562,7 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
                 .where(and(eq(leaveCancellationRequest.masterFn, scope.masterFn),
                   eq(leaveCancellationRequest.companyFn, scope.companyFn),
                   eq(leaveCancellationRequest.id, cancellationId))).limit(1);
-              await assertHrEmployeeAccessWithin(tx, session, 'hr/leave-requests', PERMISSIONS.hrWrite, target?.employeeId ?? 0);
+              await assertHrEmployeeAccessWithin(tx, session, 'hr/leave-requests', PERMISSIONS.hrWrite, persistedEmployeeId(target));
               const result = await decideApprovedLeaveCancellationWithin(
                 tx,
                 scope,

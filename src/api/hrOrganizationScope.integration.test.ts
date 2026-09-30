@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Server } from 'node:http';
 import { and, eq, isNull, ne } from 'drizzle-orm';
 import type { DB } from '../data/db';
-import { appUser, company, companyModule, employee, customer, userCompany, leaveRequest, leaveType, role, rolePermission, userCompanyRole, userCompanyRoleScope, staffAppointment, calendarHoliday, userPermissionOverride, approvalInstance, approvalInstanceEvent, leaveBalanceEntry, businessUnit, hrPosition } from '../data/schema';
+import { appUser, company, companyModule, employee, customer, userCompany, leaveRequest, leaveCancellationRequest, leaveType, role, rolePermission, userCompanyRole, userCompanyRoleScope, staffAppointment, calendarHoliday, userPermissionOverride, approvalInstance, approvalInstanceEvent, leaveBalanceEntry, businessUnit, hrPosition } from '../data/schema';
 import { resolveHrEmployeeAccessWithin } from '../auth/hrDataAccess';
 import { freshDb } from '../test/helpers';
 import { seedDemo } from '../data/seed';
@@ -337,6 +337,20 @@ describe('one HR staff projection across generic and specific API paths',()=>{
       expect((await malformed.json()).error.code).toBe('invalid_employee_id');
     }
     expect(await db.select().from(staffAppointment)).toEqual(beforeAppointments);
+    const beforeLeaveRequests=await db.select().from(leaveRequest);
+    const beforeCancellations=await db.select().from(leaveCancellationRequest);
+    for (const [path,method,body] of [
+      ['/api/hr/calendar/appointments/9000000','PUT',{employeeId:targetId,title:'Missing fictional appointment',startAt:'2026-12-20T09:00:00Z',endAt:'2026-12-20T10:00:00Z',expectedVersion:1}],
+      ['/api/hr/calendar/appointments/9000000/actions/cancel','POST',{expectedVersion:1}],
+      ['/api/hr/leave-cancellations/9000000/actions/approve','POST',{expectedVersion:1,reason:'Missing fictional cancellation'}],
+    ] as const) {
+      const missing=await request(path,method,body);
+      expect(missing.status,await missing.clone().text()).toBe(404);
+      expect((await missing.json()).error.code).toBe('data_scope_denied');
+    }
+    expect(await db.select().from(staffAppointment)).toEqual(beforeAppointments);
+    expect(await db.select().from(leaveRequest)).toEqual(beforeLeaveRequests);
+    expect(await db.select().from(leaveCancellationRequest)).toEqual(beforeCancellations);
     const legacy=await request('/api/hr/employees','POST',payload);
     expect(legacy.status,await legacy.clone().text()).toBe(201);
     await db.delete(rolePermission).where(and(eq(rolePermission.roleId,assignedRole.roleId),eq(rolePermission.permissionKey,'hr.write')));
