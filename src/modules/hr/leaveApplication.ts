@@ -1,5 +1,5 @@
 import {
-  and, desc, eq,
+  and, desc, eq, gte, inArray, lte, ne,
 } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
@@ -405,6 +405,53 @@ function ledgerReference(row: { id: number; currentRevisionNo: number }): string
   return `${row.id}:revision:${row.currentRevisionNo}`;
 }
 
+async function assertNoOverlappingLeaveWithin(
+  exec: DB,
+  scope: Scope,
+  row: Awaited<ReturnType<typeof requestForUpdate>>,
+  statuses: ('pending' | 'approved')[],
+) {
+  // Serialise submissions for this employee, including different request rows.
+  const [subject] = await exec.select({ id: employee.id }).from(employee).where(and(
+    eq(employee.id, row.employeeId),
+    eq(employee.masterFn, scope.masterFn),
+    eq(employee.companyFn, scope.companyFn),
+    eq(employee.isActive, true),
+  )).limit(1).for('update');
+  if (!subject) {
+    throw new LeaveApplicationError('employee_unavailable', 'Active employee not found.');
+  }
+  const overlaps = await exec.select({
+    id: leaveRequest.id,
+    startDate: leaveRequest.startDate,
+    endDate: leaveRequest.endDate,
+    unit: leaveRequest.unit,
+  }).from(leaveRequest).where(and(
+    eq(leaveRequest.masterFn, scope.masterFn),
+    eq(leaveRequest.companyFn, scope.companyFn),
+    eq(leaveRequest.employeeId, row.employeeId),
+    ne(leaveRequest.id, row.id),
+    inArray(leaveRequest.status, statuses),
+    lte(leaveRequest.startDate, row.endDate),
+    gte(leaveRequest.endDate, row.startDate),
+  ));
+  const conflicts = overlaps.some(other => {
+    const oppositeHalfDays = row.startDate === row.endDate
+      && other.startDate === other.endDate
+      && row.startDate === other.startDate
+      && ((row.unit === 'half_day_am' && other.unit === 'half_day_pm')
+        || (row.unit === 'half_day_pm' && other.unit === 'half_day_am'));
+    return !oppositeHalfDays;
+  });
+  if (conflicts) {
+    throw new LeaveApplicationError(
+      'leave_dates_overlap',
+      'A pending or approved leave application already covers these dates.',
+      409,
+    );
+  }
+}
+
 export async function submitLeaveApplicationWithin(
   exec: DB,
   scope: Scope,
@@ -419,6 +466,7 @@ export async function submitLeaveApplicationWithin(
   if (row.status !== 'draft') {
     throw new LeaveApplicationError('leave_not_draft', 'Only Draft leave can be submitted.', 409);
   }
+  await assertNoOverlappingLeaveWithin(exec, scope, row, ['pending', 'approved']);
   const revision = await currentRevision(exec, scope, row);
   if (revision.evidenceRequired) {
     const state = await latestEvidenceState(exec, scope, row.id, row.currentRevisionNo);
@@ -556,6 +604,9 @@ export async function decideGovernedLeaveWithin(
   }
   if (row.status !== 'pending') {
     throw new LeaveApplicationError('leave_not_pending', 'Only Pending leave can be decided.', 409);
+  }
+  if (decision === 'approved') {
+    await assertNoOverlappingLeaveWithin(exec, scope, row, ['approved']);
   }
   const approval = await decideLeaveApprovalWithin(exec, scope, {
     requestId: row.id,

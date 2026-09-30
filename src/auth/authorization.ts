@@ -114,6 +114,8 @@ const SCOPE_RANK: Record<DataScope, number> = {
   self: 0,
   team: 1,
   department: 2,
+  business_unit: 2,
+  position: 2,
   company: 3,
 };
 
@@ -139,6 +141,9 @@ function scopeTargetMatches(
   if (!requested) return grant.scope === 'company' && grant.targetType === 'none';
   if (SCOPE_RANK[grant.scope] < SCOPE_RANK[requested.scope]) return false;
   if (grant.scope === 'company' && grant.targetType === 'none') return true;
+  if ((['business_unit', 'position'].includes(grant.scope)
+    || ['business_unit', 'position'].includes(requested.scope))
+    && grant.scope !== requested.scope) return false;
   if (grant.targetType === 'none') return requested.targetType === 'none';
   return grant.targetType === requested.targetType
     && grant.targetId === requested.targetId;

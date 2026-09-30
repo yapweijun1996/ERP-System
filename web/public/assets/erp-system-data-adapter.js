@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 45000;
-  var DEMO_SCHEMA_VERSION = 117;
+  var DEMO_SCHEMA_VERSION = 118;
   var DEMO_PACK_VERSION = '16';
   var DEMO_IMPERSONATOR_KEY = 'aria-demo-impersonator-email';
 
@@ -2766,6 +2766,21 @@
   async function actionInner(resource,id,name,payload){
     var key=normalizeResource(resource);
     requireEffectiveModuleForResource(key);
+    if(key==='hr/employees'&&name==='end-employment'){
+      var staffId=Number(id), staffActor=Number(state.activeUserId);
+      if(!await state.runtime.commands.hasPermissionWithin(state.orm,SCOPE,staffActor,'hr.write')) throw new Error('HR write permission is required.');
+      var endedEmployment=await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.endEmployeeEmploymentWithin(state.runtime.createOrm(tx),SCOPE,staffId,{
+          expectedUpdatedAt:payload&&payload.expectedUpdatedAt,
+          reason:payload&&payload.reason,
+          handoffEmployeeId:(payload&&payload.handoffEmployeeId)==null?null:Number(payload.handoffEmployeeId),
+          actorUserId:staffActor,
+          requestId:'demo-end-employment-'+(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():Date.now()),
+        });
+      });
+      await refresh();
+      return {data:endedEmployment,meta:{}};
+    }
     if(key==='hr/employee-accounts'){
       var employeeId=Number(id), actorUserId=Number(state.activeUserId);
       if(!await state.runtime.commands.hasPermissionWithin(state.orm,SCOPE,actorUserId,'hr.write')) throw new Error('HR write permission is required.');
@@ -5244,6 +5259,24 @@
     get mode(){ return state.mode; },
     get db(){ return state.db; },
   };
+  adapter.organizationList=async function(kind){return {data:await requireDemoDb().transaction(function(tx){return state.runtime.commands.organizationList(state.runtime.createOrm(tx),SCOPE,Number(state.activeUserId),kind);}),meta:{}};};
+  adapter.organizationSave=async function(kind,input){var result=await requireDemoDb().transaction(function(tx){return state.runtime.commands.organizationSave(state.runtime.createOrm(tx),SCOPE,Number(state.activeUserId),kind,input);});await refresh();return {data:result,meta:{}};};
+  adapter.organizationAssign=async function(employeeId,input){var result=await requireDemoDb().transaction(function(tx){return state.runtime.commands.organizationAssign(state.runtime.createOrm(tx),SCOPE,Number(state.activeUserId),Object.assign({},input,{employeeId:Number(employeeId)}));});await refresh();return {data:result,meta:{}};};
+  async function scopedDemoHr(resource,permission,record){
+    if(resource!=='hr/employees'&&resource!=='hr/leave-requests')return null;
+    var ids=await requireDemoDb().transaction(function(tx){return state.runtime.commands.hrEmployeeAccessWithin(state.runtime.createOrm(tx),SCOPE,Number(state.activeUserId),resource,permission);});
+    if(record!=null&&ids!==null){
+      var employeeId=resource==='hr/employees'?Number(record):Number((await requireDemoDb().query('select employee_id from leave_request where master_fn=$1 and company_fn=$2 and id=$3',[SCOPE.masterFn,SCOPE.companyFn,Number(record)])).rows[0]?.employee_id);
+      if(!ids.includes(employeeId)){var error=new Error('Current staff scope does not include this record.');error.code='data_scope_denied';throw error;}
+    }
+    return ids;
+  }
+  var originalHrList=adapter.list,originalHrGet=adapter.get,originalHrUpdate=adapter.update,originalHrAction=adapter.action,originalHrCreate=adapter.create;
+  adapter.list=async function(resource,query){var key=normalizeResource(resource);var ids=await scopedDemoHr(key,'hr.read');var result=await originalHrList(resource,query);if(ids!==null)result.data=result.data.filter(function(row){return ids.includes(Number(key==='hr/employees'?row.id:row.employeeId));});return result;};
+  adapter.get=async function(resource,id){await scopedDemoHr(normalizeResource(resource),'hr.read',id);return originalHrGet(resource,id);};
+  adapter.update=async function(resource,id,payload,version){await scopedDemoHr(normalizeResource(resource),'hr.write',id);return originalHrUpdate(resource,id,payload,version);};
+  adapter.action=async function(resource,id,name,payload){await scopedDemoHr(normalizeResource(resource),'hr.write',id);return originalHrAction(resource,id,name,payload);};
+  adapter.create=async function(resource,payload){var ids=await scopedDemoHr(normalizeResource(resource),'hr.write');if(ids!==null)throw new Error('Company staff scope is required to create staff or company Leave.');return originalHrCreate(resource,payload);};
   window.ErpSystemData = adapter;
   window.ErpSystemDemo = adapter;
   window.ErpSystemDataReady = ready;

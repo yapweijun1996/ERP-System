@@ -1,3 +1,4 @@
+import { businessUnit, hrPosition } from '../data/schema';
 import { and, eq, isNull } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import { withTenantTransaction } from '../data/tenantTransaction';
@@ -29,8 +30,8 @@ export interface PermissionOverrideInput {
   reason: string;
 }
 
-const DATA_SCOPES: readonly DataScope[] = ['self', 'team', 'department', 'company'];
-const TARGET_TYPES = ['none', 'company', 'department', 'team', 'employee'] as const;
+const DATA_SCOPES: readonly DataScope[] = ['self', 'team', 'department', 'business_unit', 'position', 'company'];
+const TARGET_TYPES = ['none', 'company', 'department', 'team', 'employee', 'business_unit', 'position'] as const;
 
 function normalizeReason(reason: string): string {
   const clean = reason.trim();
@@ -66,6 +67,9 @@ function normalizeInput(input: PermissionOverrideInput, now: Date) {
   }
   if (scope === 'department' && !['none', 'department'].includes(targetType)) {
     throw new AuthLifecycleError(400, 'invalid_scope_target', 'A department scope requires a department target or none.');
+  }
+  if ((scope === 'business_unit' || scope === 'position') && !['none', scope].includes(targetType)) {
+    throw new AuthLifecycleError(400, 'invalid_scope_target', 'Organization scope requires a matching organization target or none.');
   }
   if (scope === 'team' && !['none', 'team', 'employee'].includes(targetType)) {
     throw new AuthLifecycleError(400, 'invalid_scope_target', 'A team scope requires a team/employee target or none.');
@@ -114,6 +118,15 @@ async function validateTarget(
     if (input.targetId !== session.activeCompanyFn) {
       throw new AuthLifecycleError(400, 'invalid_scope_target', 'The target company is not active.');
     }
+    return;
+  }
+  if (input.targetType === 'business_unit' || input.targetType === 'position') {
+    const table = input.targetType === 'business_unit' ? businessUnit : hrPosition;
+    const id = Number(input.targetId);
+    const [target] = await exec.select({ id: table.id }).from(table).where(and(
+      eq(table.masterFn, session.masterFn), eq(table.companyFn, session.activeCompanyFn), eq(table.id, id), eq(table.isActive, true),
+    )).limit(1);
+    if (!Number.isSafeInteger(id) || !target) throw new AuthLifecycleError(400, 'invalid_scope_target', 'Choose an active organization target in this company.');
     return;
   }
   const employees = await exec.select({ id: employee.id, department: employee.department })

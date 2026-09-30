@@ -7,7 +7,7 @@ import {
 
 export { ACTION_PERMISSION_KEYS, PERMISSION_CATALOG } from './permissionRegistry';
 
-export type DataScope = 'self' | 'team' | 'department' | 'company';
+export type DataScope = 'self' | 'team' | 'department' | 'business_unit' | 'position' | 'company';
 export const COMPANY_OWNER_ROLE_TEMPLATE_KEY = 'company_owner' as const;
 export const MASTER_ADMIN_ROLE_TEMPLATE_KEY = 'master_admin' as const;
 export const PLATFORM_TENANT_ADMIN_ROLE_TEMPLATE_KEY = 'platform_tenant_admin' as const;

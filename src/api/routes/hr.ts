@@ -1,3 +1,5 @@
+import { OrganizationError, listOrganizationWithin, saveOrganizationWithin, assignEmployeeOrganizationWithin, type OrganizationKind } from '../../modules/hr/organization';
+import { assertHrEmployeeAccessWithin, resolveHrEmployeeAccessWithin } from '../../auth/hrDataAccess';
 import { Router } from 'express';
 import { and, eq } from 'drizzle-orm';
 import type { DB } from '../../data/db';
@@ -16,6 +18,7 @@ import {
 import {
   EmployeeCreateError,
   EmployeeUpdateError,
+  endEmployeeEmploymentWithin,
   InvalidEmployeeStateError,
   updateEmployeeWithin,
 } from '../../modules/hr/employee';
@@ -28,7 +31,7 @@ import {
   completeIdempotentRequest,
 } from '../idempotency';
 import { withTenantTransaction } from '../../data/tenantTransaction';
-import { calendarOutboundConnection, employee } from '../../data/schema';
+import { calendarOutboundConnection, employee, leaveRequest, leaveCancellationRequest } from '../../data/schema';
 import {
   LeaveApplicationError,
   createLeaveDraftWithin,
@@ -109,6 +112,8 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
       apiError(res, 422, 'validation_failed', error.message);
       return;
     }
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'data_scope_denied') { apiError(res, 'status' in error && error.status === 404 ? 404 : 403, 'data_scope_denied', 'Current staff scope does not include this record.'); return; }
+    if (error instanceof OrganizationError) { apiError(res, error.status, error.code, error.message); return; }
     if (error instanceof EmployeeAccountError) {
       apiError(res, error.status, error.code, error.message, error.fieldErrors);
       return;
@@ -164,6 +169,35 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
     if (!await hasPermission(db, session, permission)) {
       apiError(res, 403, 'permission_denied', 'You cannot manage employee accounts.');
       return null;
+    }
+    const resource = req.path.startsWith('/leave-') ? 'hr/leave-requests' : 'hr/employees';
+    const tenantScope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    const access = await withTenantTransaction(db, tenantScope, tx =>
+      resolveHrEmployeeAccessWithin(tx, session, resource, permission));
+    if (access !== null) {
+      let target = Number(req.params.employeeId ?? req.body?.employeeId ?? 0);
+      if (req.params.requestId) {
+        const [request] = await withTenantTransaction(db, tenantScope, tx => tx.select({ employeeId: leaveRequest.employeeId })
+          .from(leaveRequest).where(and(eq(leaveRequest.masterFn, tenantScope.masterFn),
+            eq(leaveRequest.companyFn, tenantScope.companyFn), eq(leaveRequest.id, Number(req.params.requestId)))).limit(1));
+        target = request?.employeeId ?? 0;
+      }
+      if (req.params.cancellationId) {
+        const [request] = await withTenantTransaction(db, tenantScope, tx => tx.select({ employeeId: leaveRequest.employeeId })
+          .from(leaveCancellationRequest).innerJoin(leaveRequest, and(
+            eq(leaveRequest.id, leaveCancellationRequest.requestId),
+            eq(leaveRequest.masterFn, leaveCancellationRequest.masterFn),
+            eq(leaveRequest.companyFn, leaveCancellationRequest.companyFn)))
+          .where(and(eq(leaveCancellationRequest.masterFn, tenantScope.masterFn),
+            eq(leaveCancellationRequest.companyFn, tenantScope.companyFn),
+            eq(leaveCancellationRequest.id, Number(req.params.cancellationId)))).limit(1));
+        target = request?.employeeId ?? 0;
+      }
+      const scopedList = req.method === 'GET' && ['/calendar/staff', '/leave-approval-queue'].includes(req.path);
+      if (!access.length || (!scopedList && (!target || !access.includes(target)))) {
+        apiError(res, 403, 'data_scope_denied', 'The current staff scope does not include this operation.'); return null;
+      }
+      res.locals.hrAllowedEmployeeIds = access;
     }
     return session;
   }
@@ -229,6 +263,61 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
     return { userId, employeeId: linked?.id ?? null, canManage: true };
   }
 
+  function organizationKind(value: unknown): OrganizationKind | null {
+    return value === 'business_unit' || value === 'position' ? value : null;
+  }
+  router.get('/organization/:kind', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrRead);
+    if (!session) return;
+    const kind = organizationKind(req.params.kind);
+    if (!kind) { apiError(res, 404, 'organization_kind_invalid', 'Unknown organization master.'); return; }
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    try { res.json({ data: await withTenantTransaction(db, scope, tx => listOrganizationWithin(tx, scope, kind)), meta: { tenantScoped: true } }); }
+    catch (error) { handleError(res, error); }
+  });
+  async function organizationWrite(req: import('express').Request, res: import('express').Response,
+    assignment: boolean) {
+    const session = await requireHr(req, res, PERMISSIONS.hrWrite);
+    if (!session) return;
+    const body = req.body;
+    const fields = assignment ? ['businessUnitId', 'positionId', 'expectedVersion', 'reason'] : ['code', 'name', 'isActive', 'expectedVersion'];
+    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => !fields.includes(key))) {
+      apiError(res, 400, 'invalid_request', 'Only declared organization fields are accepted.'); return;
+    }
+    const key = req.header('idempotency-key')?.trim();
+    if (!key || key.length > 128) { apiError(res, 428, 'idempotency_key_required', 'Idempotency-Key is required.'); return; }
+    const kind = assignment ? null : organizationKind(req.params.kind);
+    if (!assignment && !kind) { apiError(res, 404, 'organization_kind_invalid', 'Unknown organization master.'); return; }
+    const recordId = req.params.employeeId ?? req.params.id;
+    const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+    const operation = assignment ? `hr.organization.assign:${recordId}` : `hr.organization.${kind}:${recordId ?? 'create'}`;
+    try {
+      const result = await withTenantTransaction(db, scope, async tx => {
+        // Re-evaluate current permission and staff scope inside the mutation transaction.
+        const access = await resolveHrEmployeeAccessWithin(tx, session, 'hr/employees', PERMISSIONS.hrWrite);
+        if (access !== null) throw new OrganizationError('data_scope_denied', 'Current scope does not permit this organization change.', 403);
+        const begun = await beginIdempotentRequest(tx, { ...scope, actorUserId: session.userId }, key, operation, body);
+        if (begun.kind === 'replay') return { status: begun.status, body: begun.body, replay: true };
+        if (begun.kind === 'conflict') throw new OrganizationError(`idempotency_${begun.reason}`, 'Idempotency-Key conflicts with this request.', 409);
+        const actor = { userId: session.userId, requestId: context(res).requestId };
+        const data = assignment ? await assignEmployeeOrganizationWithin(tx, scope, actor, {
+          employeeId: Number(recordId), businessUnitId: body.businessUnitId === null ? null : body.businessUnitId,
+          positionId: body.positionId === null ? null : body.positionId,
+          expectedVersion: body.expectedVersion, reason: body.reason,
+        }) : await saveOrganizationWithin(tx, scope, actor, kind!, { ...body, id: recordId == null ? undefined : Number(recordId) });
+        const status = !assignment && recordId == null ? 201 : 200;
+        const response = { data, meta: { tenantScoped: true } };
+        await completeIdempotentRequest(tx, begun.recordId, status, response);
+        return { status, body: response, replay: false };
+      });
+      if (result.replay) res.setHeader('Idempotency-Replayed', 'true');
+      res.status(result.status).json(result.body);
+    } catch (error) { handleError(res, error); }
+  }
+  router.post('/organization/:kind', (req, res) => organizationWrite(req, res, false));
+  router.put('/organization/:kind/:id', (req, res) => organizationWrite(req, res, false));
+  router.put('/employees/:employeeId/organization', (req, res) => organizationWrite(req, res, true));
+
   router.patch('/employees/:employeeId', async (req, res) => {
     const session = await requireHr(req, res, PERMISSIONS.hrWrite);
     if (!session) return;
@@ -287,6 +376,7 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
     };
     try {
       const updated = await withTenantTransaction(db, scope, async (tx) => {
+        await assertHrEmployeeAccessWithin(tx, session, 'hr/employees', PERMISSIONS.hrWrite, employeeId);
         const result = await updateEmployeeWithin(tx, scope, employeeId, input);
         const auditRow = (row: typeof result.employee) => ({
           employeeNo: row.employeeNo,
@@ -319,6 +409,40 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
     } catch (error) {
       handleError(res, error);
     }
+  });
+
+  router.post('/employees/:employeeId/actions/end-employment', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrWrite);
+    if (!session) return;
+    const employeeId = employeeIdParam(req.params.employeeId);
+    if (!employeeId) { apiError(res, 400, 'invalid_id', 'employeeId must be a positive integer.'); return; }
+    const body = req.body;
+    if (!body || typeof body !== 'object' || Array.isArray(body)
+      || 'masterFn' in body || 'companyFn' in body || 'userId' in body || 'isActive' in body) {
+      apiError(res, 400, 'invalid_request', 'A scoped employment-end request is required.');
+      return;
+    }
+    const reason = typeof body.reason === 'string' ? body.reason : '';
+    const expectedUpdatedAt = typeof body.expectedUpdatedAt === 'string' ? body.expectedUpdatedAt : '';
+    const handoffEmployeeId = body.handoffEmployeeId == null ? null : Number(body.handoffEmployeeId);
+    if (!expectedUpdatedAt) { apiError(res, 428, 'if_match_required', 'Employee version is required.'); return; }
+    if (reason.trim().length < 3 || reason.trim().length > 500) {
+      apiError(res, 422, 'employment_reason_required', 'Enter a reason of 3 to 500 characters.'); return;
+    }
+    if (handoffEmployeeId != null && (!Number.isSafeInteger(handoffEmployeeId) || handoffEmployeeId <= 0)) {
+      apiError(res, 422, 'invalid_handoff', 'Choose a valid handoff employee.'); return;
+    }
+    const payload = { employeeId, reason, expectedUpdatedAt, handoffEmployeeId };
+    try {
+      await runIdempotent(req, res, session, 'hr.employee.end-employment', payload, async () => {
+        const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+        const data = await withTenantTransaction(db, scope, async (tx) => {
+          await assertHrEmployeeAccessWithin(tx, session, 'hr/employees', PERMISSIONS.hrWrite, employeeId);
+          return endEmployeeEmploymentWithin(tx, scope, employeeId, { ...payload, actorUserId: session.userId, requestId: context(res).requestId });
+        });
+        return { status: 200, data };
+      });
+    } catch (error) { handleError(res, error); }
   });
 
   router.get('/employees/:employeeId/history', async (req, res) => {
@@ -399,7 +523,7 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
           eq(employee.companyFn, scope.companyFn),
           eq(employee.isActive, true),
         ));
-        const data = await listStaffCalendarWithin(tx, scope, employees.map(row => row.id), {
+        const data = await listStaffCalendarWithin(tx, scope, (res.locals.hrAllowedEmployeeIds ?? employees.map(row => row.id)) as number[], {
           from,
           to,
           employeeId,
@@ -1131,7 +1255,8 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
           new Date(),
         ));
       res.json({
-        data,
+        data: res.locals.hrAllowedEmployeeIds
+          ? data.filter(row => (res.locals.hrAllowedEmployeeIds as number[]).includes(row.employeeId)) : data,
         meta: {
           actorDerived: true,
           actionableOnly: true,
@@ -1326,6 +1451,11 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
           async () => {
             const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
             const data = await withTenantTransaction(db, scope, async (tx) => {
+              const [subject] = await tx.select({ employeeId: leaveRequest.employeeId }).from(leaveRequest).where(and(
+                eq(leaveRequest.masterFn, scope.masterFn), eq(leaveRequest.companyFn, scope.companyFn), eq(leaveRequest.id, requestId),
+              )).limit(1);
+              if (!subject) throw new OrganizationError('leave_request_not_found', 'Leave request unavailable.', 404);
+              await assertHrEmployeeAccessWithin(tx, session, 'hr/leave-requests', PERMISSIONS.hrWrite, subject.employeeId);
               const actor = await managementActor(tx, scope, session.userId);
               const result = action === 'void'
                 ? await voidLeaveApplicationWithin(
@@ -1383,6 +1513,15 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
           async () => {
             const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
             const data = await withTenantTransaction(db, scope, async (tx) => {
+              const [target] = await tx.select({ employeeId: leaveRequest.employeeId })
+                .from(leaveCancellationRequest).innerJoin(leaveRequest, and(
+                  eq(leaveRequest.id, leaveCancellationRequest.requestId),
+                  eq(leaveRequest.masterFn, leaveCancellationRequest.masterFn),
+                  eq(leaveRequest.companyFn, leaveCancellationRequest.companyFn)))
+                .where(and(eq(leaveCancellationRequest.masterFn, scope.masterFn),
+                  eq(leaveCancellationRequest.companyFn, scope.companyFn),
+                  eq(leaveCancellationRequest.id, cancellationId))).limit(1);
+              await assertHrEmployeeAccessWithin(tx, session, 'hr/leave-requests', PERMISSIONS.hrWrite, target?.employeeId ?? 0);
               const result = await decideApprovedLeaveCancellationWithin(
                 tx,
                 scope,

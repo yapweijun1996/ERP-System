@@ -1139,6 +1139,9 @@
     get mode(){ return state.mode; },
     get db(){ return null; },
   };
+  adapter.organizationList=function(kind){return apiRequest('/hr/organization/'+encodeURIComponent(kind));};
+  adapter.organizationSave=function(kind,input){return apiRequest('/hr/organization/'+encodeURIComponent(kind)+(input.id?'/'+input.id:''),{method:input.id?'PUT':'POST',body:Object.assign({},input,{id:undefined}),headers:{'Idempotency-Key':crypto.randomUUID()}});};
+  adapter.organizationAssign=function(employeeId,input){return apiRequest('/hr/employees/'+employeeId+'/organization',{method:'PUT',body:input,headers:{'Idempotency-Key':crypto.randomUUID()}});};
   window.ErpSystemData = adapter;
   window.ErpSystemDemo = adapter;
   window.ErpSystemDataReady = ready;

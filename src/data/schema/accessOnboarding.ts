@@ -6,7 +6,7 @@ import { sql } from 'drizzle-orm';
 import { tenant, timestamps } from './_shared';
 import { appUser, role, userCompanyRole } from './tenancy';
 
-export const DATA_SCOPES = ['self', 'team', 'department', 'company'] as const;
+export const DATA_SCOPES = ['self', 'team', 'department', 'business_unit', 'position', 'company'] as const;
 
 export const ROLE_ASSIGNMENT_SCOPE_TARGET_TYPES = [
   'none',
@@ -17,6 +17,7 @@ export const ROLE_ASSIGNMENT_SCOPE_TARGET_TYPES = [
   'employee',
   'region',
   'business_unit',
+  'position',
   'legal_entity',
   'cost_center',
 ] as const;
@@ -34,7 +35,7 @@ export const roleResourceScope = pgTable('role_resource_scope', {
   index('idx_role_resource_scope_tenant').on(
     t.masterFn, t.companyFn, t.resourceKey, t.scope, t.roleId,
   ),
-  check('ck_role_resource_scope_value', sql`${t.scope} in ('self', 'team', 'department', 'company')`),
+  check('ck_role_resource_scope_value', sql`${t.scope} in ('self', 'team', 'department', 'business_unit', 'position', 'company')`),
 ]);
 
 /**
@@ -58,7 +59,7 @@ export const userCompanyRoleScope = pgTable('user_company_role_scope', {
     t.masterFn, t.companyFn, t.resourceKey, t.scope, t.targetType, t.targetId,
   ),
   index('idx_user_company_role_scope_assignment').on(t.assignmentId, t.resourceKey),
-  check('ck_user_company_role_scope_value', sql`${t.scope} in ('self', 'team', 'department', 'company')`),
+  check('ck_user_company_role_scope_value', sql`${t.scope} in ('self', 'team', 'department', 'business_unit', 'position', 'company')`),
   check(
     'ck_user_company_role_scope_target',
     sql`(${t.targetType} = 'none' and ${t.targetId} = '') or (${t.targetType} <> 'none' and char_length(${t.targetId}) > 0)`,

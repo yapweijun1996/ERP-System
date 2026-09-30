@@ -2184,7 +2184,15 @@ SCREENS['my-receipts']=async function(root){
     empty:{icon:'receipt',title:s('empty'),description:s('emptyBody')},
     note:s('limits'),
     afterRender:({root:screenRoot})=>{
-      screenRoot.querySelector('[data-layout="transaction-list-v1"]')?.setAttribute('data-receipt-capture','canonical');
+      const layout=screenRoot.querySelector('[data-layout="transaction-list-v1"]');
+      layout?.setAttribute('data-receipt-capture','canonical');
+      const labels=Array.from(layout?.querySelectorAll('.dt-head .dt-c')||[])
+        .map(cell=>cell.textContent.trim());
+      layout?.querySelectorAll('.dt-body .dt-r').forEach(row=>{
+        row.querySelectorAll('.dt-c').forEach((cell,index)=>{
+          cell.dataset.label=labels[index]||'';
+        });
+      });
       const note=document.createElement('div');note.className='callout warn';note.setAttribute('data-offline-draft-warning','');
       note.innerHTML=`${ic('info')}<span>${esc(s('offlineNote'))}</span>`;
       screenRoot.querySelector('[data-list-table]')?.before(note);
@@ -3851,17 +3859,43 @@ SCREENS['leave-workflow'] = async function(root){
 };
 
 /* ---------------- EMPLOYEE DIRECTORY (listing — module landing) ---------------- */
+const staffDirectoryFilterState={companyFn:null,status:'all',role:'all'};
+const staffDirectoryCopy={
+  en:{end:'End employment',ended:'Employment ended.',endHint:'The employee record and leave history remain available.',reason:'Reason',handoff:'Transfer direct reports to',missingHandoff:'No eligible handoff employee is available.',current:'Current staff',former:'Former staff',clear:'Clear filters',filterEmpty:'Try another status, job title or department.'},
+  ms:{end:'Tamatkan pekerjaan',ended:'Pekerjaan ditamatkan.',endHint:'Rekod pekerja dan sejarah cuti kekal tersedia.',reason:'Sebab',handoff:'Pindahkan laporan langsung kepada',missingHandoff:'Tiada pekerja yang layak menerima serahan.',current:'Kakitangan semasa',former:'Bekas kakitangan',clear:'Kosongkan penapis',filterEmpty:'Cuba status, jawatan atau jabatan lain.'},
+  zh:{end:'结束雇佣',ended:'雇佣已结束。',endHint:'员工档案和休假历史仍可查阅。',reason:'原因',handoff:'将直属员工转交给',missingHandoff:'没有合适的交接员工。',current:'在职员工',former:'离职员工',clear:'清除筛选',filterEmpty:'试试其他状态、职位或部门。'},
+  ja:{end:'雇用を終了',ended:'雇用を終了しました。',endHint:'従業員記録と休暇履歴は引き続き参照できます。',reason:'理由',handoff:'直属の部下を引き継ぐ従業員',missingHandoff:'引き継ぎ可能な従業員がいません。',current:'在籍従業員',former:'退職者',clear:'フィルターを解除',filterEmpty:'別の在籍状況、職位、部署をお試しください。'},
+  vi:{end:'Kết thúc việc làm',ended:'Đã kết thúc việc làm.',endHint:'Hồ sơ nhân viên và lịch sử nghỉ phép vẫn được lưu.',reason:'Lý do',handoff:'Chuyển nhân viên báo cáo trực tiếp cho',missingHandoff:'Không có nhân viên phù hợp để bàn giao.',current:'Nhân viên hiện tại',former:'Nhân viên cũ',clear:'Xóa bộ lọc',filterEmpty:'Thử trạng thái, chức danh hoặc phòng ban khác.'},
+};
+function staffDirectoryText(key){const lang=typeof getLang==='function'?getLang():'en';return (staffDirectoryCopy[lang]||staffDirectoryCopy.en)[key];}
+function hrIsDescendantOf(candidate,managerId,employees){
+  const seen=new Set();let current=candidate;
+  while(current&&current.managerId!=null&&!seen.has(current.id)){
+    if(current.managerId===managerId)return true;
+    seen.add(current.id);current=employees.find(row=>row.id===current.managerId);
+  }
+  return false;
+}
 SCREENS['hr-directory'] = async function(root){
   const s=hrCopy();
   const canWrite=typeof userHasAnyPermission!=='function'||userHasAnyPermission('hr.write');
   const {employees,leaveRequests}=await prepareHrData();
   const depts=[...new Set(employees.map(e=>e.department))];
+  const roles=[...new Set(employees.map(e=>e.jobTitle).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const companyFn=DB.company&&DB.company.companyFn;
+  if(staffDirectoryFilterState.companyFn!==companyFn){
+    staffDirectoryFilterState.companyFn=companyFn;
+    staffDirectoryFilterState.status='all';staffDirectoryFilterState.role='all';
+  }
+  if(staffDirectoryFilterState.role!=='all'&&!roles.includes(staffDirectoryFilterState.role))staffDirectoryFilterState.role='all';
   const chips=[['all',t('common.all')]].concat(depts.map(department=>({key:department,label:department,businessText:true})));
-  const onLeave=employees.filter(e=>hrIsOnLeaveToday(e.id,leaveRequests)).length;
+  const activeHeadcount=employees.filter(e=>e.isActive!==false).length;
+  const onLeave=employees.filter(e=>e.isActive!==false&&hrIsOnLeaveToday(e.id,leaveRequests)).length;
   const pending=leaveRequests.filter(l=>l.status==='pending').length;
   transactionListPage(root,{
     module:'hr',route:'hr-directory',title:t('hr.title'),
-    rows:employees,rowId:e=>e.id,
+    rows:()=>employees.filter(e=>(staffDirectoryFilterState.status==='all'||(staffDirectoryFilterState.status==='current'?e.isActive!==false:e.isActive===false))
+      &&(staffDirectoryFilterState.role==='all'||e.jobTitle===staffDirectoryFilterState.role)),rowId:e=>e.id,
     filters:chips,filterFn:(employee,department)=>employee.department===department,
     search:{
       label:s('searchEmployees'),placeholder:s('searchEmployees'),
@@ -3870,12 +3904,36 @@ SCREENS['hr-directory'] = async function(root){
       empty:{icon:'search',title:s('noMatchingEmployees'),description:s('noMatchingEmployeesBody')},
     },
     kpis:[
-      {label:t('hr.t.headcount'),value:employees.length},
+      {label:t('hr.t.headcount'),value:activeHeadcount},
       {label:t('hr.t.onleave'),value:onLeave,accent:true},
       {label:t('hr.t.pending'),value:pending,negative:pending>0,onClick:()=>navigate('leave-approval')},
     ],
     primaryAction:canWrite?{label:t('hr.add'),icon:'plus',onClick:()=>navigate('new-employee')}:null,
-    toolbarActions:[{label:t('hr.leave'),icon:'calendar',onClick:()=>navigate('leave-approval')}],
+    toolbarContent:()=>`<div class="staff-directory-secondary-filters"><label><span>${esc(t('col.status'))}</span><select data-staff-status-filter><option value="all">${esc(t('common.all'))}</option><option value="current" ${staffDirectoryFilterState.status==='current'?'selected':''}>${esc(staffDirectoryText('current'))}</option><option value="former" ${staffDirectoryFilterState.status==='former'?'selected':''}>${esc(staffDirectoryText('former'))}</option></select></label><label><span>${esc(s('fieldJobTitle'))}</span><select data-staff-role-filter><option value="all">${esc(t('common.all'))}</option>${roles.map(role=>`<option value="${esc(role)}" ${staffDirectoryFilterState.role===role?'selected':''}>${esc(role)}</option>`).join('')}</select></label></div>`,
+    toolbarActions:[...(canWrite?[{label:t('hr.org.title'),icon:'users',onClick:()=>window.openHrOrganization()}]:[]),{label:t('hr.leave'),icon:'calendar',onClick:()=>navigate('leave-approval')}],
+    afterRender:({root,render,rows,activeFilter,setFilter})=>{
+      const departmentFilters=root.querySelector('[data-list-filters]');
+      departmentFilters?.setAttribute('role','group');
+      departmentFilters?.setAttribute('aria-label',s('fieldDept'));
+      departmentFilters?.querySelectorAll('[data-list-filter]').forEach(button=>{
+        button.setAttribute('aria-pressed',String(button.dataset.listFilter===activeFilter));
+      });
+      if(canWrite)root.querySelector('[data-list-toolbar-action="0"]')?.setAttribute('data-hr-organization','');
+      root.querySelector('[data-staff-status-filter]')?.addEventListener('change',event=>{staffDirectoryFilterState.status=event.currentTarget.value;render();});
+      root.querySelector('[data-staff-role-filter]')?.addEventListener('change',event=>{staffDirectoryFilterState.role=event.currentTarget.value;render();});
+      if(!rows.length&&employees.length&&!root.querySelector('[data-list-search]')?.value
+        &&(activeFilter!=='all'||staffDirectoryFilterState.status!=='all'||staffDirectoryFilterState.role!=='all')){
+        const empty=root.querySelector('[data-list-empty]');
+        if(empty){
+          empty.querySelector('h3').textContent=s('noMatchingEmployees');
+          const description=document.createElement('p');description.textContent=staffDirectoryText('filterEmpty');empty.append(description);
+          empty.insertAdjacentHTML('beforeend',btn(staffDirectoryText('clear'),{icon:'x',cls:'soft',attrs:'data-staff-clear-filters'}));
+          empty.querySelector('[data-staff-clear-filters]').addEventListener('click',()=>{
+            staffDirectoryFilterState.status='all';staffDirectoryFilterState.role='all';setFilter('all');
+          });
+        }
+      }
+    },
     columns:[
       {label:t('hr.col.employee'),render:e=>`<div style="display:flex;align-items:center;gap:11px">${profileAvatar({name:e.fullName,src:e.photoUrl||e.imageUrl||e.avatarUrl,size:30})}<div class="cellsub" data-business-text><b>${esc(e.fullName)}</b><small>${esc(e.employeeNo)}</small></div></div>`},
       {label:t('hr.col.dept'),align:'l',render:e=>`<span data-business-text>${esc(e.department)}</span>`},
@@ -3937,7 +3995,10 @@ SCREENS['employee'] = async function(root, params){
   const pct=total>0?Math.max(0,Math.min(100,Math.round(remaining/total*100))):0;
   const accountLabel=!account||!account.userId?ac('none'):ac(account.accountState||'active');
   const accountTone=!account||!account.userId?'neutral':account.accountState==='offboarded'?'neutral':account.accountState==='active'||account.accountState==='preactivated'?'ok':'warn';
-  const availableTargets=employees.filter(row=>row.id!==e.id&&row.isActive);
+  const availableTargets=employees.filter(row=>row.id!==e.id&&row.isActive&&row.userId);
+  const directReports=employees.filter(row=>row.managerId===e.id&&row.isActive);
+  const employmentHandoffTargets=employees.filter(row=>row.id!==e.id&&row.isActive
+    &&!hrIsDescendantOf(row,e.id,employees));
   const canEdit=typeof userHasAnyPermission!=='function'||userHasAnyPermission('hr.write');
   const employmentTypes=[
     ['Full-time',t('hr.emp.fulltime')],
@@ -3945,8 +4006,8 @@ SCREENS['employee'] = async function(root, params){
     ['Contract',t('hr.emp.contract')],
     ['Intern',s('typeIntern')],
   ];
-  const accountControls=!canEdit?'':!account||!account.userId
-    ? btn(ac('create'),{icon:'plus',cls:'soft',sm:true,attrs:'data-employee-account-create'})
+  const accountControls=!canEdit||!e.isActive?'':!account||!account.userId
+    ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">${btn(ac('create'),{icon:'plus',cls:'soft',sm:true,attrs:'data-employee-account-create'})}${btn(staffDirectoryText('end'),{icon:'x',cls:'soft',sm:true,attrs:'data-employee-end'})}</div>`
     : account.accountState!=='offboarded'
       ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">${btn(ac('enterWorkspace'),{icon:'arrowR',cls:'primary',sm:true,attrs:'data-employee-account-enter'})}${account.temporaryCredential?btn(t('staff.handoffTitle'),{icon:'eye',cls:'soft',sm:true,attrs:'data-employee-account-reveal'}):''}${btn(ac('reset'),{icon:'refresh',cls:'soft',sm:true,attrs:'data-employee-account-reset'})}${btn(ac('offboard'),{icon:'x',cls:'soft',sm:true,attrs:'data-employee-account-offboard'})}</div>`
       : '';
@@ -3981,8 +4042,11 @@ SCREENS['employee'] = async function(root, params){
     : employeeHistory.length
       ? `<div class="employee-history-list">${employeeHistory.map(row=>{
         const actor=row.actorName||row.actorEmail||'System';
-        const action=row.action==='create'?s('employeeHistoryCreated'):s('employeeHistoryUpdated');
-        const changes=historyChanges(row);
+        const action=row.action==='create'?s('employeeHistoryCreated')
+          :row.action==='end_employment'?staffDirectoryText('end'):s('employeeHistoryUpdated');
+        const changes=row.action==='end_employment'
+          ? `<div class="employee-history-change"><span>${esc(staffDirectoryText('reason'))}</span><small>${esc(row.after&&row.after.reason||'—')}</small></div>`
+          :historyChanges(row);
         return `<div class="employee-history-entry"><div class="employee-history-entry-head"><b>${esc(action)}</b><span>${esc(dateTimeValue(row.occurredAt))}</span></div><small>${esc(s('employeeHistoryBy').replace('{name}',actor))}</small>${changes?`<div class="employee-history-changes">${changes}</div>`:''}</div>`;
       }).join('')}</div>`
       : `<div class="master-detail-editor-inline-empty">${ic('history')}<span>${esc(s('employeeHistoryEmpty'))}</span></div>`;
@@ -4135,6 +4199,33 @@ SCREENS['employee'] = async function(root, params){
       root.querySelector('[data-employee-account-reveal]')?.addEventListener('click',()=>{
         void openEmployeeCredentialHandoff(e.id);
       });
+      root.querySelector('[data-employee-end]')?.addEventListener('click',()=>{
+        const requiresHandoff=directReports.length>0;
+        const canProceed=!requiresHandoff||employmentHandoffTargets.length>0;
+        const handoffHtml=requiresHandoff
+          ?employmentHandoffTargets.length
+            ?`<label class="fld"><span>${esc(staffDirectoryText('handoff'))}</span><select id="employeeEmploymentHandoff">${employmentHandoffTargets.map(row=>`<option value="${row.id}">${esc(row.fullName)} · ${esc(row.employeeNo)}</option>`).join('')}</select></label>`
+            :`<p role="alert" class="muted">${esc(staffDirectoryText('missingHandoff'))}</p>`
+          :'';
+        appModal({icon:'warn',title:staffDirectoryText('end'),body:`
+          <p class="muted" style="margin-bottom:14px">${esc(staffDirectoryText('endHint'))}</p>
+          ${handoffHtml}
+          <label class="fld"><span>${esc(staffDirectoryText('reason'))}</span><textarea id="employeeEmploymentReason" rows="3" minlength="3" maxlength="500"></textarea></label>
+          <div class="auth-error" id="employeeEmploymentError" role="alert"></div>`,
+          actions:`${btn(s('cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(staffDirectoryText('end'),{icon:'x',cls:'primary',attrs:`data-employee-end-confirm${canProceed?'':' disabled'}`})}`});
+        document.querySelector('[data-employee-end-confirm]')?.addEventListener('click',async()=>{
+          const button=document.querySelector('[data-employee-end-confirm]');
+          button.disabled=true;
+          try{
+            await window.ErpSystemData.action('hr/employees',e.id,'end-employment',{
+              expectedUpdatedAt:e.updatedAt instanceof Date?e.updatedAt.toISOString():String(e.updatedAt),
+              reason:document.querySelector('#employeeEmploymentReason').value.trim(),
+              handoffEmployeeId:requiresHandoff?Number(document.querySelector('#employeeEmploymentHandoff').value):null,
+            },crypto.randomUUID());
+            closeModal();toast(staffDirectoryText('ended'),'ok');reload();
+          }catch(error){document.querySelector('#employeeEmploymentError').textContent=(error&&error.message)||s('employeeUpdateError');button.disabled=false;}
+        });
+      });
       root.querySelector('[data-employee-account-reset]')?.addEventListener('click',()=>{
         confirmModal({icon:'warn',title:ac('reset'),message:ac('resetConfirm'),confirmLabel:ac('reset'),onConfirm:`async function(){try{await window.ErpSystemData.action('hr/employee-accounts',${Number(e.id)},'reset-password',{},crypto.randomUUID());toast(${JSON.stringify(ac('resetDone'))},'ok');navigate('employee',{employeeId:${Number(e.id)}})}catch(error){toast((error&&error.message)||${JSON.stringify(ac('error'))},'bad')}}`});
       });
@@ -4142,8 +4233,9 @@ SCREENS['employee'] = async function(root, params){
         appModal({icon:'warn',title:ac('offboardTitle'),body:`
           <label class="fld"><span>${esc(ac('handoff'))}</span><select id="employeeHandoffTarget">${availableTargets.map(row=>`<option value="${row.id}" ${row.id===e.managerId?'selected':''}>${esc(row.fullName)} · ${esc(row.employeeNo)}</option>`).join('')}</select></label>
           <label class="fld"><span>${esc(ac('reason'))}</span><textarea id="employeeOffboardReason" rows="3"></textarea></label>
+          ${availableTargets.length?'':`<p role="alert" class="muted">${esc(staffDirectoryText('missingHandoff'))}</p>`}
           <div class="auth-error" id="employeeOffboardError" role="alert"></div>`,
-          actions:`${btn(s('cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(ac('confirmOffboard'),{icon:'x',cls:'primary',attrs:'data-account-offboard-confirm'})}`});
+          actions:`${btn(s('cancel'),{cls:'soft',attrs:'onclick="closeModal()"'})}${btn(ac('confirmOffboard'),{icon:'x',cls:'primary',attrs:`data-account-offboard-confirm${availableTargets.length?'':' disabled'}`})}`});
         document.querySelector('[data-account-offboard-confirm]')?.addEventListener('click',async()=>{
           const button=document.querySelector('[data-account-offboard-confirm]');
           button.setAttribute('disabled','');

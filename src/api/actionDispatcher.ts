@@ -1,3 +1,6 @@
+import { assertHrEmployeeAccessWithin } from '../auth/hrDataAccess';
+import { leaveRequest } from '../data/schema';
+import { and, eq } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import { withTenantTransaction } from '../data/tenantTransaction';
 import { hasAnyAuthorization } from '../auth/authorization';
@@ -79,6 +82,18 @@ export async function dispatchAction(
       definition.permission,
     ], { resourceKey: context.resource })) {
       throw new ActionDispatchError(403, 'permission_denied', 'You cannot perform this action.');
+    }
+    if (context.resource === 'hr/employees' || context.resource === 'hr/leave-requests') {
+      let employeeId = context.resourceId;
+      if (context.resource === 'hr/leave-requests') {
+        const [request] = await tx.select({ employeeId: leaveRequest.employeeId }).from(leaveRequest).where(and(
+          eq(leaveRequest.masterFn, scope.masterFn), eq(leaveRequest.companyFn, scope.companyFn), eq(leaveRequest.id, context.resourceId),
+        )).limit(1);
+        if (!request) throw new ActionDispatchError(404, 'record_not_found', 'Leave record unavailable.');
+        employeeId = request.employeeId;
+      }
+      try { await assertHrEmployeeAccessWithin(tx, context.session, context.resource, definition.permission, employeeId); }
+      catch { throw new ActionDispatchError(403, 'data_scope_denied', 'Current staff scope does not include this record.'); }
     }
     const operation = `${context.resource}:${context.resourceId}:${context.action}`;
     let claimId: number | null = null;

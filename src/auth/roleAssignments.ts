@@ -1,3 +1,4 @@
+import { businessUnit, hrPosition } from '../data/schema';
 import { and, eq, isNull, ne, or } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import { withTenantTransaction } from '../data/tenantTransaction';
@@ -37,7 +38,7 @@ export interface CreateRoleAssignmentInput {
 
 function normalizeTarget(input: RoleAssignmentScopeInput) {
   const targetType = input.targetType?.trim() || 'none';
-  const stableTargetTypes = ['none', 'company', 'department', 'team', 'employee'] as const;
+  const stableTargetTypes = ['none', 'company', 'department', 'team', 'employee', 'business_unit', 'position'] as const;
   if (!stableTargetTypes.includes(
     targetType as typeof stableTargetTypes[number],
   )) {
@@ -69,6 +70,8 @@ async function validateScopeTargets(
     const validTargetForScope = scope.scope === 'company'
       ? scope.targetType === 'none'
         || (scope.targetType === 'company' && scope.targetId === session.activeCompanyFn)
+      : scope.scope === 'business_unit' || scope.scope === 'position'
+        ? scope.targetType === 'none' || scope.targetType === scope.scope
       : scope.scope === 'department'
         ? scope.targetType === 'none' || scope.targetType === 'department'
         : scope.scope === 'team'
@@ -76,6 +79,14 @@ async function validateScopeTargets(
           : scope.targetType === 'none' || scope.targetType === 'employee';
     if (!validTargetForScope) {
       throw new AuthLifecycleError(400, 'invalid_scope_target', 'The scope target does not match the data scope.');
+    }
+    if (scope.targetType === 'business_unit' || scope.targetType === 'position') {
+      const table = scope.targetType === 'business_unit' ? businessUnit : hrPosition;
+      const [target] = await exec.select({ id: table.id }).from(table).where(and(
+        eq(table.masterFn, session.masterFn), eq(table.companyFn, session.activeCompanyFn),
+        eq(table.id, Number(scope.targetId)), eq(table.isActive, true),
+      )).limit(1);
+      if (!Number.isSafeInteger(Number(scope.targetId)) || !target) throw new AuthLifecycleError(400, 'invalid_scope_target', 'Choose an active organization target in this company.');
     }
     if (scope.targetType === 'company') {
       if (scope.targetId !== session.activeCompanyFn) {

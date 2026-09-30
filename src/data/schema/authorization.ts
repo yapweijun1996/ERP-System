@@ -11,7 +11,7 @@ import { tenant, timestamps } from './_shared';
 export const AUTHORIZATION_OVERRIDE_EFFECTS = ['allow', 'deny'] as const;
 export const AUTHORIZATION_OVERRIDE_TARGET_TYPES = [
   'none', 'company', 'branch', 'department', 'team', 'employee',
-  'region', 'business_unit', 'legal_entity', 'cost_center',
+  'region', 'business_unit', 'position', 'legal_entity', 'cost_center',
 ] as const;
 
 /**
@@ -59,10 +59,10 @@ export const userPermissionOverride = pgTable('user_permission_override', {
     t.masterFn, t.companyFn, t.resourceKey, t.scope, t.targetType, t.targetId,
   ),
   check('ck_user_permission_override_effect', sql`${t.effect} in ('allow', 'deny')`),
-  check('ck_user_permission_override_scope', sql`${t.scope} in ('self', 'team', 'department', 'company')`),
+  check('ck_user_permission_override_scope', sql`${t.scope} in ('self', 'team', 'department', 'business_unit', 'position', 'company')`),
   check(
     'ck_user_permission_override_target_type',
-    sql`${t.targetType} in ('none', 'company', 'branch', 'department', 'team', 'employee', 'region', 'business_unit', 'legal_entity', 'cost_center')`,
+    sql`${t.targetType} in ('none', 'company', 'branch', 'department', 'team', 'employee', 'region', 'business_unit', 'position', 'legal_entity', 'cost_center')`,
   ),
   check(
     'ck_user_permission_override_target',

@@ -2,18 +2,52 @@
 // valid without a login; when present, `user_id` is unique within the company.
 import {
   pgTable, text, bigint, integer, numeric, boolean, date, timestamp, jsonb,
-  index, uniqueIndex, check,
+  index, uniqueIndex, check, foreignKey,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { tenant, timestamps } from './_shared';
-import { appUser } from './tenancy';
+import { appUser, company } from './tenancy';
 
 export const EMPLOYMENT_TYPES = ['Full-time', 'Part-time', 'Contract', 'Intern'] as const;
 export const LEAVE_TYPES = ['Annual', 'Medical', 'Unpaid'] as const;
 
+/** Company-owned organization masters. No migration backfill or automatic grants. */
+export const businessUnit = pgTable('hr_business_unit', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  code: text('code').notNull(),
+  name: text('name').notNull(),
+  isActive: boolean('is_active').notNull().default(true),
+  version: integer('version').notNull().default(1),
+  ...timestamps,
+}, (t) => [
+  foreignKey({ columns: [t.masterFn, t.companyFn], foreignColumns: [company.masterFn, company.companyFn], name: 'fk_hr_business_unit_company' }),
+  uniqueIndex('uq_hr_business_unit_code').on(t.masterFn, t.companyFn, t.code),
+  uniqueIndex('uq_hr_business_unit_tenant_id').on(t.masterFn, t.companyFn, t.id),
+  check('ck_hr_business_unit_version', sql`${t.version} > 0`),
+]);
+
+export const hrPosition = pgTable('hr_position', {
+  id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
+  ...tenant,
+  code: text('code').notNull(),
+  name: text('name').notNull(),
+  isActive: boolean('is_active').notNull().default(true),
+  version: integer('version').notNull().default(1),
+  ...timestamps,
+}, (t) => [
+  foreignKey({ columns: [t.masterFn, t.companyFn], foreignColumns: [company.masterFn, company.companyFn], name: 'fk_hr_position_company' }),
+  uniqueIndex('uq_hr_position_code').on(t.masterFn, t.companyFn, t.code),
+  uniqueIndex('uq_hr_position_tenant_id').on(t.masterFn, t.companyFn, t.id),
+  check('ck_hr_position_version', sql`${t.version} > 0`),
+]);
+
 export const employee = pgTable('employee', {
   id: bigint('id', { mode: 'number' }).generatedAlwaysAsIdentity().primaryKey(),
   ...tenant,
+  organizationVersion: integer('organization_version').notNull().default(0),
+  businessUnitId: bigint('business_unit_id', { mode: 'number' }),
+  positionId: bigint('position_id', { mode: 'number' }),
   employeeNo: text('employee_no').notNull(),
   fullName: text('full_name').notNull(),
   email: text('email').notNull(),
@@ -32,6 +66,12 @@ export const employee = pgTable('employee', {
   isActive: boolean('is_active').notNull().default(true),
   ...timestamps,
 }, (t) => [
+  foreignKey({ columns: [t.masterFn, t.companyFn, t.businessUnitId],
+    foreignColumns: [businessUnit.masterFn, businessUnit.companyFn, businessUnit.id],
+    name: 'fk_employee_business_unit_tenant' }),
+  foreignKey({ columns: [t.masterFn, t.companyFn, t.positionId],
+    foreignColumns: [hrPosition.masterFn, hrPosition.companyFn, hrPosition.id],
+    name: 'fk_employee_position_tenant' }),
   uniqueIndex('uq_employee_no').on(t.masterFn, t.companyFn, t.employeeNo),
   uniqueIndex('uq_employee_company_user')
     .on(t.masterFn, t.companyFn, t.userId)

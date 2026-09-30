@@ -188,4 +188,41 @@ describe('employee profile update API', () => {
     expect(response.status).toBe(403);
     expect((await response.json()).error.code).toBe('permission_denied');
   });
+
+  it('ends accountless employment with scoped permission, replay and audit guards', async () => {
+    const admin = await login('admin', 'demo1234');
+    const viewer = await login('viewer', 'viewer1234');
+    const [subject] = await db.select().from(employee).where(eq(employee.employeeNo, 'EMP-1088'));
+    const [accountHolder] = await db.select().from(employee).where(eq(employee.employeeNo, 'EMP-1042'));
+    const [otherCompany] = await db.select().from(employee).where(eq(employee.companyFn, 'C-MY'));
+    const payload = { expectedUpdatedAt: subject.updatedAt.toISOString(), reason: 'Employment ended after resignation' };
+    const submit = (id: number, key: string, body: Record<string, unknown> = payload, actor = admin) => fetch(
+      `${baseUrl}/api/hr/employees/${id}/actions/end-employment`, {
+        method: 'POST', headers: { cookie: actor.header, 'x-csrf-token': actor.csrf,
+          'content-type': 'application/json', 'idempotency-key': key },
+        body: JSON.stringify(body),
+      },
+    );
+    expect((await submit(subject.id, 'end-spoof', { ...payload, companyFn: 'C-MY' })).status).toBe(400);
+    expect((await submit(subject.id, 'end-viewer', payload, viewer)).status).toBe(403);
+    expect((await submit(otherCompany.id, 'end-other-company')).status).toBe(404);
+    expect((await submit(accountHolder.id, 'end-account-holder', {
+      ...payload, expectedUpdatedAt: accountHolder.updatedAt.toISOString(),
+    })).status).toBe(409);
+    const saved = await submit(subject.id, 'end-once');
+    expect(saved.status).toBe(200);
+    expect(await saved.json()).toMatchObject({ data: { employee: { id: subject.id, isActive: false }, reportsReassigned: 0 } });
+    const replay = await submit(subject.id, 'end-once');
+    expect(replay.status).toBe(200);
+    expect(replay.headers.get('idempotency-replayed')).toBe('true');
+    expect((await submit(subject.id, 'end-twice')).status).toBe(409);
+    const [ended] = await db.select().from(employee).where(eq(employee.id, subject.id));
+    expect(ended.isActive).toBe(false);
+    const audits = await db.select().from(auditLog).where(and(
+      eq(auditLog.entity, 'hr/employees'), eq(auditLog.entityId, String(subject.id)),
+      eq(auditLog.action, 'end_employment'),
+    ));
+    expect(audits).toHaveLength(1);
+    expect(audits[0].after).toMatchObject({ reason: payload.reason, isActive: false });
+  });
 });

@@ -1795,3 +1795,15 @@ has no owner flag or permissions. Invalid membership clears the local session.
 This is Demo workspace restoration, not production authentication. The setup
 browser regression covers new-Company login, reload, stale preference, denied
 cross-Company switching and revocation. Shared business commands retain authority.
+
+## HR organization and scoped access — local candidate 2026-09-30
+
+Company-owned BU/Position masters and nullable staff assignments grant no rights.
+Shared live HR staff projection now covers generic resources, dedicated employee
+and Leave routes, and governed permission-based approval. Explicit targets require
+active same-Company masters and an active actor assignment; stale/unassigned or
+cross-Company access fails closed. Company-only administration prevents self-moving
+to widen authority. No production grants or data changed. Additive migrations
+0118_classy_ronan on remote main 1b0a4c3 and disposable PostgreSQL RLS/backup rehearsal are documented in
+[HR organization slice](HR_ORGANIZATION_SLICE.md). TASK-256 remains in progress
+until committed source CI and reviewed migration/release evidence are complete.
