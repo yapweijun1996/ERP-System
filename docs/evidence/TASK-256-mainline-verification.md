@@ -79,3 +79,13 @@ API coverage includes both relative dimensions: matching My approval denied
 without record/balance/event changes, outside-organization approval allowed under
 Company grant, missing/stale assignment denied, revoked deny ignored, and a
 Leave-only unresolved deny does not affect the employee resource.
+
+Blank-company review repair: unresolved relative-deny state is evaluated before
+Company projection returns unrestricted null, including when there are zero
+candidate staff rows. Synthetic blank-company controls cover both BU and Position
+none denies on employee and Leave resources, blocked Company-global API commands,
+revoked-deny unrestricted controls and resolved-assignment record projections.
+Blank-company and authorization regression run: 2 files/16 tests passed after
+correcting the synthetic Company's required country/currency/tax fields.
+The blank API fixture explicitly enables fictional tenant module allocations and
+asserts data_scope_denied, so module_not_enabled cannot mask the security check.

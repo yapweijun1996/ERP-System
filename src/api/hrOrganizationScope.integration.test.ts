@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Server } from 'node:http';
 import { and, eq, isNull, ne } from 'drizzle-orm';
 import type { DB } from '../data/db';
-import { appUser, employee, customer, userCompany, leaveRequest, leaveType, role, rolePermission, userCompanyRole, userCompanyRoleScope, staffAppointment, calendarHoliday, userPermissionOverride, approvalInstance, approvalInstanceEvent, leaveBalanceEntry, businessUnit, hrPosition } from '../data/schema';
+import { appUser, company, companyModule, employee, customer, userCompany, leaveRequest, leaveType, role, rolePermission, userCompanyRole, userCompanyRoleScope, staffAppointment, calendarHoliday, userPermissionOverride, approvalInstance, approvalInstanceEvent, leaveBalanceEntry, businessUnit, hrPosition } from '../data/schema';
 import { resolveHrEmployeeAccessWithin } from '../auth/hrDataAccess';
 import { freshDb } from '../test/helpers';
 import { seedDemo } from '../data/seed';
@@ -265,6 +265,47 @@ describe('one HR staff projection across generic and specific API paths',()=>{
     const permitted=await request('/api/my/approvals/'+draft.id+'/actions/approve','POST',{expectedVersion:submitted.version,reason:'Subject permission restored'});
     expect(permitted.status,await permitted.clone().text()).toBe(200);
     await db.update(userCompanyRoleScope).set({scope:'business_unit',targetType:'business_unit',targetId:String(unitId)}).where(eq(userCompanyRoleScope.assignmentId,assignmentId));
+  });
+  it('fails closed for unresolved relative denies in a blank Company and honors revoked/resolved controls',async()=>{
+    const blank={masterFn:'M1',companyFn:'QA-BLANK'};
+    await db.insert(company).values({...blank,name:'Fictional blank Company',country:'SG',currency:'SGD',taxRegime:'GST'});
+    const allocations=await db.select().from(companyModule).where(eq(companyModule.companyFn,'C-SG'));
+    await db.insert(companyModule).values(allocations.map(row=>({...row,companyFn:blank.companyFn})));
+    const [seedUser]=await db.select().from(appUser).where(eq(appUser.userId,viewerId));
+    const [actor]=await db.insert(appUser).values({masterFn:'M1',username:'blank-company-actor',fullName:'Fictional blank actor',passwordHash:seedUser.passwordHash}).returning();
+    const [companyRole]=await db.insert(role).values({...blank,name:'Explicit blank Company HR'}).returning();
+    await db.insert(rolePermission).values(['hr.read','hr.write'].map(permissionKey=>({masterFn:'M1',roleId:companyRole.roleId,permissionKey,allowed:true})));
+    await db.insert(userCompany).values({companyFn:blank.companyFn,userId:actor.userId,roleId:companyRole.roleId});
+    const [assignment]=await db.insert(userCompanyRole).values({companyFn:blank.companyFn,userId:actor.userId,roleId:companyRole.roleId,scopeBackfilledAt:new Date()}).returning();
+    await db.insert(userCompanyRoleScope).values({...blank,assignmentId:assignment.assignmentId,resourceKey:'hr/*',scope:'company',targetType:'company',targetId:blank.companyFn});
+    const session={userId:actor.userId,masterFn:'M1',activeCompanyFn:blank.companyFn,username:'blank-company-actor',email:null,fullName:null};
+    const projection=(resource:string,permission='hr.write')=>db.transaction(tx=>resolveHrEmployeeAccessWithin(tx,session,resource,permission));
+    expect(await db.select().from(employee).where(eq(employee.companyFn,blank.companyFn))).toEqual([]);
+    expect(await projection('hr/employees')).toBeNull();
+    const auth=cookies(await fetch(base+'/api/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({organizationCode:'ACME',username:'blank-company-actor',password:'viewer1234'})}));
+    for(const dimension of ['business_unit','position']){
+      for(const resource of ['hr/employees','hr/leave-requests']){
+        const [deny]=await db.insert(userPermissionOverride).values({...blank,userId:actor.userId,permissionKey:'hr.write',resourceKey:resource,effect:'deny',scope:dimension,targetType:'none',targetId:'',reason:'Synthetic blank relative deny',assignedByUserId:actorId}).returning();
+        expect(await projection(resource)).toEqual([]);
+        const path=resource==='hr/employees'?'/api/hr/organization/business_unit':'/api/hr/leave-workflows';
+        const denied=await fetch(base+path,{method:'POST',headers:{cookie:auth.cookie,'content-type':'application/json','x-csrf-token':auth.csrf,'idempotency-key':'blank-'+dimension+'-'+resource},body:JSON.stringify({employeeId:targetId})});
+        expect(denied.status,await denied.clone().text()).toBe(403);
+        expect((await denied.json()).error.code).toBe('data_scope_denied');
+        await db.update(userPermissionOverride).set({revokedAt:new Date(),revokedByUserId:actorId,revocationReason:'Synthetic revoked blank deny'}).where(eq(userPermissionOverride.id,deny.id));
+        expect(await projection(resource)).toBeNull();
+      }
+    }
+    const [unit]=await db.insert(businessUnit).values({...blank,code:'BLANK-UNIT',name:'Fictional Unit'}).returning();
+    const [position]=await db.insert(hrPosition).values({...blank,code:'BLANK-POS',name:'Fictional Position'}).returning();
+    const values={...blank,fullName:'Fictional resolved staff',email:'blank@example.invalid',department:'Synthetic',jobTitle:'Synthetic',startDate:'2026-01-01',baseSalary:'1000.00'};
+    const [linked]=await db.insert(employee).values({...values,employeeNo:'QA-BLANK-ACTOR',userId:actor.userId,businessUnitId:unit.id,positionId:position.id}).returning();
+    const [outside]=await db.insert(employee).values({...values,employeeNo:'QA-BLANK-OUTSIDE'}).returning();
+    for(const dimension of ['business_unit','position']){
+      const [deny]=await db.insert(userPermissionOverride).values({...blank,userId:actor.userId,permissionKey:'hr.write',resourceKey:'hr/employees',effect:'deny',scope:dimension,targetType:'none',targetId:'',reason:'Synthetic resolved deny',assignedByUserId:actorId}).returning();
+      expect(await projection('hr/employees')).toEqual([outside.id]);
+      expect(await projection('hr/employees')).not.toContain(linked.id);
+      await db.delete(userPermissionOverride).where(eq(userPermissionOverride.id,deny.id));
+    }
   });
   it('accepts canonical-only scoped reads and actions without widening to other staff',async()=>{
     const [assignedRole]=await db.select().from(userCompanyRole).where(eq(userCompanyRole.assignmentId,assignmentId));
