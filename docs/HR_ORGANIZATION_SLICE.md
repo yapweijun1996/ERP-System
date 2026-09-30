@@ -36,6 +36,8 @@ employee/Leave routes use it. Governed permission-based Leave approval uses the
 same projection with approval policy context; direct/delegated approval authority
 and self-approval prohibition remain governed by the existing workflow.
 Cancellation resolves the source employee and rechecks scope in its transaction.
+Employment ending checks the subject, every affected report, and the handoff
+employee in the shared API/Demo transaction; an out-of-scope graph mutation fails.
 Restricted company-global HR configuration/onboarding operations fail closed.
 
 Self/team/department retain their existing user-account projection semantics.

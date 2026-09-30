@@ -116,6 +116,29 @@ describe('one HR staff projection across generic and specific API paths',()=>{
     const [staff]=await db.select().from(employee).where(eq(employee.id,targetId));
     const updated=await request('/api/hr/employees/'+targetId,'PATCH',{employeeNo:staff.employeeNo,fullName:staff.fullName,email:staff.email,phone:'555-0100',department:staff.department,jobTitle:staff.jobTitle,employmentType:staff.employmentType,startDate:staff.startDate,annualLeaveDays:staff.annualLeaveDays,baseSalary:staff.baseSalary,managerId:staff.managerId,expectedUpdatedAt:staff.updatedAt.toISOString()});
     expect(updated.status).toBe(200);
+    await db.update(employee).set({managerId:targetId}).where(eq(employee.id,otherId));
+    const [endTarget]=await db.select().from(employee).where(eq(employee.id,targetId));
+    const deniedEnd=await request('/api/hr/employees/'+targetId+'/actions/end-employment','POST',{
+      expectedUpdatedAt:endTarget.updatedAt.toISOString(),reason:'Synthetic out-of-scope report handoff',handoffEmployeeId:viewerEmployee,
+    });
+    expect(deniedEnd.status).toBe(403);
+    const [unchangedReport]=await db.select().from(employee).where(eq(employee.id,otherId));
+    expect(unchangedReport.managerId).toBe(targetId);
+    expect((await db.select().from(employee).where(eq(employee.id,targetId)))[0].isActive).toBe(true);
+    await db.update(employee).set({managerId:null}).where(eq(employee.id,otherId));
+    const syntheticBase={...scope,fullName:'Fictional scoped handoff',email:'handoff@example.invalid',
+      department:'Synthetic',jobTitle:'Synthetic',startDate:'2026-01-01',baseSalary:'1000.00',
+      businessUnitId:unitId,positionId};
+    const [scopedManager]=await db.insert(employee).values({...syntheticBase,employeeNo:'QA-SCOPE-MANAGER'}).returning();
+    const [scopedReport]=await db.insert(employee).values({...syntheticBase,employeeNo:'QA-SCOPE-REPORT',managerId:scopedManager.id}).returning();
+    const permittedEnd=await request('/api/hr/employees/'+scopedManager.id+'/actions/end-employment','POST',{
+      expectedUpdatedAt:scopedManager.updatedAt.toISOString(),reason:'Synthetic scoped handoff',handoffEmployeeId:viewerEmployee,
+    },'scoped-end');
+    expect(permittedEnd.status).toBe(200);
+    expect((await db.select().from(employee).where(eq(employee.id,scopedManager.id)))[0].isActive).toBe(false);
+    expect((await db.select().from(employee).where(eq(employee.id,scopedReport.id)))[0].managerId).toBe(viewerEmployee);
+
+
     expect((await request('/api/hr/employees/'+viewerEmployee+'/organization','PUT',{businessUnitId:null,positionId:null,expectedVersion:1,reason:'Cannot widen own authority'})).status).toBe(403);
     expect((await request('/api/hr/organization/business_unit','POST',{code:'NO',name:'No grant',isActive:true,expectedVersion:0})).status).toBe(403);
   });

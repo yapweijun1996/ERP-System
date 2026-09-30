@@ -1,5 +1,5 @@
 import { listOrganizationWithin, saveOrganizationWithin, assignEmployeeOrganizationWithin, OrganizationError, type OrganizationKind } from '../../src/modules/hr/organization';
-import { resolveHrEmployeeAccessWithin } from '../../src/auth/hrDataAccess';
+import { resolveHrEmployeeAccessWithin, assertHrEmploymentEndAccessWithin } from '../../src/auth/hrDataAccess';
 import { accessDemoDocumentWithin } from '../../src/data/demoDocumentAccess';
 import { readSetupModuleCatalogWithin } from '../../src/auth/moduleProvisioning';
 import { createDemoReceiptAssistantCommands } from '../../src/data/demoReceiptAssistant';
@@ -1545,9 +1545,11 @@ export const erpDemoRuntime = Object.freeze({
     ) {
       return updateEmployeeWithin(asDomainDb(db), scope, employeeId, input);
     },
-    endEmployeeEmploymentWithin(
+    async endEmployeeEmploymentWithin(
       db: DemoOrm, scope: Scope, employeeId: number, input: EndEmployeeEmploymentInput,
     ) {
+      await assertHrEmploymentEndAccessWithin(asDomainDb(db), demoSession(scope, input.actorUserId),
+        employeeId, input.handoffEmployeeId ?? null);
       return endEmployeeEmploymentWithin(asDomainDb(db), scope, employeeId, input);
     },
     projectEmployeeAnnualLeaveWithin(db: DemoOrm, scope: Scope, employeeId: number) {

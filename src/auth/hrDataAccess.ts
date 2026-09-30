@@ -52,3 +52,20 @@ export async function assertHrEmployeeAccessWithin(
     error.code = 'data_scope_denied'; error.status = staff.length ? 403 : 404; throw error;
   }
 }
+
+/** Employment end may reassign reports: every affected staff row needs authority. */
+export async function assertHrEmploymentEndAccessWithin(
+  exec: DB, session: SessionData, employeeId: number, handoffEmployeeId: number | null,
+): Promise<void> {
+  await assertHrEmployeeAccessWithin(exec, session, 'hr/employees', 'hr.write', employeeId);
+  const reports = await exec.select({ id: employee.id }).from(employee).where(and(
+    eq(employee.masterFn, session.masterFn), eq(employee.companyFn, session.activeCompanyFn),
+    eq(employee.managerId, employeeId), eq(employee.isActive, true),
+  )).for('update');
+  for (const report of reports) {
+    await assertHrEmployeeAccessWithin(exec, session, 'hr/employees', 'hr.write', report.id);
+  }
+  if (reports.length && handoffEmployeeId != null) {
+    await assertHrEmployeeAccessWithin(exec, session, 'hr/employees', 'hr.write', handoffEmployeeId);
+  }
+}

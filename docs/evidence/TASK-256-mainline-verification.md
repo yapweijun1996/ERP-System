@@ -30,3 +30,9 @@ at their exact source revision.
 No claim of production readiness, migration against populated /erp, merge or
 grant activation is made. Current-main migration0118 differs from removed
 Company Profile migration0118; existing live lineage requires separate review.
+
+Follow-up scoped review: employment ending can reassign reports. Shared API/Demo
+checks now cover the subject, every affected report and handoff employee. API
+regression8/8 and enhanced scoped matrix4/4 pass, proving out-of-scope denial with
+no changes and permitted within-BU handoff. Built editor/staff/Leave browser rerun
+passes with zero console errors. See [separate production gate](../HR_PRODUCTION_RELEASE_GATE.md).

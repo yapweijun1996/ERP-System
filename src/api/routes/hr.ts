@@ -1,5 +1,5 @@
 import { OrganizationError, listOrganizationWithin, saveOrganizationWithin, assignEmployeeOrganizationWithin, type OrganizationKind } from '../../modules/hr/organization';
-import { assertHrEmployeeAccessWithin, resolveHrEmployeeAccessWithin } from '../../auth/hrDataAccess';
+import { assertHrEmployeeAccessWithin, assertHrEmploymentEndAccessWithin, resolveHrEmployeeAccessWithin } from '../../auth/hrDataAccess';
 import { Router } from 'express';
 import { and, eq } from 'drizzle-orm';
 import type { DB } from '../../data/db';
@@ -437,7 +437,7 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
       await runIdempotent(req, res, session, 'hr.employee.end-employment', payload, async () => {
         const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
         const data = await withTenantTransaction(db, scope, async (tx) => {
-          await assertHrEmployeeAccessWithin(tx, session, 'hr/employees', PERMISSIONS.hrWrite, employeeId);
+          await assertHrEmploymentEndAccessWithin(tx, session, employeeId, handoffEmployeeId);
           return endEmployeeEmploymentWithin(tx, scope, employeeId, { ...payload, actorUserId: session.userId, requestId: context(res).requestId });
         });
         return { status: 200, data };
