@@ -4,6 +4,9 @@ import {
 import type { DB } from '../data/db';
 import {
   appUser,
+  employee,
+  businessUnit,
+  hrPosition,
   company,
   role,
   rolePermission,
@@ -477,6 +480,32 @@ export async function explicitDenyMatcherWithin(
     or(isNull(userPermissionOverride.validUntil), gt(userPermissionOverride.validUntil, now)),
     isNull(userPermissionOverride.revokedAt),
   ));
-  return (targets: AuthorizationScopeTarget[]) => targets.some(scopeTarget =>
-    rows.some(row => overrideMatches(row, { ...request, now, scopeTarget })));
+  // Organization/none is relative to the live actor assignment. Record
+  // projections use explicit subjects, so normalize relative denies before
+  // matching; an unresolved relative deny must never silently disappear.
+  const relevantRows = rows.filter(row => resourcePatternMatches(row.resourceKey, request.resourceKey));
+  const relative = relevantRows.filter(row => row.targetType === 'none'
+    && (row.scope === 'business_unit' || row.scope === 'position'));
+  const resolved = new Map<number, typeof rows[number] | null>();
+  if (relative.length) {
+    const [actor] = await db.select().from(employee).where(and(
+      eq(employee.masterFn, request.principal.masterFn),
+      eq(employee.companyFn, request.principal.companyFn),
+      eq(employee.userId, request.principal.userId), eq(employee.isActive, true),
+    )).limit(1);
+    for (const row of relative) {
+      const table = row.scope === 'business_unit' ? businessUnit : hrPosition;
+      const assignmentId = row.scope === 'business_unit' ? actor?.businessUnitId : actor?.positionId;
+      const [assignment] = assignmentId == null ? [] : await db.select({ id: table.id }).from(table).where(and(
+        eq(table.masterFn, request.principal.masterFn), eq(table.companyFn, request.principal.companyFn),
+        eq(table.id, assignmentId), eq(table.isActive, true),
+      )).limit(1);
+      resolved.set(row.id, assignment ? { ...row, targetType: row.scope, targetId: String(assignment.id) } : null);
+    }
+  }
+  return (targets: AuthorizationScopeTarget[]) => relevantRows.some(row => {
+    const normalized = resolved.has(row.id) ? resolved.get(row.id) : row;
+    if (!normalized) return true;
+    return targets.some(scopeTarget => overrideMatches(normalized, { ...request, now, scopeTarget }));
+  });
 }

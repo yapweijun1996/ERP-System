@@ -2,7 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Server } from 'node:http';
 import { and, eq, isNull, ne } from 'drizzle-orm';
 import type { DB } from '../data/db';
-import { appUser, employee, customer, userCompany, leaveRequest, leaveType, role, rolePermission, userCompanyRole, userCompanyRoleScope, staffAppointment, calendarHoliday, userPermissionOverride, approvalInstance, approvalInstanceEvent, leaveBalanceEntry } from '../data/schema';
+import { appUser, employee, customer, userCompany, leaveRequest, leaveType, role, rolePermission, userCompanyRole, userCompanyRoleScope, staffAppointment, calendarHoliday, userPermissionOverride, approvalInstance, approvalInstanceEvent, leaveBalanceEntry, businessUnit, hrPosition } from '../data/schema';
+import { resolveHrEmployeeAccessWithin } from '../auth/hrDataAccess';
 import { freshDb } from '../test/helpers';
 import { seedDemo } from '../data/seed';
 import { createApp } from './app';
@@ -224,6 +225,8 @@ describe('one HR staff projection across generic and specific API paths',()=>{
       {scope:'department',targetType:'department',targetId:subject.department},
       {scope:'self',targetType:'employee',targetId:String(targetId)},
       {scope:'business_unit',targetType:'business_unit',targetId:String(unitId)},
+      {scope:'business_unit',targetType:'none',targetId:''},
+      {scope:'position',targetType:'none',targetId:''},
     ]){
       const [deny]=await db.insert(userPermissionOverride).values({...scope,userId:viewerId,permissionKey:'hr.write',resourceKey:'hr/leave-requests',effect:'deny',...target,reason:'Synthetic subject deny',assignedByUserId:actorId}).returning();
       const response=await request('/api/my/approvals/'+draft.id+'/actions/approve','POST',{expectedVersion:submitted.version,reason:'Must not approve'});
@@ -231,6 +234,32 @@ describe('one HR staff projection across generic and specific API paths',()=>{
       expect(await db.select().from(leaveRequest).where(eq(leaveRequest.id,draft.id))).toEqual(original);
       expect(await db.select().from(leaveBalanceEntry).where(eq(leaveBalanceEntry.employeeId,targetId))).toEqual(balances);
       expect(await db.select().from(approvalInstanceEvent).where(eq(approvalInstanceEvent.instanceId,instance.id))).toEqual(events);
+      if (target.targetType === 'none') {
+        const session={userId:viewerId,masterFn:'M1',activeCompanyFn:'C-SG',username:'viewer',email:null,fullName:null};
+        const projection=()=>db.transaction(tx=>resolveHrEmployeeAccessWithin(tx,session,'hr/leave-requests','hr.write'));
+        const allowed=await projection();expect(allowed).not.toBeNull();expect(allowed).not.toContain(targetId);expect(allowed).toContain(otherId);
+        const field=target.scope==='business_unit'?'businessUnitId':'positionId';
+        const table=target.scope==='business_unit'?businessUnit:hrPosition;
+        const id=target.scope==='business_unit'?unitId:positionId;
+        await db.update(employee).set({[field]:null}).where(eq(employee.id,viewerEmployee));
+        expect(await projection()).toEqual([]);
+        expect(await db.transaction(tx=>resolveHrEmployeeAccessWithin(tx,session,'hr/employees','hr.write'))).toBeNull();
+        const unresolved=await request('/api/my/approvals/'+draft.id+'/actions/approve','POST',{expectedVersion:submitted.version,reason:'Unresolved relative deny'});
+        expect(unresolved.status).toBe(403);
+        await db.update(employee).set({[field]:id}).where(eq(employee.id,viewerEmployee));
+        await db.update(table).set({isActive:false}).where(eq(table.id,id));
+        expect(await projection()).toEqual([]);
+        await db.update(table).set({isActive:true}).where(eq(table.id,id));
+        const outsideDate=target.scope==='business_unit'?'2026-12-22':'2026-12-23';
+        const outsideDraft=await db.transaction(tx=>createLeaveDraftWithin(tx,scope,manager,otherId,{leaveTypeId:annual.id,startDate:outsideDate,endDate:outsideDate,unit:'full_day',reason:'Outside relative deny fixture'}));
+        const outsideSubmitted=await db.transaction(tx=>submitLeaveApplicationWithin(tx,scope,manager,outsideDraft.id,outsideDraft.version));
+        const outsideAllowed=await request('/api/my/approvals/'+outsideDraft.id+'/actions/approve','POST',{expectedVersion:outsideSubmitted.version,reason:'Outside relative deny scope'});
+        expect(outsideAllowed.status,await outsideAllowed.clone().text()).toBe(200);
+        await db.update(userPermissionOverride).set({revokedAt:new Date(),revokedByUserId:actorId,revocationReason:'Synthetic revoked deny'}).where(eq(userPermissionOverride.id,deny.id));
+        expect(await projection()).toBeNull();
+        expect(await db.select().from(leaveRequest).where(eq(leaveRequest.id,draft.id))).toEqual(original);
+        expect(await db.select().from(approvalInstanceEvent).where(eq(approvalInstanceEvent.instanceId,instance.id))).toEqual(events);
+      }
       await db.delete(userPermissionOverride).where(eq(userPermissionOverride.id,deny.id));
     }
     const permitted=await request('/api/my/approvals/'+draft.id+'/actions/approve','POST',{expectedVersion:submitted.version,reason:'Subject permission restored'});

@@ -70,3 +70,12 @@ Disposable PostgreSQL16 rehearsal repeated after repairs: 119 migrations,
 restricted runtime RLS, tenant write denial42501, concurrent versions, populated
 main restore/upgrade, migration replay, backup/restore and restart all passed;
 no assignment/grant backfill and no deployment change.
+
+Second review repair: accepted BU/Position targetType=none denies are now
+resolved to the actor's current active assignment and active same-company master
+before matching explicit staff subjects. Missing/inactive assignment context
+fails closed. Resource patterns and override validity/revocation remain enforced.
+API coverage includes both relative dimensions: matching My approval denied
+without record/balance/event changes, outside-organization approval allowed under
+Company grant, missing/stale assignment denied, revoked deny ignored, and a
+Leave-only unresolved deny does not affect the employee resource.
