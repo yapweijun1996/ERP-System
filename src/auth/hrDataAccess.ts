@@ -44,9 +44,9 @@ export async function resolveHrEmployeeAccessWithin(
     requireScope: true, now: options.now, context: options.context,
   })));
   const denied = (targets: Parameters<typeof denyMatchers[number]>[0]) => denyMatchers.some(matches => matches(targets));
-  // A relative deny with unresolved actor context applies even when the
-  // company has no staff rows. Empty candidates must not imply unrestricted access.
-  if (denied([])) return [];
+  // Company-wide and unresolved relative denies across all entry candidates
+  // apply even with no staff rows. Empty candidates never erase deny state.
+  if (denied([{ scope: 'company', targetType: 'company', targetId: session.activeCompanyFn }])) return [];
   const candidates = rows.filter(row => companyAccess || ids.has(row.id));
   const allowed = candidates.filter(row => !denied([
     { scope: 'company', targetType: 'company', targetId: session.activeCompanyFn },

@@ -295,6 +295,25 @@ describe('one HR staff projection across generic and specific API paths',()=>{
         expect(await projection(resource)).toBeNull();
       }
     }
+    // Empty candidate sets still enforce denies across every entry candidate.
+    await db.insert(rolePermission).values({masterFn:'M1',roleId:companyRole.roleId,permissionKey:'hr.employees.create',allowed:true});
+    const createPayload={employeeNo:'QA-BLANK-DENIED-CREATE',fullName:'Fictional denied creation',email:'deny-create@example.invalid',department:'Synthetic',jobTitle:'Synthetic',startDate:'2026-01-01',baseSalary:'1000.00'};
+    for(const permissionKey of ['hr.create','hr.employees.create','hr.write']){
+      for(const targetType of ['none','company']){
+        const [deny]=await db.insert(userPermissionOverride).values({...blank,userId:actor.userId,permissionKey,resourceKey:'hr/employees',effect:'deny',scope:'company',targetType,targetId:targetType==='none'?'':blank.companyFn,reason:'Synthetic candidate deny',assignedByUserId:actorId}).returning();
+        const candidates=()=>db.transaction(tx=>resolveHrEmployeeAccessWithin(tx,session,'hr/employees',['hr.employees.create','hr.write']));
+        expect(await candidates()).toEqual([]);
+        const headers={cookie:auth.cookie,'content-type':'application/json','x-csrf-token':auth.csrf,'idempotency-key':'blank-create-'+permissionKey+'-'+targetType};
+        const denied=await fetch(base+'/api/hr/employees',{method:'POST',headers,body:JSON.stringify(createPayload)});
+        expect(denied.status,await denied.clone().text()).toBe(403);
+        expect(await db.select().from(employee).where(eq(employee.companyFn,blank.companyFn))).toEqual([]);
+        await db.update(userPermissionOverride).set({revokedAt:new Date(),revokedByUserId:actorId,revocationReason:'Synthetic revoked candidate deny'}).where(eq(userPermissionOverride.id,deny.id));
+        expect(await candidates()).toBeNull();
+        const fallback=await fetch(base+'/api/hr/employees',{method:'POST',headers:{...headers,'idempotency-key':headers['idempotency-key']+'-revoked'},body:JSON.stringify({...createPayload,employeeNo:''})});
+        expect(fallback.status,await fallback.clone().text()).toBe(422);
+        expect(await db.select().from(employee).where(eq(employee.companyFn,blank.companyFn))).toEqual([]);
+      }
+    }
     const [unit]=await db.insert(businessUnit).values({...blank,code:'BLANK-UNIT',name:'Fictional Unit'}).returning();
     const [position]=await db.insert(hrPosition).values({...blank,code:'BLANK-POS',name:'Fictional Position'}).returning();
     const values={...blank,fullName:'Fictional resolved staff',email:'blank@example.invalid',department:'Synthetic',jobTitle:'Synthetic',startDate:'2026-01-01',baseSalary:'1000.00'};

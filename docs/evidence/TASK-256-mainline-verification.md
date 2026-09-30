@@ -96,3 +96,11 @@ and update now pass the exact canonical/compatibility candidate pair accepted by
 entry, matching actions. Company legacy and canonical-only employee creation pass;
 restricted creation remains denied with unchanged staff rows. Authorization/API
 suite: 2 files/17 tests pass. This changes the head and requires new review/CI.
+
+Candidate-deny empty-set repair: Company-target deny evaluation runs before any
+unrestricted Company return across the accepted canonical/compatibility candidate
+set, retaining unresolved relative denies too. Table-driven zero-staff controls
+cover hr.create, hr.employees.create and hr.write denies with Company/none and
+explicit Company targets, an allowed fallback, revoked-deny validation controls,
+and no inserted employee rows. Legitimate legacy/canonical Company creation and
+restricted-create denial remain covered by the preceding positive/negative cases.
