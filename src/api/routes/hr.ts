@@ -112,6 +112,9 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
       apiError(res, 422, 'validation_failed', error.message);
       return;
     }
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'invalid_employee_id') {
+      apiError(res, 422, 'invalid_employee_id', 'employeeId must be a positive integer.'); return;
+    }
     if (error && typeof error === 'object' && 'code' in error && error.code === 'data_scope_denied') { apiError(res, 'status' in error && error.status === 404 ? 404 : 403, 'data_scope_denied', 'Current staff scope does not include this record.'); return; }
     if (error instanceof OrganizationError) { apiError(res, error.status, error.code, error.message); return; }
     if (error instanceof EmployeeAccountError) {

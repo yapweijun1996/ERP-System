@@ -104,3 +104,11 @@ cover hr.create, hr.employees.create and hr.write denies with Company/none and
 explicit Company targets, an allowed fallback, revoked-deny validation controls,
 and no inserted employee rows. Legitimate legacy/canonical Company creation and
 restricted-create denial remain covered by the preceding positive/negative cases.
+
+CI0f8d0ab failed shard1 (others passed): permissionMatrix special appointment create
+for Company Owner bound NaN employeeId before domain validation, producing SQL22P02
+and500. Shared staff guard now rejects missing/nonnumeric/nonpositive/unsafe IDs
+with422 before SQL; the dedicated HR error mapper preserves the validation status.
+Malformed appointment creates do not write records. Full permission matrix and
+enhanced HR API suite passed2 files/16 tests; root typecheck/lint/docs passed.
+This is a scoped validation repair, with a new head/re-review/CI required.

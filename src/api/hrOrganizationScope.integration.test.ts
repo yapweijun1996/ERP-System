@@ -330,6 +330,13 @@ describe('one HR staff projection across generic and specific API paths',()=>{
     const [assignedRole]=await db.select().from(userCompanyRole).where(eq(userCompanyRole.assignmentId,assignmentId));
     await db.update(userCompanyRoleScope).set({scope:'company',targetType:'company',targetId:'C-SG'}).where(eq(userCompanyRoleScope.assignmentId,assignmentId));
     const payload={employeeNo:'QA-LEGACY-CREATE',fullName:'Fictional Company creation',email:'create@example.invalid',department:'Synthetic',jobTitle:'Synthetic',startDate:'2026-01-01',baseSalary:'1000.00'};
+    const beforeAppointments=await db.select().from(staffAppointment);
+    for(const employeeId of [undefined,'not-a-number',0,-1]){
+      const malformed=await request('/api/hr/calendar/appointments','POST',{employeeId});
+      expect(malformed.status,await malformed.clone().text()).toBe(422);
+      expect((await malformed.json()).error.code).toBe('invalid_employee_id');
+    }
+    expect(await db.select().from(staffAppointment)).toEqual(beforeAppointments);
     const legacy=await request('/api/hr/employees','POST',payload);
     expect(legacy.status,await legacy.clone().text()).toBe(201);
     await db.delete(rolePermission).where(and(eq(rolePermission.roleId,assignedRole.roleId),eq(rolePermission.permissionKey,'hr.write')));

@@ -62,6 +62,10 @@ export async function resolveHrEmployeeAccessWithin(
 export async function assertHrEmployeeAccessWithin(
   exec: DB, session: SessionData, resource: string, permissionKey: string | string[], employeeId: number,
 ): Promise<void> {
+  if (!Number.isSafeInteger(employeeId) || employeeId <= 0) {
+    const error = new Error('employeeId must be a positive integer.') as Error & { code: string; status: number };
+    error.code = 'invalid_employee_id'; error.status = 422; throw error;
+  }
   const staff = await exec.select({ id: employee.id }).from(employee).where(and(
     eq(employee.masterFn, session.masterFn), eq(employee.companyFn, session.activeCompanyFn),
     eq(employee.id, employeeId),
