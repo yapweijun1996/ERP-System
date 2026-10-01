@@ -235,13 +235,16 @@
         'insert into "_erp_demo_migration" ("version") values (' + DEMO_SCHEMA_VERSION + ') ' +
         'on conflict ("version") do nothing;');
     }
+    return !seeded;
+  }
+
+  async function ensureDemoDrafts(db){
     /* top-up: demo draft orders (idempotent — skips existing doc_no's), so
        databases seeded before TASK-007 gain the Confirm-flow drafts too */
     var drafts = await db.query(
       "select count(*)::int as n from sales_order " +
       "where master_fn='M1' and company_fn='C-SG' and doc_no in ('SO-2','SO-3')");
     if (drafts.rows[0].n < 2) await db.exec(await fetchSql('erp-system-demo-drafts.sql'));
-    return !seeded;
   }
 
   /* Upgrade IndexedDB databases created by older demo builds. Fresh databases
@@ -1240,6 +1243,9 @@
       var freshlySeeded = await ensureSeeded(db);
       reportBootProgress(28,'Checking database compatibility','Applying safe local schema migrations…','loading');
       await ensureSchemaUpToDate(db);
+      // Table/column presence and version markers do not prove ON CONFLICT arbiters exist.
+      await runtime.ensureDemoUniqueIndexes(db);
+      await ensureDemoDrafts(db);
       reportBootProgress(45,'Loading showcase data','Preparing the deterministic enterprise demo pack…','loading');
       var showcaseLoaded = await ensureShowcasePack(db, freshlySeeded);
       await ensureCompanyReceiptReadFixture(db);
@@ -1307,7 +1313,8 @@
       resolve();
     }).catch(function(e){
       clearTimeout(timer);
-      console.warn('[erp-system] PGlite unavailable — using static fallback.', e && e.message ? e.message : e);
+      window.__ERP_DEMO_FAILURE__ = {code:e && e.code ? String(e.code) : 'demo_initialization_failed',stage:window.__ERP_DEMO_PROGRESS__ && window.__ERP_DEMO_PROGRESS__.title};
+      console.warn('[erp-system] PGlite unavailable — using static fallback.', e && e.message ? e.message : e, window.__ERP_DEMO_FAILURE__);
       applyOnce(fallbackPayload(), 'fallback');
       reportBootProgress(100,'Opening offline demo mode','The local database could not open. Existing data has not been reset.','failed');
       resolve();

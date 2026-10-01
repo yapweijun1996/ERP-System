@@ -136,8 +136,10 @@ try {
   const broken = await failed.newPage();
   await broken.goto(url, { waitUntil: 'domcontentloaded' });
   await broken.locator('#setupWizardView').waitFor({ timeout: 90000 });
-  for (let step = 0; step < 6; step++) await broken.locator('#wizNext').click();
-  assert.equal(await broken.locator('#wizFinish').isDisabled(), true);
+  for (let step = 0; step < 4; step++) await broken.locator('#wizNext').click();
+  assert.equal(await broken.locator('#wizNext').isDisabled(), true);
+  const setupDenied = await broken.evaluate(async () => { try { await ErpSystemData.completeSetup({}); return false; } catch { return true; } });
+  assert.equal(setupDenied, true);
   assert.equal(await broken.locator('#wizardShowcase').isDisabled(), true);
   assert.match(await broken.locator('#demoStartupStatus').innerText(), /has not been reset/);
   assert.equal(await broken.evaluate(() => localStorage.getItem('aria-setup-wizard-complete')), null);

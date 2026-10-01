@@ -1,5 +1,18 @@
 # Project Status — reviewed 2026-09-25
 
+## 2026-10-01 reported retained Demo startup failure — candidate only
+
+PR13 source/Demo revision `2ad84e1` passed main CI `36807104068` and Pages.
+A new owner screenshot shows a SQL `ON CONFLICT` constraint failure and unavailable
+Modules. TASK-257 now adds bounded Demo-only startup unique-index validation and
+additive missing-index repair; mismatches/duplicates/primary-constraint loss remain
+fail closed. Fresh public boot passes; controlled retained drift reproduces the
+error. Exact owner missing constraint is unknown. Review/CI/public release gates
+remain pending; this is not a production-readiness claim.
+See [bounded evidence](evidence/TASK-257-retained-demo-schema.md). BU/Position
+showroom fixture work is paused and preserved in a separate owned worktree.
+
+
 Product Feedback source candidate — 2026-09-25: the current branch adds
 Company-scoped append-only case evidence, Agent evidence append and scoped
 readback, human classification/assignment, engineering task reference,

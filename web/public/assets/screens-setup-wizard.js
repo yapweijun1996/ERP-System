@@ -1069,6 +1069,8 @@ function renderSetupWizard(){
     var back=document.getElementById('wizBack');
     if(back) back.addEventListener('click',function(){ readCurrentStepInputs(); S.step--; render(); });
     var next=document.getElementById('wizNext');
+    // Do not invite the visitor past an empty module catalogue after a failed boot.
+    if(next && !IS_API && S.step===4) next.disabled=!(window.ErpSystemData && window.ErpSystemData.databaseReady===true && setupModuleCatalog().length);
     if(next) next.addEventListener('click',function(){
       readCurrentStepInputs();
       var err=validateStep(S.step);

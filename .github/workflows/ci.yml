@@ -109,6 +109,9 @@ jobs:
       - name: Check generated PGlite artifacts
         run: npm run check:demo-schema
 
+      - name: Check canonical Demo unique-index contract
+        run: npm run check:demo-indexes
+
       - name: Check schema drift (all Drizzle migrations vs generated PGlite schema)
         run: npm run check:drift
 
@@ -157,6 +160,9 @@ jobs:
       - name: Fresh Demo startup, recovery and retained browser data (Chromium)
         run: node tests/e2e/demo-startup.spec.mjs
 
+      - name: Retained Demo schema repair and revoked sample membership (Chromium)
+        run: node tests/e2e/demo-retained-schema.spec.mjs
+
       - name: Full first-run wizard, sign-in and responsive layout (Chromium)
         run: node tests/e2e/setup-wizard-layout.spec.mjs
 
@@ -167,6 +173,11 @@ jobs:
         env:
           DEMO_STARTUP_ENGINE: webkit
         run: node tests/e2e/demo-startup.spec.mjs
+
+      - name: Retained Demo schema repair and revoked sample membership (WebKit)
+        env:
+          DEMO_STARTUP_ENGINE: webkit
+        run: node tests/e2e/demo-retained-schema.spec.mjs
 
       - name: i18n browser matrix (en/ms/zh/ja/vi × desktop/mobile)
         env:

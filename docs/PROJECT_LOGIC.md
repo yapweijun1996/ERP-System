@@ -1815,3 +1815,14 @@ fictional administrator and seeded C-SG workspace. It changes browser session
 preferences only; existing Company/employee data remains intact. It is absent
 from the API adapter. Setup writes require fully ready PGlite, and late recovery
 retains typed wizard inputs. See [startup incident and coverage boundaries](evidence/DEMO-STARTUP-2026-10-01.md).
+
+## Demo startup unique-index contract — TASK-257 candidate
+
+Static Demo validates the canonical unique arbiters used by startup fixture upserts
+via `src/demo/schemaIntegrity.ts`, using generated metadata from the current schema
+and explicit fixture targets. Table/column signatures and migration markers alone
+are insufficient. Missing ordinary indexes may be recreated transactionally;
+duplicate data, mismatched definitions and lost primary constraints fail closed.
+No records, role assignments, grants or migration markers are changed by this
+repair. API/PostgreSQL mode never invokes it. Retained draft top-up runs after
+compatibility and index validation. See [bounded evidence](evidence/TASK-257-retained-demo-schema.md).
