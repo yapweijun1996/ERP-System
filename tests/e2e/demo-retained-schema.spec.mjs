@@ -72,6 +72,25 @@ try {
   assert.equal(failed.ready,false);
   assert.equal(failed.sentinel,'retained');
   assert.equal(failed.failure.stage,'Checking database compatibility');
+  assert.equal(failed.failure.statement,'VALIDATE UNIQUE INDEX uq_sales_credit_profile_customer');
   assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({ok:true,engine:process.env.DEMO_STARTUP_ENGINE||'chromium',freshEntry:true,retainedIndexes:after.indexes,retainedCompany:true,retainedStaff:true,revokedAssignmentDenied:true,modulesAvailable:true,mismatchedIndexBlocked:true,failedModulesContinueBlocked:true,errors}));
+  // A future mismatched fixture must identify its asset, never raw SQL or values.
+  const fixtureFailure=await browser.newContext({viewport:{width:942,height:818},serviceWorkers:'block'});
+  await fixtureFailure.route('**/db/erp-system-demo-sales-credit.sql*',async route=>{
+    const response=await route.fetch();
+    const sql=(await response.text()).replace('ON CONFLICT (master_fn, company_fn, customer_id)', 'ON CONFLICT (credit_limit)');
+    await route.fulfill({response,body:sql+'\n-- private synthetic diagnostic sentinel never to be logged'});
+  });
+  const fixturePage=await fixtureFailure.newPage();
+  await fixturePage.goto(url,{waitUntil:'domcontentloaded'});
+  await fixturePage.waitForFunction(()=>window.__ERP_DEMO_PROGRESS__?.phase==='failed',null,{timeout:180000});
+  const diagnostic=await fixturePage.evaluate(()=>window.__ERP_DEMO_FAILURE__);
+  assert.equal(diagnostic.code,'42P10');
+  assert.equal(diagnostic.statement,'erp-system-demo-sales-credit.sql');
+  assert.equal(diagnostic.stage,'Loading pricing fixtures');
+  assert(!JSON.stringify(diagnostic).includes('sentinel'));
+  assert.deepEqual(Object.keys(diagnostic).sort(),['code','stage','statement']);
+  assert.equal(await fixturePage.locator('#wizardShowcase').isEnabled(),false);
+  await fixtureFailure.close();
+  console.log(JSON.stringify({ok:true,engine:process.env.DEMO_STARTUP_ENGINE||'chromium',freshEntry:true,retainedIndexes:after.indexes,retainedCompany:true,retainedStaff:true,revokedAssignmentDenied:true,modulesAvailable:true,mismatchedIndexBlocked:true,failedModulesContinueBlocked:true,safeFixtureDiagnostic:diagnostic,errors}));
 } finally { await browser.close();preview?.kill('SIGTERM'); }

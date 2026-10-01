@@ -32,7 +32,8 @@ canonical seeding remains unchanged.
 
 A failed Modules step disables Continue, while Back/language/input controls remain
 available. Ready recovery retains the existing in-place wizard behavior. Safe
-failure diagnostics include startup stage and error code without record contents.
+failure diagnostics include startup stage, error code and source-owned asset/index
+statement labels, without SQL text, original Error objects or record contents.
 The service-worker cache revision changes; IndexedDB is never reset.
 
 ## Verification and limits
@@ -54,7 +55,7 @@ untouched. The uncommitted BU/Position showroom work remains preserved separatel
 
 ## Local candidate results
 
-- Focused unique-index integrity and API-mode startup boundary: 5 tests passed.
+- Initial candidate integrity/API boundary: 5 tests passed; metadata-review revision adds both reproduced denial cases and a healthy synchronized-rename control (8 tests passed).
 - Chromium and desktop WebKit retained-schema browser regressions passed, including
   explicit failure controls, no page errors, retained Company/staff/sentinel and
   revoked-membership denial. WebKit uses the available local desktop executable;
@@ -68,3 +69,15 @@ untouched. The uncommitted BU/Position showroom work remains preserved separatel
   organization fixture work. No production activation occurred.
 
 Exact commit/review/CI/Pages/public validation will be appended only when observed.
+
+## Independent metadata review repair
+
+Review reproduced two missed metadata checks: an ordinary same-name unique index
+replacing an expected primary constraint, and a deferrable primary key with the
+same index SQL. Both previously passed; the latter makes the actual fixture fail
+with SQLSTATE55000. The validator now checks exact owning constraint type/name and
+index immediacy/deferrability as well as definition/validity/readiness. Both fail
+closed without data changes; primary/deferrable structures are never auto-repaired.
+Safe source-owned statement labels identify fixture filenames or canonical index
+creation, without logging SQL, original Error objects, duplicate values or rows.
+The new exact head requires refreshed independent review and CI.

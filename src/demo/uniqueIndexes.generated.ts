@@ -5,168 +5,196 @@ export const DEMO_UNIQUE_INDEXES = [
     "name": "uq_account_code",
     "table": "account",
     "definition": "CREATE UNIQUE INDEX uq_account_code ON public.account USING btree (master_fn, company_fn, code)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   },
   {
     "name": "uq_user_master_username",
     "table": "app_user",
     "definition": "CREATE UNIQUE INDEX uq_user_master_username ON public.app_user USING btree (master_fn, username)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   },
   {
     "name": "uq_customer_code",
     "table": "customer",
     "definition": "CREATE UNIQUE INDEX uq_customer_code ON public.customer USING btree (master_fn, company_fn, code)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   },
   {
     "name": "uq_employee_no",
     "table": "employee",
     "definition": "CREATE UNIQUE INDEX uq_employee_no ON public.employee USING btree (master_fn, company_fn, employee_no)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   },
   {
     "name": "uq_leave_balance_entry_key",
     "table": "leave_balance_entry",
     "definition": "CREATE UNIQUE INDEX uq_leave_balance_entry_key ON public.leave_balance_entry USING btree (master_fn, company_fn, entry_key)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   },
   {
     "name": "uq_leave_policy_version",
     "table": "leave_policy_version",
     "definition": "CREATE UNIQUE INDEX uq_leave_policy_version ON public.leave_policy_version USING btree (master_fn, company_fn, leave_type_id, version_no)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   },
   {
     "name": "uq_leave_type_code",
     "table": "leave_type",
     "definition": "CREATE UNIQUE INDEX uq_leave_type_code ON public.leave_type USING btree (master_fn, company_fn, code)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   },
   {
     "name": "uq_payroll_run_docno",
     "table": "payroll_run",
     "definition": "CREATE UNIQUE INDEX uq_payroll_run_docno ON public.payroll_run USING btree (master_fn, company_fn, doc_no)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   },
   {
     "name": "uq_payroll_run_line",
     "table": "payroll_run_line",
     "definition": "CREATE UNIQUE INDEX uq_payroll_run_line ON public.payroll_run_line USING btree (master_fn, company_fn, run_id, line_no)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   },
   {
     "name": "uq_product_sku",
     "table": "product",
     "definition": "CREATE UNIQUE INDEX uq_product_sku ON public.product USING btree (master_fn, company_fn, sku)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   },
   {
     "name": "uq_role_company_name",
     "table": "role",
     "definition": "CREATE UNIQUE INDEX uq_role_company_name ON public.role USING btree (master_fn, company_fn, name)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   },
   {
     "name": "role_permission_role_id_permission_key_pk",
     "table": "role_permission",
     "definition": "CREATE UNIQUE INDEX role_permission_role_id_permission_key_pk ON public.role_permission USING btree (role_id, permission_key)",
-    "constraint": "p"
+    "constraint": "p",
+    "constraintName": "role_permission_role_id_permission_key_pk"
   },
   {
     "name": "role_resource_scope_role_id_resource_key_pk",
     "table": "role_resource_scope",
     "definition": "CREATE UNIQUE INDEX role_resource_scope_role_id_resource_key_pk ON public.role_resource_scope USING btree (role_id, resource_key)",
-    "constraint": "p"
+    "constraint": "p",
+    "constraintName": "role_resource_scope_role_id_resource_key_pk"
   },
   {
     "name": "uq_sales_credit_profile_customer",
     "table": "sales_credit_profile",
     "definition": "CREATE UNIQUE INDEX uq_sales_credit_profile_customer ON public.sales_credit_profile USING btree (master_fn, company_fn, customer_id)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   },
   {
     "name": "uq_sales_debit_note_docno",
     "table": "sales_debit_note",
     "definition": "CREATE UNIQUE INDEX uq_sales_debit_note_docno ON public.sales_debit_note USING btree (master_fn, company_fn, doc_no)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   },
   {
     "name": "uq_sales_delivery_order",
     "table": "sales_delivery",
     "definition": "CREATE UNIQUE INDEX uq_sales_delivery_order ON public.sales_delivery USING btree (master_fn, company_fn, order_id)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   },
   {
     "name": "uq_sales_discount_rule_code",
     "table": "sales_discount_rule",
     "definition": "CREATE UNIQUE INDEX uq_sales_discount_rule_code ON public.sales_discount_rule USING btree (master_fn, company_fn, code)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   },
   {
     "name": "uq_sales_price_list_code",
     "table": "sales_price_list",
     "definition": "CREATE UNIQUE INDEX uq_sales_price_list_code ON public.sales_price_list USING btree (master_fn, company_fn, code)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   },
   {
     "name": "uq_sales_price_list_line",
     "table": "sales_price_list_line",
     "definition": "CREATE UNIQUE INDEX uq_sales_price_list_line ON public.sales_price_list_line USING btree (master_fn, company_fn, price_list_id, product_id, min_qty)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   },
   {
     "name": "uq_stock_level",
     "table": "stock_level",
     "definition": "CREATE UNIQUE INDEX uq_stock_level ON public.stock_level USING btree (master_fn, company_fn, product_id, warehouse_id)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   },
   {
     "name": "uq_stock_location_balance",
     "table": "stock_location_balance",
     "definition": "CREATE UNIQUE INDEX uq_stock_location_balance ON public.stock_location_balance USING btree (master_fn, company_fn, product_id, warehouse_id, bin_id, tracking_key)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   },
   {
     "name": "uq_supplier_code",
     "table": "supplier",
     "definition": "CREATE UNIQUE INDEX uq_supplier_code ON public.supplier USING btree (master_fn, company_fn, code)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   },
   {
     "name": "system_state_pkey",
     "table": "system_state",
     "definition": "CREATE UNIQUE INDEX system_state_pkey ON public.system_state USING btree (key)",
-    "constraint": "p"
+    "constraint": "p",
+    "constraintName": "system_state_pkey"
   },
   {
     "name": "user_company_user_id_company_fn_pk",
     "table": "user_company",
     "definition": "CREATE UNIQUE INDEX user_company_user_id_company_fn_pk ON public.user_company USING btree (user_id, company_fn)",
-    "constraint": "p"
+    "constraint": "p",
+    "constraintName": "user_company_user_id_company_fn_pk"
   },
   {
     "name": "uq_warehouse_code",
     "table": "warehouse",
     "definition": "CREATE UNIQUE INDEX uq_warehouse_code ON public.warehouse USING btree (master_fn, company_fn, code)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   },
   {
     "name": "uq_warehouse_bin_code",
     "table": "warehouse_bin",
     "definition": "CREATE UNIQUE INDEX uq_warehouse_bin_code ON public.warehouse_bin USING btree (master_fn, company_fn, warehouse_id, code)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   },
   {
     "name": "uq_working_calendar_code",
     "table": "working_calendar",
     "definition": "CREATE UNIQUE INDEX uq_working_calendar_code ON public.working_calendar USING btree (master_fn, company_fn, code)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   },
   {
     "name": "uq_working_calendar_version",
     "table": "working_calendar_version",
     "definition": "CREATE UNIQUE INDEX uq_working_calendar_version ON public.working_calendar_version USING btree (master_fn, company_fn, calendar_id, version_no)",
-    "constraint": ""
+    "constraint": "",
+    "constraintName": null
   }
 ] as const;

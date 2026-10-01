@@ -181,6 +181,19 @@
     });
   }
 
+  async function execBootStatement(db, statement, sqlText){
+    try { return await db.exec(sqlText); }
+    catch(error){
+      // Labels are source-owned filenames/identifiers; never retain SQL or row values.
+      if(error && typeof error==='object' && !error.demoBootStatement) error.demoBootStatement=statement;
+      throw error;
+    }
+  }
+
+  async function execBootAsset(db, name){
+    return execBootStatement(db, name, await fetchSql(name));
+  }
+
   async function ensureShowcasePack(db, freshlySeeded){
     var manifest = await fetchJson('erp-system-showcase-v1.json');
     if(!manifest || manifest.version !== DEMO_PACK_VERSION || !manifest.sha256){
@@ -201,14 +214,14 @@
     var digest = await state.runtime.sha256Hex(sqlText);
     if(digest !== manifest.sha256) throw new Error('Demo showcase pack integrity check failed.');
     var started = performance.now();
-    await db.exec(sqlText);
+    await execBootStatement(db, 'erp-system-showcase-v1.sql', sqlText);
     state.demoPack = Object.assign({}, manifest, { loadMs: Math.round(performance.now()-started) });
     return true;
   }
 
   async function ensureCompanyReceiptReadFixture(db){
     var sqlText = await fetchSql('erp-system-demo-company-receipts.sql');
-    await db.exec(sqlText);
+    await execBootStatement(db, 'erp-system-demo-company-receipts.sql', sqlText);
   }
 
   async function ensureSeeded(db){
@@ -223,9 +236,10 @@
     if (!seeded) {
       var schema = await fetchSql('erp-system-schema.sql');
       var txn = await fetchSql('erp-system-demo-txn.sql');
-      await db.exec(schema);
-      await state.runtime.commands.seedDemo(state.orm);
-      await db.exec(txn);
+      await execBootStatement(db, 'erp-system-schema.sql', schema);
+      try { await state.runtime.commands.seedDemo(state.orm); }
+      catch(error){if(error && typeof error==='object')error.demoBootStatement='canonical seedDemo';throw error;}
+      await execBootStatement(db, 'erp-system-demo-txn.sql', txn);
       /* The flat schema already contains the complete ordered migration chain.
          Mark it current immediately so a brand-new browser database never
          replays legacy data migrations against today's constraints. */
@@ -244,7 +258,7 @@
     var drafts = await db.query(
       "select count(*)::int as n from sales_order " +
       "where master_fn='M1' and company_fn='C-SG' and doc_no in ('SO-2','SO-3')");
-    if (drafts.rows[0].n < 2) await db.exec(await fetchSql('erp-system-demo-drafts.sql'));
+    if (drafts.rows[0].n < 2) await execBootAsset(db, 'erp-system-demo-drafts.sql');
   }
 
   /* Upgrade IndexedDB databases created by older demo builds. Fresh databases
@@ -372,7 +386,7 @@
     }
     var pending = headers.filter(function(header){ return header.version > currentVersion; });
     if (!pending.length) throw new Error('Demo migration bundle has no pending migration for schema drift.');
-    await db.exec(migrationSql.slice(pending[0].offset));
+    await execBootStatement(db, 'erp-system-migrations.sql', migrationSql.slice(pending[0].offset));
     await db.exec(
       'drop index if exists "uq_role_master_name";' +
       'create unique index if not exists "uq_role_company_name" ' +
@@ -425,7 +439,7 @@
       "select count(*)::int as n from warehouse_pick " +
       "where master_fn='M1' and company_fn='C-SG' and doc_no='PICK-1'")).rows[0];
     if(!row||Number(row.n)===0){
-      await db.exec(await fetchSql('erp-system-demo-picks.sql'));
+      await execBootAsset(db, 'erp-system-demo-picks.sql');
     }
   }
 
@@ -433,35 +447,35 @@
     /* The fixture is entirely guarded by NOT EXISTS, so replay it on every
        boot. This also tops up newly required manufacturing accounts or
        snapshots in a persistent IndexedDB created by an earlier v9 build. */
-    await db.exec(await fetchSql('erp-system-demo-manufacturing.sql'));
+    await execBootAsset(db, 'erp-system-demo-manufacturing.sql');
   }
 
   async function ensureQualityFixture(db){
-    await db.exec(await fetchSql('erp-system-demo-quality.sql'));
+    await execBootAsset(db, 'erp-system-demo-quality.sql');
   }
 
   async function ensureSalesFrontFixture(db){
-    await db.exec(await fetchSql('erp-system-demo-sales-front.sql'));
+    await execBootAsset(db, 'erp-system-demo-sales-front.sql');
   }
 
   async function ensureSalesDeliveryFixture(db){
-    await db.exec(await fetchSql('erp-system-demo-sales-delivery.sql'));
+    await execBootAsset(db, 'erp-system-demo-sales-delivery.sql');
   }
 
   async function ensureSalesReturnFixture(db){
-    await db.exec(await fetchSql('erp-system-demo-sales-return.sql'));
+    await execBootAsset(db, 'erp-system-demo-sales-return.sql');
   }
 
   async function ensureSalesDebitFixture(db){
-    await db.exec(await fetchSql('erp-system-demo-sales-debit.sql'));
+    await execBootAsset(db, 'erp-system-demo-sales-debit.sql');
   }
 
   async function ensureSalesPricingFixture(db){
-    await db.exec(await fetchSql('erp-system-demo-sales-pricing.sql'));
+    await execBootAsset(db, 'erp-system-demo-sales-pricing.sql');
   }
 
   async function ensureSalesCreditFixture(db){
-    await db.exec(await fetchSql('erp-system-demo-sales-credit.sql'));
+    await execBootAsset(db, 'erp-system-demo-sales-credit.sql');
   }
 
   async function demoWorkspaceCompanies(db,email){
@@ -1313,8 +1327,8 @@
       resolve();
     }).catch(function(e){
       clearTimeout(timer);
-      window.__ERP_DEMO_FAILURE__ = {code:e && e.code ? String(e.code) : 'demo_initialization_failed',stage:window.__ERP_DEMO_PROGRESS__ && window.__ERP_DEMO_PROGRESS__.title};
-      console.warn('[erp-system] PGlite unavailable — using static fallback.', e && e.message ? e.message : e, window.__ERP_DEMO_FAILURE__);
+      window.__ERP_DEMO_FAILURE__ = {code:e && e.code ? String(e.code) : 'demo_initialization_failed',stage:window.__ERP_DEMO_PROGRESS__ && window.__ERP_DEMO_PROGRESS__.title,statement:e && e.demoBootStatement ? String(e.demoBootStatement) : null};
+      console.warn('[erp-system] PGlite unavailable — using static fallback.', e && e.message ? String(e.message) : 'Demo initialization failed', window.__ERP_DEMO_FAILURE__);
       applyOnce(fallbackPayload(), 'fallback');
       reportBootProgress(100,'Opening offline demo mode','The local database could not open. Existing data has not been reset.','failed');
       resolve();
