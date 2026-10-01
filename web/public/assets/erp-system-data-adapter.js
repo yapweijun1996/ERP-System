@@ -1297,7 +1297,7 @@
       clearTimeout(timer);
       console.warn('[erp-system] PGlite unavailable — using static fallback.', e && e.message ? e.message : e);
       applyOnce(fallbackPayload(), 'fallback');
-      reportBootProgress(100,'Opening offline demo mode','The bundled demo view is ready for this session.','fallback');
+      reportBootProgress(100,'Opening offline demo mode','The local database could not open. Existing data has not been reset.','failed');
       resolve();
     });
   });
@@ -1315,7 +1315,7 @@
      by PostgreSQL. The adapter resolves legacy document/warehouse codes only;
      stock, state, invoice and GL rules live in confirmOrder.ts. */
   async function confirmOrder(docNo){
-    if (!state.db) throw new Error('Demo database unavailable (offline fallback) — Confirm needs PGlite.');
+    if (state.mode !== 'pglite' || !state.db) throw new Error('Demo database unavailable (offline fallback) — Confirm needs PGlite.');
     var result = await state.db.transaction(async function(tx){
       var o = (await tx.query(
         'select id from sales_order where master_fn=$1 and company_fn=$2 and doc_no=$3',
@@ -1354,7 +1354,7 @@
      yet. Legacy input: { supplierCode, orderDate, currency,
      lines: [{ sku, qty, unitCost, taxCode }] }. */
   async function createPurchaseOrder(input){
-    if (!state.db) throw new Error('Demo database unavailable (offline fallback) — Create PO needs PGlite.');
+    if (state.mode !== 'pglite' || !state.db) throw new Error('Demo database unavailable (offline fallback) — Create PO needs PGlite.');
     input = input || {};
     var lines = input.lines || [];
     if (!input.supplierCode) throw new Error('Supplier is required.');
@@ -1403,7 +1403,7 @@
      separate purchasing warehouse needed for the demo). Guards against
      receiving the same PO twice inside the shared command. */
   async function receiveGoods(poDocNo){
-    if (!state.db) throw new Error('Demo database unavailable (offline fallback) — Receive goods needs PGlite.');
+    if (state.mode !== 'pglite' || !state.db) throw new Error('Demo database unavailable (offline fallback) — Receive goods needs PGlite.');
     var result = await state.db.transaction(async function(tx){
       var po = (await tx.query(
         'select id from purchase_order where master_fn=$1 and company_fn=$2 and doc_no=$3',
@@ -1435,7 +1435,7 @@
      Accounts Payable), gated on the PO already being 'received' — invoicing
      goods you haven't received is rejected inside the shared command. */
   async function postSupplierInvoice(poDocNo){
-    if (!state.db) throw new Error('Demo database unavailable (offline fallback) — Post invoice needs PGlite.');
+    if (state.mode !== 'pglite' || !state.db) throw new Error('Demo database unavailable (offline fallback) — Post invoice needs PGlite.');
     var result = await state.db.transaction(async function(tx){
       var po = (await tx.query(
         'select id from purchase_order where master_fn=$1 and company_fn=$2 and doc_no=$3',
@@ -1464,7 +1464,7 @@
   /* createOpportunity.ts: a plain insert — stage starts at whatever the
      wizard's kanban-column choice was, no line items yet. */
   async function createOpportunity(input){
-    if (!state.db) throw new Error('Demo database unavailable (offline fallback) — Create opportunity needs PGlite.');
+    if (state.mode !== 'pglite' || !state.db) throw new Error('Demo database unavailable (offline fallback) — Create opportunity needs PGlite.');
     var result = await state.db.transaction(async function(tx){
       var cust = (await tx.query(
         'select id from customer where master_fn=$1 and company_fn=$2 and code=$3',
@@ -1498,7 +1498,7 @@
      transaction: opportunity lock → order/line → stock → invoice → balanced
      GL → stage update. No browser-side copy of those business writes remains. */
   async function convertOpportunityToSalesOrder(opportunityNo, sku, qty, unitPrice){
-    if (!state.db) throw new Error('Demo database unavailable (offline fallback) — Convert needs PGlite.');
+    if (state.mode !== 'pglite' || !state.db) throw new Error('Demo database unavailable (offline fallback) — Convert needs PGlite.');
     var result = await state.db.transaction(async function(tx){
       var opp = (await tx.query(
         'select id from opportunity where master_fn=$1 and company_fn=$2 and doc_no=$3',
@@ -1579,7 +1579,7 @@
   }
 
   async function completeSetup(input){
-    if (!state.db) throw new Error('Demo database unavailable (offline fallback) — Setup needs PGlite.');
+    if (state.mode !== 'pglite' || !state.db) throw new Error('The local demo database is not ready. Setup has not been saved.');
     input = input || {};
     var companyName = String(input.companyName || '').trim();
     var organizationCode = String(input.organizationCode || '').trim().toUpperCase();
@@ -1633,7 +1633,7 @@
   }
 
   async function createStaffAccount(input){
-    if(!state.db) throw new Error('Demo database unavailable — Staff onboarding needs PGlite.');
+    if(state.mode!=='pglite'||!state.db) throw new Error('Demo database unavailable — Staff onboarding needs PGlite.');
     input=input||{};
     if(!await state.runtime.commands.hasPermissionWithin(state.orm,SCOPE,Number(state.activeUserId),'hr.write')) throw new Error('HR write permission is required.');
     var initialPassword=newDemoTemporaryPassword();
@@ -1760,6 +1760,21 @@
       localStorage.setItem('aria-demo-auth', JSON.stringify({ signedIn: true, email: trimmed || 'admin@acme.co', at: new Date().toISOString() }));
     } catch {}
     return { email: trimmed, passwordChangeRequired:!!user.password_change_required };
+  }
+  async function openShowcase(){
+    if(typeof window.erpDataMode!=='function'||window.erpDataMode()!=='demo') throw new Error('Sample access is available only in the static Demo build.');
+    if(state.mode!=='pglite'||!state.db) throw new Error('The local demo database is not ready.');
+    // Authenticate an existing, allowlisted fictional persona. Never create a
+    // user, change its rights, overwrite a Company or reset IndexedDB here.
+    var companies=await demoWorkspaceCompanies(state.db,'admin@acme.co');
+    if(!companies.includes('C-SG')) throw new Error('The sample account no longer has access to the sample Company.');
+    await login('admin@acme.co');
+    SCOPE.companyFn='C-SG';
+    try{
+      localStorage.setItem('aria-active-company-fn','C-SG');
+      localStorage.setItem('aria-setup-wizard-complete','1');
+    }catch{}
+    await refresh();
   }
   async function logout(){
     try {
@@ -1976,7 +1991,7 @@
     }
   }
   function requireDemoDb(){
-    if(!state.db) throw new Error('Demo database unavailable (offline fallback) — this operation needs PGlite.');
+    if(state.mode!=='pglite'||!state.db) throw new Error('Demo database unavailable (offline fallback) — this operation needs PGlite.');
     return state.db;
   }
   function contractRow(row){
@@ -5248,6 +5263,7 @@
     isSignedIn: isSignedIn,
     login: login,
     logout: logout,
+    openShowcase: openShowcase,
     switchUser: switchUser,
     auth: {
       needsSetup:needsSetup,

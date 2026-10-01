@@ -210,6 +210,7 @@ function renderLogin(){
      be reached, so DB.company.name is trustworthy there. */
   const apiMode=typeof window.erpDataMode==='function' && window.erpDataMode()==='api';
   const demoOneClickAvailable=!apiMode&&(!window.ErpSystemDemo||window.ErpSystemDemo.demoOneClickAvailable!==false);
+  const showcaseCopy=!apiMode?demoStartupCopy():null;
   const companyLabel=(!apiMode && DB.company && DB.company.name) ? (esc(DB.company.name)+' · Static demo') : (apiMode?'Production':'Static demo');
   setAuthShell(true);
   closeAllPops();
@@ -247,7 +248,7 @@ function renderLogin(){
       ${apiMode?'<p class="auth-help">Use the credentials created during first-run setup. The password is never stored in this browser.</p>':''}
       <button class="btn primary lg" type="submit">${ic('signout')}<span>Sign in</span></button>
       ${demoOneClickAvailable?`<button class="btn soft lg" type="button" id="demoLoginBtn">${ic('user')}<span>Continue as ${esc(u.name)}</span></button>`:''}
-      ${!apiMode?`<div class="auth-demo-actions">
+      ${!apiMode?`<div class="auth-help" role="status" id="demoStartupStatus"></div><button class="btn soft lg" type="button" id="loginShowcase" ${window.ErpSystemData?.mode==='pglite'?'':'disabled'}>${esc(showcaseCopy.entry)}</button><div class="auth-demo-actions">
         <button class="btn soft" type="button" id="demoResetBtn">${ic('refresh')}<span>Reset demo database</span></button>
         <small>Restore the original demo data in this browser.</small>
       </div>`:''}
@@ -311,6 +312,13 @@ function renderLogin(){
     }
     doLogin(u.email);
   });
+  const showcaseBtn=$('#loginShowcase');
+  showcaseBtn&&showcaseBtn.addEventListener('click',async()=>{
+    showcaseBtn.disabled=true;
+    try{await window.ErpSystemData.openShowcase();location.reload();}
+    catch(error){$('#loginError').textContent=error.message;showcaseBtn.disabled=false;}
+  });
+  if(!apiMode)updateDemoStartupControls();
   const demoResetBtn=$('#demoResetBtn');
   demoResetBtn&&demoResetBtn.addEventListener('click',()=>{
     const adapter=window.ErpSystemData;

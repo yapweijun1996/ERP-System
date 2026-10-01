@@ -154,6 +154,20 @@ jobs:
           ERP_HR_REGRESSION: "1"
         run: node tests/e2e/hr-organization.spec.mjs
 
+      - name: Fresh Demo startup, recovery and retained browser data (Chromium)
+        run: node tests/e2e/demo-startup.spec.mjs
+
+      - name: Full first-run wizard, sign-in and responsive layout (Chromium)
+        run: node tests/e2e/setup-wizard-layout.spec.mjs
+
+      - name: Install Playwright WebKit (+ OS deps)
+        run: npx playwright install --with-deps webkit
+
+      - name: Fresh Demo startup, recovery and retained browser data (WebKit)
+        env:
+          DEMO_STARTUP_ENGINE: webkit
+        run: node tests/e2e/demo-startup.spec.mjs
+
       - name: i18n browser matrix (en/ms/zh/ja/vi × desktop/mobile)
         env:
           I18N_LANGUAGES: en,ms,zh,ja,vi

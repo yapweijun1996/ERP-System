@@ -1807,3 +1807,11 @@ to widen authority. No production grants or data changed. Additive migrations
 0118_classy_ronan on remote main 1b0a4c3 and disposable PostgreSQL RLS/backup rehearsal are documented in
 [HR organization slice](HR_ORGANIZATION_SLICE.md). TASK-256 remains in progress
 until committed source CI and reviewed migration/release evidence are complete.
+
+## Static Demo startup and sample entry — 2026-10-01
+
+Sample entry on the wizard and sign-in screen uses the existing allowlisted
+fictional administrator and seeded C-SG workspace. It changes browser session
+preferences only; existing Company/employee data remains intact. It is absent
+from the API adapter. Setup writes require fully ready PGlite, and late recovery
+retains typed wizard inputs. See [startup incident and coverage boundaries](evidence/DEMO-STARTUP-2026-10-01.md).
