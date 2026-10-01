@@ -33,11 +33,11 @@ function clearSetupWizardFlag(){
 
 function demoStartupCopy(languageOverride){
   var messages={
-    en:{entry:'Open the complete sample demo',waiting:'Preparing the local demo database. Setup will become available when it is ready.',failed:'The local demo database could not open. Your existing data has not been reset. Reload to retry.',ready:'The sample demo uses fictional data stored only in this browser.'},
-    zh:{entry:'打开完整示例演示',waiting:'正在准备本地演示数据库。准备完成后才能保存设置。',failed:'无法打开本地演示数据库。现有数据未被重置，请重新加载以重试。',ready:'示例演示使用虚构数据，仅存储于此浏览器。'},
-    ms:{entry:'Buka demo contoh lengkap',waiting:'Menyediakan pangkalan data demo setempat. Persediaan tersedia apabila ia sedia.',failed:'Pangkalan data demo setempat tidak dapat dibuka. Data sedia ada tidak ditetapkan semula. Muat semula untuk mencuba lagi.',ready:'Demo contoh menggunakan data rekaan yang disimpan dalam pelayar ini sahaja.'},
-    ja:{entry:'完全なサンプルデモを開く',waiting:'ローカルのデモデータベースを準備中です。準備完了後に設定を保存できます。',failed:'ローカルのデモデータベースを開けませんでした。既存のデータはリセットされていません。再読み込みして再試行してください。',ready:'サンプルデモの架空データは、このブラウザーにのみ保存されます。'},
-    vi:{entry:'Mở bản demo mẫu đầy đủ',waiting:'Đang chuẩn bị cơ sở dữ liệu demo cục bộ. Có thể lưu thiết lập khi đã sẵn sàng.',failed:'Không thể mở cơ sở dữ liệu demo cục bộ. Dữ liệu hiện có chưa bị đặt lại. Hãy tải lại để thử lại.',ready:'Demo mẫu dùng dữ liệu giả định chỉ lưu trong trình duyệt này.'},
+    en:{entry:'Open the complete sample demo',denied:'The sample account no longer has access to the sample Company.',waiting:'Preparing the local demo database. Setup will become available when it is ready.',failed:'The local demo database could not open. Your existing data has not been reset. Reload to retry.',ready:'The sample demo uses fictional data stored only in this browser.'},
+    zh:{entry:'打开完整示例演示',denied:'示例账户已无权访问示例公司。',waiting:'正在准备本地演示数据库。准备完成后才能保存设置。',failed:'无法打开本地演示数据库。现有数据未被重置，请重新加载以重试。',ready:'示例演示使用虚构数据，仅存储于此浏览器。'},
+    ms:{entry:'Buka demo contoh lengkap',denied:'Akaun contoh tidak lagi mempunyai akses kepada syarikat contoh.',waiting:'Menyediakan pangkalan data demo setempat. Persediaan tersedia apabila ia sedia.',failed:'Pangkalan data demo setempat tidak dapat dibuka. Data sedia ada tidak ditetapkan semula. Muat semula untuk mencuba lagi.',ready:'Demo contoh menggunakan data rekaan yang disimpan dalam pelayar ini sahaja.'},
+    ja:{entry:'完全なサンプルデモを開く',denied:'サンプルアカウントはサンプル会社にアクセスできません。',waiting:'ローカルのデモデータベースを準備中です。準備完了後に設定を保存できます。',failed:'ローカルのデモデータベースを開けませんでした。既存のデータはリセットされていません。再読み込みして再試行してください。',ready:'サンプルデモの架空データは、このブラウザーにのみ保存されます。'},
+    vi:{entry:'Mở bản demo mẫu đầy đủ',denied:'Tài khoản mẫu không còn quyền truy cập công ty mẫu.',waiting:'Đang chuẩn bị cơ sở dữ liệu demo cục bộ. Có thể lưu thiết lập khi đã sẵn sàng.',failed:'Không thể mở cơ sở dữ liệu demo cục bộ. Dữ liệu hiện có chưa bị đặt lại. Hãy tải lại để thử lại.',ready:'Demo mẫu dùng dữ liệu giả định chỉ lưu trong trình duyệt này.'},
   };
   i18nLegacy(messages);
   var language=languageOverride||(typeof getLang==='function'?getLang():'en');
@@ -45,7 +45,7 @@ function demoStartupCopy(languageOverride){
 }
 
 function updateDemoStartupControls(){
-  var ready=window.ErpSystemData&&window.ErpSystemData.mode==='pglite';
+  var ready=window.ErpSystemData&&window.ErpSystemData.databaseReady===true;
   var wizard=document.getElementById('setupWizardView');
   var language=wizard&&wizard.getAttribute('lang');
   var copy=demoStartupCopy(language==='zh-Hans'?'zh':language);
@@ -900,7 +900,7 @@ function renderSetupWizard(){
 
   function footer(){
     var isLast = S.step===STEP_KEYS.length-1;
-    var demoReady=IS_API||window.ErpSystemData&&window.ErpSystemData.mode==='pglite';
+    var demoReady=IS_API||window.ErpSystemData&&window.ErpSystemData.databaseReady===true;
     var right = isLast
       ? '<button class="btn primary lg wizard-primary" id="wizFinish" '+(!demoReady?'disabled':'')+'>'+esc(s('finish'))+ic('checkc')+'</button>'
       : '<button class="btn primary lg wizard-primary" id="wizNext">'+esc(s('cont'))+ic('arrowR')+'</button>';
@@ -1083,7 +1083,7 @@ function renderSetupWizard(){
     if(showcase) showcase.addEventListener('click',async function(){
       showcase.disabled=true;
       try{await window.ErpSystemData.openShowcase();localStorage.setItem('aria-lang',S.lang);location.reload();}
-      catch(error){showcase.disabled=false;var status=document.getElementById('demoStartupStatus');if(status)status.textContent=error.message;}
+      catch(error){showcase.disabled=false;var status=document.getElementById('demoStartupStatus');if(status)status.textContent=error.code==='demo_sample_access_denied'?demoStartupCopy(S.lang).denied:error.message;}
     });
     var finish=document.getElementById('wizFinish');
     if(finish) finish.addEventListener('click',function(){

@@ -248,7 +248,7 @@ function renderLogin(){
       ${apiMode?'<p class="auth-help">Use the credentials created during first-run setup. The password is never stored in this browser.</p>':''}
       <button class="btn primary lg" type="submit">${ic('signout')}<span>Sign in</span></button>
       ${demoOneClickAvailable?`<button class="btn soft lg" type="button" id="demoLoginBtn">${ic('user')}<span>Continue as ${esc(u.name)}</span></button>`:''}
-      ${!apiMode?`<div class="auth-help" role="status" id="demoStartupStatus"></div><button class="btn soft lg" type="button" id="loginShowcase" ${window.ErpSystemData?.mode==='pglite'?'':'disabled'}>${esc(showcaseCopy.entry)}</button><div class="auth-demo-actions">
+      ${!apiMode?`<div class="auth-help" role="status" id="demoStartupStatus"></div><button class="btn soft lg" type="button" id="loginShowcase" ${window.ErpSystemData?.databaseReady===true?'':'disabled'}>${esc(showcaseCopy.entry)}</button><div class="auth-demo-actions">
         <button class="btn soft" type="button" id="demoResetBtn">${ic('refresh')}<span>Reset demo database</span></button>
         <small>Restore the original demo data in this browser.</small>
       </div>`:''}
@@ -316,7 +316,7 @@ function renderLogin(){
   showcaseBtn&&showcaseBtn.addEventListener('click',async()=>{
     showcaseBtn.disabled=true;
     try{await window.ErpSystemData.openShowcase();location.reload();}
-    catch(error){$('#loginError').textContent=error.message;showcaseBtn.disabled=false;}
+    catch(error){$('#loginError').textContent=error.code==='demo_sample_access_denied'?showcaseCopy.denied:error.message;showcaseBtn.disabled=false;}
   });
   if(!apiMode)updateDemoStartupControls();
   const demoResetBtn=$('#demoResetBtn');

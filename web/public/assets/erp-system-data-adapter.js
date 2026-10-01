@@ -136,7 +136,7 @@
   })();
 
   var state = {
-    db: null, orm: null, runtime: null, mode: 'pending', activeUserId: null,
+    db: null, orm: null, runtime: null, initialized: false, mode: 'pending', activeUserId: null,
     setupModuleCatalog: [],
     demoPack: null, demoPackAvailable: null,
   };
@@ -466,8 +466,12 @@
       'select distinct c.company_fn from app_user u '+
       'join user_company_role membership on membership.user_id=u.user_id '+
       'join company c on c.company_fn=membership.company_fn and c.master_fn=u.master_fn '+
+      'join role r on r.role_id=membership.role_id and r.master_fn=u.master_fn '+
+      'and (r.company_fn=c.company_fn or r.company_fn is null) '+
       'where u.master_fn=$1 and lower(u.email)=$2 and u.is_active=true '+
       "and u.identity_kind='human' and u.login_enabled=true and u.account_state<>'offboarded' "+
+      'and membership.revoked_at is null and membership.valid_from<=current_timestamp '+
+      'and (membership.valid_until is null or membership.valid_until>current_timestamp) '+
       'order by c.company_fn',[SCOPE.masterFn,email])).rows.map(function(row){ return row.company_fn; });
   }
 
@@ -510,13 +514,19 @@
       "coalesce(bool_or(r.source_template_key = 'company_owner'), false) as is_company_owner, " +
       "coalesce(array_agg(distinct r.name) filter (where r.name is not null), '{}') as roles, " +
       "coalesce(array_agg(distinct rp.permission_key) filter (where rp.allowed), '{}') as permissions, " +
-      "coalesce((select array_agg(distinct all_uc.company_fn) from user_company all_uc where all_uc.user_id=u.user_id), '{}') as companies " +
+      "'{}'::text[] as companies " +
       "from app_user u join user_company_role ucr on ucr.user_id = u.user_id and ucr.company_fn='" + SCOPE.companyFn + "' " +
-      "left join role r on r.role_id = ucr.role_id " +
-      "left join role_permission rp on rp.role_id = r.role_id " +
+      'and ucr.revoked_at is null and ucr.valid_from<=current_timestamp '+
+      'and (ucr.valid_until is null or ucr.valid_until>current_timestamp) '+
+      "join role r on r.role_id = ucr.role_id and r.master_fn=u.master_fn " +
+      "and (r.company_fn=ucr.company_fn or r.company_fn is null) " +
+      "left join role_permission rp on rp.role_id = r.role_id and rp.master_fn=u.master_fn " +
       "where " + w('u') + " and u.is_active and u.identity_kind='human' and u.login_enabled=true and u.account_state<>'offboarded' " +
       "group by u.user_id, u.username, u.email, u.full_name, u.language, " +
       "u.password_change_required, u.initial_password_expires_at, u.account_state order by u.user_id");
+    for(var userIndex=0;userIndex<users.length;userIndex++){
+      users[userIndex].companies=await demoWorkspaceCompanies(db,users[userIndex].email);
+    }
     var products = await rows(
       "select p.id, p.company_fn, p.sku, p.name, p.uom, p.standard_cost::float as standard_cost, " +
       "p.average_cost::float as average_cost, " +
@@ -1254,6 +1264,7 @@
       var payload = await readPayload(db);
       if (!payload.master) throw new Error('PGlite payload empty (no master row)');
       var wasFallback = appliedMode === 'fallback';
+      state.initialized = true;
       applyOnce(payload, 'pglite');
       reportBootProgress(100,'Demo database ready','Your local demo workspace is ready.','ready');
       console.info('[erp-system] demo data source: PGlite (' + PG_DATA_DIR + ')' +
@@ -1275,6 +1286,7 @@
     } catch (e) {
       /* Never leave a failed or stale database writable through completeSetup()
          or another mutation after the UI falls back to static data. */
+      state.initialized = false;
       state.db = null;
       state.orm = null;
       state.runtime = null;
@@ -1305,7 +1317,7 @@
   /* Re-read everything from PGlite and re-apply to the Aria DB contract.
      Call after any write so the next render shows fresh data. */
   async function refresh(){
-    if (!state.db) return null;
+    if (!state.initialized || !state.db) return null;
     var payload = await readPayload(state.db);
     applyData(payload, 'pglite');
     return payload;
@@ -1315,7 +1327,7 @@
      by PostgreSQL. The adapter resolves legacy document/warehouse codes only;
      stock, state, invoice and GL rules live in confirmOrder.ts. */
   async function confirmOrder(docNo){
-    if (state.mode !== 'pglite' || !state.db) throw new Error('Demo database unavailable (offline fallback) — Confirm needs PGlite.');
+    if (!state.initialized || state.mode !== 'pglite' || !state.db) throw new Error('Demo database unavailable (offline fallback) — Confirm needs PGlite.');
     var result = await state.db.transaction(async function(tx){
       var o = (await tx.query(
         'select id from sales_order where master_fn=$1 and company_fn=$2 and doc_no=$3',
@@ -1354,7 +1366,7 @@
      yet. Legacy input: { supplierCode, orderDate, currency,
      lines: [{ sku, qty, unitCost, taxCode }] }. */
   async function createPurchaseOrder(input){
-    if (state.mode !== 'pglite' || !state.db) throw new Error('Demo database unavailable (offline fallback) — Create PO needs PGlite.');
+    if (!state.initialized || state.mode !== 'pglite' || !state.db) throw new Error('Demo database unavailable (offline fallback) — Create PO needs PGlite.');
     input = input || {};
     var lines = input.lines || [];
     if (!input.supplierCode) throw new Error('Supplier is required.');
@@ -1403,7 +1415,7 @@
      separate purchasing warehouse needed for the demo). Guards against
      receiving the same PO twice inside the shared command. */
   async function receiveGoods(poDocNo){
-    if (state.mode !== 'pglite' || !state.db) throw new Error('Demo database unavailable (offline fallback) — Receive goods needs PGlite.');
+    if (!state.initialized || state.mode !== 'pglite' || !state.db) throw new Error('Demo database unavailable (offline fallback) — Receive goods needs PGlite.');
     var result = await state.db.transaction(async function(tx){
       var po = (await tx.query(
         'select id from purchase_order where master_fn=$1 and company_fn=$2 and doc_no=$3',
@@ -1435,7 +1447,7 @@
      Accounts Payable), gated on the PO already being 'received' — invoicing
      goods you haven't received is rejected inside the shared command. */
   async function postSupplierInvoice(poDocNo){
-    if (state.mode !== 'pglite' || !state.db) throw new Error('Demo database unavailable (offline fallback) — Post invoice needs PGlite.');
+    if (!state.initialized || state.mode !== 'pglite' || !state.db) throw new Error('Demo database unavailable (offline fallback) — Post invoice needs PGlite.');
     var result = await state.db.transaction(async function(tx){
       var po = (await tx.query(
         'select id from purchase_order where master_fn=$1 and company_fn=$2 and doc_no=$3',
@@ -1464,7 +1476,7 @@
   /* createOpportunity.ts: a plain insert — stage starts at whatever the
      wizard's kanban-column choice was, no line items yet. */
   async function createOpportunity(input){
-    if (state.mode !== 'pglite' || !state.db) throw new Error('Demo database unavailable (offline fallback) — Create opportunity needs PGlite.');
+    if (!state.initialized || state.mode !== 'pglite' || !state.db) throw new Error('Demo database unavailable (offline fallback) — Create opportunity needs PGlite.');
     var result = await state.db.transaction(async function(tx){
       var cust = (await tx.query(
         'select id from customer where master_fn=$1 and company_fn=$2 and code=$3',
@@ -1498,7 +1510,7 @@
      transaction: opportunity lock → order/line → stock → invoice → balanced
      GL → stage update. No browser-side copy of those business writes remains. */
   async function convertOpportunityToSalesOrder(opportunityNo, sku, qty, unitPrice){
-    if (state.mode !== 'pglite' || !state.db) throw new Error('Demo database unavailable (offline fallback) — Convert needs PGlite.');
+    if (!state.initialized || state.mode !== 'pglite' || !state.db) throw new Error('Demo database unavailable (offline fallback) — Convert needs PGlite.');
     var result = await state.db.transaction(async function(tx){
       var opp = (await tx.query(
         'select id from opportunity where master_fn=$1 and company_fn=$2 and doc_no=$3',
@@ -1541,12 +1553,14 @@
   /* Switch the active company scope (topbar company switcher) and re-read.
      Same-master only today — SCOPE.masterFn stays fixed, matching the single-
      org demo model. */
-  function switchCompany(companyFn){
+  async function switchCompany(companyFn){
+    var db=requireDemoDb();
     if (!companyFn || companyFn === SCOPE.companyFn) return Promise.resolve(null);
     var active=(DB.erpSystem&&DB.erpSystem.users||[]).find(function(user){
       return Number(user.user_id)===Number(state.activeUserId);
     });
-    if(!active||!(active.companies||[]).includes(companyFn)){
+    var companies=active?await demoWorkspaceCompanies(db,active.email):[];
+    if(!active||!companies.includes(companyFn)){
       return Promise.reject(new Error('This Demo persona has no role in the selected company.'));
     }
     SCOPE.companyFn = companyFn;
@@ -1579,7 +1593,7 @@
   }
 
   async function completeSetup(input){
-    if (state.mode !== 'pglite' || !state.db) throw new Error('The local demo database is not ready. Setup has not been saved.');
+    if (!state.initialized || state.mode !== 'pglite' || !state.db) throw new Error('The local demo database is not ready. Setup has not been saved.');
     input = input || {};
     var companyName = String(input.companyName || '').trim();
     var organizationCode = String(input.organizationCode || '').trim().toUpperCase();
@@ -1633,7 +1647,7 @@
   }
 
   async function createStaffAccount(input){
-    if(state.mode!=='pglite'||!state.db) throw new Error('Demo database unavailable — Staff onboarding needs PGlite.');
+    if(!state.initialized||state.mode!=='pglite'||!state.db) throw new Error('Demo database unavailable — Staff onboarding needs PGlite.');
     input=input||{};
     if(!await state.runtime.commands.hasPermissionWithin(state.orm,SCOPE,Number(state.activeUserId),'hr.write')) throw new Error('HR write permission is required.');
     var initialPassword=newDemoTemporaryPassword();
@@ -1697,6 +1711,7 @@
         await state.db.exec('drop schema public cascade; create schema public;');
         schemaDropped=true;
         try { await state.db.close(); } catch {}
+        state.initialized=false;
         state.db=null;
         state.orm=null;
         state.runtime=null;
@@ -1763,11 +1778,11 @@
   }
   async function openShowcase(){
     if(typeof window.erpDataMode!=='function'||window.erpDataMode()!=='demo') throw new Error('Sample access is available only in the static Demo build.');
-    if(state.mode!=='pglite'||!state.db) throw new Error('The local demo database is not ready.');
+    if(!state.initialized||state.mode!=='pglite'||!state.db) throw new Error('The local demo database is not ready.');
     // Authenticate an existing, allowlisted fictional persona. Never create a
     // user, change its rights, overwrite a Company or reset IndexedDB here.
     var companies=await demoWorkspaceCompanies(state.db,'admin@acme.co');
-    if(!companies.includes('C-SG')) throw new Error('The sample account no longer has access to the sample Company.');
+    if(!companies.includes('C-SG')) throw Object.assign(new Error('The sample account no longer has access to the sample Company.'),{code:'demo_sample_access_denied'});
     await login('admin@acme.co');
     SCOPE.companyFn='C-SG';
     try{
@@ -1783,6 +1798,7 @@
     } catch {}
   }
   async function switchUser(email){
+    requireDemoDb();
     var trimmed = String(email || '').trim().toLowerCase();
     if (!trimmed) return null;
     try { localStorage.setItem('aria-active-user-email', trimmed); } catch {}
@@ -1991,7 +2007,7 @@
     }
   }
   function requireDemoDb(){
-    if(state.mode!=='pglite'||!state.db) throw new Error('Demo database unavailable (offline fallback) — this operation needs PGlite.');
+    if(!state.initialized||state.mode!=='pglite'||!state.db) throw new Error('Demo database unavailable (offline fallback) — this operation needs PGlite.');
     return state.db;
   }
   function contractRow(row){
@@ -5272,6 +5288,7 @@
       logout:logout,
     },
     get demoOneClickAvailable(){ return DEMO_ONE_CLICK_EMAILS.has(String(DB.user&&DB.user.email||'').toLowerCase()); },
+    get databaseReady(){ return state.initialized&&state.mode==='pglite'&&!!state.db; },
     get mode(){ return state.mode; },
     get db(){ return state.db; },
   };

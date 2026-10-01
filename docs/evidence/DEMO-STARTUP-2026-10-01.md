@@ -39,3 +39,17 @@ full-wizard/sign-in/layout test. Native iPhone Safari and the owner's exact
 existing database remain unverified until direct evidence is available.
 
 No production PostgreSQL, credentials, grants, routing or services change.
+
+Independent review identified two blockers on candidate 0d422f2. Both were
+reproduced against its pre-repair bundle: a revoked Company assignment still
+allowed sample entry and wrote local session/setup flags; public refresh during
+a delayed credit fixture promoted fallback to PGlite while progress still said
+fallback. The repair uses a private completed-initialization marker, so refresh
+cannot promote readiness and switching/mutations cannot run before completion.
+Live Company lookup and displayed role projection exclude revoked, expired and
+future assignments and roles owned by another Master/Company. Legacy null-Company
+roles follow the existing shared authorization contract. There is no independent
+role isActive column in the current schema; assignment validity defines live
+membership. Regression controls revoke/expire/future-date actual assignments,
+use a wrong-Company role, restore valid membership, and assert denied entry writes
+no session/setup flags. Disabled-account denial is a separate control.
