@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
+import { mkdirSync, writeFileSync } from 'node:fs';
 
 const baseUrl = process.env.ERP_E2E_BASE_URL ?? 'http://127.0.0.1:4179';
 
@@ -49,12 +50,12 @@ async function main() {
     await page.locator('#modalEl [data-master-editor-input="phone"]').fill('+65 6123 4567');
     await page.locator('#modalEl [data-master-editor-save]').click();
     await page.locator('#modalEl').waitFor({ state: 'detached', timeout: 60_000 });
-    await page.locator('[data-employee-contact]').getByText('+65 6123 4567').waitFor({ state: 'visible', timeout: 60_000 });
     const savedPhone = await page.evaluate(async () => {
       const result = await window.ErpSystemData.db.query("select phone from employee where employee_no='EMP-1088'");
       return result.rows[0]?.phone;
     });
     assert.equal(savedPhone, '+65 6123 4567');
+    await page.locator('[data-employee-contact]').getByText('+65 6123 4567').waitFor({ state: 'visible', timeout: 60_000 });
     await page.locator('[data-employee-end]').waitFor({ state: 'visible', timeout: 60_000 });
     await page.locator('[data-employee-end]').click();
     await page.locator('#employeeEmploymentReason').fill('No');
@@ -96,6 +97,43 @@ async function main() {
     assert.ok(width.scroll <= width.client + 1, `Mobile root overflow: ${JSON.stringify(width)}`);
     assert.deepEqual(errors, []);
     console.log(JSON.stringify({ ok: true, initialCount, endedId: persisted.employee.id, mobileWidth: width, errors }));
+  } catch (error) {
+    // This isolated fixture uses only public sample data. Diagnose the child
+    // page itself; its parent HR page cannot establish the child's failure.
+    const diagnostic = await page.evaluate(async () => {
+      const adapter = window.ErpSystemData;
+      let phone = 'unavailable';
+      if (adapter?.databaseReady && adapter.db) {
+        phone = await Promise.race([
+          adapter.db.query("select phone from employee where employee_no='EMP-1088'")
+            .then(result => result.rows[0]?.phone ?? null).catch(() => 'query_failed'),
+          new Promise(resolve => setTimeout(() => resolve('query_timeout'), 3000)),
+        ]);
+      }
+      const root = document.getElementById('viewRoot');
+      return {
+        route: typeof CURRENT_ROUTE === 'string' ? CURRENT_ROUTE : null,
+        params: typeof CURRENT_ROUTE_PARAMS === 'object' ? CURRENT_ROUTE_PARAMS : null,
+        renderSequence: typeof SCREEN_RENDER_SEQUENCE === 'number' ? SCREEN_RENDER_SEQUENCE : null,
+        mode: adapter?.mode ?? null,
+        databaseReady: adapter?.databaseReady === true,
+        progress: window.__ERP_DEMO_PROGRESS__ ?? null,
+        safeFailure: window.ErpDemoDiagnostics?.snapshot?.() ?? null,
+        authLocked: document.body.classList.contains('auth-locked'),
+        failureHost: !!document.getElementById('demoFailureView'),
+        screenRenderError: root?.dataset.screenRenderError ?? null,
+        contact: document.querySelector('[data-employee-contact]')?.textContent ?? null,
+        modalPresent: !!document.getElementById('modalEl'),
+        rootText: root?.innerText.slice(-3000) ?? null,
+        fictionalSavedPhone: phone,
+      };
+    }).catch(() => ({ childDiagnosticUnavailable: true }));
+    const report = { errors, diagnostic };
+    console.log(JSON.stringify({ staffBrowserFailure: report }));
+    mkdirSync('output', { recursive: true });
+    writeFileSync('output/demo-staff-browser-failure.json', JSON.stringify(report, null, 2) + '\n');
+    await page.screenshot({ path: 'output/demo-staff-browser-failure.png', fullPage: true }).catch(() => {});
+    throw error;
   } finally {
     await context.close();
     await browser.close();
