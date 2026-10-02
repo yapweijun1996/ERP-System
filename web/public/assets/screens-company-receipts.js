@@ -734,9 +734,7 @@
         attrs:`data-company-receipts-more${loadingMore?' disabled':''}`})}${error}`;
     };
     page=transactionListPage(root,{
-      /* The route guard remains expenses_tax in app.js.  Finance is only the
-         shared visual shell that owns this register's sub-navigation. */
-      module:'finance',
+      module:'expenses_tax',
       route:'company-receipts',title:c.title,description:c.sub,rows:()=>rows,
       rowId:row=>row.id,onOpen:row=>receiptDetails(row),count:()=>rows.length,
       kpis:[{label:scopeLabel,value:()=>rows.length}],

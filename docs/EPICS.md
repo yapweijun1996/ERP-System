@@ -2596,6 +2596,7 @@ Approved flow:
 | TASK-191 | Done | Workspace UX, API/idempotency, browser/security/negative tests |
 | TASK-192 | Done | Deploy, backup/restore rehearsal, exact-volume reset and final production evidence |
 | TASK-193 | Blocked | Administrator email self-service reset; SMTP is not configured |
+| TASK-250 | In Progress | Opt-in Platform trusted-device login is source-verified; production rollout pending |
 
 Core exit criteria for EPIC-065 were met at the TASK-192 checkpoint: it proved migration 0098 and production RLS on
 the deployed release, preserves old data before the reset, validates custom dumps and an
@@ -2671,7 +2672,11 @@ Current truth:
 | TASK-221 | Done | Make procurement next actions and receiving scope clear; built-Demo desktop/mobile full-receipt workflow passes |
 | TASK-222 | Done | Improve mobile touch zoom and localized status usability; five-language desktop/mobile E2E and half-width reflow pass |
 | TASK-223 | Done | Resolve payment voucher recovery audit timing uncertainty; Promise-aware 10-second recovery budget and full 129-route audit pass |
+| TASK-251 | Done | Local Company, Employee, Leave and Receipts Demo E2E; localized module-blocked title repaired, with scanner/production limits recorded |
 | TASK-252 | Done | Governed Company profile view/edit for HR/Admin MVP verified locally in Demo/API tests and desktop/375px browser |
+| TASK-253 | Done | Staff directory combined filters and governed accountless employment end verified locally in Demo/API tests and desktop/375px browser |
+| TASK-254 | Done | Leave date-overlap guard and employee-to-HR approval lifecycle verified locally against Demo/PGlite and domain/API tests |
+| TASK-255 | Done | My/Company Receipts archive, mobile receipt cards, yearly category-keyword Pack/PDF/Print and scanner boundary verified locally |
 
 Exit criteria: TASK-195–202 and TASK-204–205 pass their source, PostgreSQL, browser and operational
 acceptance criteria; all required current-HEAD CI gates pass; public

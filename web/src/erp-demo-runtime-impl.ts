@@ -344,8 +344,10 @@ import {
 } from '../../src/modules/assets/depreciationRun';
 import {
   createEmployeeWithin,
+  endEmployeeEmploymentWithin,
   updateEmployeeWithin,
   type CreateEmployeeInput,
+  type EndEmployeeEmploymentInput,
   type UpdateEmployeeInput,
 } from '../../src/modules/hr/employee';
 import { projectEmployeeAnnualLeaveWithin } from '../../src/modules/hr/leaveBalance';
@@ -1544,6 +1546,11 @@ export const erpDemoRuntime = Object.freeze({
       input: UpdateEmployeeInput,
     ) {
       return updateEmployeeWithin(asDomainDb(db), scope, employeeId, input);
+    },
+    endEmployeeEmploymentWithin(
+      db: DemoOrm, scope: Scope, employeeId: number, input: EndEmployeeEmploymentInput,
+    ) {
+      return endEmployeeEmploymentWithin(asDomainDb(db), scope, employeeId, input);
     },
     projectEmployeeAnnualLeaveWithin(db: DemoOrm, scope: Scope, employeeId: number) {
       return projectEmployeeAnnualLeaveWithin(asDomainDb(db), scope, employeeId);

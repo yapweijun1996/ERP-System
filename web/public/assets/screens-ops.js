@@ -49,10 +49,15 @@ SCREENS['dashboard'] = function(root){
       ${a.risk==='high'?cap(t('dash.cap.high'),'danger'):a.risk==='warn'?cap(t('dash.cap.check'),'warn'):cap(t('dash.cap.routine'),'neutral')}
     </div>`).join('')+`</div>`;
   const headerKpis=[
-    {permission:'sales.read',label:t('dash.kpi.openorder'),value:money(m.openOrderValue??0,DB.company.currency),cls:''},
-    {permission:'finance.read',label:t('dash.kpi.cash'),value:money(m.cash??0,DB.company.currency),cls:''},
-    {permission:'sales.read',label:t('dash.kpi.mtd'),value:money(m.mtdSales??0,DB.company.currency),cls:' pos'},
-  ].filter(kpi=>userHasAnyPermission(kpi.permission)).map(kpi=>`<div class="kfig"><small>${esc(kpi.label)}</small><b class="tnum${kpi.cls}">${kpi.value}</b></div>`).join('');
+    {module:'sales',permission:'sales.read',label:t('dash.kpi.openorder'),amount:m.openOrderValue,cls:''},
+    {module:'finance',permission:'finance.read',label:t('dash.kpi.cash'),amount:m.cash,cls:''},
+    {module:'sales',permission:'sales.read',label:t('dash.kpi.mtd'),amount:m.mtdSales,cls:' pos'},
+  ].filter(kpi=>moduleState(kpi.module).active&&moduleState(kpi.module).visible
+    &&userHasAnyPermission(kpi.permission)).map(kpi=>{
+    const amount=kpi.amount;
+    const value=amount==null?'—':`${Number(amount)<0?'−':''}${money(amount,DB.company.currency)}`;
+    return `<div class="kfig"><small>${esc(kpi.label)}</small><b class="tnum${kpi.cls}">${value}</b></div>`;
+  }).join('');
   const approvalQueue=routeAllowed('approval-inbox')?`
         <div class="dash-sectitle"><span>${esc(t('dash.sec.queue'))}</span><span class="ln"></span><span><a href="javascript:navigate('approval-inbox')">${esc(t('dash.openall'))}</a></span></div>
         <div class="dashgrid">

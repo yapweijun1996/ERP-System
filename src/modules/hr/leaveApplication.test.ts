@@ -38,6 +38,11 @@ describe('governed leave application lifecycle', () => {
     const [admin] = await db.select().from(appUser).where(eq(appUser.username, 'admin'));
     const [employeeUser] = await db.select().from(appUser).where(eq(appUser.username, 'viewer'));
     const [subject] = await db.select().from(employee).where(eq(employee.userId, employeeUser.userId));
+    // The seeded viewer has a legacy pending trip on this fixture's test dates.
+    await db.delete(leaveRequest).where(and(
+      eq(leaveRequest.employeeId, subject.id),
+      eq(leaveRequest.legacyPolicy, true),
+    ));
     const [type] = await db.select().from(leaveType).where(and(
       eq(leaveType.masterFn, scope.masterFn),
       eq(leaveType.companyFn, scope.companyFn),
@@ -161,6 +166,48 @@ describe('governed leave application lifecycle', () => {
     await expect(data.db.transaction((tx) => submitLeaveApplicationWithin(
       tx, scope, data.employeeActor, draft.id, 99,
     ))).rejects.toMatchObject({ code: 'leave_version_conflict', status: 409 });
+  });
+
+  it('rejects an overlapping submitted request but permits opposite half-day units', async () => {
+    const data = await fixture();
+    const first = await createDraft(data, {
+      startDate: '2026-08-10', endDate: '2026-08-10', unit: 'half_day_am',
+    });
+    await data.db.transaction(tx => submitLeaveApplicationWithin(
+      tx, scope, data.employeeActor, first.id, first.version,
+    ));
+    const duplicate = await createDraft(data, {
+      startDate: '2026-08-10', endDate: '2026-08-10', unit: 'half_day_am',
+    });
+    await expect(data.db.transaction(tx => submitLeaveApplicationWithin(
+      tx, scope, data.employeeActor, duplicate.id, duplicate.version,
+    ))).rejects.toMatchObject({ code: 'leave_dates_overlap', status: 409 });
+    const afternoon = await createDraft(data, {
+      startDate: '2026-08-10', endDate: '2026-08-10', unit: 'half_day_pm',
+    });
+    await expect(data.db.transaction(tx => submitLeaveApplicationWithin(
+      tx, scope, data.employeeActor, afternoon.id, afternoon.version,
+    ))).resolves.toMatchObject({ status: 'pending' });
+  });
+
+  it('blocks final approval when a legacy approved absence now overlaps', async () => {
+    const data = await fixture();
+    const draft = await createDraft(data, {
+      startDate: '2026-10-05', endDate: '2026-10-05', unit: 'full_day',
+    });
+    const pending = await data.db.transaction(tx => submitLeaveApplicationWithin(
+      tx, scope, data.employeeActor, draft.id, draft.version,
+    ));
+    await data.db.insert(leaveRequest).values({
+      ...scope, employeeId: data.subject.id, leaveType: 'Legacy annual',
+      startDate: '2026-10-05', endDate: '2026-10-05', days: '1.00',
+      status: 'approved', legacyPolicy: true,
+    });
+    await expect(data.db.transaction(tx => decideGovernedLeaveWithin(
+      tx, scope, data.hrActor, draft.id, pending.version, 'approved',
+    ))).rejects.toMatchObject({ code: 'leave_dates_overlap', status: 409 });
+    const [unchanged] = await data.db.select().from(leaveRequest).where(eq(leaveRequest.id, draft.id));
+    expect(unchanged.status).toBe('pending');
   });
 
   it('enforces medical evidence without exposing a fake upload service', async () => {

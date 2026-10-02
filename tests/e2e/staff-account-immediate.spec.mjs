@@ -17,7 +17,10 @@ try {
     await new Promise(resolve => setTimeout(resolve, 250));
   }
   browser = await chromium.launch();
-  for (const width of [1280, 445, 390, 375]) {
+  const widths = process.env.STAFF_ACCOUNT_E2E_WIDTHS
+    ? process.env.STAFF_ACCOUNT_E2E_WIDTHS.split(',').map(Number)
+    : [1280, 445, 390, 375];
+  for (const width of widths) {
     const context = await browser.newContext({ viewport: { width, height: 844 }, permissions: ['clipboard-read', 'clipboard-write'] });
     const page = await context.newPage();
     const errors = [];
@@ -124,6 +127,23 @@ try {
     if (persisted.includes(generatedPassword)) throw new Error('Plaintext credential persisted');
     await page.evaluate(() => closeModal());
     await page.locator('#employeeAccountEmailTemplate').waitFor({ state: 'detached' });
+    if (width === 1280 || width === 375) {
+      await page.evaluate(() => navigate('hr-directory'));
+      const directorySearch = page.locator('[data-list-search]');
+      await directorySearch.waitFor({ state: 'visible', timeout: 60000 });
+      await directorySearch.fill('Synthetic Immediate Staff');
+      const employeeRow = page.locator('[data-list-table] .dt-r[data-row]').filter({ hasText: 'Synthetic Immediate Staff' });
+      await employeeRow.waitFor({ state: 'visible', timeout: 60000 });
+      const directoryRows = page.locator('[data-list-table] .dt-r[data-row]');
+      const rowCount = await directoryRows.count();
+      const rowTexts = await directoryRows.allInnerTexts();
+      const rowText = await employeeRow.innerText();
+      if (rowCount !== 1 || !rowText.includes('Synthetic Testing')) {
+        throw new Error(`New staff member directory mismatch at ${width}px: ${JSON.stringify({rowCount,rowTexts})}`);
+      }
+      await employeeRow.click();
+      await page.locator('[data-canonical-employee="true"]').waitFor({ state: 'visible', timeout: 60000 });
+    }
     await page.evaluate(() => signOutDemo());
     await page.locator('#loginEmail').waitFor({ state: 'visible', timeout: 60000 });
     const authFoot = await page.locator('.auth-foot').innerText();
@@ -201,6 +221,46 @@ try {
     });
     if (width <= 980 && (!receiptBottom || receiptBottom.emptyBottom > receiptBottom.scrollAreaBottom + 1)) {
       throw new Error(`Receipt empty state is hidden behind mobile navigation at ${width}px: ${JSON.stringify(receiptBottom)}`);
+    }
+    if (width === 1280 || width === 375) {
+      await page.locator('[data-receipt-file]').setInputFiles(path.join(root, 'web/public/icons/icon-192.png'));
+      const capturedRow = page.locator('[data-list-table] .dt-r[data-row]').filter({ hasText: 'icon-192.png' });
+      await capturedRow.waitFor({ state: 'visible', timeout: 60000 });
+      if (!(await capturedRow.innerText()).includes('Offline draft')) {
+        throw new Error(`My Receipts did not retain the captured draft at ${width}px`);
+      }
+      await page.getByRole('button', { name: 'Sync all', exact: true }).click();
+      await page.waitForFunction(() => {
+        const row = [...document.querySelectorAll('[data-list-table] .dt-r[data-row]')]
+          .find(element => element.textContent?.includes('icon-192.png'));
+        return row?.textContent?.includes('Quarantined · scanner unavailable');
+      }, null, { timeout: 60000 });
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      const storedRow = page.locator('[data-list-table] .dt-r[data-row]').filter({ hasText: 'icon-192.png' });
+      await storedRow.waitFor({ state: 'visible', timeout: 60000 });
+      if (!(await storedRow.innerText()).includes('Quarantined · scanner unavailable')) {
+        throw new Error(`My Receipts upload did not persist after reload at ${width}px`);
+      }
+      if (width === 375) {
+        const card = await storedRow.evaluate((row) => {
+          const cells = [...row.querySelectorAll('.dt-c')];
+          const state = cells[1];
+          const rowBounds = row.getBoundingClientRect();
+          const stateBounds = state?.getBoundingClientRect();
+          return {
+            rowOverflow: row.scrollWidth - row.clientWidth,
+            labels: cells.map(cell => cell.dataset.label),
+            stateVisible: Boolean(stateBounds && stateBounds.left >= rowBounds.left
+              && stateBounds.right <= rowBounds.right && stateBounds.bottom <= rowBounds.bottom),
+            headerHidden: getComputedStyle(document.querySelector('[data-receipt-capture="canonical"] .dt-head')).display === 'none',
+          };
+        });
+        if (card.rowOverflow > 1 || !card.stateVisible || !card.headerHidden
+          || card.labels[0] !== 'File' || card.labels[1] !== 'State') {
+          throw new Error(`My Receipts mobile card is clipped or unlabelled: ${JSON.stringify(card)}`);
+        }
+        await storedRow.scrollIntoViewIfNeeded();
+      }
     }
     if (await page.locator('#activationForm').count()) throw new Error('Activation form still exists');
     if (await page.getByRole('heading', { name: 'Employee self service is unavailable' }).count()) throw new Error('Employee link missing');

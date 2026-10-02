@@ -16,6 +16,7 @@ import {
 import {
   EmployeeCreateError,
   EmployeeUpdateError,
+  endEmployeeEmploymentWithin,
   InvalidEmployeeStateError,
   updateEmployeeWithin,
 } from '../../modules/hr/employee';
@@ -319,6 +320,39 @@ export function createHrRouter(db: DB, options: HrRouterOptions = {}): Router {
     } catch (error) {
       handleError(res, error);
     }
+  });
+
+  router.post('/employees/:employeeId/actions/end-employment', async (req, res) => {
+    const session = await requireHr(req, res, PERMISSIONS.hrWrite);
+    if (!session) return;
+    const employeeId = employeeIdParam(req.params.employeeId);
+    if (!employeeId) { apiError(res, 400, 'invalid_id', 'employeeId must be a positive integer.'); return; }
+    const body = req.body;
+    if (!body || typeof body !== 'object' || Array.isArray(body)
+      || 'masterFn' in body || 'companyFn' in body || 'userId' in body || 'isActive' in body) {
+      apiError(res, 400, 'invalid_request', 'A scoped employment-end request is required.');
+      return;
+    }
+    const reason = typeof body.reason === 'string' ? body.reason : '';
+    const expectedUpdatedAt = typeof body.expectedUpdatedAt === 'string' ? body.expectedUpdatedAt : '';
+    const handoffEmployeeId = body.handoffEmployeeId == null ? null : Number(body.handoffEmployeeId);
+    if (!expectedUpdatedAt) { apiError(res, 428, 'if_match_required', 'Employee version is required.'); return; }
+    if (reason.trim().length < 3 || reason.trim().length > 500) {
+      apiError(res, 422, 'employment_reason_required', 'Enter a reason of 3 to 500 characters.'); return;
+    }
+    if (handoffEmployeeId != null && (!Number.isSafeInteger(handoffEmployeeId) || handoffEmployeeId <= 0)) {
+      apiError(res, 422, 'invalid_handoff', 'Choose a valid handoff employee.'); return;
+    }
+    const payload = { employeeId, reason, expectedUpdatedAt, handoffEmployeeId };
+    try {
+      await runIdempotent(req, res, session, 'hr.employee.end-employment', payload, async () => {
+        const scope = { masterFn: session.masterFn, companyFn: session.activeCompanyFn };
+        const data = await withTenantTransaction(db, scope, (tx) => endEmployeeEmploymentWithin(
+          tx, scope, employeeId, { ...payload, actorUserId: session.userId, requestId: context(res).requestId },
+        ));
+        return { status: 200, data };
+      });
+    } catch (error) { handleError(res, error); }
   });
 
   router.get('/employees/:employeeId/history', async (req, res) => {

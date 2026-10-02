@@ -1,5 +1,31 @@
 # ERP-System Project Logic
 
+Home monetary KPIs — 2026-09-25: `web/public/assets/screens-ops.js` displays
+Open order value and MTD revenue only when Sales is active and the user has
+`sales.read`; Cash position requires active Finance and `finance.read`.
+Unavailable API values display as `—`, never as a fabricated zero. The canonical
+`/api/dashboard` evaluates current permissions and effective Company module
+entitlements before reading module facts; denied modules return `null` metrics
+and no inventory alerts. The `src/api/dashboard.ts` read model uses
+Company-scoped draft and pending-approval
+sales orders for open value, account `1000` GL debit less credit for cash, and
+account `4000` GL credit less debit posted in the current month of the Company's
+IANA time zone for MTD revenue. The Demo adapter derives the same three values
+from its local canonical facts. A real zero is meaningful only when the owning
+module is available and the corresponding fact query returns zero; local source
+verification does not establish any hosted Company's actual balance.
+
+Workspace module navigation — 2026-09-25: `web/public/assets/data-core.js`
+and `web/public/assets/app.js` expose Company Receipts under its own
+`expenses_tax` module, separate from Finance and employee My Work. Payroll Run
+and Payslip are owned by the independent `payroll` module; HR Directory and
+Leave remain under `hr`. The browser hides module destinations when the
+authenticated effective module projection or route permissions deny them;
+`src/auth/moduleAccess.ts` and the API resource/module gates remain the
+authorization source; `src/auth/accessMatrix.ts` checks route alignment. The
+UI still uses shared register layouts across these modules without sharing
+business ownership.
+
 Product feedback implementation candidate — 2026-09-25: `src/data/schema/productFeedback.ts`
 defines Company-scoped `product_case`, append-only `product_case_evidence` and
 `product_case_event` records, separate
@@ -909,6 +935,31 @@ the employee name changes.
 
 Source: `src/modules/hr/employee.ts:290-352, 454-572`.
 
+### 2.3.1 Directory and accountless employment end (TASK-253)
+
+The Staff directory keeps Search and Department, and adds combined Current /
+Former and Job title filters. Current means `employee.isActive !== false`,
+including staff on leave. Former means `isActive === false`; the record remains
+visible and historical. The Headcount KPI counts current staff, independent of
+the filtered result count. Job title is an employee fact, not an application
+permission role.
+
+`endEmployeeEmploymentWithin` serves active employees without a linked
+`app_user`. HR write authority, a reason, idempotency at the API boundary and
+an `updatedAt` optimistic token are required. The command locks the active
+Company employee, rejects linked accounts and stale or repeated requests,
+transfers any active direct reports to an eligible current employee outside
+the source reporting subtree, sets `isActive=false` and appends a reasoned
+audit event in one transaction. It never deletes the employee or decides
+Leave Applications. Account-bearing staff retain the existing account
+offboarding path, which also revokes sessions and transfers ownership.
+
+Sources: `src/modules/hr/employee.ts`, `src/api/routes/hr.ts`,
+`web/public/assets/screens-hr.js`; verification:
+`src/modules/hr/employeeEnd.test.ts`,
+`src/api/employeeUpdate.integration.test.ts`,
+`tests/e2e/staff-directory-mvp.spec.mjs`.
+
 ### 2.4 Staff onboarding and account lifecycle
 
 Staff onboarding is a draft-to-account creation path. The historical command
@@ -1000,8 +1051,20 @@ the reservation fails when `available = balance - reserved` is insufficient. The
 request then moves to `pending`, an approval instance is started from the current
 workflow configuration and a `submitted` event is appended.
 
+Submission locks the active employee and rejects a date overlap with another
+`pending` or `approved` request for that employee, including legacy requests.
+Two same-date half days may coexist only as one AM and one PM request. Draft,
+rejected, withdrawn, voided and cancelled requests do not block submission.
+Final approval repeats the check against already approved requests so a legacy
+or previously imported overlap cannot become a second approved absence. The
+employee lock serializes submissions and approvals for different request rows.
+The rejection uses `leave_dates_overlap` (409) and leaves the draft or pending
+request unchanged. This rule is shared by Demo/PGlite and API/PostgreSQL.
+
 Sources: `src/modules/hr/leaveApplication.ts:297-368, 387-473` and
 `src/modules/hr/leaveBalance.ts:59-87, 351-443`.
+Overlap verification: `src/modules/hr/leaveApplication.test.ts` and
+`tests/e2e/leave-overlap-mvp.spec.mjs`.
 
 ### 3.4 Approval decision
 
@@ -1587,7 +1650,8 @@ TASK-185 foundation and TASK-186 tenant-authority cutover:
    TASK-226 adds a one-time trusted initial Platform setup selection (and its static-Demo
    PGlite equivalent) before optional AI; tenant onboarding can no longer select modules.
 5. TASK-187/migration 0096 authenticates Platform Superadmin with independent password
-   credentials, one-hour non-remembered platform cookies and `platform.simulation.manage`.
+   credentials and `platform.simulation.manage`. Current login keeps the one-hour default
+   and offers an opt-in 30-day absolute / seven-day idle trusted-device cookie.
    Explicit simulation of an active assigned tenant user is default-15-minute, cannot
    outlive the platform session, runs with exactly the target authority, remains visibly
    marked/revocable and records both identities; it never provides a MAC bypass.
