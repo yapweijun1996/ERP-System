@@ -5,721 +5,4321 @@ export const DEMO_SCHEMA_LINEAGE = {
       "version": 0,
       "tag": "0000_init",
       "sqlHash": "c85883363340c54c4b50518f225ed445f8e37fe4a7b9f23885705f39af12d988",
-      "structuralHash": "ef45a5530276db602cf4c750859202e05ef7ca0ee46c5b9ab8a993edf371bf68"
+      "structuralHash": "ef45a5530276db602cf4c750859202e05ef7ca0ee46c5b9ab8a993edf371bf68",
+      "categories": {
+        "tables": {
+          "hash": "6170008f7eb4e3ce9fcfc513b344ffd8f3d04f90dbc8f2b400bfc07ed674676d",
+          "count": 18
+        },
+        "columns": {
+          "hash": "01bfe47eb1e0a68f15c089815d8b4bbef66fd62f774d47235bc857ac32548f66",
+          "count": 156
+        },
+        "constraints": {
+          "hash": "741d9da847ca4ba3a23ec10616b18268d51242dda912ac103736b6e93be925ad",
+          "count": 186
+        },
+        "indexes": {
+          "hash": "b686114e8d7eacb95dd80d02ebac3ff3f4abec9092f5c2f57d042d25107ffd41",
+          "count": 33
+        },
+        "sequences": {
+          "hash": "fef6da82eb53cadc2e1388557680f44ea9b8bc32c3940209db1723fe1a6696a2",
+          "count": 14
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 1,
       "tag": "0001_quiet_blizzard",
       "sqlHash": "73196e483adeb7fc7bb03912cf244311f08667a6b361d9f55c9d1497833108d1",
-      "structuralHash": "44bd4f9596ed60b4c82a530c72dd6cc8133ba3833abb9c1d4d9ea27b1121a88a"
+      "structuralHash": "44bd4f9596ed60b4c82a530c72dd6cc8133ba3833abb9c1d4d9ea27b1121a88a",
+      "categories": {
+        "tables": {
+          "hash": "6170008f7eb4e3ce9fcfc513b344ffd8f3d04f90dbc8f2b400bfc07ed674676d",
+          "count": 18
+        },
+        "columns": {
+          "hash": "8e4458094f780f2271a9c56c29c92c16fddb7d0061ded531face13c1050c22b3",
+          "count": 157
+        },
+        "constraints": {
+          "hash": "4dc32ba150ca357ced693406a975871a2821e710a0579be4c3a6d06f767cd9e5",
+          "count": 187
+        },
+        "indexes": {
+          "hash": "b686114e8d7eacb95dd80d02ebac3ff3f4abec9092f5c2f57d042d25107ffd41",
+          "count": 33
+        },
+        "sequences": {
+          "hash": "fef6da82eb53cadc2e1388557680f44ea9b8bc32c3940209db1723fe1a6696a2",
+          "count": 14
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 2,
       "tag": "0002_messy_slyde",
       "sqlHash": "7533fa606bfadfa5f3ed56081301760f08c3a6f80e3720b018ef12dc89877b70",
-      "structuralHash": "54fd05dd4eb1a15ac490156d35c64d6c430167aeabb8d7fb60f027b374820208"
+      "structuralHash": "54fd05dd4eb1a15ac490156d35c64d6c430167aeabb8d7fb60f027b374820208",
+      "categories": {
+        "tables": {
+          "hash": "25f93b8f88aef373bfbb5031a65a39cf05cf046d385c103c8f49af4c147ddc3a",
+          "count": 23
+        },
+        "columns": {
+          "hash": "ab05e9d4dbaa854554f2ec3a6964579a893c33176e24ead8c7dd7b13a661a039",
+          "count": 214
+        },
+        "constraints": {
+          "hash": "13950537c9e7525115ee630618c4e3918bfe0ee03ea9812b04f3c723393bfd8a",
+          "count": 256
+        },
+        "indexes": {
+          "hash": "33f62286cb409bfc6d6212e6ede943c5d3f623fe4538696332c89c816f8ecdb9",
+          "count": 45
+        },
+        "sequences": {
+          "hash": "82b713252eee6f8ecb6c29eb263acf49ee14361916cb21804ed5a37db77a6d37",
+          "count": 19
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 3,
       "tag": "0003_fuzzy_ronan",
       "sqlHash": "7737caa86959f7fd6ca6f8f1fefa89954c8c059803b11cb1688e230ebac158da",
-      "structuralHash": "bdde7ed6468cead3d5b15ed2087ae4648693dc7884791b3b3540d3d60c83c539"
+      "structuralHash": "bdde7ed6468cead3d5b15ed2087ae4648693dc7884791b3b3540d3d60c83c539",
+      "categories": {
+        "tables": {
+          "hash": "ee50c7e59627e0fe9fcf21fa1a460d38671afc670f1c97bbb04b8f482815d392",
+          "count": 25
+        },
+        "columns": {
+          "hash": "88ba4ce98af9017ca8e9a363a1db3eaefab04ea2e3315b90ffefc840fa485c26",
+          "count": 238
+        },
+        "constraints": {
+          "hash": "b2ff2fccc9c92073259c91a992e42a12367687dcf7635cb9a6ee2d5aede398bf",
+          "count": 284
+        },
+        "indexes": {
+          "hash": "6ce46f82961f4356c39c0209681c413772b7e1c863e69bb6dce6ee539a60a186",
+          "count": 51
+        },
+        "sequences": {
+          "hash": "8e14a06a6dd0d29610a46afa3a32ad9fe1152c3bed4cabb93b35fb95b5a809ca",
+          "count": 21
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 4,
       "tag": "0004_stormy_guardian",
       "sqlHash": "9252cb5fb0ddd8a6fedb23f399b82101f16586089b2df8aa348380e1b4f03566",
-      "structuralHash": "6c867343846110d842388d22d69edcddb0e0cb80cfbc4bc4a76c2b737e69fa32"
+      "structuralHash": "6c867343846110d842388d22d69edcddb0e0cb80cfbc4bc4a76c2b737e69fa32",
+      "categories": {
+        "tables": {
+          "hash": "c14486dd548ab7e943d1b204648f166505c7db917fdd48758addbe0139d8a126",
+          "count": 33
+        },
+        "columns": {
+          "hash": "a81e779f9404775fb5d6cb6ba80f71d12e9e928dc69d2e0158de94268f9415fc",
+          "count": 319
+        },
+        "constraints": {
+          "hash": "122f080aae1d77fb3b711a50ec6aeacef3073528dc567daf6aa61c9c0a56742c",
+          "count": 366
+        },
+        "indexes": {
+          "hash": "b29263a08ef5d49224dad258a2fbcba7df7f8bbfdb553319fef21c6957902cae",
+          "count": 72
+        },
+        "sequences": {
+          "hash": "e4e3e4275537f994df2bdaabad4b8c7a88a82e644aa6311b7bf131b9149fb68d",
+          "count": 26
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 5,
       "tag": "0005_magenta_terrax",
       "sqlHash": "779c7be35ee69ca58ef5e43974b347e0abf57a3f6595597a562b8656fe4b01db",
-      "structuralHash": "1fd34146c41403195f76bb2e01a4c866107dcd021e006ad8c14c6c766ac1d8c8"
+      "structuralHash": "1fd34146c41403195f76bb2e01a4c866107dcd021e006ad8c14c6c766ac1d8c8",
+      "categories": {
+        "tables": {
+          "hash": "8e065c54f08429f488607aec52745ca47aca2b40e78a8588dc0c1e3930c94378",
+          "count": 34
+        },
+        "columns": {
+          "hash": "19f21a86b97e0f81f614eca97c96f4f12ef752526d71790a2affe1b350ffc533",
+          "count": 326
+        },
+        "constraints": {
+          "hash": "9a8380b99b21ffc8c5e2ae3bd86906ba6f82cd3c7debe7b69794566b10487f00",
+          "count": 371
+        },
+        "indexes": {
+          "hash": "5e9e13e7405520097c447bef064aff0b5139dffaca2b81475d06fefc0678a382",
+          "count": 73
+        },
+        "sequences": {
+          "hash": "e4e3e4275537f994df2bdaabad4b8c7a88a82e644aa6311b7bf131b9149fb68d",
+          "count": 26
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 6,
       "tag": "0006_uneven_korg",
       "sqlHash": "b4e1627b03c9aadc4aad510821f4b9cf3d050cf23597d1f1229b83aedee7d01e",
-      "structuralHash": "04d92ed5e22591533705a2c8daf767bbc031ab4153fe926e95355731061ebcd9"
+      "structuralHash": "04d92ed5e22591533705a2c8daf767bbc031ab4153fe926e95355731061ebcd9",
+      "categories": {
+        "tables": {
+          "hash": "337471b3feab7acc3b4a9993d9d9499fd8feebade518ba7ddd29223618fa6c4d",
+          "count": 38
+        },
+        "columns": {
+          "hash": "f073425151479030e9c927b3f2adf5b0cca7b6921d36baf9aa0e42dcb62f2453",
+          "count": 376
+        },
+        "constraints": {
+          "hash": "6627573e842f1a0193b8109680fdfd5792a1f99fada86647e573ca05e4877f27",
+          "count": 428
+        },
+        "indexes": {
+          "hash": "69d8708ce27f0edf12577b7355a28d3daeda6bf7b885be5b9ffa728cc941769b",
+          "count": 85
+        },
+        "sequences": {
+          "hash": "5f38eec1b9b4ac4f69aee6774d55d8f6f5f8494c518c6dbfa1508008c1cc6aa6",
+          "count": 30
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 7,
       "tag": "0007_wonderful_swordsman",
       "sqlHash": "4cf130f3624794d681d14f92e938684903accc77891338e026b4612bee86a97a",
-      "structuralHash": "0a6a9357c3429034c660d068649fd0669d4e252e80d1a906e94af7332bd3ad11"
+      "structuralHash": "0a6a9357c3429034c660d068649fd0669d4e252e80d1a906e94af7332bd3ad11",
+      "categories": {
+        "tables": {
+          "hash": "33fc7c63ac303a7936503e2a90e9574737056cf8cd65c74c2bf4ec3231304b7c",
+          "count": 42
+        },
+        "columns": {
+          "hash": "9e3c42dcad94ce37ad23c32ce67cd65263d290345740553aa2f19e2b115daf52",
+          "count": 421
+        },
+        "constraints": {
+          "hash": "df95be8a15faccfe7fc1ac3fe5d262e5decc69016f211ef96a3aa7c418ba5a67",
+          "count": 487
+        },
+        "indexes": {
+          "hash": "66c80cec2530c555c0eb1613192a491218d645eaac3aa510e0142dc701c16992",
+          "count": 95
+        },
+        "sequences": {
+          "hash": "d5f3ac6496b94803b00bf015981e01e3a61c876a79bbaf991c4552480e49fffb",
+          "count": 34
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 8,
       "tag": "0008_sweet_menace",
       "sqlHash": "737c45eb71a933b9fbe5a925de35dda1dd3fe17f01a74fc2f3567afbb441f1d5",
-      "structuralHash": "926c560fe8e706003d532f388568490b0af0e1130178628c0f281f0fe0b5370b"
+      "structuralHash": "926c560fe8e706003d532f388568490b0af0e1130178628c0f281f0fe0b5370b",
+      "categories": {
+        "tables": {
+          "hash": "43ca76caf42c9c56bd80d877c1ab093fca37d942a761bb66807f2a53105c264d",
+          "count": 45
+        },
+        "columns": {
+          "hash": "53d89b5ce4cd11272ea049ac7acd21f46b81e6464e612fe58b8fe0546e39427b",
+          "count": 459
+        },
+        "constraints": {
+          "hash": "9d5d9e65f3fa1e93cdb483290d2200f897a822d0e641870b615e4dd2a11924b6",
+          "count": 538
+        },
+        "indexes": {
+          "hash": "546f44264ec33ecf5906ce4a2750a72e2ef748ec6e9c91dfae05c06b15ff944c",
+          "count": 104
+        },
+        "sequences": {
+          "hash": "4ac5e1e6a6b14fbc2083bac4ef7fc5a4281c907817ea6bdfc3ae35acd4db82bb",
+          "count": 37
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 9,
       "tag": "0009_wet_nekra",
       "sqlHash": "5f506605460dfe18c10cc3bd65decc013f8b1d1a4742b8cff03bfbbabb63a956",
-      "structuralHash": "b2f60af156f830c0317af01ed5d458eb940a8e74ce3974ff666f738382820625"
+      "structuralHash": "b2f60af156f830c0317af01ed5d458eb940a8e74ce3974ff666f738382820625",
+      "categories": {
+        "tables": {
+          "hash": "e2c8817978c45bb5d1fcd8518fbc777d32b61ca754046d2f9a66a07f9a6e9d19",
+          "count": 54
+        },
+        "columns": {
+          "hash": "ad672879b8531a06065aee6c8574ad9019909ebb0b1e95b20b3e6e4781b672df",
+          "count": 562
+        },
+        "constraints": {
+          "hash": "5149092f274a94576c0023b1b8227c5ab33040aafaf97b806d507931ea824773",
+          "count": 677
+        },
+        "indexes": {
+          "hash": "8a49c3278b6fe3997849b73dc1975475fd416e1b25f87dc3dfbb65620d7e26c5",
+          "count": 132
+        },
+        "sequences": {
+          "hash": "fc65baee457c2771ef868e10be4b8356d79826216c0d29cc35658cf05059df12",
+          "count": 46
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 10,
       "tag": "0010_gorgeous_arachne",
       "sqlHash": "cbbc5bfcc47c1c89818724de63657dbb0b4ccc0df11c67aa7b78d5ea3703e5e2",
-      "structuralHash": "bacdc47d2879089dfc949bbb7d3850a4b98f685adfdab346aacf3b3f1503891a"
+      "structuralHash": "bacdc47d2879089dfc949bbb7d3850a4b98f685adfdab346aacf3b3f1503891a",
+      "categories": {
+        "tables": {
+          "hash": "e65c377e17d8d89dd255ee6bc63ec6b03568d8d42a0cf675e1e46d67d893a1c5",
+          "count": 56
+        },
+        "columns": {
+          "hash": "1174056341fd1a3f9bee67a9c60446d50a7cb57c4243cef795bbbad2503adf15",
+          "count": 586
+        },
+        "constraints": {
+          "hash": "1cdac127527d470a919fc100874162f4ba752b9f6257cf2f2b255fea185ab7e7",
+          "count": 708
+        },
+        "indexes": {
+          "hash": "28d9c19eb3c42d10a5e3675a81e5081f4b0ca5bff7399f04a97b817a4ff8e9af",
+          "count": 138
+        },
+        "sequences": {
+          "hash": "27710dacc90f407f6698b71215eb22272746124069c3508a8a87fdee5d300932",
+          "count": 48
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 11,
       "tag": "0011_open_ender_wiggin",
       "sqlHash": "9eab8b6f36c4d75bb4a1568632d9b60a9936f1f9de22346d2f663e6c27fbd51d",
-      "structuralHash": "c7257c7f925b2272f4497526bae3ac9a07dcd10feb9107cf68cfc78ab7bf6c9c"
+      "structuralHash": "c7257c7f925b2272f4497526bae3ac9a07dcd10feb9107cf68cfc78ab7bf6c9c",
+      "categories": {
+        "tables": {
+          "hash": "84bbc82e41084fc93f4edff57ee6cf1d7c4a47259edf313c52afd9d831d2b9e6",
+          "count": 62
+        },
+        "columns": {
+          "hash": "58b9fd0cb2b0b0d0e34f46b580cfdaab3e8f65332fd565a191ddc7652eaf65c3",
+          "count": 671
+        },
+        "constraints": {
+          "hash": "5a71f52a1aca7b7caa1ac8df96dee05a948d0a773e0e05e2770428251bfdf352",
+          "count": 813
+        },
+        "indexes": {
+          "hash": "733634036bbeba47f376b46ded97a1fa10e1f7297780ad3cb5b80f69cc08ef9a",
+          "count": 159
+        },
+        "sequences": {
+          "hash": "1ce33fb673ca1e44deaf8d56ce6089752baaf3fc5439ec0e92b5317cfeb0a5a4",
+          "count": 54
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 12,
       "tag": "0012_broad_snowbird",
       "sqlHash": "36094109931ac8fd397ce8be98b853a453631339363b6ab0c651ce6c95888225",
-      "structuralHash": "a229b3b708c139f429d689d4d392d954a7673340e0a95907aa6a849f787bbd47"
+      "structuralHash": "a229b3b708c139f429d689d4d392d954a7673340e0a95907aa6a849f787bbd47",
+      "categories": {
+        "tables": {
+          "hash": "c839ceb280378c9e452e7c4ed883885ea4a9b0f8cba585f00f97fe8d1c52c2c4",
+          "count": 65
+        },
+        "columns": {
+          "hash": "1012a656145b548f143c7dec0b1f05f27489ad3fec5e5084ef0dacfb705a9a22",
+          "count": 718
+        },
+        "constraints": {
+          "hash": "b749050e6aced3b9146c4ca8a78e352e0fe102be4d062a8e8ff1ed66b23c82cf",
+          "count": 873
+        },
+        "indexes": {
+          "hash": "8e9d0552974d0a96dba422eede923a39b5ab81154cc82b25e9ea309e764c51ba",
+          "count": 171
+        },
+        "sequences": {
+          "hash": "77c15da25c17161a6d4226ef45b2a5f6d2af4ec852794e1d590761f720457170",
+          "count": 57
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 13,
       "tag": "0013_mighty_trauma",
       "sqlHash": "20c91eb37b758c29289597bbf370dd8a883b151ea2b6eb849d76669a4fe04ce4",
-      "structuralHash": "ae51f50d033b0b449421fc0ed6de6e474dda54334492ec4c83e09dc8487a8c9b"
+      "structuralHash": "ae51f50d033b0b449421fc0ed6de6e474dda54334492ec4c83e09dc8487a8c9b",
+      "categories": {
+        "tables": {
+          "hash": "0b75653c200be3e03a9d8826a314f06c1c0abe4b30e1531653a50f94a1432006",
+          "count": 67
+        },
+        "columns": {
+          "hash": "9c4bcf1102070b0d8e6045d0f7dae6de3fc5e4f0b20c9de940b2f817ed65e80e",
+          "count": 742
+        },
+        "constraints": {
+          "hash": "74a5e38c235161f74f59a6668fe8375af4cbaea6bffe9a683a6a9a3e922bbb26",
+          "count": 904
+        },
+        "indexes": {
+          "hash": "e8b274c178e65bf2408d8b3200dcb46695cebd28253f7d6a62258c87acd0254a",
+          "count": 177
+        },
+        "sequences": {
+          "hash": "b6ad5496d8bd4bf9b825240a95c91a5d19ae4bd36862308c6362dcb5ee34ff79",
+          "count": 59
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 14,
       "tag": "0014_perfect_mongu",
       "sqlHash": "c84b02ce03903ff707e2f35e7393360ec5497360380802cca054b9b2fe6d7fc0",
-      "structuralHash": "54bd14d00c84cfe69c6f76e1e0df8c9f59f85b4cdbc51f6b30110b72eab2aaef"
+      "structuralHash": "54bd14d00c84cfe69c6f76e1e0df8c9f59f85b4cdbc51f6b30110b72eab2aaef",
+      "categories": {
+        "tables": {
+          "hash": "faa5d9713c06fc026bd73671b7c3ebb586c7f2098e6f4cecfc891f182639c728",
+          "count": 71
+        },
+        "columns": {
+          "hash": "67d1d9b906b184c5774e3d0578417e63d3f4c291bc77268c3ec622c829a68462",
+          "count": 797
+        },
+        "constraints": {
+          "hash": "c40511927e70b9bba38a4a3f226e665bc5d81ff71f409cccc8f70b7f21261cb4",
+          "count": 977
+        },
+        "indexes": {
+          "hash": "1b5a63644625f5bc8e3343fda19c06a3cf7ff2919c1bf12550dc1f033a4ae88e",
+          "count": 190
+        },
+        "sequences": {
+          "hash": "71a568b3d0e9ca8a819da7cd0277c7ec4883695fe392cea05a58bca1bd3466c7",
+          "count": 63
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 15,
       "tag": "0015_overjoyed_silhouette",
       "sqlHash": "6050afde3d810742af5aaae2f37a59b0fe95d970b27ee2869bef4242635c558d",
-      "structuralHash": "5026a13e78b324922f8a82f583d6a30f527ed037fcf2bd66a4c1698f76edc466"
+      "structuralHash": "5026a13e78b324922f8a82f583d6a30f527ed037fcf2bd66a4c1698f76edc466",
+      "categories": {
+        "tables": {
+          "hash": "31865ea0bf82ee55c88d2401afdd62eecc182a89c62d5b999b83c94a2be1c8f1",
+          "count": 72
+        },
+        "columns": {
+          "hash": "1afef2c715a82ed4c9e8b6f6eff364bc731aa9019b574e05cbd32257cd8c2e15",
+          "count": 814
+        },
+        "constraints": {
+          "hash": "d77a866b3a60512bfcd6003ae80066801353886056e45ccd9e97846114f09161",
+          "count": 998
+        },
+        "indexes": {
+          "hash": "4296e53472b1e9e083ec0751c93e73889697997e433b36ccbdb05b26a6ec3985",
+          "count": 193
+        },
+        "sequences": {
+          "hash": "e6a2119bb969c47685c0a51db0f4634bf2b79f0775d4602d545418561d82c3d2",
+          "count": 64
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 16,
       "tag": "0016_bouncy_kang",
       "sqlHash": "11947e147bd8dbc93c458d246a604def895d401582ebe8b48e5e40cd8b66fc6d",
-      "structuralHash": "4fb29b0f08909014ae701a416ba3d097e4bbcdca7d168ef54c485a59b7d1914a"
+      "structuralHash": "4fb29b0f08909014ae701a416ba3d097e4bbcdca7d168ef54c485a59b7d1914a",
+      "categories": {
+        "tables": {
+          "hash": "39b7c0d71e056f5c0c0e53e22cf94aaffad08101e02f67ff999ccfdb8ba5fae1",
+          "count": 75
+        },
+        "columns": {
+          "hash": "68adc4283101125de59bad2817512c3749a7c2c9671952bd0c7bddcc1a336ac4",
+          "count": 858
+        },
+        "constraints": {
+          "hash": "10965ebbc98943f1fcc59b924631ab225925fd7fe439f33ef91e3b73a790bc5d",
+          "count": 1051
+        },
+        "indexes": {
+          "hash": "4cadcb8a3d3ef02b0e72214cd4a78f08847fd5c47dc85a75beac28a60248ef71",
+          "count": 200
+        },
+        "sequences": {
+          "hash": "882d530b5a89a1b616f9c857bc83bdb5721b5c66d8459238a947b465abb5ffa6",
+          "count": 67
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 17,
       "tag": "0017_strange_mother_askani",
       "sqlHash": "7e1b4929075242aa9bfdd1d36c8ffcf1d2788cedca16f95aee4dde3d296d9608",
-      "structuralHash": "ac70c1232c8a486e47d8b56aff222d006cb85c60a77de52da5892751f9c85243"
+      "structuralHash": "ac70c1232c8a486e47d8b56aff222d006cb85c60a77de52da5892751f9c85243",
+      "categories": {
+        "tables": {
+          "hash": "39b7c0d71e056f5c0c0e53e22cf94aaffad08101e02f67ff999ccfdb8ba5fae1",
+          "count": 75
+        },
+        "columns": {
+          "hash": "68adc4283101125de59bad2817512c3749a7c2c9671952bd0c7bddcc1a336ac4",
+          "count": 858
+        },
+        "constraints": {
+          "hash": "10965ebbc98943f1fcc59b924631ab225925fd7fe439f33ef91e3b73a790bc5d",
+          "count": 1051
+        },
+        "indexes": {
+          "hash": "0dad431ce3ceea9873901800a139c3cd57c685e93b8844c0209901f9ff6881ee",
+          "count": 201
+        },
+        "sequences": {
+          "hash": "882d530b5a89a1b616f9c857bc83bdb5721b5c66d8459238a947b465abb5ffa6",
+          "count": 67
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 18,
       "tag": "0018_windy_titania",
       "sqlHash": "efacaf3136549edf565a13a735b0f4154f2bc6d61334294ce31dfcad12555ea5",
-      "structuralHash": "afc0b449440c2486d439f200cf535f26bcf37dc722b6112aa7f6f22b16e5f684"
+      "structuralHash": "afc0b449440c2486d439f200cf535f26bcf37dc722b6112aa7f6f22b16e5f684",
+      "categories": {
+        "tables": {
+          "hash": "b3cdfd518426bc4500887514aed61a35bfcc62839e90c24ce6abeb914a7daa74",
+          "count": 76
+        },
+        "columns": {
+          "hash": "118a9841a477bfe69db12f9077021f745e3de6d196c74de311a43f619d910de8",
+          "count": 869
+        },
+        "constraints": {
+          "hash": "daffea13ba6a3883faddb90ae14336336c47949df3b21068fa315ad85e22eb9f",
+          "count": 1065
+        },
+        "indexes": {
+          "hash": "0e55286fa88d1c09dd680442cbbaf2b46bff885d4401bff35bfc9cb8f2e349c9",
+          "count": 203
+        },
+        "sequences": {
+          "hash": "d06e919f2b3758aa572d740e764f0172e3330fc8d707ba4b845811bfcf112ba3",
+          "count": 68
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 19,
       "tag": "0019_aromatic_wendigo",
       "sqlHash": "fe7d59cb7fccb2647dee86686921e39100c881d4b92f2e1233f12c1595abefe4",
-      "structuralHash": "e36895dc85621bf4234721e547278cac65b807941739e41742039725ae4f9d62"
+      "structuralHash": "e36895dc85621bf4234721e547278cac65b807941739e41742039725ae4f9d62",
+      "categories": {
+        "tables": {
+          "hash": "b3cdfd518426bc4500887514aed61a35bfcc62839e90c24ce6abeb914a7daa74",
+          "count": 76
+        },
+        "columns": {
+          "hash": "69dc2258b7077fe233ad3d2853f95466ede4293e087e1dd3faba8443671456c1",
+          "count": 873
+        },
+        "constraints": {
+          "hash": "5359f774da48d14b4d385f7488e54721a5a81a4ef75797ebeaaf587850f2c3bd",
+          "count": 1071
+        },
+        "indexes": {
+          "hash": "0e55286fa88d1c09dd680442cbbaf2b46bff885d4401bff35bfc9cb8f2e349c9",
+          "count": 203
+        },
+        "sequences": {
+          "hash": "d06e919f2b3758aa572d740e764f0172e3330fc8d707ba4b845811bfcf112ba3",
+          "count": 68
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 20,
       "tag": "0020_fast_naoko",
       "sqlHash": "d56bef2f868696aba92654c188649891b4593eb04d691645b2b8a87ce2d3604d",
-      "structuralHash": "b006257722ecc16741de847db9189d8491cec4f0dbb62b6e35a19b8aba9123d9"
+      "structuralHash": "b006257722ecc16741de847db9189d8491cec4f0dbb62b6e35a19b8aba9123d9",
+      "categories": {
+        "tables": {
+          "hash": "bad488dc76d4b9a2fc90c3d3f1f2c7a42929cfe35f8b0009229673ef46c4ba55",
+          "count": 77
+        },
+        "columns": {
+          "hash": "60a259c06d285e195a2a07b833774ab71c39263337c535e5cbf5acb00f8b34eb",
+          "count": 886
+        },
+        "constraints": {
+          "hash": "cc4ab516f03d066dfb6d0337f569fbe21ec305c1bafcbaf7d93f805103ff1568",
+          "count": 1083
+        },
+        "indexes": {
+          "hash": "72b38df11ec2bf194adc6647f3afd95cb5aa69e3b9e78d5885fa18d2b4a99a32",
+          "count": 206
+        },
+        "sequences": {
+          "hash": "f0ccc9c6d0d6d401df64fab45a26748c1a2c62dd4e5fd2b104850d415e1545ff",
+          "count": 69
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 21,
       "tag": "0021_busy_lilandra",
       "sqlHash": "86177cf9f8ff759360af5253df44c7a82c754d4a923a68ec0678d0a009903faf",
-      "structuralHash": "d485b18838645f41a85aa037b16c8bdad7e2d5f8895a6aaa99e0684c9f21946d"
+      "structuralHash": "d485b18838645f41a85aa037b16c8bdad7e2d5f8895a6aaa99e0684c9f21946d",
+      "categories": {
+        "tables": {
+          "hash": "ffd48f5e09e5f4363645881cb9c1489c8c3e014ed412b34332ae0bd580969df5",
+          "count": 80
+        },
+        "columns": {
+          "hash": "14138c00c380b43091961e9639d8533624750a67f38128b44a55429fdf7bb84a",
+          "count": 925
+        },
+        "constraints": {
+          "hash": "31be0cd2093ec3416a3aa45098a90dbcd03974a1a82b05b2f253b69b62b0df9c",
+          "count": 1131
+        },
+        "indexes": {
+          "hash": "057692b5ee70851e2021c1a825939b45be5a2212a28226e19c18d5abb141bc5d",
+          "count": 215
+        },
+        "sequences": {
+          "hash": "3064f00342b6a623157c67e4b7d6b3e7570d0b8e5325827ec487cbc72ecc46f1",
+          "count": 72
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 22,
       "tag": "0022_fluffy_shadowcat",
       "sqlHash": "a22c330d4f1cc90d358bc05473ef6cd25e1e18bbac94506106f315c0877ef6b2",
-      "structuralHash": "0d8100b53051efe922a96823660d75a8090fd2c7e761786c2e0aa9f36db023b1"
+      "structuralHash": "0d8100b53051efe922a96823660d75a8090fd2c7e761786c2e0aa9f36db023b1",
+      "categories": {
+        "tables": {
+          "hash": "e65dd08cd937f795750d5b7537b3dc81bb34f49adbeef2efbaeef610a9872c7d",
+          "count": 81
+        },
+        "columns": {
+          "hash": "11427339e0608aae77554dbfd91197d0e0eac1448f61a65f73d5f362c2f12a25",
+          "count": 930
+        },
+        "constraints": {
+          "hash": "386df82f8409716cfc76e5fe5a9c5352e9bdf52250a308bba189f3ac5d0d6c70",
+          "count": 1137
+        },
+        "indexes": {
+          "hash": "5383bfc85146fce9d31ee8ebd4a6466d2c17650c9d6e79091a38cbbc8d2898a0",
+          "count": 217
+        },
+        "sequences": {
+          "hash": "3064f00342b6a623157c67e4b7d6b3e7570d0b8e5325827ec487cbc72ecc46f1",
+          "count": 72
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 23,
       "tag": "0023_tired_goblin_queen",
       "sqlHash": "59071e80eea84468abfd2689d66c4b8a5b9f13dc1cb8a07ad433a6a4fdb0c31f",
-      "structuralHash": "0bd3024e5d8ffa214be1b0a387a9ca02ff81441d2fb491805e8e112615b99d2d"
+      "structuralHash": "0bd3024e5d8ffa214be1b0a387a9ca02ff81441d2fb491805e8e112615b99d2d",
+      "categories": {
+        "tables": {
+          "hash": "b3443438b2d09861c95f876e5684f4ebf491d54d11d23756db24bf11531ed7e1",
+          "count": 83
+        },
+        "columns": {
+          "hash": "728f9fdcb95e6ba5169c4cb5b32069bfbb21035044310cbb97d8a3134e385d04",
+          "count": 960
+        },
+        "constraints": {
+          "hash": "251204d7d2235c28e1e5bc5c98be4a2c9c425cdbfe9622c5817109af19c9cb46",
+          "count": 1172
+        },
+        "indexes": {
+          "hash": "86fcd35e9a77416803a2bd8e0eeea9db70b8799445905f1ad40d5e3b3d7f0773",
+          "count": 222
+        },
+        "sequences": {
+          "hash": "fe332b3e7987a220da3687a25db926117c5061634fc4f2b30ba62e69e57549de",
+          "count": 74
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 24,
       "tag": "0024_awesome_emma_frost",
       "sqlHash": "bb42dd8fc95472148fa7dc55794acc1630fc7f9d7536346696effd2e9cf13782",
-      "structuralHash": "88b2183333425237a7fcfdcf6ec52bff88c802943fb0d936319ce56f98b6c665"
+      "structuralHash": "88b2183333425237a7fcfdcf6ec52bff88c802943fb0d936319ce56f98b6c665",
+      "categories": {
+        "tables": {
+          "hash": "feb6ef383b5d96af8289013d476452b00d6cafbb8ce803d0c822c68e650b5ebf",
+          "count": 85
+        },
+        "columns": {
+          "hash": "0e0b256e8c9c5d900fa1b3cb415095905dfd1dba8739f5cfd4a87e0aebd8f16e",
+          "count": 990
+        },
+        "constraints": {
+          "hash": "9c7231462b662416115e59198129edd208262282d8faff6363180c12b8da8d36",
+          "count": 1208
+        },
+        "indexes": {
+          "hash": "b4bf2d6c107fac3e2feb400ef6b914c7f0a9c1f61a75693fbf6d932db73e9471",
+          "count": 230
+        },
+        "sequences": {
+          "hash": "2bec1001a6a724ec83d13cf8b89470b3fd32f3ea2b0b5b424a97d8e024cff809",
+          "count": 76
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 25,
       "tag": "0025_great_sprite",
       "sqlHash": "6a9abd1acf07de206f1538674dd08cdf8a2b915db31cb77676be7e40a3cb04e5",
-      "structuralHash": "3e7a950880e1ba358716d8a835a75e4fada34d35a772d2a032dcccae4f5a2a1d"
+      "structuralHash": "3e7a950880e1ba358716d8a835a75e4fada34d35a772d2a032dcccae4f5a2a1d",
+      "categories": {
+        "tables": {
+          "hash": "a93ad38b7f117be7d3d59c218e6f64fce1bbdd499caafdc2fe44babf1b6b0d6f",
+          "count": 87
+        },
+        "columns": {
+          "hash": "d8127091b1a91f445378ee0db18943895d24e8998b8953daa34a1f97bb2bf857",
+          "count": 1021
+        },
+        "constraints": {
+          "hash": "06c517255508ed8336f01861e7519f2cb609bfb2ecc3a8772772a11664b4e700",
+          "count": 1244
+        },
+        "indexes": {
+          "hash": "1defa1cd5a27c56bb177040b350e6a9fee18a3a52a0e3c2e6a405011fe563bde",
+          "count": 238
+        },
+        "sequences": {
+          "hash": "1a9bf6e8423eee80bba1cd58a0deae8ae49e29a1f5a26453eba9a798580b700d",
+          "count": 78
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 26,
       "tag": "0026_bouncy_fixer",
       "sqlHash": "5285b962b80a80cf450bef2fbc362ac3e470a4f1d2443e95e9181ff0474cc29e",
-      "structuralHash": "98d2b567b9c42628c0b82fc220fc4a7a90242cde86bd459e423b6c6fb92fcf59"
+      "structuralHash": "98d2b567b9c42628c0b82fc220fc4a7a90242cde86bd459e423b6c6fb92fcf59",
+      "categories": {
+        "tables": {
+          "hash": "f883c7c9e4f2192a4887bb22b5f7d8b5d3eee825ad9d5cb051e2f7ca36ddb7e9",
+          "count": 89
+        },
+        "columns": {
+          "hash": "9b5eecf991723d2950ac919d34420780e2b5b37fef8475084ef703c2ee6cff1c",
+          "count": 1047
+        },
+        "constraints": {
+          "hash": "88504aec0c2ed60e4c2b9ca09af478ed872a03aa1ad37879e92adf2555e27aaa",
+          "count": 1273
+        },
+        "indexes": {
+          "hash": "2cc1c72616f2831e5b697b5b84a4a48c49b42123498da159b9216248fe4bcdad",
+          "count": 244
+        },
+        "sequences": {
+          "hash": "0fc05fb4f3571d16ba443f7240cb3ea8ec412c3a0afcb7c482bc3ff4dfe67e6c",
+          "count": 80
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 27,
       "tag": "0027_familiar_thunderbolt_ross",
       "sqlHash": "f3a6e848977dffd0c9f0c170026d8c333402bbe3ee10aadf070b010f956bba21",
-      "structuralHash": "143d5c3776296f4671ef4274b6a47dbaaac0f95825325271a2131ccdeba27683"
+      "structuralHash": "143d5c3776296f4671ef4274b6a47dbaaac0f95825325271a2131ccdeba27683",
+      "categories": {
+        "tables": {
+          "hash": "ada382242de51f4b286052d8c19eed863edbddc97ae715df42bbe05f82a472cf",
+          "count": 92
+        },
+        "columns": {
+          "hash": "bbb609504de4c479807c115858e2204cd4179029cee63c2d97d4f6060e3bc4b6",
+          "count": 1078
+        },
+        "constraints": {
+          "hash": "6da9f8c2505de4119d55a68077b08e0ce0206b5335bcc3b7d2b60b0fb39bc8ce",
+          "count": 1310
+        },
+        "indexes": {
+          "hash": "4c5a0e0d1af515794fc5b610761e91c21ab50dbe1b8056f4cdf416280cf59ec6",
+          "count": 254
+        },
+        "sequences": {
+          "hash": "bcfc94ab9c0dd418479d38f5f30ec68f966157e76a50af08554fd7458cf4a7cb",
+          "count": 83
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 28,
       "tag": "0028_nice_firebrand",
       "sqlHash": "1204f318fef88e7222f2bbd8b2c33c4405b7035cc99837bba59367ad6a680c3f",
-      "structuralHash": "d1c148b2fa69dc832b33e69b0908224b9f15e9e1b66e531c27fb018c8307b1fa"
+      "structuralHash": "d1c148b2fa69dc832b33e69b0908224b9f15e9e1b66e531c27fb018c8307b1fa",
+      "categories": {
+        "tables": {
+          "hash": "cf10220123512d637d137eacbcb3a89e87dd58d0498590972e7a84a83d9ad74f",
+          "count": 94
+        },
+        "columns": {
+          "hash": "750f5c0e86ec31a05509a789a4c4b9b2f2846a7bd590b0912cc178b79fdd1b13",
+          "count": 1107
+        },
+        "constraints": {
+          "hash": "65c207dba61ba68bc1081ddf08beae95a682313ab4d38fa674b8e3ecfbfe7c76",
+          "count": 1346
+        },
+        "indexes": {
+          "hash": "794bf774335ad9f3ba0753f7884bb99917b66e393a812450c7cab3b36462af21",
+          "count": 258
+        },
+        "sequences": {
+          "hash": "029a730d1a3ef215790ab88bbe4dd1cc789bdee85a34c84463ccef0b0ce9725a",
+          "count": 85
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 29,
       "tag": "0029_zippy_epoch",
       "sqlHash": "fc7e38f053691e0ddc9333e89e4b6c16bfe0044d493b4abd47ff008ef29812cd",
-      "structuralHash": "af930164a75a678e5f6a9deab1c5566532d1f58c44258f0ac9c43ce3473344f7"
+      "structuralHash": "af930164a75a678e5f6a9deab1c5566532d1f58c44258f0ac9c43ce3473344f7",
+      "categories": {
+        "tables": {
+          "hash": "a3907ed3a80609c1a8ba0cf9e1bc13ae0057306cd1b01757bab12f11e9058133",
+          "count": 99
+        },
+        "columns": {
+          "hash": "1e9d44509148b5bd163cda3bf323715d390f36b741ffe933577d90be7950a1c6",
+          "count": 1170
+        },
+        "constraints": {
+          "hash": "0aadb3d54a6a9e71888f2614188a0fe8762068378e8a947eb80b12d0de5ae5f4",
+          "count": 1429
+        },
+        "indexes": {
+          "hash": "9ac281f08370b07088fa35f06478a02d0b815f6072453a0230093b4aa359ccc0",
+          "count": 277
+        },
+        "sequences": {
+          "hash": "e1bb94ed3dbd6a6edb82fbcdbbc1406e7d47b25d78095f906ccbb90e848ea956",
+          "count": 90
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 30,
       "tag": "0030_slippery_fantastic_four",
       "sqlHash": "3750a8522149e5b8ff360bd7fb7a9b33059d24cf110ae086f8719b7375ad7823",
-      "structuralHash": "54c97c0c208120d7379f465aa8b7655fbe1f25c2f32c48be877ff829840bfb0e"
+      "structuralHash": "54c97c0c208120d7379f465aa8b7655fbe1f25c2f32c48be877ff829840bfb0e",
+      "categories": {
+        "tables": {
+          "hash": "d1203d9eee240f1bc9bf399332456cbad1e67f36ae303b86a057147cd062a8ff",
+          "count": 103
+        },
+        "columns": {
+          "hash": "fc8778c26b9b1a495040840940df07d5ec5aa675a26071dc1282f2806c79d50b",
+          "count": 1228
+        },
+        "constraints": {
+          "hash": "ee87400e5c32166377ff86dff6583af5c6595258b62026dfca6231fb8188cc94",
+          "count": 1506
+        },
+        "indexes": {
+          "hash": "1dabe647faa0856febbf8ff19db86d0e3876dd0fd500f6721393660d8e5da19a",
+          "count": 293
+        },
+        "sequences": {
+          "hash": "74f4e116627d47c97f45edb36aed0f24d4e81a2a43e97ebb889d28904c1bbe94",
+          "count": 94
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 31,
       "tag": "0031_busy_orphan",
       "sqlHash": "17592cfa558e9bf07c75d81f183a4d7b4fa557069e936e8e8f9435e9c66d5200",
-      "structuralHash": "7a90e57b9e8eb8f16d5d0917dc7a3081bf23a40843f832eba743f2eecaefbdf8"
+      "structuralHash": "7a90e57b9e8eb8f16d5d0917dc7a3081bf23a40843f832eba743f2eecaefbdf8",
+      "categories": {
+        "tables": {
+          "hash": "ceef375b0b5eb5d59574dc242a4cd89871e89f7c37c8cd232e090bafc671ef10",
+          "count": 104
+        },
+        "columns": {
+          "hash": "063cbfafc27a14d2fe202abaa53544919eea6de8601fc96a12c45878d3c4e47e",
+          "count": 1246
+        },
+        "constraints": {
+          "hash": "115c90f52a92793ea59d28df151c0dec72bca518dacb967f187aa42bd7cc3380",
+          "count": 1529
+        },
+        "indexes": {
+          "hash": "d4de7054a530e3a43946af7b416ac21aa17748689d1d0d11a300071eb8fca4c0",
+          "count": 297
+        },
+        "sequences": {
+          "hash": "86556e54b19fb2ca2f9161a5fe29df37d07a1ebc6ee1420c90ecbddec73b5691",
+          "count": 95
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 32,
       "tag": "0032_backfill_cash_account",
       "sqlHash": "c90076842af52f6b19f0d96492bc701369ad87447b9e464ea368e0c99ffe14ba",
-      "structuralHash": "7a90e57b9e8eb8f16d5d0917dc7a3081bf23a40843f832eba743f2eecaefbdf8"
+      "structuralHash": "7a90e57b9e8eb8f16d5d0917dc7a3081bf23a40843f832eba743f2eecaefbdf8",
+      "categories": {
+        "tables": {
+          "hash": "ceef375b0b5eb5d59574dc242a4cd89871e89f7c37c8cd232e090bafc671ef10",
+          "count": 104
+        },
+        "columns": {
+          "hash": "063cbfafc27a14d2fe202abaa53544919eea6de8601fc96a12c45878d3c4e47e",
+          "count": 1246
+        },
+        "constraints": {
+          "hash": "115c90f52a92793ea59d28df151c0dec72bca518dacb967f187aa42bd7cc3380",
+          "count": 1529
+        },
+        "indexes": {
+          "hash": "d4de7054a530e3a43946af7b416ac21aa17748689d1d0d11a300071eb8fca4c0",
+          "count": 297
+        },
+        "sequences": {
+          "hash": "86556e54b19fb2ca2f9161a5fe29df37d07a1ebc6ee1420c90ecbddec73b5691",
+          "count": 95
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 33,
       "tag": "0033_pretty_tarot",
       "sqlHash": "8bd80e3e2f6a7d52537cbc224926c3ecf527a88337d130d43fb2113311810719",
-      "structuralHash": "67eeae9aa951bb2f5c47f8f039137573639f5380d9f5b1ff487fd5f5f9cc2b97"
+      "structuralHash": "67eeae9aa951bb2f5c47f8f039137573639f5380d9f5b1ff487fd5f5f9cc2b97",
+      "categories": {
+        "tables": {
+          "hash": "189b0feb25384dae3242c60f714667e6c889be8f61418397210aaee0c0015412",
+          "count": 106
+        },
+        "columns": {
+          "hash": "595b3a494b155a17ca89e532eb5b361311951d313cc23b3bc2fb931493b71bba",
+          "count": 1283
+        },
+        "constraints": {
+          "hash": "24db8705b8c49752af2f175cb68ee3dcece2a59ff72a5b5959e2b8bf2e6864a9",
+          "count": 1573
+        },
+        "indexes": {
+          "hash": "01af40382af704ce45a12c82ebba054485ff2e43cf4587d7deab0d9d19aad6d4",
+          "count": 305
+        },
+        "sequences": {
+          "hash": "328360d7242486b68907855520b71df9dee8d33a57da537dc21a625998e0de2a",
+          "count": 97
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 34,
       "tag": "0034_dapper_karnak",
       "sqlHash": "afc63d9de1695378b7b9025e9dd6f6984c45141245475a636ff80b8f3ebba06d",
-      "structuralHash": "842ed11dedbddbe08a74268d3998bb2c6a19558abbe468534d986c4d7bc09373"
+      "structuralHash": "842ed11dedbddbe08a74268d3998bb2c6a19558abbe468534d986c4d7bc09373",
+      "categories": {
+        "tables": {
+          "hash": "89b8799485f60f8f1874e23a3a699c1f4b26994db4023a74744c4ff52e8a9197",
+          "count": 107
+        },
+        "columns": {
+          "hash": "cee1ddf61242a01c9d573af032e55d83aa9f6fe0128fb9a60a00e5e569ce0d97",
+          "count": 1296
+        },
+        "constraints": {
+          "hash": "9bb578dd2321602a8b9e741526b92c6def91b0d67c0c58ec6041021a5811dd42",
+          "count": 1587
+        },
+        "indexes": {
+          "hash": "d04388718fc9c15189b7965523364729afbdb8cac2663e5d88f9a29471b2d364",
+          "count": 308
+        },
+        "sequences": {
+          "hash": "5f10877efcd025bd44bd3860cf813559e8430d6093421c739f044478b28fcb93",
+          "count": 98
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 35,
       "tag": "0035_sad_paper_doll",
       "sqlHash": "dd45c0851dd7bec0249d4c1cd49ec116b2dd71fde4406d7ca13f6b369306b26a",
-      "structuralHash": "a7e4485a78a9e844c8a643206f46b8edd8d1b643e64deb1cd41059e9032d7fe7"
+      "structuralHash": "a7e4485a78a9e844c8a643206f46b8edd8d1b643e64deb1cd41059e9032d7fe7",
+      "categories": {
+        "tables": {
+          "hash": "40b75b93b612e9ec16a27569c026dd54b76fc95e62702fe73718c9362380fe0f",
+          "count": 109
+        },
+        "columns": {
+          "hash": "8ea760a1fc4dd10d49b6495c71a493e96338d92391a53a01374a8ea1b53a349a",
+          "count": 1322
+        },
+        "constraints": {
+          "hash": "a321737773c02becc6707943b3fa6918e13d0b474e617f0e4c0cbe0ddbe5dbe7",
+          "count": 1620
+        },
+        "indexes": {
+          "hash": "19f8509c1b0ba88b2b9f2f65b3cf58ce52849dfcb6578dcddcaa991f899c47c9",
+          "count": 315
+        },
+        "sequences": {
+          "hash": "3a9467b9c6b40494f245f8cd8f03d4376321b8c5c96648393e498a0058a0d600",
+          "count": 100
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 36,
       "tag": "0036_lively_captain_cross",
       "sqlHash": "8879b1e6a7c9cc7ab4eeb0ddcabf12972bd08b2b003bf73b1fd7db9ae0b1029d",
-      "structuralHash": "3253680b70b0cd582fcb79a22a3bcf54a7d6a0bc0a25ab9f8c8ae3b20ebfb2ac"
+      "structuralHash": "3253680b70b0cd582fcb79a22a3bcf54a7d6a0bc0a25ab9f8c8ae3b20ebfb2ac",
+      "categories": {
+        "tables": {
+          "hash": "fcb0d048778a43fcdc47535574d19efb164a78410310c982ceb11f9851104b50",
+          "count": 110
+        },
+        "columns": {
+          "hash": "e1620dcee86b8c9e678143ed47ee88c13ee0926aaafe125ad0df760fcebd8062",
+          "count": 1336
+        },
+        "constraints": {
+          "hash": "e4426cb9cbe929404cddbcd3ac3fc6d066dacd116086911ffe953040e48b1219",
+          "count": 1635
+        },
+        "indexes": {
+          "hash": "cfd41460587bbafa554a67a77835bf3adab58d08526875520b159eb51ba3cb87",
+          "count": 318
+        },
+        "sequences": {
+          "hash": "677db98aff46166e8682b50be3b026d68f6c797aa22495601e883caf835b2584",
+          "count": 101
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 37,
       "tag": "0037_acoustic_jigsaw",
       "sqlHash": "4de4c4936b5430590566269d976f5b16d785f51815945ce938e88f13415e920d",
-      "structuralHash": "12f078b761727d8a596c6883ad568776cb3965f0b519ac5c43b2daf9fb03d1c9"
+      "structuralHash": "12f078b761727d8a596c6883ad568776cb3965f0b519ac5c43b2daf9fb03d1c9",
+      "categories": {
+        "tables": {
+          "hash": "e4fd12f039f1571391e3efaec5b271f645d0f046d05d53ade37dc226d1581af9",
+          "count": 114
+        },
+        "columns": {
+          "hash": "176c4170e5916cbc427b4a1a776c9f55c9d3385658759e07a557efbad68a9508",
+          "count": 1409
+        },
+        "constraints": {
+          "hash": "fcc0861d73605c1bb13b03e0c9297336286f1207b005ab3ab4a3f1274d279c68",
+          "count": 1729
+        },
+        "indexes": {
+          "hash": "6497f69f4b97173c84b0ad6f41d1ca81a51c2bf556ce7e3c783f588fefebe0e0",
+          "count": 333
+        },
+        "sequences": {
+          "hash": "abaa5b38244d5345be1a37d39a5101aff6cca6aae5f104cbb5eedc951a7a8eba",
+          "count": 105
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 38,
       "tag": "0038_overjoyed_black_knight",
       "sqlHash": "969de08349beb87f2c1217ab97a4dca3aa7a7aeacba7f19336ad8a76ed6b8ce1",
-      "structuralHash": "7a9756b7e9247c8be2129a0cb6751f80bae1429f7b063cfe506b2f841a4aa1d3"
+      "structuralHash": "7a9756b7e9247c8be2129a0cb6751f80bae1429f7b063cfe506b2f841a4aa1d3",
+      "categories": {
+        "tables": {
+          "hash": "3bd7895aec14c8746dd1b2a25e03ef308323b674dd22f6a6a8c9e524edb5ed4c",
+          "count": 116
+        },
+        "columns": {
+          "hash": "96dd8e80fc705d2a4989d8e6789e87cc59ab5291b663a53dc6698b0d8788699a",
+          "count": 1436
+        },
+        "constraints": {
+          "hash": "36d0ae8cf5059ccdb55016abd37edf1dbf27a0a462137f32f6fc9ee60dfc7caa",
+          "count": 1758
+        },
+        "indexes": {
+          "hash": "8315fe4978ec35e8a528923be1c86208a9426cca6ead9b31233513c49b26db9c",
+          "count": 340
+        },
+        "sequences": {
+          "hash": "86e3ff1466419ed599c0c7370e7fa7411ffd9395136fb76b690490f6f9cb70d1",
+          "count": 107
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 39,
       "tag": "0039_cultured_talkback",
       "sqlHash": "f58eec430aed2be760ba4ce3de317f1653666e7880a15d695d382f4c54b8a739",
-      "structuralHash": "ffb696921cb9662af2620ba3026fcc9e64b95154e6cb641d7457da7626d40fb8"
+      "structuralHash": "ffb696921cb9662af2620ba3026fcc9e64b95154e6cb641d7457da7626d40fb8",
+      "categories": {
+        "tables": {
+          "hash": "1d846c042b7049c11632e1f0a4c1105115c335d046135f687c6a53aa93a20214",
+          "count": 118
+        },
+        "columns": {
+          "hash": "3bff2b678780f724c0e6467d7dfbf7bb94538c0e0ea0986e8dea84326c56bead",
+          "count": 1464
+        },
+        "constraints": {
+          "hash": "64fbe1099f5a759e559ad3f8f1c1ba873564f3a77808f015f5c530b1b98083f9",
+          "count": 1791
+        },
+        "indexes": {
+          "hash": "265086f0db9f461649d1b26d85cd3723cafa3285e58f01aa9f0654c0e1a9d3d3",
+          "count": 349
+        },
+        "sequences": {
+          "hash": "d7962f1a837924e43cd6851426387d53c6ddd89231e591c0cf0565de64dc1728",
+          "count": 109
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 40,
       "tag": "0040_modern_jimmy_woo",
       "sqlHash": "041291190ac541fef4e38e2f178348e07e9fab607912bc3b70f6679afbbc99bf",
-      "structuralHash": "17dc8839b2e7a8d649a5a857f2e04e7170fb6d014a896c16398bfb13b6a1419a"
+      "structuralHash": "17dc8839b2e7a8d649a5a857f2e04e7170fb6d014a896c16398bfb13b6a1419a",
+      "categories": {
+        "tables": {
+          "hash": "98ead7b6f6871b694f67c5bbf616895cedd07b7eec4a5d8ba308efe9602eb386",
+          "count": 119
+        },
+        "columns": {
+          "hash": "a49d1f8456e56798d6c064967c25d36c4646af020ddcb6f9d8502de941f39a41",
+          "count": 1478
+        },
+        "constraints": {
+          "hash": "53f49d78805d197b7640dcd0cf7587bfcb671a89586b8e6f259053a6b24b9f78",
+          "count": 1809
+        },
+        "indexes": {
+          "hash": "976d27e36e61005e038bc9cc24e1ea5141a95d1baaa0d80be40f28e068c17144",
+          "count": 352
+        },
+        "sequences": {
+          "hash": "6fc94fe8c77d2426c8acc5669ed1e9336cd8b001771c47ac53ef1e3ce7661f73",
+          "count": 110
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 41,
       "tag": "0041_ancient_doctor_doom",
       "sqlHash": "8f527aebcd903a8fa0c939ca8e1f9da76132e712a4ced52547b50cc61c7741e1",
-      "structuralHash": "e4ce0d17e9aa84ec7096ed1d37a8942c98d29d7ca3c785b87e21050df112e144"
+      "structuralHash": "e4ce0d17e9aa84ec7096ed1d37a8942c98d29d7ca3c785b87e21050df112e144",
+      "categories": {
+        "tables": {
+          "hash": "7de038066dd2174074944841170c662d8998fdf2355c5a2533ef339e810fdb1a",
+          "count": 122
+        },
+        "columns": {
+          "hash": "4cdff86ab9c73ec6416d83f6e452e2ba2dfc886a06f2b9ecb2298c5389d8c154",
+          "count": 1519
+        },
+        "constraints": {
+          "hash": "998dd0a6d29cab110dde2493f1de8a1a63e82489c0d076f9f48f1e1984bd8590",
+          "count": 1859
+        },
+        "indexes": {
+          "hash": "56d9c83305d42e0cf511ed28cadf69e663013cca177ff90a3a880ce20feee179",
+          "count": 359
+        },
+        "sequences": {
+          "hash": "afc4123aad883f347f77a67d76b9cfcd66f1bd0c5a4c04b407d55790ace19eaf",
+          "count": 113
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 42,
       "tag": "0042_lovely_ma_gnuci",
       "sqlHash": "3fb82fa72053c2e44514f56b1b5f0cd9b32b402a06b4323db9b7575a5e7bd617",
-      "structuralHash": "864e8236f5238a46b87450d8c7019dd83348139597c124c0151a90a079b6097a"
+      "structuralHash": "864e8236f5238a46b87450d8c7019dd83348139597c124c0151a90a079b6097a",
+      "categories": {
+        "tables": {
+          "hash": "7de038066dd2174074944841170c662d8998fdf2355c5a2533ef339e810fdb1a",
+          "count": 122
+        },
+        "columns": {
+          "hash": "4cdff86ab9c73ec6416d83f6e452e2ba2dfc886a06f2b9ecb2298c5389d8c154",
+          "count": 1519
+        },
+        "constraints": {
+          "hash": "998dd0a6d29cab110dde2493f1de8a1a63e82489c0d076f9f48f1e1984bd8590",
+          "count": 1859
+        },
+        "indexes": {
+          "hash": "92dad8939d35c17f7ec1a146b9b3f1e9545ff786d3facebeb884d358126ba9de",
+          "count": 360
+        },
+        "sequences": {
+          "hash": "afc4123aad883f347f77a67d76b9cfcd66f1bd0c5a4c04b407d55790ace19eaf",
+          "count": 113
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 43,
       "tag": "0043_useful_miek",
       "sqlHash": "3621a04d57cec1ec1d42ce0d68161320b1da688d5908e393d00d8a33d3803923",
-      "structuralHash": "05516c61072a44025bca5367d6a060f0fa4f897409ea1067f80fd8744eb17ab1"
+      "structuralHash": "05516c61072a44025bca5367d6a060f0fa4f897409ea1067f80fd8744eb17ab1",
+      "categories": {
+        "tables": {
+          "hash": "4db4e8c1aea34a0c3feb8e7c9f4720c3ab369756d923cbfe54507ac6b447aa52",
+          "count": 123
+        },
+        "columns": {
+          "hash": "303b49cdaa264657dc2748d0f9e6fe745c7d2638deabeef909d7b6033914af27",
+          "count": 1535
+        },
+        "constraints": {
+          "hash": "21638e91c48384f1cb95c733a819365115ddf28555fc683a4339aa5ddd580e49",
+          "count": 1880
+        },
+        "indexes": {
+          "hash": "153c6281eecf5cf84d0e33c56decfdd00e34cc25e57e93a2254ac2e054e9a77b",
+          "count": 362
+        },
+        "sequences": {
+          "hash": "f92caa8907b38bcc3fdf1a75097301a7675bb9e821bd54f51614a8f3b137c29d",
+          "count": 114
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 44,
       "tag": "0044_dark_goliath",
       "sqlHash": "9f25848e390f44c74aa20f0400252853250bb08a9aa168961f0259f9335dd516",
-      "structuralHash": "196c119b399c7e5ad5156d7054f0b5155b5aa183e8db43bb268767ff7476b331"
+      "structuralHash": "196c119b399c7e5ad5156d7054f0b5155b5aa183e8db43bb268767ff7476b331",
+      "categories": {
+        "tables": {
+          "hash": "47c3545974572d5a97f172e8d44b3efec744c63825a7d19eb51b2bcaf73fcbce",
+          "count": 127
+        },
+        "columns": {
+          "hash": "d60f307b43ac0208017156e8033f8f73d56c61faa09ceb618bdc05f9913a8aa9",
+          "count": 1593
+        },
+        "constraints": {
+          "hash": "bdb66d421d8b48579486b86f05e84745ec01f1f99a1b8ccf97255de0bf9cdd80",
+          "count": 1948
+        },
+        "indexes": {
+          "hash": "2afe797f9a090ffd886761dcd6ecd7161126489b8dc51d61edd5c8075c4a0f0c",
+          "count": 373
+        },
+        "sequences": {
+          "hash": "50b22a7b480d333f4f6a93871037ab447e581319f11729288e85fe876a7b1cc7",
+          "count": 118
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 45,
       "tag": "0045_soft_james_howlett",
       "sqlHash": "00d50cd83b6d949c4fa465acef8584b4a19398984e8683643b0fcdb8c04fd927",
-      "structuralHash": "a247719804a6c8c132969ad4fbca7c1f8c911210c3aa588933e45559b04e8175"
+      "structuralHash": "a247719804a6c8c132969ad4fbca7c1f8c911210c3aa588933e45559b04e8175",
+      "categories": {
+        "tables": {
+          "hash": "2feb56ccca39405302289a4681044c05d68fc2c006262ae7e9d0f4f125447db6",
+          "count": 133
+        },
+        "columns": {
+          "hash": "f38774af6c4e1a10bcb2bbf18b5e49a3e804092fcbd616a775640f1cc1f307b5",
+          "count": 1671
+        },
+        "constraints": {
+          "hash": "e50a39efcd00c6879b80bf70ce819ad6454c799521b1fc8398070f0955aff711",
+          "count": 2048
+        },
+        "indexes": {
+          "hash": "5e20d980ff9fb7c90b29861092418682bc82bd614386751dbb02ebac445465e6",
+          "count": 392
+        },
+        "sequences": {
+          "hash": "74aa4c54c9ac116bb4ec3c6610a338ba35bfc465866159ec2c9d9aedee3902f3",
+          "count": 124
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 46,
       "tag": "0046_tiresome_rumiko_fujikawa",
       "sqlHash": "70916b333c054568f262a11d16752debc728b624c354384315a14bd740642a39",
-      "structuralHash": "5b9b1211eaff90b1af508f4303d52148af36d6e3646d73e6264164417e829c49"
+      "structuralHash": "5b9b1211eaff90b1af508f4303d52148af36d6e3646d73e6264164417e829c49",
+      "categories": {
+        "tables": {
+          "hash": "4f6be572112c65ffb0ec668f4cc60fd8a6dc9f98de9a21048b8607cc82701e91",
+          "count": 134
+        },
+        "columns": {
+          "hash": "9f8d82837520d611c9236197c1b8295f4844862e579f03c1cc31daaed88e7007",
+          "count": 1678
+        },
+        "constraints": {
+          "hash": "7490b735b842440fadfa0115830891e772a87a76066551c714e63011ec0163a4",
+          "count": 2059
+        },
+        "indexes": {
+          "hash": "88eb259a0dbc368e86650cfb6537a93c9195aebf3957d710ffcb3aca28b80903",
+          "count": 396
+        },
+        "sequences": {
+          "hash": "74aa4c54c9ac116bb4ec3c6610a338ba35bfc465866159ec2c9d9aedee3902f3",
+          "count": 124
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 47,
       "tag": "0047_employee_account_lifecycle",
       "sqlHash": "52b99576fa651cab0d429068e8bc029fbddecf4befa5cf5f934c39b931e376dc",
-      "structuralHash": "dc8d77abed971ae1cc00068102640932834a920c7c0f7e9ab8a390672d808c9b"
+      "structuralHash": "dc8d77abed971ae1cc00068102640932834a920c7c0f7e9ab8a390672d808c9b",
+      "categories": {
+        "tables": {
+          "hash": "3981935d14666555bc93dbe5f72379db35e09338b4321c0fff6fcf558f7fbda5",
+          "count": 136
+        },
+        "columns": {
+          "hash": "cad99fffbc59047f94339d874ab21c073ea1bef04effd7bd442fdd62920a1974",
+          "count": 1712
+        },
+        "constraints": {
+          "hash": "b9b6fdc9c9b98c877e60c512845bcae2e20879e2d6bc293f1503b9a3ef22a985",
+          "count": 2104
+        },
+        "indexes": {
+          "hash": "d067e76a4090d72158126418e0cf94f2bdec7d0e295a38f6ec2b15466281d98f",
+          "count": 402
+        },
+        "sequences": {
+          "hash": "fcfb080780bcb76f1a9fa3090a4a0a09d8bf9a630ab3167e525cd3a987e60e0d",
+          "count": 126
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 48,
       "tag": "0048_actor_owned_my_contracts",
       "sqlHash": "e7de6ea97d27b292cb29d7f10fd2e595c428f7ef17e340318a2920631c0566bd",
-      "structuralHash": "32eb7b3e6a12b23ca01452f64027680e88233079bd63ac4b3f9202f3fe76f07e"
+      "structuralHash": "32eb7b3e6a12b23ca01452f64027680e88233079bd63ac4b3f9202f3fe76f07e",
+      "categories": {
+        "tables": {
+          "hash": "676ff85c3636af6a44625ee0c1597eafcb05104809b948dad7ed857a3ef32af3",
+          "count": 137
+        },
+        "columns": {
+          "hash": "6bcdf002eaed01aaee7cb546ad68d1c0cd5c5f0acc4966118cf5e200e2054df5",
+          "count": 1723
+        },
+        "constraints": {
+          "hash": "c42a3edb91720253951cd865967ed8e9291e0e0af282bf3ff98fc4fc8d67c5a9",
+          "count": 2121
+        },
+        "indexes": {
+          "hash": "9ea23bc3df9f428c299678ceb5ddf422a98a85fa152f922d513215f52ea0a606",
+          "count": 404
+        },
+        "sequences": {
+          "hash": "e6fb44937e3cd35100a157a31049628e6216fee11fc55e89c3f8b574e9095c47",
+          "count": 127
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 49,
       "tag": "0049_late_microbe",
       "sqlHash": "d5b53146b3b2837044de8199b364025b15e69d11a125636078b87f6e2cd4970c",
-      "structuralHash": "702338eb6953e2482fde1231b05bbb7c8ba23f3ac311ef40488383983a945cd7"
+      "structuralHash": "702338eb6953e2482fde1231b05bbb7c8ba23f3ac311ef40488383983a945cd7",
+      "categories": {
+        "tables": {
+          "hash": "676ff85c3636af6a44625ee0c1597eafcb05104809b948dad7ed857a3ef32af3",
+          "count": 137
+        },
+        "columns": {
+          "hash": "017990ef0ecb5905de6e4d873ebd2f315646355d497c1db93dd6d403e1fc114b",
+          "count": 1724
+        },
+        "constraints": {
+          "hash": "e8c24e520434300f1ff5fd55110f99b059af94e13051723fbbea7854e3b0bec6",
+          "count": 2122
+        },
+        "indexes": {
+          "hash": "9ea23bc3df9f428c299678ceb5ddf422a98a85fa152f922d513215f52ea0a606",
+          "count": 404
+        },
+        "sequences": {
+          "hash": "e6fb44937e3cd35100a157a31049628e6216fee11fc55e89c3f8b574e9095c47",
+          "count": 127
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 50,
       "tag": "0050_violet_havok",
       "sqlHash": "b23a5b4ca4594c7dfa892c9974b7168d7f51ea6376a839a67e5a1f70a96e0cea",
-      "structuralHash": "2dc7ac6128b2485896f7c6574da7b950dc2f12e2fb4a0ff91788b9bd167aa78c"
+      "structuralHash": "2dc7ac6128b2485896f7c6574da7b950dc2f12e2fb4a0ff91788b9bd167aa78c",
+      "categories": {
+        "tables": {
+          "hash": "b2c98c27afe6b1ac150855d58925064c8bb6059e1baa6370233c7d3831eb925d",
+          "count": 142
+        },
+        "columns": {
+          "hash": "85e8ac3589d92a6a61aacc5d989cd84ddfa85af6677be82b6b83f387fadfe2c4",
+          "count": 1793
+        },
+        "constraints": {
+          "hash": "e32ab288360a849d29281f4850df470d995f7c7b5eb7149b4233c21fedb0f1fa",
+          "count": 2208
+        },
+        "indexes": {
+          "hash": "be47c7a49afe94b6158294e609187da2138654e4c8fb141b1436a8dbe245cb0c",
+          "count": 417
+        },
+        "sequences": {
+          "hash": "a3e8d1c0ff34b06e13e4b024480237e0354f9786c1c439ee89a9713591a95d59",
+          "count": 132
+        },
+        "triggers": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        },
+        "functions": {
+          "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "count": 0
+        }
+      }
     },
     {
       "version": 51,
       "tag": "0051_volatile_tyger_tiger",
       "sqlHash": "a9657bb0a1b6138a710966457fe642389f668d886d1674ad8d0e39a242a2f0b3",
-      "structuralHash": "6791838295bde854427de81a1a6510740cad4c1f5b4e6f8a812078f5a5d5ca48"
+      "structuralHash": "6791838295bde854427de81a1a6510740cad4c1f5b4e6f8a812078f5a5d5ca48",
+      "categories": {
+        "tables": {
+          "hash": "049827e7b122a85221a7a0ca98b4f41b2b8240f2ac8ce023cd693d9c01a92a80",
+          "count": 143
+        },
+        "columns": {
+          "hash": "7b690dda835d3c8fdf7701570f99761637ca7c29eb676c0baa83c2e38d6ff0f4",
+          "count": 1809
+        },
+        "constraints": {
+          "hash": "4b446dcc4198c995739ba590c21fdac58442a173479c2e7c0ac19b0e5fdb94b6",
+          "count": 2231
+        },
+        "indexes": {
+          "hash": "22ea3de576bddb11a361669640d3d69e39aa3733dd79ad09facc2eabdbc05338",
+          "count": 420
+        },
+        "sequences": {
+          "hash": "380dbb7ad83072422bb35b9bf9e632f10ad548ae14b50f033894209ca16a9012",
+          "count": 133
+        },
+        "triggers": {
+          "hash": "c7c51843799c8d9139e3b489b95b40d11d023a038eefdcd9d49cc0900ec34577",
+          "count": 1
+        },
+        "functions": {
+          "hash": "4d518deb1a92e0941c17844e2e952499775ed0fddfb81a08001e5db0963d6a9c",
+          "count": 1
+        }
+      }
     },
     {
       "version": 52,
       "tag": "0052_leave_application_lifecycle",
       "sqlHash": "c234d29a7f0b28fac253378f8a66084f3ac5328aff2cacfb6691f09a69374180",
-      "structuralHash": "b0d72052644425a5f8a06566684e432ea639c53ac5c482a0f591bef5d4aeda6b"
+      "structuralHash": "b0d72052644425a5f8a06566684e432ea639c53ac5c482a0f591bef5d4aeda6b",
+      "categories": {
+        "tables": {
+          "hash": "e3555b7243720352cca3d869cb61606c3b129b81669e5e159a27104b110e803f",
+          "count": 147
+        },
+        "columns": {
+          "hash": "b5892d8d2517705d53968328e20ea8ef3831b05525ba2e824d1d6b4cd539a4d1",
+          "count": 1879
+        },
+        "constraints": {
+          "hash": "31a89aeb1ca72accf5eea0e1df95c8813420aba3c13b448d71d4e390ea03b425",
+          "count": 2314
+        },
+        "indexes": {
+          "hash": "d6c9aa7a2793426e975a0e21fd34eff15a4f541cd7de5962fccf72744cce6c70",
+          "count": 432
+        },
+        "sequences": {
+          "hash": "090baff8b6c958ac71aa1209149b713359cf529b762330cd87cfc35dcec56b69",
+          "count": 137
+        },
+        "triggers": {
+          "hash": "ca08f317729488854144c6dddc6b5958f1a706e2708d36484288c3e23dffe4bf",
+          "count": 4
+        },
+        "functions": {
+          "hash": "816761681b96ac7f96cc66a0728e14a616071f6cdfbeb3cfad1822c6e9d5b79a",
+          "count": 2
+        }
+      }
     },
     {
       "version": 53,
       "tag": "0053_configurable_approval_governance",
       "sqlHash": "b6a31edcfda0259f4096f91ada06229a4dd5d55197a46384b8ae66af93e2babc",
-      "structuralHash": "6828e193b5d6ae65812af205a3a8d871cc6f8183538f50726efe3b057ecc0cab"
+      "structuralHash": "6828e193b5d6ae65812af205a3a8d871cc6f8183538f50726efe3b057ecc0cab",
+      "categories": {
+        "tables": {
+          "hash": "bdf2badb052a669d6831c91a210ce3f776ccb166296ba392f7602f83e06ba4a4",
+          "count": 157
+        },
+        "columns": {
+          "hash": "4d5f9dc6f743c6a159df4d40bed4b89378d9b64a38541b591040b71b6f5a462c",
+          "count": 2047
+        },
+        "constraints": {
+          "hash": "b60f45ebc64ed420130a75be239bb837ee4fd35854926e9e30f505a25f7ae3e0",
+          "count": 2498
+        },
+        "indexes": {
+          "hash": "1f0c75fa80c28f3fb4b5fb79d6c04a36292a670f6b91435a4cde16afd1ef5b6b",
+          "count": 467
+        },
+        "sequences": {
+          "hash": "6188f04a2e65a66ff69c804a1d5e201e955b37d73a26ea9baf18ccaae98a48e9",
+          "count": 147
+        },
+        "triggers": {
+          "hash": "ca08f317729488854144c6dddc6b5958f1a706e2708d36484288c3e23dffe4bf",
+          "count": 4
+        },
+        "functions": {
+          "hash": "816761681b96ac7f96cc66a0728e14a616071f6cdfbeb3cfad1822c6e9d5b79a",
+          "count": 2
+        }
+      }
     },
     {
       "version": 54,
       "tag": "0054_calendar_workspace_outbound_sync",
       "sqlHash": "a00808765ac40078f0ce5517dfca9b1c70931742c948671c5ae4eb00296f9975",
-      "structuralHash": "b7d95edeb44346ad16ee13431ea1e01d7308c9c04fd0349f8c55f3be954dd784"
+      "structuralHash": "b7d95edeb44346ad16ee13431ea1e01d7308c9c04fd0349f8c55f3be954dd784",
+      "categories": {
+        "tables": {
+          "hash": "c4f3de6acabb132cc4004e02a79feb35784389792303d859ea4578217740aa74",
+          "count": 159
+        },
+        "columns": {
+          "hash": "84a1e7354874180a3609a6681b36d50f50e09257e77807e3c39f8639a6ce6886",
+          "count": 2078
+        },
+        "constraints": {
+          "hash": "459a07f65e0f1a76a543151a3e1d7328251dbe1d3f9b1232fcc557fd5e96da26",
+          "count": 2532
+        },
+        "indexes": {
+          "hash": "1692394504858c4c0272c6b9239d48cb51d72dd4464698e2fe5c2e78c3e1b175",
+          "count": 475
+        },
+        "sequences": {
+          "hash": "d2b03708a86ff79bb40e3fb102f76582ad315fbf16c796b60f13e230f7c2c1a7",
+          "count": 149
+        },
+        "triggers": {
+          "hash": "ca08f317729488854144c6dddc6b5958f1a706e2708d36484288c3e23dffe4bf",
+          "count": 4
+        },
+        "functions": {
+          "hash": "816761681b96ac7f96cc66a0728e14a616071f6cdfbeb3cfad1822c6e9d5b79a",
+          "count": 2
+        }
+      }
     },
     {
       "version": 55,
       "tag": "0055_leave_payroll_sources",
       "sqlHash": "a7566f9dd957d7bfb55ccce6e7fbf4d6c662cbc10cdde3669dbdc55f59024a7d",
-      "structuralHash": "0a23cd47c0d2debbd6cfa724518f1b1781704f7e41dfe86a70f2b5c1f647efbc"
+      "structuralHash": "0a23cd47c0d2debbd6cfa724518f1b1781704f7e41dfe86a70f2b5c1f647efbc",
+      "categories": {
+        "tables": {
+          "hash": "b5c2f2a06c68187bb59ae21c7648e130088c695949af525d38245f5ecfa2fdec",
+          "count": 161
+        },
+        "columns": {
+          "hash": "cfd25a30102051e89b6045556f67cad77391ec4f0efc6f7f5b8a55dd71728a1d",
+          "count": 2107
+        },
+        "constraints": {
+          "hash": "333e5e76e2b9fa8898ed46d16838d1d04382ae3db5f5c2c0b2d99274a60dbd1c",
+          "count": 2570
+        },
+        "indexes": {
+          "hash": "8f824c896b94520e8787cc800ebee322bd13e231cf66947f0383594f34edee58",
+          "count": 482
+        },
+        "sequences": {
+          "hash": "39953532353466efc848024780baeca3111a2b3b04a32271530b4889277ec08c",
+          "count": 151
+        },
+        "triggers": {
+          "hash": "e314634807b98e85af3ca7fc4afaebfb99e45081bcaa8b788d12251cf5db1fd9",
+          "count": 6
+        },
+        "functions": {
+          "hash": "7eca9ceb4d372532c64f5f03cf083d0081ba8a72bf265207f1900b141d932106",
+          "count": 3
+        }
+      }
     },
     {
       "version": 56,
       "tag": "0056_document_storage_provider",
       "sqlHash": "70231af9febe1b0de9a82e2666efbcb931e039bde18578a8aaf18ab4a5153793",
-      "structuralHash": "78d8b7a8c44aa290f1604064c114144473a0a4193e5e33b69f598c22ce699b99"
+      "structuralHash": "78d8b7a8c44aa290f1604064c114144473a0a4193e5e33b69f598c22ce699b99",
+      "categories": {
+        "tables": {
+          "hash": "63a5e7f2180ae9b54a0f524b731bba972ba5936cbae0303ff87824e914822da4",
+          "count": 165
+        },
+        "columns": {
+          "hash": "eed33466272772c44dd780e5f2505c5820d8ceb8c2d4d6ed766348740f230f55",
+          "count": 2143
+        },
+        "constraints": {
+          "hash": "7c1aaf9f55fc51297180c3750936375b9eb4f845bb3c6e66c1b5a9b56b2dca30",
+          "count": 2625
+        },
+        "indexes": {
+          "hash": "9904c849cd6c0a2a595d41710d7abe8ead237d291f019a0fabc2c650fa4d522d",
+          "count": 493
+        },
+        "sequences": {
+          "hash": "8446470b85a8af605286271e505437e0e575ae4e67a58c36f367775b80d54783",
+          "count": 155
+        },
+        "triggers": {
+          "hash": "681dd2552f80dcd894d3c62a12c84bd3ae915bc7ea53b08ce2f0f6c2d5e959da",
+          "count": 10
+        },
+        "functions": {
+          "hash": "61e475576a2d9adc07c9f7e57fc46ec14376cf2cddf2d9c0418c02063a8d0d65",
+          "count": 5
+        }
+      }
     },
     {
       "version": 57,
       "tag": "0057_secure_receipt_upload",
       "sqlHash": "4f526c7f7efd3e0b10a2bc9bfb8acebcbad44a71c66972c07f29f18f8083725e",
-      "structuralHash": "4fdd783e5dfa39e4e6f98354762bbcf20ad5a2bf757ac888d253fd158b532ca8"
+      "structuralHash": "4fdd783e5dfa39e4e6f98354762bbcf20ad5a2bf757ac888d253fd158b532ca8",
+      "categories": {
+        "tables": {
+          "hash": "63a5e7f2180ae9b54a0f524b731bba972ba5936cbae0303ff87824e914822da4",
+          "count": 165
+        },
+        "columns": {
+          "hash": "341fbf6c67622f08a2d5050235decda74ba503ae9727a20b115da207f0a6e3b2",
+          "count": 2144
+        },
+        "constraints": {
+          "hash": "dfca35142ca7e5f239e3d8797af6f53ff681ceafd00e34ddce40753d7291b05d",
+          "count": 2627
+        },
+        "indexes": {
+          "hash": "9904c849cd6c0a2a595d41710d7abe8ead237d291f019a0fabc2c650fa4d522d",
+          "count": 493
+        },
+        "sequences": {
+          "hash": "8446470b85a8af605286271e505437e0e575ae4e67a58c36f367775b80d54783",
+          "count": 155
+        },
+        "triggers": {
+          "hash": "681dd2552f80dcd894d3c62a12c84bd3ae915bc7ea53b08ce2f0f6c2d5e959da",
+          "count": 10
+        },
+        "functions": {
+          "hash": "61e475576a2d9adc07c9f7e57fc46ec14376cf2cddf2d9c0418c02063a8d0d65",
+          "count": 5
+        }
+      }
     },
     {
       "version": 58,
       "tag": "0058_document_quarantine_processing",
       "sqlHash": "93cdf4ab9aa994c15812d24ab8749d4a32bebc36e7702bfb08fc31fe52fbd309",
-      "structuralHash": "e1eff4af672f9fe3fbb9e1976e058a0fd07b2d014b2ee6fdec986aecccaf6342"
+      "structuralHash": "e1eff4af672f9fe3fbb9e1976e058a0fd07b2d014b2ee6fdec986aecccaf6342",
+      "categories": {
+        "tables": {
+          "hash": "f01b70536e4c96f056b44da0273935224368bef4b588dd7a888a1889d29c1c5d",
+          "count": 168
+        },
+        "columns": {
+          "hash": "fe98130828d8ccb2fa07b59a9d9cdd154f82f32418fd785e128bfa67e65af615",
+          "count": 2188
+        },
+        "constraints": {
+          "hash": "076fd9de3e8142f3ae2266504e711376ae25ed4a0d4beb59e8160bb4695628c5",
+          "count": 2673
+        },
+        "indexes": {
+          "hash": "db13935686b29e1c3fb9ce98814dad5f10b8de4e4956ea443059dc2ac248257b",
+          "count": 502
+        },
+        "sequences": {
+          "hash": "656ceb068964da83755f4a47b32899eb9794453157cd07b4d81ec8cc4ca39989",
+          "count": 158
+        },
+        "triggers": {
+          "hash": "681dd2552f80dcd894d3c62a12c84bd3ae915bc7ea53b08ce2f0f6c2d5e959da",
+          "count": 10
+        },
+        "functions": {
+          "hash": "61e475576a2d9adc07c9f7e57fc46ec14376cf2cddf2d9c0418c02063a8d0d65",
+          "count": 5
+        }
+      }
     },
     {
       "version": 59,
       "tag": "0059_receipt_confidence_inbox",
       "sqlHash": "dceda98e405a54c0f269d6b7bd9e3f869c59ea142dc5518ce58552b36788e24d",
-      "structuralHash": "c530eed6e175824bd57b334ca538697005eb1b619afbc1a968afeaa24332079e"
+      "structuralHash": "c530eed6e175824bd57b334ca538697005eb1b619afbc1a968afeaa24332079e",
+      "categories": {
+        "tables": {
+          "hash": "df72f954d976e9b22afd4797c2c57a85c5694a5c80e5c2f028f962a3d0127e1c",
+          "count": 171
+        },
+        "columns": {
+          "hash": "2b8f262480b39a1d19bb1bef1a9f0d5095d7c4f68fae1a75fc40948de4efa91b",
+          "count": 2231
+        },
+        "constraints": {
+          "hash": "93df9bd3bf8632010b4c266f475bc20cabebc7e712316d81caf0185b80589e50",
+          "count": 2734
+        },
+        "indexes": {
+          "hash": "d1e2e3ba02c435330ed6c0d5e4fe44a243a4446bcec8ef903f38c7cfd199b91d",
+          "count": 511
+        },
+        "sequences": {
+          "hash": "6ff85044b79930470613cdd6dbb5cf31325b81e5b5801c15487aed2bee2ef9f0",
+          "count": 161
+        },
+        "triggers": {
+          "hash": "681dd2552f80dcd894d3c62a12c84bd3ae915bc7ea53b08ce2f0f6c2d5e959da",
+          "count": 10
+        },
+        "functions": {
+          "hash": "61e475576a2d9adc07c9f7e57fc46ec14376cf2cddf2d9c0418c02063a8d0d65",
+          "count": 5
+        }
+      }
     },
     {
       "version": 60,
       "tag": "0060_document_void_retention_purge",
       "sqlHash": "7ac281bb45126995ee5ec1c9eb347e8e6b9075029f5aa6c439ee8d2d42b0b4f2",
-      "structuralHash": "53b9e46d900921c7b05908965792e6096a5121ae108627081f0f61fe9cd04da2"
+      "structuralHash": "53b9e46d900921c7b05908965792e6096a5121ae108627081f0f61fe9cd04da2",
+      "categories": {
+        "tables": {
+          "hash": "15ff1656c9380d06cad0e466602de24afd7f4952da2a975ef459f5a0e90df3ee",
+          "count": 175
+        },
+        "columns": {
+          "hash": "659c576b72b97ec46486e79148fa0fa177431555fc391a12f472e059be27fe2d",
+          "count": 2295
+        },
+        "constraints": {
+          "hash": "6c9d0e13c4424d4852ea43eb4b2b9074618059500898ecb9afc26c467c4ddf4b",
+          "count": 2825
+        },
+        "indexes": {
+          "hash": "3593ec51718a40b7d7f324239cbc9b9f2ca85418daa758788c0192561601e6f2",
+          "count": 523
+        },
+        "sequences": {
+          "hash": "9fefa01efc7e3df94768baaa5a7d9b41fdf77a94ba5a196ff8679b12a8f42235",
+          "count": 165
+        },
+        "triggers": {
+          "hash": "681dd2552f80dcd894d3c62a12c84bd3ae915bc7ea53b08ce2f0f6c2d5e959da",
+          "count": 10
+        },
+        "functions": {
+          "hash": "37dce414dc8d1dc9447290b94ab1ff6de1abf979eb58d743495f1e4edc6d66fc",
+          "count": 5
+        }
+      }
     },
     {
       "version": 61,
       "tag": "0061_document_sensitive_access_audit",
       "sqlHash": "55b52115be10619991063a1c9d6d09db38da0fcfc7a94197961984dc5471b406",
-      "structuralHash": "6a4652feb6cc411df7ddb99af07e96637297708ea3a2e0d168f0c56b1209bd87"
+      "structuralHash": "6a4652feb6cc411df7ddb99af07e96637297708ea3a2e0d168f0c56b1209bd87",
+      "categories": {
+        "tables": {
+          "hash": "d75861caa8604054ec6fb6f2a5921a01cb4e332e440b379f6fcf21bc4f5125a7",
+          "count": 176
+        },
+        "columns": {
+          "hash": "327d13c1a8b7069ea1f5c8ce2f6dc872fe5a8ae7d86594e482c33b6a3d7f0af2",
+          "count": 2307
+        },
+        "constraints": {
+          "hash": "a5dea52cd85220e423c6bac0871a01b3f4379b3c61c81f8e78647ed34588c4ea",
+          "count": 2844
+        },
+        "indexes": {
+          "hash": "1b329492d211ec402f2509cfe05091e11bcfc4fa6c959e1980335d0126f54deb",
+          "count": 527
+        },
+        "sequences": {
+          "hash": "0cfc1a962d564648d7dbccf5fa0c5130a500d99d8919a61e097b12d6c33bec14",
+          "count": 166
+        },
+        "triggers": {
+          "hash": "b1e91ccf855dbfb6f103b674cf1d71a635feac636e3519b9e437215bbed56832",
+          "count": 11
+        },
+        "functions": {
+          "hash": "d708c9c37ef168dd984e8efe32df2bfdf7c3e0acc7a042e598e27cc3d3526b51",
+          "count": 6
+        }
+      }
     },
     {
       "version": 62,
       "tag": "0062_expense_policy_tax_fx_gl",
       "sqlHash": "419bbc50ab6ff5b7af208691257dc9c2b6217bfe169962a87d1a393d1d47c886",
-      "structuralHash": "32c903619d19637511dd07affd81d1c41181e10c69b4983eb66e89b2cd3e75c2"
+      "structuralHash": "32c903619d19637511dd07affd81d1c41181e10c69b4983eb66e89b2cd3e75c2",
+      "categories": {
+        "tables": {
+          "hash": "a614ee041846eb8d805b06ccce92b39e81c6456b00eb8a67f19a76472abb5e7c",
+          "count": 181
+        },
+        "columns": {
+          "hash": "47d80da25e477b75420836fdc6abda0cf660b5451a4aadb2b9bbca305580f46d",
+          "count": 2385
+        },
+        "constraints": {
+          "hash": "4e539457a118cf5625fa6878c6083997ca85cbbee7990e3a7a29aacf0c4cec48",
+          "count": 2959
+        },
+        "indexes": {
+          "hash": "694845b83ca0ef2f3524b6e42fed927941df3e934861c4cb883b2e88346b7d9b",
+          "count": 540
+        },
+        "sequences": {
+          "hash": "8ad80e5f7692e242339bb88ec15251ab7f9c31ab65633ace67ab555c0684156f",
+          "count": 171
+        },
+        "triggers": {
+          "hash": "1dfac8f55d7798b4ae33eba62159234bd8284c9acafb77b56c3cba1f6958206c",
+          "count": 14
+        },
+        "functions": {
+          "hash": "271c46ede96cff839fbc08ea41c55561e153be717df4cefe905665c3c4cf76ba",
+          "count": 7
+        }
+      }
     },
     {
       "version": 63,
       "tag": "0063_expense_claims_allocations",
       "sqlHash": "0fb331a9f44f3920d3a306e1ba1633b33f3084ceee7ccafe03998dc28bf12c25",
-      "structuralHash": "0574d4f1c1f846e4321ef28c4e5b85182db94b14a84d94e398acdede3eac5995"
+      "structuralHash": "0574d4f1c1f846e4321ef28c4e5b85182db94b14a84d94e398acdede3eac5995",
+      "categories": {
+        "tables": {
+          "hash": "94d5985df239f6ea3f574fdb8003d26a96c367ad92fd050363088f3b28bb2eaf",
+          "count": 187
+        },
+        "columns": {
+          "hash": "8fa44be810c0404b4ddaa3c34fb32eec14c98521874aef47fc0eeeb1cec933f9",
+          "count": 2459
+        },
+        "constraints": {
+          "hash": "a9a772abee9cb8f74136d157480d1397e9316479dfaa9d352f19a9cfc5f47987",
+          "count": 3063
+        },
+        "indexes": {
+          "hash": "7e0033f56a886d951807b8f37880cbe9309ddcc1a6690356071fd8b8c508c4d2",
+          "count": 558
+        },
+        "sequences": {
+          "hash": "be8463c5a6099bffd42821edf0fda9ae8bc24e3ab0b12794231b607a01b8711f",
+          "count": 177
+        },
+        "triggers": {
+          "hash": "c6a6548b05d66fbc498e02c098d259fbbb868dc9f1d58d6750e3a2ec9d60a980",
+          "count": 20
+        },
+        "functions": {
+          "hash": "bc87c9aca6ac29d688c10f275c628c837f8cbcfdafdf84bdef92ae6382f8e4ad",
+          "count": 10
+        }
+      }
     },
     {
       "version": 64,
       "tag": "0064_expense_line_controls",
       "sqlHash": "7501ab59e4fc7d888d84a9876b333756ea15974c48fc50ecae5dee22b641911d",
-      "structuralHash": "8406ca83e6dea83c5f59a0374e4e9c30e89d923c7f81e0f3a016fee975117a5c"
+      "structuralHash": "8406ca83e6dea83c5f59a0374e4e9c30e89d923c7f81e0f3a016fee975117a5c",
+      "categories": {
+        "tables": {
+          "hash": "3e06fea6b257221f9e1dda1ebff7d51c2ceb32f20a0cab0694a4573e3ba46931",
+          "count": 192
+        },
+        "columns": {
+          "hash": "fa21aaf5b50386ca72e2fe559d96392fd79fad0a083f448a5343c789a007d177",
+          "count": 2524
+        },
+        "constraints": {
+          "hash": "08273f2dd414a8d6b7a2be81826fc84060136be9bc5391d6ca0498e511a54a38",
+          "count": 3160
+        },
+        "indexes": {
+          "hash": "4492618d58f989acbe4f57f203c7a61fc986ef17da3a43338ff9dda64b4bad0e",
+          "count": 573
+        },
+        "sequences": {
+          "hash": "5ad6ef1962dc9b30b4484c0cad0b2a9640c988c30d57cf4fe5948e0f33d9e791",
+          "count": 182
+        },
+        "triggers": {
+          "hash": "90cb8cceb215122cb28fd1ebfc26411a05dc3982cbef531de1e87fa39425b2c5",
+          "count": 26
+        },
+        "functions": {
+          "hash": "372b6b411ddf41981a462e263c2ad097b95bb9dee0727e7f311edb24883e3e09",
+          "count": 12
+        }
+      }
     },
     {
       "version": 65,
       "tag": "0065_corporate_card_reconciliation",
       "sqlHash": "95d30983046b08a1f58a8435cf1d6eedc68e333b62ddd8fca6fa704a5823bb8c",
-      "structuralHash": "69208fd59239c60492268b23c48c1b5ebc16638a3f114d9856bcbb142db63b72"
+      "structuralHash": "69208fd59239c60492268b23c48c1b5ebc16638a3f114d9856bcbb142db63b72",
+      "categories": {
+        "tables": {
+          "hash": "adb6eae803d5c3d7f36d546379853eade4ffc3fe1d60ec5695a4939f94222dea",
+          "count": 197
+        },
+        "columns": {
+          "hash": "904f389d35b130a20ee027374b31b31338e7d5150533907e732bcb044fd02dbc",
+          "count": 2597
+        },
+        "constraints": {
+          "hash": "cd77fdaf7fa67b9290721fdd1b5ebcd3024bd3838a781a2bc3540101cb89b6d9",
+          "count": 3259
+        },
+        "indexes": {
+          "hash": "eb6d99b02a8a18b633b1350b1d5ec6673fef3b0e0cacd1a4a5d128357bb42f25",
+          "count": 594
+        },
+        "sequences": {
+          "hash": "8645d300ac663ad29eb37dad085f63f3830e235918f37bd834b7556b8b7c7f2f",
+          "count": 187
+        },
+        "triggers": {
+          "hash": "8b89b4bfa9682958a1cd6f25b5cf029190e1969b85b4f175de5fb7ddbd197847",
+          "count": 34
+        },
+        "functions": {
+          "hash": "bbf157ff7d2cbd8421e39502158379cc35cebed84d1dd9658dbf70c387cf2b14",
+          "count": 16
+        }
+      }
     },
     {
       "version": 66,
       "tag": "0066_allowances_cash_advances",
       "sqlHash": "19c08a4dc66c05f8623c5317a2a8c639f35b02e4f741304150b7aee593e795bf",
-      "structuralHash": "68b6bd29709742ff7644f10051b90171afae930e41de7afa455f957d9b3795d5"
+      "structuralHash": "68b6bd29709742ff7644f10051b90171afae930e41de7afa455f957d9b3795d5",
+      "categories": {
+        "tables": {
+          "hash": "4dfd05470229601f7656f8062d6802ab8671219b492a33129333c8799a64813c",
+          "count": 203
+        },
+        "columns": {
+          "hash": "e23baef21fd5cc46f8d883ed2646e3f667ef935c6c5befd427d016244ce3064e",
+          "count": 2691
+        },
+        "constraints": {
+          "hash": "79ff35d2f1a5750eace16231947028d6cfa3a4baed5907bb5009de2a08654dd4",
+          "count": 3400
+        },
+        "indexes": {
+          "hash": "62393b43f5d29006ba3fc0b863f4e19b53a1e320900954c2adbfae866d343f02",
+          "count": 613
+        },
+        "sequences": {
+          "hash": "a85b8cd1dd0caf2086c2c8a733ace736a05caf6aacd22fe8389f06df9460fd1d",
+          "count": 193
+        },
+        "triggers": {
+          "hash": "04dd0fa50d36ca6641fb00cc43dd6431063814d34d35eba1bfcf7cea233326fd",
+          "count": 42
+        },
+        "functions": {
+          "hash": "494f4a4fb6166e44feb6318edafbb12db86a680360992bec7c21e50a6ea99ad3",
+          "count": 19
+        }
+      }
     },
     {
       "version": 67,
       "tag": "0067_expense_postings",
       "sqlHash": "aae9286a3b028253c8dd64d3dd4180cd8717d2a3316d558843486afe60b7db35",
-      "structuralHash": "600b50f8f2922150d7e1fabbc57614f1c6ba743296baeb928743476eb4b4d2cd"
+      "structuralHash": "600b50f8f2922150d7e1fabbc57614f1c6ba743296baeb928743476eb4b4d2cd",
+      "categories": {
+        "tables": {
+          "hash": "caaed09b60e3397cf854885ec2924bf35c969bfb18656ea89c6917b3547ac0df",
+          "count": 205
+        },
+        "columns": {
+          "hash": "7cd148c369a022f8c68725c7718a3bc3aec05ec1f8437ace621372518c1231db",
+          "count": 2725
+        },
+        "constraints": {
+          "hash": "7ed791f212c1a1bc7594fc2e006863a537358d4fe677ef2c79a75fd137d72221",
+          "count": 3454
+        },
+        "indexes": {
+          "hash": "9cf112f7ebd41acf3829a348c44e21d6dfcde9acff29026f5270791431d8b42c",
+          "count": 621
+        },
+        "sequences": {
+          "hash": "2865eff238c89e260872b6e531ea1aae66259823f34b2e16f71a3425d22d8c81",
+          "count": 195
+        },
+        "triggers": {
+          "hash": "7266a94213daa2f8496941b454fe185f723e1111e764c05164d5c423abbef593",
+          "count": 45
+        },
+        "functions": {
+          "hash": "cbf839e70d7a064bbd84c9051502c39927303aaba8ccf1844bc7092e1a5ead97",
+          "count": 21
+        }
+      }
     },
     {
       "version": 68,
       "tag": "0068_employee_payout_profiles",
       "sqlHash": "3793b0a4c5a17f36b3eacaecc4114c67c15e403a26e4d401463d62883a43ff8e",
-      "structuralHash": "12025d887dab75f5d5cbedb76640608ff27df6fc88a201fc69dec5378d33a26b"
+      "structuralHash": "12025d887dab75f5d5cbedb76640608ff27df6fc88a201fc69dec5378d33a26b",
+      "categories": {
+        "tables": {
+          "hash": "e9928bf37ea94c6d241f52386dbd8309ed8302d94f13a4251f4cb5bde605a7f8",
+          "count": 207
+        },
+        "columns": {
+          "hash": "866f4b3826927f0869f01f8212d6bd1f5fcb86db23c98d464dc96af8b1bc39c7",
+          "count": 2758
+        },
+        "constraints": {
+          "hash": "b18d45a98ee429f19037f84ec225c7bfc76690f1e731d37a93bbcd3a9faddd8d",
+          "count": 3502
+        },
+        "indexes": {
+          "hash": "c315553226e522e070980f8bd4baa5e281d64b3d16e94b66fcbf6278df0e542b",
+          "count": 627
+        },
+        "sequences": {
+          "hash": "cbb917d705f935ca9217224e4a0a76460c33f1e69893ae338c418a9a80005c60",
+          "count": 197
+        },
+        "triggers": {
+          "hash": "e33d8684d5a371098a9b65db04caf08fb096a75e88ca7541688931c525e56f34",
+          "count": 46
+        },
+        "functions": {
+          "hash": "23b21c712008c23362a102ba8267361909e8a9c17f20c8ce12cc9ebe3bff80ab",
+          "count": 22
+        }
+      }
     },
     {
       "version": 69,
       "tag": "0069_reimbursement_payment_batches",
       "sqlHash": "32a964ce07d5de68b7e5d4be4b4549cc8e33c64baf16500846383c0df0e81b2c",
-      "structuralHash": "e29b6bec52505c71027b431df52cf555aa37bda377c8b2b0b56e4a46bf21b601"
+      "structuralHash": "e29b6bec52505c71027b431df52cf555aa37bda377c8b2b0b56e4a46bf21b601",
+      "categories": {
+        "tables": {
+          "hash": "1e58b718a910f68cace6e1cd90096efaac6d318a1dedd254ed020cd6837c3142",
+          "count": 210
+        },
+        "columns": {
+          "hash": "a97bf4ee610f1c015503148ef0cfbd3362f0c7e0538bba90e6586d87f73fd0fa",
+          "count": 2809
+        },
+        "constraints": {
+          "hash": "b8c3fc57a1728a532541819362596fd64dc96737909b023ce9bf57ef1598e177",
+          "count": 3581
+        },
+        "indexes": {
+          "hash": "14df4fd909e02839e8bfe1f945ed942414030fcc579a0963eec29c81d219d70c",
+          "count": 638
+        },
+        "sequences": {
+          "hash": "5c491b20c8613fe97b4e39eff93229d611bdfd1e18d6869458f80652e56cfdcc",
+          "count": 200
+        },
+        "triggers": {
+          "hash": "838c0ac1d75ef1c78d0e1440020fbbbe6b5c019abeb8019935fbc3f8ca6be344",
+          "count": 49
+        },
+        "functions": {
+          "hash": "b191d5bb5f144a633ecd0e73697aacd6e6df70ce43d6fa5888a941eecd747dd9",
+          "count": 25
+        }
+      }
     },
     {
       "version": 70,
       "tag": "0070_reimbursement_bank_results",
       "sqlHash": "eee58f671d6f8663e1b086bb90723d905ac27ae382004ce3a7214c17cf3bbab0",
-      "structuralHash": "95db9eec3bb71c690dacdab12797d3bf4b4f6fe2f5de48a363ba1000d591a028"
+      "structuralHash": "95db9eec3bb71c690dacdab12797d3bf4b4f6fe2f5de48a363ba1000d591a028",
+      "categories": {
+        "tables": {
+          "hash": "35acf3fdd8176ef3645a3c52f59d505d1f62d6bb937e8a0836b44b54bba7aaf9",
+          "count": 217
+        },
+        "columns": {
+          "hash": "e40b0ab84ea82378155a1d75afb9d1c350aac19d32d8e3036cbd19831c1a545c",
+          "count": 2901
+        },
+        "constraints": {
+          "hash": "ccdf77ca4b58d105aeaf8c1b4a9e4164c29a1664c2496aaef18c5faf46a959eb",
+          "count": 3731
+        },
+        "indexes": {
+          "hash": "6eb147e6f27db94f0e249d2fe4140eac01a2e8c583c3fdffcb013594dcf1381e",
+          "count": 663
+        },
+        "sequences": {
+          "hash": "14ed1ae1ee90490650ad756dc2eb1ce634e9c7cf16b3bb126bd494a39965f0b7",
+          "count": 207
+        },
+        "triggers": {
+          "hash": "6697c3dbda0f387ba51f2f32a343955e6cad931cfd7f1cb796011136f93fe05e",
+          "count": 57
+        },
+        "functions": {
+          "hash": "1977414fd5a39ea732f0f1839a09225953caeee9ca954adf0771c00649a3826e",
+          "count": 27
+        }
+      }
     },
     {
       "version": 71,
       "tag": "0071_tax_evidence_jobs",
       "sqlHash": "a02145b890872d12dc364d47c26ed03b73aded117de484a9e83910ad0a0e5119",
-      "structuralHash": "53a70930c49630d0f0d36dfce36f433c16bc752b7b0f3914e3da8b41fb03bd6d"
+      "structuralHash": "53a70930c49630d0f0d36dfce36f433c16bc752b7b0f3914e3da8b41fb03bd6d",
+      "categories": {
+        "tables": {
+          "hash": "bd3bcc331cdfb8a95170f4e205b4003bfc977c2cbd011449ffef29344b17526c",
+          "count": 223
+        },
+        "columns": {
+          "hash": "3d23ecd119bfd44807d27f3e2a5c5c0791bade75ab17e4dab24bd46ae3e22a20",
+          "count": 2974
+        },
+        "constraints": {
+          "hash": "480552fd6334069b6295efbe0cc90bfe09729913cf11a253f605d41a8d92793c",
+          "count": 3838
+        },
+        "indexes": {
+          "hash": "6f26f39ed1b5bc8bfb5a6522654a598339958010312386410946e9e87fe2b116",
+          "count": 684
+        },
+        "sequences": {
+          "hash": "091d75878c486356fad3dee6b066f703cb4e87585de7612b9dd05c1fb821794a",
+          "count": 213
+        },
+        "triggers": {
+          "hash": "e540df42a3f54a6b989bd54eea4c32fee1ec11821e750332441171b6b34c934b",
+          "count": 62
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 72,
       "tag": "0072_tax_evidence_pack_governance",
       "sqlHash": "5d00f27d2818eaa2acceafbf64869f771ef84be5e626b5026e2fe850948b85a0",
-      "structuralHash": "560d1a2af1e454220a5fafab17c6b97d0ec23aafb15b7d730222e1cb35dec947"
+      "structuralHash": "560d1a2af1e454220a5fafab17c6b97d0ec23aafb15b7d730222e1cb35dec947",
+      "categories": {
+        "tables": {
+          "hash": "6323da63d2aec80aa0beca84d2d29bb2ad589a2194b81a6857d25a789bb810ba",
+          "count": 226
+        },
+        "columns": {
+          "hash": "36e40bc9b6533331ef740951e54b5c05e5c8c0d8166b6dd42b6283d26671c767",
+          "count": 3014
+        },
+        "constraints": {
+          "hash": "d5376b42e6a55b95970ab9a5afb13c8184539ab57c915c461ff7bf55b6426cd2",
+          "count": 3899
+        },
+        "indexes": {
+          "hash": "9b255f7e51bbc77ebefc495009a1990fb11817c6351f1cdacc8f030eb78a24be",
+          "count": 697
+        },
+        "sequences": {
+          "hash": "ef772d0e63a4d54d0e8db9fbc318ac97f535ef037972976b058ba6ab4f9b8402",
+          "count": 216
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 73,
       "tag": "0073_even_gateway",
       "sqlHash": "403d671ad364d5d791324265719ba29db7fa8d2eb3e9e17794cb40be19ffe91c",
-      "structuralHash": "e9fa85def0392af9ce7fdf69420f17bc04b5f8a85fcc6b1007589d626c44fa4b"
+      "structuralHash": "e9fa85def0392af9ce7fdf69420f17bc04b5f8a85fcc6b1007589d626c44fa4b",
+      "categories": {
+        "tables": {
+          "hash": "c2c9abfe2287551c4bc306b49621b03e7ba59b88ce046927ea78b06c702748b7",
+          "count": 232
+        },
+        "columns": {
+          "hash": "9bb54f44fbca8f126d1a179464e083f26bc29cc8d953075abaf8951ba83a66e5",
+          "count": 3082
+        },
+        "constraints": {
+          "hash": "5547476ec45908b71ce8e13838f2eb3ac71a293f1ea8fa23ab98d2941b1d8743",
+          "count": 3981
+        },
+        "indexes": {
+          "hash": "80d36cae44f903c8dea478cdeda7ca66b35bd244765423fc58585a15fd639574",
+          "count": 711
+        },
+        "sequences": {
+          "hash": "5e6f86f1413cee10da7c5d81be16cd4e69190943f6a38c8c925701d3089b0401",
+          "count": 219
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 74,
       "tag": "0074_employee_leave_opening",
       "sqlHash": "cc4e42c83c004da7a39d8a9c22b5981c2999f2400aeb5e1aa0b94015a7304b92",
-      "structuralHash": "e9fa85def0392af9ce7fdf69420f17bc04b5f8a85fcc6b1007589d626c44fa4b"
+      "structuralHash": "e9fa85def0392af9ce7fdf69420f17bc04b5f8a85fcc6b1007589d626c44fa4b",
+      "categories": {
+        "tables": {
+          "hash": "c2c9abfe2287551c4bc306b49621b03e7ba59b88ce046927ea78b06c702748b7",
+          "count": 232
+        },
+        "columns": {
+          "hash": "9bb54f44fbca8f126d1a179464e083f26bc29cc8d953075abaf8951ba83a66e5",
+          "count": 3082
+        },
+        "constraints": {
+          "hash": "5547476ec45908b71ce8e13838f2eb3ac71a293f1ea8fa23ab98d2941b1d8743",
+          "count": 3981
+        },
+        "indexes": {
+          "hash": "80d36cae44f903c8dea478cdeda7ca66b35bd244765423fc58585a15fd639574",
+          "count": 711
+        },
+        "sequences": {
+          "hash": "5e6f86f1413cee10da7c5d81be16cd4e69190943f6a38c8c925701d3089b0401",
+          "count": 219
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 75,
       "tag": "0075_lumpy_star_brand",
       "sqlHash": "61b0c2c361925b9248dd177a6a848f64f7e9be0f78a51879517865d09737fd29",
-      "structuralHash": "915bb8a33f07b40edacfca98852e81fd557b9160599c5d9ab77067b0c9e6ed50"
+      "structuralHash": "915bb8a33f07b40edacfca98852e81fd557b9160599c5d9ab77067b0c9e6ed50",
+      "categories": {
+        "tables": {
+          "hash": "c2c9abfe2287551c4bc306b49621b03e7ba59b88ce046927ea78b06c702748b7",
+          "count": 232
+        },
+        "columns": {
+          "hash": "88eae4829f4291ea63ca83180cc834f7799d2ede77084134985e3a8b62a4e8a8",
+          "count": 3085
+        },
+        "constraints": {
+          "hash": "5c8f0b2a796ab5959aa43d7afdafab0f5fe1a4dba7e33752a739a25d4cf38c5c",
+          "count": 3982
+        },
+        "indexes": {
+          "hash": "80d36cae44f903c8dea478cdeda7ca66b35bd244765423fc58585a15fd639574",
+          "count": 711
+        },
+        "sequences": {
+          "hash": "5e6f86f1413cee10da7c5d81be16cd4e69190943f6a38c8c925701d3089b0401",
+          "count": 219
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 76,
       "tag": "0076_sweet_professor_monster",
       "sqlHash": "4021004fb50503b2fd152482f0c67da50e9e8c65623e77135a96dee2b682e281",
-      "structuralHash": "619dc66cc3b8fe48c585181b435ba8430b76dbb2da45e57320e41c181349cdd6"
+      "structuralHash": "619dc66cc3b8fe48c585181b435ba8430b76dbb2da45e57320e41c181349cdd6",
+      "categories": {
+        "tables": {
+          "hash": "f5753c0f9fde0795f432e38c4c7a08f6350f202b47a4d80e3f1d4acc861e4ca5",
+          "count": 233
+        },
+        "columns": {
+          "hash": "32fe3f398a72138aab6ab587bf5046b971953f164fc6af4796d552b1993d0d6a",
+          "count": 3095
+        },
+        "constraints": {
+          "hash": "58a77f77b85c6db25d60ef9283a9759160bc37c12e789dc3fe248ccd794a76dc",
+          "count": 3996
+        },
+        "indexes": {
+          "hash": "051959468d31701d03dd2d9e4518687ac8fbc1bf39939b134b1b9b8256246691",
+          "count": 714
+        },
+        "sequences": {
+          "hash": "069bf422596ee79502114723dfe387772077ab160ab589320dc347aabca87b04",
+          "count": 220
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 77,
       "tag": "0077_damp_champions",
       "sqlHash": "d3abee4c231a6de89307268dbd16a7e7c5b561a262d0ca09509ca766a5c79e9f",
-      "structuralHash": "ad8bef016fec61fbd3aef47b1869ff2411d4b41d9091a2896487f1359a28448f"
+      "structuralHash": "ad8bef016fec61fbd3aef47b1869ff2411d4b41d9091a2896487f1359a28448f",
+      "categories": {
+        "tables": {
+          "hash": "f5753c0f9fde0795f432e38c4c7a08f6350f202b47a4d80e3f1d4acc861e4ca5",
+          "count": 233
+        },
+        "columns": {
+          "hash": "fecef2a95e44348c71df865e11ef15b5b7a6f1558795d6246b7158df2b3f8cf3",
+          "count": 3101
+        },
+        "constraints": {
+          "hash": "2eb54a52b27f3e48bf617390800bcd1c35bd2df7c3bc969ae297250eb56d1314",
+          "count": 4006
+        },
+        "indexes": {
+          "hash": "051959468d31701d03dd2d9e4518687ac8fbc1bf39939b134b1b9b8256246691",
+          "count": 714
+        },
+        "sequences": {
+          "hash": "069bf422596ee79502114723dfe387772077ab160ab589320dc347aabca87b04",
+          "count": 220
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 78,
       "tag": "0078_service_capable_sales_order_lines",
       "sqlHash": "db4e607e254704963f6fbc43a6d1c92fb3f7342d469b09c5caa711e44e25630f",
-      "structuralHash": "3ddb526430a5953c79025f131d3e3941ad3fbd1f5abc8c8869af198a5cf05a53"
+      "structuralHash": "3ddb526430a5953c79025f131d3e3941ad3fbd1f5abc8c8869af198a5cf05a53",
+      "categories": {
+        "tables": {
+          "hash": "f5753c0f9fde0795f432e38c4c7a08f6350f202b47a4d80e3f1d4acc861e4ca5",
+          "count": 233
+        },
+        "columns": {
+          "hash": "e027ce1d15f811daf8e4fe93e254125272c9a10fd4a9c2e8f6f7b4a580615b3c",
+          "count": 3104
+        },
+        "constraints": {
+          "hash": "3a9b7480acdeae4378224c7f7bd22ea397e8ac9f3816acaa6cb1a182abde2c4d",
+          "count": 4012
+        },
+        "indexes": {
+          "hash": "051959468d31701d03dd2d9e4518687ac8fbc1bf39939b134b1b9b8256246691",
+          "count": 714
+        },
+        "sequences": {
+          "hash": "069bf422596ee79502114723dfe387772077ab160ab589320dc347aabca87b04",
+          "count": 220
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 79,
       "tag": "0079_broken_richard_fisk",
       "sqlHash": "72c8a8a36f52ce5129ee18a97a9fe6d291fbfc69b0b0c258c50a1a2266e14fbb",
-      "structuralHash": "fd7efa794101e3c7927939d25b30a0f2cdd236c891edcd06900a47ac8e3a2bcd"
+      "structuralHash": "fd7efa794101e3c7927939d25b30a0f2cdd236c891edcd06900a47ac8e3a2bcd",
+      "categories": {
+        "tables": {
+          "hash": "f5753c0f9fde0795f432e38c4c7a08f6350f202b47a4d80e3f1d4acc861e4ca5",
+          "count": 233
+        },
+        "columns": {
+          "hash": "05cc791c042b788b85f971169237131bd223bc26c1a80604b7d1f31c309557a2",
+          "count": 3106
+        },
+        "constraints": {
+          "hash": "e871e605f806bf2da80af93a887502871918655311be10f5abfbe47d9e5da766",
+          "count": 4013
+        },
+        "indexes": {
+          "hash": "051959468d31701d03dd2d9e4518687ac8fbc1bf39939b134b1b9b8256246691",
+          "count": 714
+        },
+        "sequences": {
+          "hash": "069bf422596ee79502114723dfe387772077ab160ab589320dc347aabca87b04",
+          "count": 220
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 80,
       "tag": "0080_spooky_garia",
       "sqlHash": "d565fd78ced4d7ef3f0f523f1a15bc882dede25db1d5df886e75128ce5823e3b",
-      "structuralHash": "58eff2cc43964a931f3ec271c6eae4d14b3455e1cd23242a9a9e0aa73c8a9549"
+      "structuralHash": "58eff2cc43964a931f3ec271c6eae4d14b3455e1cd23242a9a9e0aa73c8a9549",
+      "categories": {
+        "tables": {
+          "hash": "f5753c0f9fde0795f432e38c4c7a08f6350f202b47a4d80e3f1d4acc861e4ca5",
+          "count": 233
+        },
+        "columns": {
+          "hash": "d0963b1433459ccf5ab0065ecac49fa528a8b3d823b3e0910e86ff7fe0a86821",
+          "count": 3112
+        },
+        "constraints": {
+          "hash": "8062563a5c7bf7864f0eeb7ac1b4e11f033682928790de7c01f5b01886d2b0b9",
+          "count": 4019
+        },
+        "indexes": {
+          "hash": "051959468d31701d03dd2d9e4518687ac8fbc1bf39939b134b1b9b8256246691",
+          "count": 714
+        },
+        "sequences": {
+          "hash": "069bf422596ee79502114723dfe387772077ab160ab589320dc347aabca87b04",
+          "count": 220
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 81,
       "tag": "0081_hr_permission_leave_default",
       "sqlHash": "98d632d934ef4060119a903a93fae3fa1f55b21231b566c607028b0a319c92b9",
-      "structuralHash": "58eff2cc43964a931f3ec271c6eae4d14b3455e1cd23242a9a9e0aa73c8a9549"
+      "structuralHash": "58eff2cc43964a931f3ec271c6eae4d14b3455e1cd23242a9a9e0aa73c8a9549",
+      "categories": {
+        "tables": {
+          "hash": "f5753c0f9fde0795f432e38c4c7a08f6350f202b47a4d80e3f1d4acc861e4ca5",
+          "count": 233
+        },
+        "columns": {
+          "hash": "d0963b1433459ccf5ab0065ecac49fa528a8b3d823b3e0910e86ff7fe0a86821",
+          "count": 3112
+        },
+        "constraints": {
+          "hash": "8062563a5c7bf7864f0eeb7ac1b4e11f033682928790de7c01f5b01886d2b0b9",
+          "count": 4019
+        },
+        "indexes": {
+          "hash": "051959468d31701d03dd2d9e4518687ac8fbc1bf39939b134b1b9b8256246691",
+          "count": 714
+        },
+        "sequences": {
+          "hash": "069bf422596ee79502114723dfe387772077ab160ab589320dc347aabca87b04",
+          "count": 220
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 82,
       "tag": "0082_organic_dazzler",
       "sqlHash": "276121e98fb6af21bc08a06e92ae0bfcca0d3b6a4a747ffa1f62e483629d6913",
-      "structuralHash": "dc4ef162b3ba288db217d5f31898d158df851bc295b112eab51f83afd76d6cc7"
+      "structuralHash": "dc4ef162b3ba288db217d5f31898d158df851bc295b112eab51f83afd76d6cc7",
+      "categories": {
+        "tables": {
+          "hash": "5c0e62f9ddf3cba2bc1e5006f88fca6d9a44e83e15a66d07ead6f6601e054cf1",
+          "count": 234
+        },
+        "columns": {
+          "hash": "ce8940155383ac31d6bd97c19ae6713de3d32f94971f42a5341fb79756d09f7e",
+          "count": 3129
+        },
+        "constraints": {
+          "hash": "2fc9bb172331f5bab3d8aec72f93aa67327e425f73f082b1d864ed2375a96133",
+          "count": 4045
+        },
+        "indexes": {
+          "hash": "e765dc816413c02c9039eb2f7eb80fa8f8bc7246cdd8ab04febc516b82cd45fd",
+          "count": 717
+        },
+        "sequences": {
+          "hash": "2f2b02af8e514d2fdb19dc1bbebc7df6bb667cdd9d7cdf3f1903154e37f988fd",
+          "count": 221
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 83,
       "tag": "0083_staff_appointment_recurrence_reminders_calendar_sync",
       "sqlHash": "5c3494f8c672cbf85ed4a98a7ec6f171da4223d4fd51269af6d029dd6ee0ae4d",
-      "structuralHash": "1c80153ded034c3257f812119fd4d2e88ee2de66632bfaf218ee8e4d3e5a6076"
+      "structuralHash": "1c80153ded034c3257f812119fd4d2e88ee2de66632bfaf218ee8e4d3e5a6076",
+      "categories": {
+        "tables": {
+          "hash": "6e1eda6dc4a71597c04cbe2044a9eec7b25c796ee7f994430083937ec158aec7",
+          "count": 236
+        },
+        "columns": {
+          "hash": "eade0bc69b3aaa00f62b08cc6265b1e2cf0585d5281c61fc7b16a5baee8f7b07",
+          "count": 3173
+        },
+        "constraints": {
+          "hash": "f539f56e33d03eb04c274328eb4dd416ad738aded40d8d8ee5262e764b487611",
+          "count": 4088
+        },
+        "indexes": {
+          "hash": "283356287cd9c5aa4f22c32418f54dab7b8a0d8f79fe1bc94241ac268a44e29a",
+          "count": 726
+        },
+        "sequences": {
+          "hash": "42d3c4f6e1dbfd0bfcd473973ae362b6c5d40e568548e9dfa2979ba4bd825c1a",
+          "count": 223
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 84,
       "tag": "0084_platform_support_access",
       "sqlHash": "7fc54432dbd0042476565df079097db2867bdb1f7a8268432d3aba34cfca3937",
-      "structuralHash": "5160cba93ea73a5ff6c63b11104067b5529dd1a257b54e25cb19a3edaaa61c7e"
+      "structuralHash": "5160cba93ea73a5ff6c63b11104067b5529dd1a257b54e25cb19a3edaaa61c7e",
+      "categories": {
+        "tables": {
+          "hash": "45d03d78209616ebf176364ebfcc299403c433c9ce3f4e43b3381c9e038c16a0",
+          "count": 242
+        },
+        "columns": {
+          "hash": "1079634371d47542dafdb70213d0206f9a9ac3ecbbe06bb5e9ffe3938c823411",
+          "count": 3219
+        },
+        "constraints": {
+          "hash": "f62df2bd2fab1064eed3b29bcef22d77e3539fecc45bd410dcf82cda29685d63",
+          "count": 4145
+        },
+        "indexes": {
+          "hash": "33d6822e44dcef622cfb120f16862ae5a2f5ef8a7e64d6e1398aa2279163fd90",
+          "count": 742
+        },
+        "sequences": {
+          "hash": "8e976af62a00eb7baa02866f0acd6e723b5719d1e003901098084baee2d35fc4",
+          "count": 226
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 85,
       "tag": "0085_support_grant_company_boundary",
       "sqlHash": "bc204ab38bf4bd254d3b162585b15a5405d4252bc612a769c8113817f8a8ac50",
-      "structuralHash": "e319f2cc30d28211a98a48092b986b894b69ec50f8ca08dd44afcdd14c729f99"
+      "structuralHash": "e319f2cc30d28211a98a48092b986b894b69ec50f8ca08dd44afcdd14c729f99",
+      "categories": {
+        "tables": {
+          "hash": "45d03d78209616ebf176364ebfcc299403c433c9ce3f4e43b3381c9e038c16a0",
+          "count": 242
+        },
+        "columns": {
+          "hash": "1079634371d47542dafdb70213d0206f9a9ac3ecbbe06bb5e9ffe3938c823411",
+          "count": 3219
+        },
+        "constraints": {
+          "hash": "29865439ff70a4cfc474e9f3acb94b073891e3b630b172652c3164210d7d2beb",
+          "count": 4146
+        },
+        "indexes": {
+          "hash": "4875f55a96edaca32757d5dc0d27d601c386dc7dd239d127cd56c0b884883749",
+          "count": 743
+        },
+        "sequences": {
+          "hash": "8e976af62a00eb7baa02866f0acd6e723b5719d1e003901098084baee2d35fc4",
+          "count": 226
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 86,
       "tag": "0086_youthful_mac_gargan",
       "sqlHash": "9c4c7a5de0d7cc36dbe5e76ffec922a6a56ade439d302226a17416d4ce3e1c46",
-      "structuralHash": "70abaa48d9a405cbc42c51e938282a868fbe48e9c98af60d1c5e17734da03fb0"
+      "structuralHash": "70abaa48d9a405cbc42c51e938282a868fbe48e9c98af60d1c5e17734da03fb0",
+      "categories": {
+        "tables": {
+          "hash": "a2c2a186dfb2b5da788214433843feba040e4781affc95d119e79509650f2025",
+          "count": 243
+        },
+        "columns": {
+          "hash": "016499ab8dacb99943a328e3cdd83dd2d883b8a8249898e388a32069765cd553",
+          "count": 3238
+        },
+        "constraints": {
+          "hash": "d5bc5b96b79fb22a086bdcf32c0d6b95480558cc36239d799aca7d5d4ca498ba",
+          "count": 4166
+        },
+        "indexes": {
+          "hash": "5af0d0a441e10c14095c8451eb1ae3c5a07520444dbb1f3d6003927ac4359ab2",
+          "count": 748
+        },
+        "sequences": {
+          "hash": "527cd628e66a0252152451c3d6bcc5577a6aed83f3a9768f4ce1d1e34f7fabd5",
+          "count": 227
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 87,
       "tag": "0087_pink_shadowcat",
       "sqlHash": "dda3d25ffa9ea7d673308e01d2edee4e7ef16959d8b2818ebd2920c9c7a1f417",
-      "structuralHash": "73de05d4a8b2372103d1ce127a9b67cbd90e8b76339df4b3667a552289b16490"
+      "structuralHash": "73de05d4a8b2372103d1ce127a9b67cbd90e8b76339df4b3667a552289b16490",
+      "categories": {
+        "tables": {
+          "hash": "6397a1af240490f51d8bfb820598c6ecb9d7c9e45065fb3f8dc81f40423457bf",
+          "count": 244
+        },
+        "columns": {
+          "hash": "d65640c13133092192d466681059c8ed97a5966b4fdeb6df2cbad5eefdc6fee9",
+          "count": 3257
+        },
+        "constraints": {
+          "hash": "7297b2a8f1fb152594096e7f2701e0705e36bbbf8c81b62265a7aae9bd232a7f",
+          "count": 4192
+        },
+        "indexes": {
+          "hash": "9def33967daa675179c0bde63463013319e428d3e2a64c4df98501f9e534c934",
+          "count": 751
+        },
+        "sequences": {
+          "hash": "58159748b6be693f1bf0113580f9ea61a397dd7f90e72d2a41073447646a3d9f",
+          "count": 228
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 88,
       "tag": "0088_early_marvel_boy",
       "sqlHash": "4114f9bdbffca51b012f4b80daf3da9beae493aa0826959d4ee9dd3f77f368b8",
-      "structuralHash": "9ae6eefaa53f974069570e243b91f7d2ba4ab962336fe6322d34db66e8c42a47"
+      "structuralHash": "9ae6eefaa53f974069570e243b91f7d2ba4ab962336fe6322d34db66e8c42a47",
+      "categories": {
+        "tables": {
+          "hash": "6397a1af240490f51d8bfb820598c6ecb9d7c9e45065fb3f8dc81f40423457bf",
+          "count": 244
+        },
+        "columns": {
+          "hash": "12ef24d2ade90a8ab6b65f66b0a09a3a479be8d36982a03ef420f989bf5bc1c4",
+          "count": 3258
+        },
+        "constraints": {
+          "hash": "0825854c48a681077c1100e49d8e5c5c4e736cd730c75b5de8579fb7c782c0d3",
+          "count": 4193
+        },
+        "indexes": {
+          "hash": "9def33967daa675179c0bde63463013319e428d3e2a64c4df98501f9e534c934",
+          "count": 751
+        },
+        "sequences": {
+          "hash": "58159748b6be693f1bf0113580f9ea61a397dd7f90e72d2a41073447646a3d9f",
+          "count": 228
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 89,
       "tag": "0089_company_owner_cutover",
       "sqlHash": "0ef0c9f7a05038176e97eea8c2ac951cd80caae216b8da707fda1dd3b036124c",
-      "structuralHash": "9ae6eefaa53f974069570e243b91f7d2ba4ab962336fe6322d34db66e8c42a47"
+      "structuralHash": "9ae6eefaa53f974069570e243b91f7d2ba4ab962336fe6322d34db66e8c42a47",
+      "categories": {
+        "tables": {
+          "hash": "6397a1af240490f51d8bfb820598c6ecb9d7c9e45065fb3f8dc81f40423457bf",
+          "count": 244
+        },
+        "columns": {
+          "hash": "12ef24d2ade90a8ab6b65f66b0a09a3a479be8d36982a03ef420f989bf5bc1c4",
+          "count": 3258
+        },
+        "constraints": {
+          "hash": "0825854c48a681077c1100e49d8e5c5c4e736cd730c75b5de8579fb7c782c0d3",
+          "count": 4193
+        },
+        "indexes": {
+          "hash": "9def33967daa675179c0bde63463013319e428d3e2a64c4df98501f9e534c934",
+          "count": 751
+        },
+        "sequences": {
+          "hash": "58159748b6be693f1bf0113580f9ea61a397dd7f90e72d2a41073447646a3d9f",
+          "count": 228
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 90,
       "tag": "0090_company_receipts",
       "sqlHash": "49d8f0deac6ddedbb2ed2d02aef29523ed81cba4aa5f664f001ab898e83e16ce",
-      "structuralHash": "706480bb9054f2ed823752cda4f798b2f93b309d1fa47725f1cc93bff559ba92"
+      "structuralHash": "706480bb9054f2ed823752cda4f798b2f93b309d1fa47725f1cc93bff559ba92",
+      "categories": {
+        "tables": {
+          "hash": "b218018fcf4ec6e691f277bfc3c9250dd423ec6e8b887d044a840679d4a096df",
+          "count": 245
+        },
+        "columns": {
+          "hash": "948d2bca9c3fa83f16c01b3ede94bb7f8f06207264ac5dab63675ddfd4f741e4",
+          "count": 3280
+        },
+        "constraints": {
+          "hash": "380eac0602a2b802b48b272cdd0dfcefe944185b4a7f531b4c9f95e39c2e61d2",
+          "count": 4226
+        },
+        "indexes": {
+          "hash": "483c4a9394ff1fc80a15f66a3f4064fc4938c3b640c8b9441d10e7a49506c19d",
+          "count": 757
+        },
+        "sequences": {
+          "hash": "fdd6510eb2a1f7963fd0ea29389bb0b8d91dc85362f88c612511518f28e85761",
+          "count": 229
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 91,
       "tag": "0091_sloppy_blackheart",
       "sqlHash": "0cfc5129de619f95e8fa710827b10484c7e075ec4b6a26f35808f3c76849caed",
-      "structuralHash": "1f937e4157bf18ec49d4dc6b52850bf7190f1c3c661c0aa6191b790031514939"
+      "structuralHash": "1f937e4157bf18ec49d4dc6b52850bf7190f1c3c661c0aa6191b790031514939",
+      "categories": {
+        "tables": {
+          "hash": "b218018fcf4ec6e691f277bfc3c9250dd423ec6e8b887d044a840679d4a096df",
+          "count": 245
+        },
+        "columns": {
+          "hash": "e2c73ba8f856c84301a29f6ee31c9da5370b7b7feff02d4a1d7e4bc0f1ab4139",
+          "count": 3281
+        },
+        "constraints": {
+          "hash": "24a97aab2e3f32605cc65a369b4772ffe0316f92b28c4bab0518c58850181d59",
+          "count": 4228
+        },
+        "indexes": {
+          "hash": "40afd6df8452b4440ab53d341a6cf563b770ed4378230a7e2c1a81a81b5bec04",
+          "count": 758
+        },
+        "sequences": {
+          "hash": "fdd6510eb2a1f7963fd0ea29389bb0b8d91dc85362f88c612511518f28e85761",
+          "count": 229
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 92,
       "tag": "0092_company_receipt_read_scope",
       "sqlHash": "3d33c9a3b47610772fb7a04022416d5131f16a9a3170043bbfaf8c66685cc81a",
-      "structuralHash": "1f937e4157bf18ec49d4dc6b52850bf7190f1c3c661c0aa6191b790031514939"
+      "structuralHash": "1f937e4157bf18ec49d4dc6b52850bf7190f1c3c661c0aa6191b790031514939",
+      "categories": {
+        "tables": {
+          "hash": "b218018fcf4ec6e691f277bfc3c9250dd423ec6e8b887d044a840679d4a096df",
+          "count": 245
+        },
+        "columns": {
+          "hash": "e2c73ba8f856c84301a29f6ee31c9da5370b7b7feff02d4a1d7e4bc0f1ab4139",
+          "count": 3281
+        },
+        "constraints": {
+          "hash": "24a97aab2e3f32605cc65a369b4772ffe0316f92b28c4bab0518c58850181d59",
+          "count": 4228
+        },
+        "indexes": {
+          "hash": "40afd6df8452b4440ab53d341a6cf563b770ed4378230a7e2c1a81a81b5bec04",
+          "count": 758
+        },
+        "sequences": {
+          "hash": "fdd6510eb2a1f7963fd0ea29389bb0b8d91dc85362f88c612511518f28e85761",
+          "count": 229
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 93,
       "tag": "0093_company_receipt_pack",
       "sqlHash": "90a262727cac611b6b08c90eec5bc6fa5d5c6b8564a59d497a671c088386d441",
-      "structuralHash": "b6751c86df3bd1a7e89f771f8aad8c4a7bbff3ce3b1f4c59365ef1fa10b9add9"
+      "structuralHash": "b6751c86df3bd1a7e89f771f8aad8c4a7bbff3ce3b1f4c59365ef1fa10b9add9",
+      "categories": {
+        "tables": {
+          "hash": "341653a758f4b527c2154b9f5a2efd8e77dc61b648643c0917c4969bb1bb4b0b",
+          "count": 246
+        },
+        "columns": {
+          "hash": "b65dd771e188ddb415233cbb076c59ca254a0ae483b578022c52a53495c4d136",
+          "count": 3295
+        },
+        "constraints": {
+          "hash": "882dc9ec2f6a5563bcdca8687837b9ef7ce51cbe0cccc129842315561ea63263",
+          "count": 4250
+        },
+        "indexes": {
+          "hash": "74daa48c8442a7063a42b2342b48a38e0a23f7d432cf10eb5f517000642cd52a",
+          "count": 761
+        },
+        "sequences": {
+          "hash": "f3d87a547639b8146cc37cd4ea1aa51a4084dafc2ee6b83260114c3834c00653",
+          "count": 230
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 94,
       "tag": "0094_platform_module_entitlement",
       "sqlHash": "12e7dbc990cb94dc34a667e44271c4e3923b6bf2264cad730f1f97cce2ca5685",
-      "structuralHash": "74df564675ceef9f0821c2a8e3a62188e830c48f269f37ec51e03e8701df063a"
+      "structuralHash": "74df564675ceef9f0821c2a8e3a62188e830c48f269f37ec51e03e8701df063a",
+      "categories": {
+        "tables": {
+          "hash": "341653a758f4b527c2154b9f5a2efd8e77dc61b648643c0917c4969bb1bb4b0b",
+          "count": 246
+        },
+        "columns": {
+          "hash": "35a7b3c5868b9063803a45072e6940be8e5882931772938845d18870996ac1ac",
+          "count": 3298
+        },
+        "constraints": {
+          "hash": "df6969475089f266e03c74b457b234a0a175d63d6226b89b37adc759e6843626",
+          "count": 4255
+        },
+        "indexes": {
+          "hash": "74daa48c8442a7063a42b2342b48a38e0a23f7d432cf10eb5f517000642cd52a",
+          "count": 761
+        },
+        "sequences": {
+          "hash": "f3d87a547639b8146cc37cd4ea1aa51a4084dafc2ee6b83260114c3834c00653",
+          "count": 230
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 95,
       "tag": "0095_retire_tenant_module_authority",
       "sqlHash": "989a7e28ca4fbbb6515cebedc477893e19eb4944b9cabc408d2758e0f44b8538",
-      "structuralHash": "74df564675ceef9f0821c2a8e3a62188e830c48f269f37ec51e03e8701df063a"
+      "structuralHash": "74df564675ceef9f0821c2a8e3a62188e830c48f269f37ec51e03e8701df063a",
+      "categories": {
+        "tables": {
+          "hash": "341653a758f4b527c2154b9f5a2efd8e77dc61b648643c0917c4969bb1bb4b0b",
+          "count": 246
+        },
+        "columns": {
+          "hash": "35a7b3c5868b9063803a45072e6940be8e5882931772938845d18870996ac1ac",
+          "count": 3298
+        },
+        "constraints": {
+          "hash": "df6969475089f266e03c74b457b234a0a175d63d6226b89b37adc759e6843626",
+          "count": 4255
+        },
+        "indexes": {
+          "hash": "74daa48c8442a7063a42b2342b48a38e0a23f7d432cf10eb5f517000642cd52a",
+          "count": 761
+        },
+        "sequences": {
+          "hash": "f3d87a547639b8146cc37cd4ea1aa51a4084dafc2ee6b83260114c3834c00653",
+          "count": 230
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 96,
       "tag": "0096_platform_superadmin_realm",
       "sqlHash": "945021b1924af0ab13cbbfabd9f0ca07575d81f0e230b8d7783ed5f06aa66745",
-      "structuralHash": "46ad1bdf2adabaa95fb6d824e2c1aa30bee2bc77669033b097a65b0a607b0207"
+      "structuralHash": "46ad1bdf2adabaa95fb6d824e2c1aa30bee2bc77669033b097a65b0a607b0207",
+      "categories": {
+        "tables": {
+          "hash": "c2b83be80a6da9312094560bef0039f06d9bf86deb77effd4e099b79b228771b",
+          "count": 247
+        },
+        "columns": {
+          "hash": "47f587ddf885cef40a474d7b42a788637789ad6a0fc0632b0129416dd9f81866",
+          "count": 3309
+        },
+        "constraints": {
+          "hash": "944093a1a80965fce0db7345492beb15f5a8ef0526ae22ab0b1061001d480a6f",
+          "count": 4271
+        },
+        "indexes": {
+          "hash": "ee869b3b0ec7d7bd2520a61622558073954cfb7a5314516c1fe7b40cdee3b7dc",
+          "count": 765
+        },
+        "sequences": {
+          "hash": "4156a344f391bdf841387b6a0fdfe42addf65aa201485e99ca512c248fe7fa11",
+          "count": 231
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 97,
       "tag": "0097_company_receipt_canonical_permissions",
       "sqlHash": "180f364b2c26a253a353e051f61a3992bf1dae840364dbb3925e6dd6b65bc201",
-      "structuralHash": "46ad1bdf2adabaa95fb6d824e2c1aa30bee2bc77669033b097a65b0a607b0207"
+      "structuralHash": "46ad1bdf2adabaa95fb6d824e2c1aa30bee2bc77669033b097a65b0a607b0207",
+      "categories": {
+        "tables": {
+          "hash": "c2b83be80a6da9312094560bef0039f06d9bf86deb77effd4e099b79b228771b",
+          "count": 247
+        },
+        "columns": {
+          "hash": "47f587ddf885cef40a474d7b42a788637789ad6a0fc0632b0129416dd9f81866",
+          "count": 3309
+        },
+        "constraints": {
+          "hash": "944093a1a80965fce0db7345492beb15f5a8ef0526ae22ab0b1061001d480a6f",
+          "count": 4271
+        },
+        "indexes": {
+          "hash": "ee869b3b0ec7d7bd2520a61622558073954cfb7a5314516c1fe7b40cdee3b7dc",
+          "count": 765
+        },
+        "sequences": {
+          "hash": "4156a344f391bdf841387b6a0fdfe42addf65aa201485e99ca512c248fe7fa11",
+          "count": 231
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 98,
       "tag": "0098_pretty_silver_centurion",
       "sqlHash": "4dab39e7e8a156d0b036907e4bd21f4cfe026a2865e30b5f27f761ffdfe0b313",
-      "structuralHash": "33be3e6ebe0e75ddd105ffa6df5e9283b14921338446e37d91dfd82d12f9e262"
+      "structuralHash": "33be3e6ebe0e75ddd105ffa6df5e9283b14921338446e37d91dfd82d12f9e262",
+      "categories": {
+        "tables": {
+          "hash": "2947ea69412c7b2f71e6c0c9954e7b372590557bcc26d3f07d661f68606f5040",
+          "count": 249
+        },
+        "columns": {
+          "hash": "d3ab1770110d9a191a5b54aed2fce4646ef3b753d8649e8fa25517fe266f11b7",
+          "count": 3323
+        },
+        "constraints": {
+          "hash": "b29192922a5a8062a7570774057b1956d37224826a0a5890503f954c02ed9674",
+          "count": 4287
+        },
+        "indexes": {
+          "hash": "3cf8a6628ef59265a70bc051c42112243a329a8f37a655abd842f60dc614e178",
+          "count": 770
+        },
+        "sequences": {
+          "hash": "4156a344f391bdf841387b6a0fdfe42addf65aa201485e99ca512c248fe7fa11",
+          "count": 231
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 99,
       "tag": "0099_sleepy_nuke",
       "sqlHash": "b3dc7004c4b00d61e647e1fc85c7045562aa32cec81bcdba0b1e1a745ae9209a",
-      "structuralHash": "042666fa229e28149e403eee5994a15692f69f25376b7ab908ad7219e16a176a"
+      "structuralHash": "042666fa229e28149e403eee5994a15692f69f25376b7ab908ad7219e16a176a",
+      "categories": {
+        "tables": {
+          "hash": "dc98d1738cc3a16b9ab8de7ee9449ed59caa5d423d46fdcd13fc19ed97b7689c",
+          "count": 252
+        },
+        "columns": {
+          "hash": "19ff59a584bf71fe30f1a0b04aa4ea097d71e8ef2ff0ba13fe8ccdbad2c51412",
+          "count": 3354
+        },
+        "constraints": {
+          "hash": "fed322f4a93eb201050608aba415de88b2197f01ef6a42275906029bc2b0fec8",
+          "count": 4336
+        },
+        "indexes": {
+          "hash": "53cc4010391157fc7afcf2bac07f390a29d42d7d52525919d2ff47e3b9bbf0a1",
+          "count": 780
+        },
+        "sequences": {
+          "hash": "66adc73281ff6e5c2534b2af904246e22d0c3f36e5367c5856074f94777f9661",
+          "count": 233
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 100,
       "tag": "0100_parallel_onslaught",
       "sqlHash": "684e45ddac4be55d5241af290ac74bc2645561f7e576edddc7bc2c0f8176dfa6",
-      "structuralHash": "f3af6f2c9823cb98d1406ef3ca5209d6658ea78e7011b8c46f26ec30b400a79c"
+      "structuralHash": "f3af6f2c9823cb98d1406ef3ca5209d6658ea78e7011b8c46f26ec30b400a79c",
+      "categories": {
+        "tables": {
+          "hash": "dc98d1738cc3a16b9ab8de7ee9449ed59caa5d423d46fdcd13fc19ed97b7689c",
+          "count": 252
+        },
+        "columns": {
+          "hash": "9ddd7432c99716fa4ac69ce160b0b2d2ddc18cc962221742c1dce5a4ea5da03b",
+          "count": 3366
+        },
+        "constraints": {
+          "hash": "b29f3d39424463bfbdfbb89e5e67ef0860baf3e62d563c85f4660060a3a68356",
+          "count": 4348
+        },
+        "indexes": {
+          "hash": "53cc4010391157fc7afcf2bac07f390a29d42d7d52525919d2ff47e3b9bbf0a1",
+          "count": 780
+        },
+        "sequences": {
+          "hash": "66adc73281ff6e5c2534b2af904246e22d0c3f36e5367c5856074f94777f9661",
+          "count": 233
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 101,
       "tag": "0101_clear_swordsman",
       "sqlHash": "a50a9b609d3025784476a7e5204027437c3a294465e5fc219dc80e4ef024d023",
-      "structuralHash": "129082f887f5b05ed17c34f4ef07ab268e33d1fe6074d7eb3d54a9fcabb4f8d8"
+      "structuralHash": "129082f887f5b05ed17c34f4ef07ab268e33d1fe6074d7eb3d54a9fcabb4f8d8",
+      "categories": {
+        "tables": {
+          "hash": "dc98d1738cc3a16b9ab8de7ee9449ed59caa5d423d46fdcd13fc19ed97b7689c",
+          "count": 252
+        },
+        "columns": {
+          "hash": "5841ebcb3f88704859f82d7afbfe4f37265a4663146f75a097853b8d795e35a4",
+          "count": 3367
+        },
+        "constraints": {
+          "hash": "cc72012ea31f6da4a1731b3850e1644367936a4c5151c2d6e7e9488a7a273a1a",
+          "count": 4349
+        },
+        "indexes": {
+          "hash": "53cc4010391157fc7afcf2bac07f390a29d42d7d52525919d2ff47e3b9bbf0a1",
+          "count": 780
+        },
+        "sequences": {
+          "hash": "66adc73281ff6e5c2534b2af904246e22d0c3f36e5367c5856074f94777f9661",
+          "count": 233
+        },
+        "triggers": {
+          "hash": "56e55198288b742c16d08fed4beda1e3baed50647940440a010474ab9a79d3da",
+          "count": 65
+        },
+        "functions": {
+          "hash": "0e2f7f5653cce51a09c3796be4aca00d84295faf0bb1ed2371670859e8818ed9",
+          "count": 28
+        }
+      }
     },
     {
       "version": 102,
       "tag": "0102_great_mongu",
       "sqlHash": "cbd55bcdb1a1d1bcf5cef4488059c84134ec67ca7dda986881c8b0bc4c6c2804",
-      "structuralHash": "8c22ae9b31da7d828742ce13eab415c0ed383368abbf5fd68af85f24b7e21f4b"
+      "structuralHash": "8c22ae9b31da7d828742ce13eab415c0ed383368abbf5fd68af85f24b7e21f4b",
+      "categories": {
+        "tables": {
+          "hash": "02460121b6e8147509befaac2fb6962e67c91b9d7f3a910cf9b8f4c77d7a1ee3",
+          "count": 255
+        },
+        "columns": {
+          "hash": "cab2fb386fa93525b28c142437481b33c5510ecf2d81a6b2691f89a383272c94",
+          "count": 3418
+        },
+        "constraints": {
+          "hash": "8ed845624c2466aa2f7916c82449bbb548cc0107a31712a995a2ca4e135ceec1",
+          "count": 4420
+        },
+        "indexes": {
+          "hash": "134f3a968569155ecaea8f9f4c6addaaf249a28334960a1cbee49b4252ac5758",
+          "count": 789
+        },
+        "sequences": {
+          "hash": "58d62d06b907ed90889d2c1a9bf4caa48c102ba0cd8f6a63488ce332f6900665",
+          "count": 236
+        },
+        "triggers": {
+          "hash": "fc967c1fc3d0d62df9ad4a362eec603491702d5a4fa3d38f95a988c851882f55",
+          "count": 68
+        },
+        "functions": {
+          "hash": "d3b4f75ac34fc6b4b6c821d8778203536fef3de7b7560e2aabfb2ee3fc965b1d",
+          "count": 29
+        }
+      }
     },
     {
       "version": 103,
       "tag": "0103_grey_charles_xavier",
       "sqlHash": "d2dc70f2ab203fddc4aab1449ec0c2be16a91512a2aabaa376509bceee3fcb3d",
-      "structuralHash": "ba38516faab2137b43e841a562322569b6c1f0e27fe8f0eb3c3a865e08d4ae69"
+      "structuralHash": "ba38516faab2137b43e841a562322569b6c1f0e27fe8f0eb3c3a865e08d4ae69",
+      "categories": {
+        "tables": {
+          "hash": "02460121b6e8147509befaac2fb6962e67c91b9d7f3a910cf9b8f4c77d7a1ee3",
+          "count": 255
+        },
+        "columns": {
+          "hash": "3a5823399665d9c91beb35f8494a6a38d81163c4bf65468f63170002eb11319c",
+          "count": 3421
+        },
+        "constraints": {
+          "hash": "009d08b640addf7df793d33122ee76d9c44db538ab0c6c421917c7f8abc29966",
+          "count": 4420
+        },
+        "indexes": {
+          "hash": "adc128a12f7a3e43610a41db5f50a2bc810106f32f2b4996405dad27e1d66b87",
+          "count": 789
+        },
+        "sequences": {
+          "hash": "58d62d06b907ed90889d2c1a9bf4caa48c102ba0cd8f6a63488ce332f6900665",
+          "count": 236
+        },
+        "triggers": {
+          "hash": "fc967c1fc3d0d62df9ad4a362eec603491702d5a4fa3d38f95a988c851882f55",
+          "count": 68
+        },
+        "functions": {
+          "hash": "d3b4f75ac34fc6b4b6c821d8778203536fef3de7b7560e2aabfb2ee3fc965b1d",
+          "count": 29
+        }
+      }
     },
     {
       "version": 104,
       "tag": "0104_windy_gabe_jones",
       "sqlHash": "dd39739213456e39384c46267eefab5f32f9293ebd445193c3933e42890e2bd8",
-      "structuralHash": "4136630f57adf3ac0f7e14ce048722126792a4d899611eefe73377bbbd94539e"
+      "structuralHash": "4136630f57adf3ac0f7e14ce048722126792a4d899611eefe73377bbbd94539e",
+      "categories": {
+        "tables": {
+          "hash": "6098d42093fd12d4a3619f172d32e6162347b3515c8d3a1e060ffbb3474b8117",
+          "count": 257
+        },
+        "columns": {
+          "hash": "212952a73274274b0f3892b337b61870ea2b8ec5447c1c4da1cef1742f28b11a",
+          "count": 3461
+        },
+        "constraints": {
+          "hash": "ab2d6940753be0451ac608dff6ba6c85fc9a2edb06a2cf9b49cbea9d885dce06",
+          "count": 4478
+        },
+        "indexes": {
+          "hash": "c1c4e4120282b3bcbf05408a06b19a09bd8b99be003ef90cf3e61d67cfba027a",
+          "count": 798
+        },
+        "sequences": {
+          "hash": "75d51d0852b9e309fd7957e7c98beea1d5846046211d5e8e4f3bb577459ec8d1",
+          "count": 238
+        },
+        "triggers": {
+          "hash": "fc967c1fc3d0d62df9ad4a362eec603491702d5a4fa3d38f95a988c851882f55",
+          "count": 68
+        },
+        "functions": {
+          "hash": "d3b4f75ac34fc6b4b6c821d8778203536fef3de7b7560e2aabfb2ee3fc965b1d",
+          "count": 29
+        }
+      }
     },
     {
       "version": 105,
       "tag": "0105_boring_sentinels",
       "sqlHash": "c5defc427212564141a105db7e8697d6a693d1bd316bfe43e6033d1253372f4d",
-      "structuralHash": "6d38392f0531fa1a59f80acf13bbd1f57feb1f0ce900f2425b3097b3a915a2e6"
+      "structuralHash": "6d38392f0531fa1a59f80acf13bbd1f57feb1f0ce900f2425b3097b3a915a2e6",
+      "categories": {
+        "tables": {
+          "hash": "6098d42093fd12d4a3619f172d32e6162347b3515c8d3a1e060ffbb3474b8117",
+          "count": 257
+        },
+        "columns": {
+          "hash": "d9a3789642c48fea2c7043d81bebb7342797a9b91e3104699aa466c485cf6492",
+          "count": 3463
+        },
+        "constraints": {
+          "hash": "94735f22a9f241b6c0536c66d4e69213ae0779c3e461488d6e4fffe451a3d486",
+          "count": 4480
+        },
+        "indexes": {
+          "hash": "67ced531cfd6a77801f36b41d1cc8ef7618cfaeed2d1937b79967391beb927e8",
+          "count": 800
+        },
+        "sequences": {
+          "hash": "75d51d0852b9e309fd7957e7c98beea1d5846046211d5e8e4f3bb577459ec8d1",
+          "count": 238
+        },
+        "triggers": {
+          "hash": "fc967c1fc3d0d62df9ad4a362eec603491702d5a4fa3d38f95a988c851882f55",
+          "count": 68
+        },
+        "functions": {
+          "hash": "d3b4f75ac34fc6b4b6c821d8778203536fef3de7b7560e2aabfb2ee3fc965b1d",
+          "count": 29
+        }
+      }
     },
     {
       "version": 106,
       "tag": "0106_military_preak",
       "sqlHash": "6778d08120248652d59e9cfb0f4194be11649d3d7c89c8f9defc5fd2597b3458",
-      "structuralHash": "b3a4c31220f876ed2c046824e5d9c8f0d23c90f0dda7e76d139a02d3476adb39"
+      "structuralHash": "b3a4c31220f876ed2c046824e5d9c8f0d23c90f0dda7e76d139a02d3476adb39",
+      "categories": {
+        "tables": {
+          "hash": "6098d42093fd12d4a3619f172d32e6162347b3515c8d3a1e060ffbb3474b8117",
+          "count": 257
+        },
+        "columns": {
+          "hash": "d9a3789642c48fea2c7043d81bebb7342797a9b91e3104699aa466c485cf6492",
+          "count": 3463
+        },
+        "constraints": {
+          "hash": "09bb8ce83c4497214bfd993a93c3363370899631acbd9c969f2449e4ee3dec62",
+          "count": 4481
+        },
+        "indexes": {
+          "hash": "67ced531cfd6a77801f36b41d1cc8ef7618cfaeed2d1937b79967391beb927e8",
+          "count": 800
+        },
+        "sequences": {
+          "hash": "75d51d0852b9e309fd7957e7c98beea1d5846046211d5e8e4f3bb577459ec8d1",
+          "count": 238
+        },
+        "triggers": {
+          "hash": "fc967c1fc3d0d62df9ad4a362eec603491702d5a4fa3d38f95a988c851882f55",
+          "count": 68
+        },
+        "functions": {
+          "hash": "d3b4f75ac34fc6b4b6c821d8778203536fef3de7b7560e2aabfb2ee3fc965b1d",
+          "count": 29
+        }
+      }
     },
     {
       "version": 107,
       "tag": "0107_small_gambit",
       "sqlHash": "9e0e37a3e58b23bb736f461bd2020d1bcf29b848ce788936eff934dcc03470af",
-      "structuralHash": "5495ef14052a269204d3375ced783b2916aa513454acfc17257cad0aa6c0b8ae"
+      "structuralHash": "5495ef14052a269204d3375ced783b2916aa513454acfc17257cad0aa6c0b8ae",
+      "categories": {
+        "tables": {
+          "hash": "49c472a6fc80485be76778744d5002f84104f38d7addff8adb64063d097594c1",
+          "count": 258
+        },
+        "columns": {
+          "hash": "a9f499e455f84d3d9d53af77c15424ba506ce0aacbd6ca40295555cf2ef924a2",
+          "count": 3481
+        },
+        "constraints": {
+          "hash": "3dc344b444cfa33b45b66553f990e68da94cc9314a608a275bb6300d496d99d0",
+          "count": 4508
+        },
+        "indexes": {
+          "hash": "c779e6b0426ad9693c53dbcb64f0ce3d17532cd2b46b6b61ce100cc5cce3e207",
+          "count": 804
+        },
+        "sequences": {
+          "hash": "35cf3562ef68ef38dc73c6af57adcebb0f8dff27b5e9ed22ff6c83b140299873",
+          "count": 239
+        },
+        "triggers": {
+          "hash": "fc967c1fc3d0d62df9ad4a362eec603491702d5a4fa3d38f95a988c851882f55",
+          "count": 68
+        },
+        "functions": {
+          "hash": "d3b4f75ac34fc6b4b6c821d8778203536fef3de7b7560e2aabfb2ee3fc965b1d",
+          "count": 29
+        }
+      }
     },
     {
       "version": 108,
       "tag": "0108_breezy_naoko",
       "sqlHash": "ed4d5a485dac49e420c0c0bbb44a86751d123cc049987c862682ec1834011a73",
-      "structuralHash": "2ee8a770087a142545604f2262b06c33e1b5937d36b1f1ab30d1925c1724620c"
+      "structuralHash": "2ee8a770087a142545604f2262b06c33e1b5937d36b1f1ab30d1925c1724620c",
+      "categories": {
+        "tables": {
+          "hash": "4c46c8147c35362104a2d5c63b0493364c640c3e58a80c2d161e2c92e9966cec",
+          "count": 259
+        },
+        "columns": {
+          "hash": "2db617bd1a7d16438329ff4591faacc17c5186453401fb97248c9c19ac598000",
+          "count": 3504
+        },
+        "constraints": {
+          "hash": "ea424d17002eddaa40f82ea5df8d0643d4076e3b48a966f11016d0dece3efab0",
+          "count": 4544
+        },
+        "indexes": {
+          "hash": "8a0d2d80d5756d1f77dab783e85c2c8c17131fdb26adffe1dbdb83ffd8d0afb1",
+          "count": 808
+        },
+        "sequences": {
+          "hash": "4f54fc11f5a6f8d6fcddc3c5a26e843ae81ec2fca5d6887ebb86829b358673b7",
+          "count": 240
+        },
+        "triggers": {
+          "hash": "fc967c1fc3d0d62df9ad4a362eec603491702d5a4fa3d38f95a988c851882f55",
+          "count": 68
+        },
+        "functions": {
+          "hash": "d3b4f75ac34fc6b4b6c821d8778203536fef3de7b7560e2aabfb2ee3fc965b1d",
+          "count": 29
+        }
+      }
     },
     {
       "version": 109,
       "tag": "0109_open_karen_page",
       "sqlHash": "2bf5daf3c775475bf38d906fb28e5ad2cd409d68ee30d37c4643eca5049bcdf9",
-      "structuralHash": "45422a3d46e9c1342d736124b7fe00d4782e828c2fca47deaf6d2756e4cc1435"
+      "structuralHash": "45422a3d46e9c1342d736124b7fe00d4782e828c2fca47deaf6d2756e4cc1435",
+      "categories": {
+        "tables": {
+          "hash": "6a1dc20ac372270fbe026e04380ff9b801dc12a7d8c5edf39388841593e72390",
+          "count": 260
+        },
+        "columns": {
+          "hash": "92b7bfbcad11e6ac541a741f8db2f780ae52127b98a3fcd97a3bbb29230d64f2",
+          "count": 3523
+        },
+        "constraints": {
+          "hash": "3048ee9316c72491edfdb827523dcb2784d583e41becba707315140be7312c7f",
+          "count": 4575
+        },
+        "indexes": {
+          "hash": "8bf4a73a1c8c83512efd35a93e4a6b5c5951f10019383b486712815933490bb5",
+          "count": 811
+        },
+        "sequences": {
+          "hash": "ee933bfaff918530296fe5e5ba38225c48377ff7ff18fe42337fed5e4eb3663d",
+          "count": 241
+        },
+        "triggers": {
+          "hash": "fc967c1fc3d0d62df9ad4a362eec603491702d5a4fa3d38f95a988c851882f55",
+          "count": 68
+        },
+        "functions": {
+          "hash": "d3b4f75ac34fc6b4b6c821d8778203536fef3de7b7560e2aabfb2ee3fc965b1d",
+          "count": 29
+        }
+      }
     },
     {
       "version": 110,
       "tag": "0110_parched_random",
       "sqlHash": "341f6d3f96c017eacd10027980f770db30ee6619581d9f14b7bac3ddb6f9e445",
-      "structuralHash": "9be53352b43014f3f7139d7e8e8b454592028b9589f8c81382124f07c75fd856"
+      "structuralHash": "9be53352b43014f3f7139d7e8e8b454592028b9589f8c81382124f07c75fd856",
+      "categories": {
+        "tables": {
+          "hash": "9c2febdf6404bf38503e71302cc11837a0e49ffb02443eda1e29f1b195bfdfd1",
+          "count": 261
+        },
+        "columns": {
+          "hash": "9ded200c99e203f999201ad7bd3cd99fc91c77954c26f83284da395f20480f17",
+          "count": 3544
+        },
+        "constraints": {
+          "hash": "3217173d23d4c0a283897d33a513ffbf8637ac3576e80ed5c947d6ac9f355900",
+          "count": 4609
+        },
+        "indexes": {
+          "hash": "7d11badb28edc42c13c0b1a4a3c94925f711571fe84787bc74af597e32dab67e",
+          "count": 814
+        },
+        "sequences": {
+          "hash": "b2f9d1b9c3395dde7d5a1463d1bc83cd8a367da31f5c7f05306a881f68c98c46",
+          "count": 242
+        },
+        "triggers": {
+          "hash": "fc967c1fc3d0d62df9ad4a362eec603491702d5a4fa3d38f95a988c851882f55",
+          "count": 68
+        },
+        "functions": {
+          "hash": "d3b4f75ac34fc6b4b6c821d8778203536fef3de7b7560e2aabfb2ee3fc965b1d",
+          "count": 29
+        }
+      }
     },
     {
       "version": 111,
       "tag": "0111_immediate_account_access",
       "sqlHash": "f00952d3b9250fb10b8713ab83323592b3a9edf12525765b81f68cfc4225cfa0",
-      "structuralHash": "9be53352b43014f3f7139d7e8e8b454592028b9589f8c81382124f07c75fd856"
+      "structuralHash": "9be53352b43014f3f7139d7e8e8b454592028b9589f8c81382124f07c75fd856",
+      "categories": {
+        "tables": {
+          "hash": "9c2febdf6404bf38503e71302cc11837a0e49ffb02443eda1e29f1b195bfdfd1",
+          "count": 261
+        },
+        "columns": {
+          "hash": "9ded200c99e203f999201ad7bd3cd99fc91c77954c26f83284da395f20480f17",
+          "count": 3544
+        },
+        "constraints": {
+          "hash": "3217173d23d4c0a283897d33a513ffbf8637ac3576e80ed5c947d6ac9f355900",
+          "count": 4609
+        },
+        "indexes": {
+          "hash": "7d11badb28edc42c13c0b1a4a3c94925f711571fe84787bc74af597e32dab67e",
+          "count": 814
+        },
+        "sequences": {
+          "hash": "b2f9d1b9c3395dde7d5a1463d1bc83cd8a367da31f5c7f05306a881f68c98c46",
+          "count": 242
+        },
+        "triggers": {
+          "hash": "fc967c1fc3d0d62df9ad4a362eec603491702d5a4fa3d38f95a988c851882f55",
+          "count": 68
+        },
+        "functions": {
+          "hash": "d3b4f75ac34fc6b4b6c821d8778203536fef3de7b7560e2aabfb2ee3fc965b1d",
+          "count": 29
+        }
+      }
     },
     {
       "version": 112,
       "tag": "0112_known_saracen",
       "sqlHash": "172b5887f78349583f67110212c4d8d83ef5c011d125d3464fba161e533791dd",
-      "structuralHash": "6595a7882b5d46b9eda1ee1f605b8a32ed24c413895af583e157f409112ed68a"
+      "structuralHash": "6595a7882b5d46b9eda1ee1f605b8a32ed24c413895af583e157f409112ed68a",
+      "categories": {
+        "tables": {
+          "hash": "937074f5e728cecf95882227a6fb4fb9a98ce0ecdb5a736446c6901e35410bcb",
+          "count": 263
+        },
+        "columns": {
+          "hash": "5d947707a9959d596044e60a6891882068f07d5fd354e9cf9b8b39aacf2cf888",
+          "count": 3593
+        },
+        "constraints": {
+          "hash": "7a44947ebc81609ca6c10129f9e0128d7ff6fc8bf3cce175bd7fc6852e1506db",
+          "count": 4668
+        },
+        "indexes": {
+          "hash": "33e4b15933554edcfe74466ed4d89e71d331d824652821ad0d5c3b7593808f8b",
+          "count": 824
+        },
+        "sequences": {
+          "hash": "db4f78ef32050fc6f39ddf66ede1e32aaa70e2c2ec59ab1736be54bd67845b0a",
+          "count": 244
+        },
+        "triggers": {
+          "hash": "fc967c1fc3d0d62df9ad4a362eec603491702d5a4fa3d38f95a988c851882f55",
+          "count": 68
+        },
+        "functions": {
+          "hash": "d3b4f75ac34fc6b4b6c821d8778203536fef3de7b7560e2aabfb2ee3fc965b1d",
+          "count": 29
+        }
+      }
     },
     {
       "version": 113,
       "tag": "0113_violet_moira_mactaggert",
       "sqlHash": "c1e3f28411f4c3d75b0720e833f631aa64210c41a9ca615e1ae6d234b3af039e",
-      "structuralHash": "d19580b15c77c795f3b537a45b9cdc8692e5ce0c9457957c5de248ad39091643"
+      "structuralHash": "d19580b15c77c795f3b537a45b9cdc8692e5ce0c9457957c5de248ad39091643",
+      "categories": {
+        "tables": {
+          "hash": "937074f5e728cecf95882227a6fb4fb9a98ce0ecdb5a736446c6901e35410bcb",
+          "count": 263
+        },
+        "columns": {
+          "hash": "5d947707a9959d596044e60a6891882068f07d5fd354e9cf9b8b39aacf2cf888",
+          "count": 3593
+        },
+        "constraints": {
+          "hash": "7a44947ebc81609ca6c10129f9e0128d7ff6fc8bf3cce175bd7fc6852e1506db",
+          "count": 4668
+        },
+        "indexes": {
+          "hash": "3d53402f8e622dd7b374e13f4e8374bc2cf76c4e0871b192c42cc9b034fb23fa",
+          "count": 824
+        },
+        "sequences": {
+          "hash": "db4f78ef32050fc6f39ddf66ede1e32aaa70e2c2ec59ab1736be54bd67845b0a",
+          "count": 244
+        },
+        "triggers": {
+          "hash": "fc967c1fc3d0d62df9ad4a362eec603491702d5a4fa3d38f95a988c851882f55",
+          "count": 68
+        },
+        "functions": {
+          "hash": "d3b4f75ac34fc6b4b6c821d8778203536fef3de7b7560e2aabfb2ee3fc965b1d",
+          "count": 29
+        }
+      }
     },
     {
       "version": 114,
       "tag": "0114_amusing_krista_starr",
       "sqlHash": "d15b0b6b245d6a54b9156f1d255461c157e02faa034b2eaa3fa1b10d5347e4f9",
-      "structuralHash": "d19580b15c77c795f3b537a45b9cdc8692e5ce0c9457957c5de248ad39091643"
+      "structuralHash": "d19580b15c77c795f3b537a45b9cdc8692e5ce0c9457957c5de248ad39091643",
+      "categories": {
+        "tables": {
+          "hash": "937074f5e728cecf95882227a6fb4fb9a98ce0ecdb5a736446c6901e35410bcb",
+          "count": 263
+        },
+        "columns": {
+          "hash": "5d947707a9959d596044e60a6891882068f07d5fd354e9cf9b8b39aacf2cf888",
+          "count": 3593
+        },
+        "constraints": {
+          "hash": "7a44947ebc81609ca6c10129f9e0128d7ff6fc8bf3cce175bd7fc6852e1506db",
+          "count": 4668
+        },
+        "indexes": {
+          "hash": "3d53402f8e622dd7b374e13f4e8374bc2cf76c4e0871b192c42cc9b034fb23fa",
+          "count": 824
+        },
+        "sequences": {
+          "hash": "db4f78ef32050fc6f39ddf66ede1e32aaa70e2c2ec59ab1736be54bd67845b0a",
+          "count": 244
+        },
+        "triggers": {
+          "hash": "fc967c1fc3d0d62df9ad4a362eec603491702d5a4fa3d38f95a988c851882f55",
+          "count": 68
+        },
+        "functions": {
+          "hash": "d3b4f75ac34fc6b4b6c821d8778203536fef3de7b7560e2aabfb2ee3fc965b1d",
+          "count": 29
+        }
+      }
     },
     {
       "version": 115,
       "tag": "0115_skinny_zombie",
       "sqlHash": "962d312682be39000999c732c2d8cee9c216f568c9777094260c700b5141d012",
-      "structuralHash": "9d3552598e3782a48c06c975c272e9cc8e1b01cf8da389f12ef1e6e9953a9300"
+      "structuralHash": "9d3552598e3782a48c06c975c272e9cc8e1b01cf8da389f12ef1e6e9953a9300",
+      "categories": {
+        "tables": {
+          "hash": "937074f5e728cecf95882227a6fb4fb9a98ce0ecdb5a736446c6901e35410bcb",
+          "count": 263
+        },
+        "columns": {
+          "hash": "5d947707a9959d596044e60a6891882068f07d5fd354e9cf9b8b39aacf2cf888",
+          "count": 3593
+        },
+        "constraints": {
+          "hash": "7a44947ebc81609ca6c10129f9e0128d7ff6fc8bf3cce175bd7fc6852e1506db",
+          "count": 4668
+        },
+        "indexes": {
+          "hash": "fdbf7047c39724ea14a7c26cbcced1d219deb045d8037a783518adbdb7cb32b8",
+          "count": 823
+        },
+        "sequences": {
+          "hash": "db4f78ef32050fc6f39ddf66ede1e32aaa70e2c2ec59ab1736be54bd67845b0a",
+          "count": 244
+        },
+        "triggers": {
+          "hash": "fc967c1fc3d0d62df9ad4a362eec603491702d5a4fa3d38f95a988c851882f55",
+          "count": 68
+        },
+        "functions": {
+          "hash": "d3b4f75ac34fc6b4b6c821d8778203536fef3de7b7560e2aabfb2ee3fc965b1d",
+          "count": 29
+        }
+      }
     },
     {
       "version": 116,
       "tag": "0116_majestic_prowler",
       "sqlHash": "38d966663311c2b61922bb7cfc1a80df5af4e718b9fa3851ed3f65e681e63118",
-      "structuralHash": "b3cc5b6c981b90a9fb1286a29db633587034e2e44be2bb256f91a258a791f814"
+      "structuralHash": "b3cc5b6c981b90a9fb1286a29db633587034e2e44be2bb256f91a258a791f814",
+      "categories": {
+        "tables": {
+          "hash": "82e544e82055f6aa110cc039631528c994aff4ce8036d3a05f54fe8792b51bfe",
+          "count": 265
+        },
+        "columns": {
+          "hash": "1f353d18f43b6aac690d312885ac7f0b6f3c8beb1ff7e0361787b5f6e3805dd9",
+          "count": 3623
+        },
+        "constraints": {
+          "hash": "c0d3dcc79d869eede1dc59869810a871e26b6de329d3fc38653f1388d13e020c",
+          "count": 4708
+        },
+        "indexes": {
+          "hash": "57d6dcd3917b5abdd900fd1ee860681444fde7e160ff28e73413daab1904544d",
+          "count": 830
+        },
+        "sequences": {
+          "hash": "e8be0f2fdc5ffa5d892d9e2c9191e329ed26635b0f08cb882f1e553474395a62",
+          "count": 246
+        },
+        "triggers": {
+          "hash": "fc967c1fc3d0d62df9ad4a362eec603491702d5a4fa3d38f95a988c851882f55",
+          "count": 68
+        },
+        "functions": {
+          "hash": "d3b4f75ac34fc6b4b6c821d8778203536fef3de7b7560e2aabfb2ee3fc965b1d",
+          "count": 29
+        }
+      }
     },
     {
       "version": 117,
       "tag": "0117_overconfident_tyger_tiger",
       "sqlHash": "40e6994cb9012129f36cb9bf4aea2765d7eaa989b254ca64c12ee868348b7a32",
-      "structuralHash": "0d83f977320a015bc572b09cab2f45612e9c1abfb81ffe7372d625ece8e73eb7"
+      "structuralHash": "0d83f977320a015bc572b09cab2f45612e9c1abfb81ffe7372d625ece8e73eb7",
+      "categories": {
+        "tables": {
+          "hash": "e90582d88fd144338abe2f751358d58062a663dfe2a87b4d9cc14c4885217f54",
+          "count": 266
+        },
+        "columns": {
+          "hash": "6038d91d3f57fc6c9d87088de20108a012719aa3bf051c20821baabe99131e1c",
+          "count": 3656
+        },
+        "constraints": {
+          "hash": "a7ed2b304a555089155a3426491c77934661e355cc8667138148977d7f70963c",
+          "count": 4749
+        },
+        "indexes": {
+          "hash": "bfc10e6f55089f2d74002d220923f4ece3b10468e7f15809b12150f82d4a58a4",
+          "count": 835
+        },
+        "sequences": {
+          "hash": "9f05c395cbbce6a9b8378b3761be8c23d7c9df830db856e13f639c7571b98463",
+          "count": 247
+        },
+        "triggers": {
+          "hash": "fc967c1fc3d0d62df9ad4a362eec603491702d5a4fa3d38f95a988c851882f55",
+          "count": 68
+        },
+        "functions": {
+          "hash": "d3b4f75ac34fc6b4b6c821d8778203536fef3de7b7560e2aabfb2ee3fc965b1d",
+          "count": 29
+        }
+      }
     },
     {
       "version": 118,
       "tag": "0118_classy_ronan",
       "sqlHash": "5f33b9217ce97f4f6274ac98b9967c8c3c1fd0c6db293eb8e12a2e1b5b0d5569",
-      "structuralHash": "bc98ba23c396e6a14d384c406083b8dc455895e64a781ce8922bf9c9ced2c902"
+      "structuralHash": "bc98ba23c396e6a14d384c406083b8dc455895e64a781ce8922bf9c9ced2c902",
+      "categories": {
+        "tables": {
+          "hash": "cc8d402096eeb80a4afa5b90b25d015148e273584c9a5410b0185f9b63388776",
+          "count": 268
+        },
+        "columns": {
+          "hash": "4b7f7eb60f03943e7d9966ebdccc4ce92c82c6f3e2d4dfba28e95bcba543d916",
+          "count": 3677
+        },
+        "constraints": {
+          "hash": "d6ca22d4e93b533a4cc69fd2ea0a503573c938e142e4dc335a9ed3792560f026",
+          "count": 4776
+        },
+        "indexes": {
+          "hash": "8c8fc7b13faa2ab929b66dceb3b56b8cf1824cfb17552fd37c723e716a535aa7",
+          "count": 841
+        },
+        "sequences": {
+          "hash": "9e3e3c8de726732a4dfb741caf74f6569c120cadf461c8631fd472c42e4a63cc",
+          "count": 249
+        },
+        "triggers": {
+          "hash": "fc967c1fc3d0d62df9ad4a362eec603491702d5a4fa3d38f95a988c851882f55",
+          "count": 68
+        },
+        "functions": {
+          "hash": "d3b4f75ac34fc6b4b6c821d8778203536fef3de7b7560e2aabfb2ee3fc965b1d",
+          "count": 29
+        }
+      }
     },
     {
       "version": 119,
       "tag": "0119_company_profile",
       "sqlHash": "75222ed3d3930d0dd0bd40d9ccbd49a53a6a070385e51a078b13c70fb510ad49",
-      "structuralHash": "da5baa635e62ab7d23f1d256c0927186e09613e7ce5c58ce9cb2a976c9462550"
+      "structuralHash": "da5baa635e62ab7d23f1d256c0927186e09613e7ce5c58ce9cb2a976c9462550",
+      "categories": {
+        "tables": {
+          "hash": "5ab6707f1eccb413434e7d4f4a607795a43b57d6e35a3b6614d58919f8ad0c98",
+          "count": 269
+        },
+        "columns": {
+          "hash": "5bdeebb5fa2dc7c53aef538326c715299f1ead0c2541808f4163d03d2ff66baf",
+          "count": 3690
+        },
+        "constraints": {
+          "hash": "1b38624663377ccc2aa6d18ae2411168c4faec859538ff1444b2bbaa6443a313",
+          "count": 4791
+        },
+        "indexes": {
+          "hash": "14637aa248a6f91d8e02784db7f3567b69075e165b7258fc621388741c44d85b",
+          "count": 842
+        },
+        "sequences": {
+          "hash": "9e3e3c8de726732a4dfb741caf74f6569c120cadf461c8631fd472c42e4a63cc",
+          "count": 249
+        },
+        "triggers": {
+          "hash": "fc967c1fc3d0d62df9ad4a362eec603491702d5a4fa3d38f95a988c851882f55",
+          "count": 68
+        },
+        "functions": {
+          "hash": "d3b4f75ac34fc6b4b6c821d8778203536fef3de7b7560e2aabfb2ee3fc965b1d",
+          "count": 29
+        }
+      }
     }
   ],
   "ownedTables": [
@@ -1027,6 +4627,26 @@ export const DEMO_SCHEMA_LINEAGE = {
   "assetHashes": {
     "erp-system-schema.sql": "e82d4b9fa613eb68774a23e36675a835f56af90b69b243ea73d3cfc263501520",
     "erp-system-migrations.sql": "81accea19756edac97235f164c24f8947ebd782be810f0efa8580ec97ba41877"
+  },
+  "legacyRoleRepair": {
+    "absentSinceVersion": 73,
+    "index": {
+      "table": "role",
+      "name": "uq_role_master_name",
+      "definition": "CREATE UNIQUE INDEX uq_role_master_name ON public.role USING btree (master_fn, name)",
+      "valid": true,
+      "ready": true,
+      "immediate": true
+    }
+  },
+  "historicalCompanyProfile": {
+    "sourceCommit": "4f9234d05d9983bd416f74ab4bdee6f95b64e8bd",
+    "sourceTag": "0118_lucky_randall",
+    "sourceSqlHash": "75222ed3d3930d0dd0bd40d9ccbd49a53a6a070385e51a078b13c70fb510ad49",
+    "marker": 118,
+    "structuralHash": "b1dbebe5d902670c840af6c215762a7bee150bb39ff32469831e24cfd9096a76",
+    "targetVersion": 119,
+    "sql": "-- 0119_company_profile\nCREATE TABLE IF NOT EXISTS \"company_profile\" (\n\t\"master_fn\" text NOT NULL,\n\t\"company_fn\" text NOT NULL,\n\t\"registration_no\" text DEFAULT '' NOT NULL,\n\t\"tax_no\" text DEFAULT '' NOT NULL,\n\t\"address_line_1\" text DEFAULT '' NOT NULL,\n\t\"address_line_2\" text DEFAULT '' NOT NULL,\n\t\"city\" text DEFAULT '' NOT NULL,\n\t\"region\" text DEFAULT '' NOT NULL,\n\t\"postal_code\" text DEFAULT '' NOT NULL,\n\t\"logo_data_url\" text,\n\t\"version\" integer DEFAULT 1 NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"updated_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\tCONSTRAINT \"company_profile_master_fn_company_fn_pk\" PRIMARY KEY(\"master_fn\",\"company_fn\"),\n\tCONSTRAINT \"ck_company_profile_version\" CHECK (\"company_profile\".\"version\" > 0)\n);\n\n--> statement-breakpoint\nDO $$ BEGIN\n ALTER TABLE \"company_profile\" ADD CONSTRAINT \"fk_company_profile_company\" FOREIGN KEY (\"master_fn\",\"company_fn\") REFERENCES \"public\".\"company\"(\"master_fn\",\"company_fn\") ON DELETE no action ON UPDATE no action;\nEXCEPTION WHEN duplicate_object THEN null;\nEND $$;"
   },
   "hrRepair": {
     "fromVersion": 117,

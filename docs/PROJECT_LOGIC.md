@@ -576,7 +576,7 @@ reviewed receipt selection atomically, including newly matching rows. These are
 implementation requirements, not changes to the existing Pack command or domain
 contract. Existing key replay and current-visibility checks remain authoritative.
 
-## Static Demo startup identity and diagnostics — TASK-258 candidate
+## Static Demo startup identity and diagnostics — TASK-258
 
 The browser Demo transport validates canonical schema-prefix identities and
 source SQL hashes before migration, with a single transaction for ordered
@@ -588,11 +588,37 @@ identity drift fails closed without data/authority repair. The existing28 startu
 unique-arbiter validator remains separately responsible for its narrow additive
 ordinary-index contract. Additional unrelated tables/functions are preserved.
 
+Early-v73 Demo previews could retain the obsolete `uq_role_master_name` index.
+An untracked known prefix at73 or later can normalize only its exact canonical
+role-index definition when metadata-only omission yields that prefix's complete
+canonical hash (or the already-evidenced117/118 collision). Recognition precedes
+DDL; normalization, ordered upgrade and identity commit remain atomic. A recorded
+identity, changed/constraint-backed index or any additional owned-object drift
+does not receive this normalization. A same-name index on an unrelated extension
+is preserved; the late adapter no longer drops an index merely by global name.
+
+Historical CompanyProfile source `4f9234d05d9983bd416f74ab4bdee6f95b64e8bd`
+is now present in main history. Its0–117 migration bytes match current canonical
+source and historical0118 matches current0119 exactly. Generated compatibility
+binds the source SQL digest and complete base117 contract, then recognizes only
+exact historical117+Profile118 metadata with no recorded identity, or exact
+canonical119 metadata with marker118 and no identity/canonicalHR118 identity.
+The latter is the verified d29 path that treated Profile as an unrelated extension.
+Missing HR118 DDL (only when required), idempotent canonicalProfile119 DDL, marker
+and identities commit atomically after full119/HR-index validation. Profile values,
+version and FK plus tenant/staff/revoked authority remain unchanged. Other markers,
+contradictory identities and near-matching/partial/default/FK/owned-object drift
+remain fail closed. None of these source shapes identifies the owner's actual DB.
+
 Source entry points: `src/demo/migrationIdentity.ts`, `schemaLineage.ts`, the
 generated `schemaLineage.generated.ts`, and `scripts/generate-demo-schema-lineage.ts`;
 `web/public/assets/erp-system-data-adapter.js` orchestrates the classic adapter
 through `web/src/erp-demo-runtime-impl.ts`. `demo-startup-diagnostics.js` projects
-only safe source identifiers and readiness/build metadata. Failed wizard/login
+only safe source identifiers and readiness/build metadata. Unknown lineage also
+projects the numeric marker, canonical-match versions, bounded category counts
+and SHA-256 digests, identity count and a three-value obsolete-index eligibility
+enum. Actual object names, defaults, SQL/function definitions and ERP rows never
+enter the diagnostic payload. Failed wizard/login
 input and stored session/setup flags survive diagnosis; immediate/late failed
 signed-in startup is locked behind a diagnostic-only shell. No automatic reset,
 deduplication, record edit, grant activation or third-party diagnostic upload occurs.

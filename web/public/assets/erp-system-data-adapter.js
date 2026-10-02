@@ -370,12 +370,10 @@
       && accessColumnSignature && Number(accessColumnSignature.n) === 3
       && commercialLineSignature && Number(commercialLineSignature.n) === 6;
     if (currentVersion >= DEMO_SCHEMA_VERSION && hasCurrentSignature) {
-      /* Repair databases upgraded by an early v73 preview that retained the
-         obsolete group-wide role-name index. Company roles must be independent. */
-      await db.exec(
-        'drop index if exists "uq_role_master_name";' +
-        'create unique index if not exists "uq_role_company_name" ' +
-        'on "role" ("master_fn","company_fn","name");');
+      /* Identity preflight performs the bounded early-v73 normalization only
+         after exact role-index and complete canonical-contract recognition.
+         The separate startup-index validator validates/repairs company roles.
+         Never drop an unrelated extension index merely by its global name. */
       return false;
     }
 

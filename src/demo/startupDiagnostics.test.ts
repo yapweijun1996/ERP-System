@@ -37,4 +37,19 @@ describe('safe visible Demo startup diagnostics',()=>{
   it('is absent from production/API mode',()=>{
     expect(install('api').window.ErpDemoDiagnostics).toBeUndefined();
   });
+  it('copies only bounded metadata digests/counts for an unknown lineage, never names, definitions or defaults',()=>{
+    const {window,diagnostics}=install();
+    const lineage={marker:118,structuralHash:'a'.repeat(64),expectedStructuralHash:'b'.repeat(64),matchedVersion:null,identityCount:0,legacyRoleIndex:'absent',normalizedMatchedVersion:null,
+      categories:[{name:'columns',hash:'c'.repeat(64),count:5000,expectedHash:'d'.repeat(64),expectedCount:4999,definition:'private default literal'},{name:'private_custom_table',hash:'e'.repeat(64),count:1}],privateRow:'private row',storage:'private storage'};
+    window.__ERP_DEMO_FAILURE__=diagnostics.failure({code:'demo_schema_lineage_unknown',demoBootStatement:'VALIDATE DEMO SCHEMA LINEAGE',demoBootLineage:lineage},'Checking database compatibility');
+    const result=diagnostics.snapshot();
+    expect(result.lineage).toEqual({marker:118,structuralHash:'a'.repeat(64),expectedStructuralHash:'b'.repeat(64),matchedVersion:null,identityCount:0,legacyRoleIndex:'absent',normalizedMatchedVersion:null,categories:[{name:'columns',hash:'c'.repeat(64),count:5000,expectedHash:'d'.repeat(64),expectedCount:4999}]});
+    expect(diagnostics.serialize()).not.toMatch(/private|storage|definition|default/);
+    expect(diagnostics.failure({code:'42P10',demoBootStatement:'erp-system-demo-sales-credit.sql',demoBootLineage:lineage},'Loading pricing fixtures')).not.toHaveProperty('lineage');
+  });
+  it('rejects malformed, unbounded or arbitrary diagnostic evidence',()=>{
+    const {diagnostics}=install();
+    for(const marker of [-1,1000001,118.5,'private marker'])expect(diagnostics.failure({code:'demo_schema_lineage_unknown',demoBootStatement:'VALIDATE DEMO SCHEMA LINEAGE',demoBootLineage:{marker,structuralHash:'a'.repeat(64)}},'Checking database compatibility')).not.toHaveProperty('lineage');
+    expect(diagnostics.failure({code:'demo_schema_lineage_unknown',demoBootStatement:'VALIDATE DEMO SCHEMA LINEAGE',demoBootLineage:{marker:118,structuralHash:'private SQL'}},'Checking database compatibility')).not.toHaveProperty('lineage');
+  });
 });

@@ -10,9 +10,11 @@ const schema=readFileSync('web/public/db/erp-system-schema.sql','utf8');
 const latestIdentity=DEMO_SCHEMA_LINEAGE.identities.at(-1)!;
 const hrIdentity=DEMO_SCHEMA_LINEAGE.identities.find(identity=>identity.version===118)!;
 const priorSchema=schema.slice(0,schema.indexOf('-- 0118_classy_ronan'));
-async function fixture(version=118,current=false) {
+const profileSql=readFileSync('drizzle/0119_company_profile.sql','utf8');
+const hrSchema=schema.slice(0,schema.indexOf('-- 0119_company_profile'));
+async function fixture(version=118,current: boolean|'hr'=false) {
   const db=new PGlite();
-  await db.exec(current?schema:priorSchema);
+  await db.exec(current==='hr'?hrSchema:current?schema:priorSchema);
   await db.exec('create table "_erp_demo_migration"(version integer primary key,applied_at timestamptz not null default now())');
   await db.query('insert into "_erp_demo_migration"(version) values($1)',[version]);
   await db.exec(`
@@ -27,16 +29,30 @@ async function fixture(version=118,current=false) {
     create table retained_custom_note(id integer primary key,note text);
     insert into retained_custom_note values(1,'Fictional unrelated retained extension');
   `);
+  if((await db.query<{n:number}>("select count(*)::int as n from pg_tables where schemaname='public' and tablename='company_profile'")).rows[0].n)await db.query("insert into company_profile(master_fn,company_fn,registration_no,tax_no,address_line_1) values('M-FIXTURE','C-FIXTURE',$1,$2,$3)",['FICTIONAL-REG','FICTIONAL-TAX','Fictional preserved profile address']);
   return db;
 }
 async function preserved(db:PGlite) {
   const result:Record<string,unknown>={};
   for(const table of ['master','company','app_user','role','user_company_role','retained_custom_note'])result[table]=(await db.query('select * from '+table+' order by 1')).rows;
   result.employee=(await db.query('select id,master_fn,company_fn,employee_no,full_name,department,job_title from employee order by id')).rows;
+  result.company_profile=(await db.query<{n:number}>("select count(*)::int as n from pg_tables where schemaname='public' and tablename='company_profile'")).rows[0].n?(await db.query('select * from company_profile order by master_fn,company_fn')).rows:[];
   return result;
 }
 async function identityTable(db:PGlite) {return (await db.query<{n:number}>("select count(*)::int as n from pg_tables where schemaname='public' and tablename='_erp_demo_schema_identity'")).rows[0].n;}
 async function structure(db:PGlite) {return demoStructuralHash(await readDemoStructuralContract(db,DEMO_SCHEMA_LINEAGE.ownedTables,DEMO_SCHEMA_LINEAGE.ownedFunctions));}
+async function historicalProfileFixture(modern=false,tracked=false) {
+  const db=await fixture();
+  await db.exec(profileSql);
+  await db.query("insert into company_profile(master_fn,company_fn,registration_no,tax_no,address_line_1,version) values('M-FIXTURE','C-FIXTURE',$1,$2,$3,7)",['FICTIONAL-REG','FICTIONAL-TAX','Fictional historical profile address']);
+  if(modern)await db.exec(DEMO_SCHEMA_LINEAGE.hrRepair.sql);
+  if(tracked){
+    await db.exec('create table "_erp_demo_schema_identity"(version integer primary key,tag text not null,sql_hash text not null,applied_at timestamptz not null default now())');
+    await db.query('insert into "_erp_demo_schema_identity"(version,tag,sql_hash) values(118,$1,$2)',[hrIdentity.tag,hrIdentity.sqlHash]);
+  }
+  return db;
+}
+async function profileForeignKey(db:PGlite){return (await db.query("select pg_get_constraintdef(oid) as definition,convalidated as validated from pg_constraint where conname='fk_company_profile_company'")).rows;}
 
 function orderedRunner() {
   const adapter=readFileSync('web/public/assets/erp-system-data-adapter.js','utf8');
@@ -48,6 +64,132 @@ function orderedRunner() {
 }
 
 describe('identity-aware bounded retained Demo compatibility',()=>{
+  it.each(['historical118','historical118 plus exact legacy role','d29-repaired tracked118','advanced untracked118'])('upgrades exact source-backed CompanyProfile lineage %s without rewriting profile values/version/FK or authority',async scenario=>{
+    const db=await historicalProfileFixture(scenario.includes('repaired')||scenario.includes('advanced'),scenario.includes('tracked')&&!scenario.includes('untracked'));
+    try{
+      if(scenario.includes('legacy role'))await db.exec(DEMO_SCHEMA_LINEAGE.legacyRoleRepair.index.definition);
+      const before=await preserved(db),fkBefore=await profileForeignKey(db);
+      const identityBefore=await identityTable(db)?(await db.query('select * from "_erp_demo_schema_identity" order by version')).rows:[];
+      expect(await ensureDemoMigrationIdentity(db)).toEqual({repaired:true,version:119});
+      expect(await preserved(db)).toEqual(before);
+      expect(await profileForeignKey(db)).toEqual(fkBefore);
+      expect(await structure(db)).toBe(latestIdentity.structuralHash);
+      expect((await db.query('select version,tag from "_erp_demo_schema_identity" order by version')).rows).toEqual([{version:118,tag:hrIdentity.tag},{version:119,tag:'0119_company_profile'}]);
+      if(identityBefore.length)expect((await db.query('select * from "_erp_demo_schema_identity" where version=118')).rows).toEqual(identityBefore);
+      expect((await db.query('select max(version)::int as version from "_erp_demo_migration"')).rows).toEqual([{version:119}]);
+      await upgradeDemoSchema(db,orderedRunner());
+      expect(await ensureDemoMigrationIdentity(db)).toEqual({repaired:false,version:119});
+      expect(await preserved(db)).toEqual(before);
+      expect(await profileForeignKey(db)).toEqual(fkBefore);
+    }finally{await db.close();}
+  });
+  it.each(['changed profile default','changed profile FK','extra owned drift','partial HR','contradictory HR identity','historical tag recorded','future marker','wrong119 marker'])('rejects CompanyProfile near-match %s before schema/marker/identity changes',async scenario=>{
+    const db=await historicalProfileFixture(false,scenario==='contradictory HR identity');
+    try{
+      const changes:Record<string,string>={
+        'changed profile default':"alter table company_profile alter column registration_no set default 'fictional private schema literal'",
+        'changed profile FK':'alter table company_profile drop constraint fk_company_profile_company;alter table company_profile add constraint fk_company_profile_company foreign key(master_fn,company_fn) references company(master_fn,company_fn) on delete cascade',
+        'extra owned drift':'alter table employee add column unknown_retained_value text',
+        'partial HR':'create table hr_business_unit(id integer primary key)',
+        'contradictory HR identity':'select 1',
+        'historical tag recorded':'create table "_erp_demo_schema_identity"(version integer primary key,tag text not null,sql_hash text not null,applied_at timestamptz not null default now())',
+        'future marker':'insert into "_erp_demo_migration"(version) values(120)',
+        'wrong119 marker':'insert into "_erp_demo_migration"(version) values(119)',
+      };
+      await db.exec(changes[scenario]);
+      if(scenario==='historical tag recorded')await db.query('insert into "_erp_demo_schema_identity"(version,tag,sql_hash) values(118,$1,$2)',[DEMO_SCHEMA_LINEAGE.historicalCompanyProfile.sourceTag,DEMO_SCHEMA_LINEAGE.historicalCompanyProfile.sourceSqlHash]);
+      const before=await preserved(db),metadataBefore=await structure(db),markerBefore=(await db.query('select * from "_erp_demo_migration" order by version')).rows;
+      const identityBefore=await identityTable(db)?(await db.query('select * from "_erp_demo_schema_identity" order by version')).rows:[];
+      await expect(upgradeDemoSchema(db,orderedRunner())).rejects.toMatchObject({code:scenario.includes('identity')||scenario==='historical tag recorded'?'demo_schema_lineage_mismatch':'demo_schema_lineage_unknown'});
+      expect(await preserved(db)).toEqual(before);
+      expect(await structure(db)).toBe(metadataBefore);
+      expect((await db.query('select * from "_erp_demo_migration" order by version')).rows).toEqual(markerBefore);
+      expect(await identityTable(db)?(await db.query('select * from "_erp_demo_schema_identity" order by version')).rows:[]).toEqual(identityBefore);
+    }finally{await db.close();}
+  });
+  it.each(['historical HR interruption','119 marker interruption','119 identity interruption'])('rolls back every known CompanyProfile repair step on %s and retries preserving profile/authority',async scenario=>{
+    const db=await historicalProfileFixture();
+    try{
+      if(scenario==='historical HR interruption')await db.exec(DEMO_SCHEMA_LINEAGE.legacyRoleRepair.index.definition);
+      const before=await preserved(db),metadataBefore=await structure(db),fkBefore=await profileForeignKey(db);
+      const interrupted={transaction:async(callback:(tx:Transaction)=>Promise<unknown>)=>db.transaction(async tx=>callback(new Proxy(tx,{get(target,key){
+        if(key==='exec')return async(sql:string)=>{const result=await target.exec(sql);if(scenario==='historical HR interruption'&&sql===DEMO_SCHEMA_LINEAGE.hrRepair.sql)throw new Error('fictional historical HR interruption');return result;};
+        if(key==='query')return async(sql:string,parameters?:unknown[])=>{const result=await target.query(sql,parameters);if((scenario==='119 marker interruption'&&sql.startsWith('insert into "_erp_demo_migration"'))||(scenario==='119 identity interruption'&&sql.startsWith('insert into "_erp_demo_schema_identity"')&&parameters?.[0]===119))throw new Error('fictional interrupted historical repair');return result;};
+        const value=Reflect.get(target,key);return typeof value==='function'?value.bind(target):value;
+      }})))} as unknown as PGlite;
+      await expect(ensureDemoMigrationIdentity(interrupted)).rejects.toThrow(/fictional|demo_schema_repair_failed/);
+      expect(await preserved(db)).toEqual(before);
+      expect(await structure(db)).toBe(metadataBefore);
+      expect(await profileForeignKey(db)).toEqual(fkBefore);
+      expect((await db.query('select max(version)::int as version from "_erp_demo_migration"')).rows).toEqual([{version:118}]);
+      expect(await identityTable(db)).toBe(0);
+      await upgradeDemoSchema(db,orderedRunner());
+      expect(await preserved(db)).toEqual(before);
+      expect(await profileForeignKey(db)).toEqual(fkBefore);
+    }finally{await db.close();}
+  });
+  it.each([['current119',latestIdentity.version,true],['canonical118',118,'hr'],['genuine117',117,false],['bare118 actual117',118,false]] as const)('normalizes only the exact untracked obsolete role index for %s and preserves records/authority',async(_name,version,current)=>{
+    const db=await fixture(version,current);
+    try{
+      await db.exec(DEMO_SCHEMA_LINEAGE.legacyRoleRepair.index.definition);
+      const before=await preserved(db);
+      await upgradeDemoSchema(db,orderedRunner());
+      expect(await preserved(db)).toEqual(before);
+      expect(await structure(db)).toBe(DEMO_SCHEMA_LINEAGE.identities.at(-1)!.structuralHash);
+      expect((await db.query("select indexname from pg_indexes where schemaname='public' and indexname='uq_role_master_name'")).rows).toEqual([]);
+      expect((await db.query('select version,tag from "_erp_demo_schema_identity" order by version')).rows).toEqual(version===118&&!current?[{version:118,tag:hrIdentity.tag},{version:latestIdentity.version,tag:latestIdentity.tag}]:[{version:latestIdentity.version,tag:latestIdentity.tag}]);
+      await upgradeDemoSchema(db,orderedRunner());
+      expect(await preserved(db)).toEqual(before);
+    }finally{await db.close();}
+  });
+  it.each(['nonunique','different columns','partial predicate','constraint-backed','extra owned drift','tracked identity'])('rejects %s obsolete-name variation without changing data or structure',async scenario=>{
+    const db=await fixture(latestIdentity.version,true);
+    try{
+      const sql:Record<string,string>={
+        nonunique:'create index uq_role_master_name on role(master_fn,name)',
+        'different columns':'create unique index uq_role_master_name on role(master_fn,role_id)',
+        'partial predicate':'create unique index uq_role_master_name on role(master_fn,name) where is_superadmin=false',
+        'constraint-backed':'alter table role add constraint uq_role_master_name unique(master_fn,name)',
+        'extra owned drift':DEMO_SCHEMA_LINEAGE.legacyRoleRepair.index.definition+';alter table employee add column unknown_retained_value text',
+        'tracked identity':DEMO_SCHEMA_LINEAGE.legacyRoleRepair.index.definition,
+      };
+      if(scenario==='tracked identity')await ensureDemoMigrationIdentity(db);
+      await db.exec(sql[scenario]);
+      const before=await preserved(db),metadataBefore=await structure(db);
+      const identityBefore=await identityTable(db);
+      await expect(upgradeDemoSchema(db,orderedRunner())).rejects.toMatchObject({code:'demo_schema_lineage_unknown'});
+      expect(await preserved(db)).toEqual(before);
+      expect(await structure(db)).toBe(metadataBefore);
+      expect(await identityTable(db)).toBe(identityBefore);
+    }finally{await db.close();}
+  });
+  it('preserves an unrelated extension index with the obsolete name through the actual late runner',async()=>{
+    const db=await fixture(latestIdentity.version,true);
+    try{
+      await db.exec('create unique index uq_role_master_name on retained_custom_note(id)');
+      const before=await preserved(db);
+      await upgradeDemoSchema(db,orderedRunner());
+      expect(await preserved(db)).toEqual(before);
+      expect((await db.query("select indexdef from pg_indexes where schemaname='public' and indexname='uq_role_master_name'")).rows).toEqual([{indexdef:'CREATE UNIQUE INDEX uq_role_master_name ON public.retained_custom_note USING btree (id)'}]);
+    }finally{await db.close();}
+  });
+  it.each([true,false])('rolls back obsolete-index normalization and identity/HR changes on interrupted %s initialization',async current=>{
+    const db=await fixture(current?latestIdentity.version:118,current);
+    try{
+      await db.exec(DEMO_SCHEMA_LINEAGE.legacyRoleRepair.index.definition);
+      const before=await preserved(db),metadataBefore=await structure(db);
+      const interrupted={transaction:async(callback:(tx:Transaction)=>Promise<unknown>)=>db.transaction(async tx=>callback(new Proxy(tx,{get(target,key){
+        if(key==='query')return async(sql:string,parameters?:unknown[])=>{if(sql.startsWith('insert into "_erp_demo_schema_identity"'))throw new Error('fictional interruption after normalization');return target.query(sql,parameters);};
+        const value=Reflect.get(target,key);return typeof value==='function'?value.bind(target):value;
+      }})))} as unknown as PGlite;
+      await expect(ensureDemoMigrationIdentity(interrupted)).rejects.toThrow('fictional interruption after normalization');
+      expect(await preserved(db)).toEqual(before);
+      expect(await structure(db)).toBe(metadataBefore);
+      expect(await identityTable(db)).toBe(0);
+      await upgradeDemoSchema(db,orderedRunner());
+      expect(await preserved(db)).toEqual(before);
+    }finally{await db.close();}
+  });
   it('recognizes exact117 mis-marked118, repairs only HR schema and preserves tenant data/revoked authority/extensions',async()=>{
     const db=await fixture();
     try{
@@ -93,6 +235,22 @@ describe('identity-aware bounded retained Demo compatibility',()=>{
       if(scenario==='partial HR schema')await db.exec('create table hr_business_unit(id integer primary key)');
       const before=await preserved(db),metadataBefore=await structure(db);
       await expect(ensureDemoMigrationIdentity(db)).rejects.toMatchObject({code:'demo_schema_lineage_unknown',demoBootStatement:'VALIDATE DEMO SCHEMA LINEAGE',message:'demo_schema_lineage_unknown'});
+      expect(await preserved(db)).toEqual(before);
+      expect(await structure(db)).toBe(metadataBefore);
+      expect(await identityTable(db)).toBe(0);
+    }finally{await db.close();}
+  });
+  it('reports only schema digests and category counts when rejecting private-literal structural drift',async()=>{
+    const db=await fixture(latestIdentity.version,true);
+    try{
+      await db.exec("alter table employee add column unknown_retained_value text default 'fictional private sentinel'");
+      const before=await preserved(db),metadataBefore=await structure(db);
+      const error=await ensureDemoMigrationIdentity(db).catch(error=>error);
+      expect(error).toMatchObject({code:'demo_schema_lineage_unknown',demoBootLineage:{marker:latestIdentity.version,structuralHash:metadataBefore,expectedStructuralHash:DEMO_SCHEMA_LINEAGE.identities.at(-1)!.structuralHash,matchedVersion:null}});
+      const evidence=error.demoBootLineage;
+      expect(evidence.categories).toHaveLength(7);
+      expect(evidence.categories.filter((item:{hash:string;expectedHash:string})=>item.hash!==item.expectedHash).map((item:{name:string})=>item.name)).toEqual(['columns']);
+      expect(JSON.stringify(evidence)).not.toMatch(/fictional|private|employee|unknown_retained_value|default/);
       expect(await preserved(db)).toEqual(before);
       expect(await structure(db)).toBe(metadataBefore);
       expect(await identityTable(db)).toBe(0);

@@ -50,16 +50,18 @@ overflow. This is a local candidate, not a production deployment or
 PostgreSQL migration/UAT result. See [evidence](evidence/TASK-252-company-profile.md)
 and the [focused MVP tracker](PROGRESS.md).
 
-## 2026-10-02 atomic Demo upgrade and visible diagnostics — blocked candidate
+## 2026-10-02 retained Demo identity gate — repair follow-up
 
-TASK-258 adds source-derived migration identity, bounded canonical117 mis-marked118
-repair, atomic ordered upgrades/fresh seeding, mixed-asset rejection and localized
-read-only failure diagnostics. Unknown canonical/governance drift remains unchanged
-and fails closed; Company/staff/revoked authority are preserved. The owner's
-startup cause and historical CompanyProfile lineage remain unconfirmed. Native
-cloud browser IPC and ERP GitHub write403 block browser proof, draft PR and CI;
-no deployment or production/UAT change occurred. See [candidate contract and
-verification boundary](evidence/TASK-258-demo-lineage-diagnostics.md).
+TASK-258 original repair/diagnostics merged as PR15 at main d29c29b; full main
+hosted CI and six Chromium/WebKit Demo suites passed, and the public revision was
+verified. The owner now supplied unknown-lineage gate rejection; exact retained
+metadata mismatch remains unconfirmed. The current-main119 integration recognizes
+only fully verified canonical/early-v73/historicalCompanyProfile contracts,
+preserves Profile values/version/FK and same-name extension indexes, and exposes
+metadata-only hashes/counts for unknown failures. Historical4f source is now
+verified; its identification still does not establish owner lineage. New exact-head review/browser/CI and owner
+acceptance are pending. Pages publication remains independent of CI; production
+PG/UAT stays separate. See the [verification boundary](evidence/TASK-258-demo-lineage-diagnostics.md).
 
 ## 2026-10-01 reported retained Demo startup failure — candidate only
 

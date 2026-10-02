@@ -9,7 +9,7 @@
  */
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -19,6 +19,61 @@ const DIST_INDEX = path.join(WEB_DIR, 'dist', 'index.html');
 const PORT = process.env.SETUP_WIZARD_E2E_PORT || '4321';
 const BASE_URL = `http://localhost:${PORT}`;
 const TIMEOUT = 60000;
+
+// Only fresh, isolated localhost contexts with fictional fixtures are captured.
+// Never serialize storage, cookies, requests, DB state or console arguments.
+function diagnosticText(value) {
+  return String(value).replace(/(?:Bearer\s+)[^\s"']+/gi, 'Bearer [redacted]')
+    .replace(/((?:password|token|secret|authorization|api[_-]?key)\s*[=:]\s*)[^\s,;]+/gi, '$1[redacted]')
+    .replace(/demo1234|fixture-only-password/g, '[fixture credential]')
+    .slice(0, 1200);
+}
+
+function captureRuntimeErrors(page) {
+  const errors = [];
+  const record = (message) => {
+    // Preserve the test's failure signal while bounding diagnostic memory/output.
+    if (errors.length < 40) errors.push(diagnosticText(message));
+  };
+  page.on('pageerror', (error) => record(`pageerror: ${error.message}`));
+  page.on('console', (message) => {
+    if (message.type() === 'error') record(`console: ${message.text()}`);
+  });
+  return errors;
+}
+
+async function saveFailureDiagnostics(page, label, error, runtimeErrors) {
+  try {
+    const url = new URL(page.url());
+    if (url.origin !== BASE_URL) return;
+    const directory = path.join(ROOT, 'output', 'setup-wizard-failures');
+    mkdirSync(directory, { recursive: true });
+    const mode = process.env.SETUP_WIZARD_E2E_MODULE_ONLY === '1' ? 'targeted' : 'full';
+    const basename = path.join(directory, `${mode}-${label}`);
+    const rendered = await page.evaluate(() => {
+      const visibleText = (selector) => [...document.querySelectorAll(selector)]
+        .filter(element => element.getClientRects().length && getComputedStyle(element).visibility !== 'hidden')
+        .slice(0, 8).map(element => (element.innerText || '').slice(0, 1200));
+      return {
+        errors: visibleText('[role="alert"], #wizErr, #loginError, .error-state'),
+        settings: visibleText('[data-canonical-system-settings] [data-company-profile] .cp-facts'),
+        headings: visibleText('h1, h2, h3'),
+      };
+    });
+    writeFileSync(`${basename}.json`, JSON.stringify({
+      label, route: diagnosticText(url.pathname + url.hash.split('?')[0]),
+      error: diagnosticText(error.message),
+      rendered: Object.fromEntries(Object.entries(rendered).map(([key, values]) => [key, values.map(diagnosticText)])),
+      runtimeErrors,
+    }, null, 2));
+    await page.screenshot({ path: `${basename}.png`, fullPage: false, timeout: 5000,
+      mask: [page.locator('input, textarea, [contenteditable="true"]')] });
+    console.error(`Saved fictional setup failure diagnostics: ${path.relative(ROOT, basename)}.{json,png}`);
+  } catch (diagnosticError) {
+    // Evidence collection must not replace the original test failure.
+    console.error(`Could not save setup diagnostics: ${diagnosticText(diagnosticError.message)}`);
+  }
+}
 
 function assertResponsiveProgress(viewport, progress, stage) {
   if (viewport.width > 980) return;
@@ -42,11 +97,7 @@ function assertResponsiveProgress(viewport, progress, stage) {
 async function runModuleVisibilityAfterSetup(browser) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: 'block' });
   const page = await context.newPage();
-  const runtimeErrors = [];
-  page.on('pageerror', (error) => runtimeErrors.push(`pageerror: ${error.message}`));
-  page.on('console', (message) => {
-    if (message.type() === 'error') runtimeErrors.push(`console: ${message.text()}`);
-  });
+  const runtimeErrors = captureRuntimeErrors(page);
   try {
     await page.goto(`${BASE_URL}/?module-visibility-e2e=${Date.now()}`, {
       waitUntil: 'domcontentloaded',
@@ -109,7 +160,7 @@ async function runModuleVisibilityAfterSetup(browser) {
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => document.querySelector('#palette')?.getAttribute('aria-hidden') === 'true', null, { timeout: TIMEOUT });
     await page.evaluate(() => navigate('sys-settings'));
-    const companyFacts = page.locator('[data-canonical-system-settings] .docmeta');
+    const companyFacts = page.locator('[data-canonical-system-settings] [data-company-profile] .cp-facts');
     await companyFacts.waitFor({ state: 'visible', timeout: TIMEOUT });
     const displayedFacts = await companyFacts.innerText();
     if (!['Acme Singapore', 'SG', 'SGD', 'GST'].every(fact => displayedFacts.includes(fact))) {
@@ -125,6 +176,9 @@ async function runModuleVisibilityAfterSetup(browser) {
     }
     if (runtimeErrors.length) throw new Error(`module visibility emitted runtime errors: ${runtimeErrors.join(' | ')}`);
     console.log('PASS setup module visibility E2E: selected modules control the post-setup command palette');
+  } catch (error) {
+    await saveFailureDiagnostics(page, 'module-visibility', error, runtimeErrors);
+    throw error;
   } finally {
     await context.close();
   }
@@ -196,11 +250,7 @@ async function main() {
         serviceWorkers: 'block',
       });
       const page = await context.newPage();
-      const runtimeErrors = [];
-      page.on('pageerror', (error) => runtimeErrors.push(`pageerror: ${error.message}`));
-      page.on('console', (message) => {
-        if (message.type() === 'error') runtimeErrors.push(`console: ${message.text()}`);
-      });
+      const runtimeErrors = captureRuntimeErrors(page);
       try {
         await page.goto(`${BASE_URL}/?setup-wizard-e2e=${viewport.label}-${Date.now()}`, {
           waitUntil: 'domcontentloaded',
@@ -639,6 +689,9 @@ async function main() {
           throw new Error(`${viewport.label}: setup wizard emitted runtime errors: ${runtimeErrors.join(' | ')}`);
         }
         console.log(`PASS setup wizard layout E2E: ${viewport.label}`);
+      } catch (error) {
+        await saveFailureDiagnostics(page, viewport.label, error, runtimeErrors);
+        throw error;
       } finally {
         await context.close();
       }

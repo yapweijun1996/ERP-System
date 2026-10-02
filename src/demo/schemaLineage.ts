@@ -9,6 +9,16 @@ type Sequence = { table: string; column: string; start: string; increment: strin
 type Trigger = { table: string; name: string; definition: string; enabled: string };
 type FunctionDefinition = { signature: string; definition: string };
 export type DemoStructuralContract = { tables: string[]; columns: Column[]; constraints: Constraint[]; indexes: Index[]; sequences: Sequence[]; triggers: Trigger[]; functions: FunctionDefinition[] };
+export const DEMO_STRUCTURAL_CATEGORIES = ['tables','columns','constraints','indexes','sequences','triggers','functions'] as const;
+export type DemoStructuralCategory = typeof DEMO_STRUCTURAL_CATEGORIES[number];
+
+/** Digests and counts only. Definitions/defaults can contain private literals and must never be exported. */
+export async function demoStructuralCategoryEvidence(contract: DemoStructuralContract): Promise<Record<DemoStructuralCategory,{hash:string;count:number}>> {
+  const entries=await Promise.all(DEMO_STRUCTURAL_CATEGORIES.map(async category=>[
+    category,{hash:await demoTextHash(JSON.stringify(contract[category])),count:contract[category].length},
+  ] as const));
+  return Object.fromEntries(entries) as Record<DemoStructuralCategory,{hash:string;count:number}>;
+}
 
 /** Schema metadata only. Never read ERP rows or ordinary index contents. */
 export async function readDemoStructuralContract(client: MetadataClient, ownedTables?: readonly string[], ownedFunctions?: readonly string[]): Promise<DemoStructuralContract> {
