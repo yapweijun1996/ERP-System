@@ -1,15 +1,67 @@
-# Project Status — reviewed 2026-09-25
+# Project Status — reviewed 2026-09-29
 
-## 2026-10-02 atomic Demo upgrade and visible diagnostics — blocked candidate
+TASK-255 Receipts archive/report local verification — 2026-09-29: Company
+Receipts category-keyword search and current-year period were passed into the
+Company-scoped register query and frozen Receipt Pack; built Demo preview,
+download and Print produced the PDF route. A scan-clean fixture completed
+actual Demo confirmation. My Receipts upload persisted after reload at 375 px;
+its mobile card now displays the full labelled scan state and correctly reports
+`Quarantined · scanner unavailable` in the normal Demo. Four focused domain/API
+files passed 26 tests, and both browser suites
+passed. The default Demo cannot confirm newly uploaded evidence until a real
+scanner marks it clean; no scan boundary was bypassed. See
+[evidence](evidence/TASK-255-receipts.md) and the
+[focused MVP tracker](PROGRESS.md).
 
-TASK-258 adds source-derived migration identity, bounded canonical117 mis-marked118
-repair, atomic ordered upgrades/fresh seeding, mixed-asset rejection and localized
-read-only failure diagnostics. Unknown canonical/governance drift remains unchanged
-and fails closed; Company/staff/revoked authority are preserved. The owner's
-startup cause and historical CompanyProfile lineage remain unconfirmed. Native
-cloud browser IPC and ERP GitHub write403 block browser proof, draft PR and CI;
-no deployment or production/UAT change occurred. See [candidate contract and
-verification boundary](evidence/TASK-258-demo-lineage-diagnostics.md).
+TASK-254 Leave overlap correction and lifecycle local candidate — 2026-09-29:
+The shared governed Leave command now serializes each employee's submissions,
+rejects pending/approved date collisions (while allowing opposite AM/PM half
+days), and rechecks approved overlap at final decision. The failure was first
+reproduced in a test where two same-day requests both became Pending. Focused
+Leave domain/API/calendar tests (5 files, 18 tests), employee→HR→employee built
+Demo browser E2E, persisted Draft/Pending/Approved and paid-balance ledger
+readback, desktop/375 px, lint, root/web typechecks, Demo proof and build passed.
+The browser had zero console errors and no 375 px root overflow. Local candidate
+only; production UAT and external calendar delivery were not tested. See
+[evidence](evidence/TASK-254-leave-lifecycle.md) and the
+[focused MVP tracker](PROGRESS.md).
+
+TASK-253 Staff directory local candidate — 2026-09-29: Staff search now combines
+Department, Current/Former status and Job title, with active headcount and a
+clearable empty result. HR can end employment for an accountless employee using
+a reasoned, version-checked, audited Company-scoped command with direct-report
+handoff; account holders continue through account offboarding. Focused domain/API
+tests (6), built Demo browser filtering, phone edit and persisted 59→58 employee/audit
+readback, desktop/375 px and reload, lint, root/web typechecks, Demo proof,
+build, generated-schema/RLS, docs links and diff checks passed. No browser
+console errors or 375 px root overflow were observed. Local candidate only;
+production migration/UAT was not run. See [evidence](evidence/TASK-253-staff-directory.md)
+and the [focused MVP tracker](PROGRESS.md).
+
+TASK-252 Company profile local candidate — 2026-09-29: System Settings now
+reads and edits the active Company's name, registration number, tax number,
+address and optional validated logo through a versioned, audited shared
+command. Demo/PGlite and API routes use the same domain contract; Company
+scope comes from the session. Focused domain/API tests (5), browser save and
+reload on both dev and built-preview desktop/375 px, PGlite row readback, logo and required-name errors,
+lint, root/web typechecks, Demo proof, build, generated-schema/RLS and diff
+checks passed. The browser had zero console errors and no 375 px horizontal
+overflow. This is a local candidate, not a production deployment or
+PostgreSQL migration/UAT result. See [evidence](evidence/TASK-252-company-profile.md)
+and the [focused MVP tracker](PROGRESS.md).
+
+## 2026-10-02 retained Demo identity gate — repair follow-up
+
+TASK-258 original repair/diagnostics merged as PR15 at main d29c29b; full main
+hosted CI and six Chromium/WebKit Demo suites passed, and the public revision was
+verified. The owner now supplied unknown-lineage gate rejection; exact retained
+metadata mismatch remains unconfirmed. The current-main119 integration recognizes
+only fully verified canonical/early-v73/historicalCompanyProfile contracts,
+preserves Profile values/version/FK and same-name extension indexes, and exposes
+metadata-only hashes/counts for unknown failures. Historical4f source is now
+verified; its identification still does not establish owner lineage. New exact-head review/browser/CI and owner
+acceptance are pending. Pages publication remains independent of CI; production
+PG/UAT stays separate. See the [verification boundary](evidence/TASK-258-demo-lineage-diagnostics.md).
 
 ## 2026-10-01 reported retained Demo startup failure — candidate only
 
@@ -868,6 +920,10 @@ Pack creation, dropped-response replay, deterministic conflict and export hash
 verification; S5 verifies rate/error/version operations, the full local suite and
 repository gates. Production OAuth issuer, multi-instance rate capacity and
 deployment evidence remain separate release gates.
+The proposed ChatGPT user-delegated, read-only extension for receipts, team leave,
+and personal leave approvals is documented in
+[CHATGPT_MCP_INTEGRATION_PLAN.md](CHATGPT_MCP_INTEGRATION_PLAN.md). It is planning
+only: no HR/order MCP tools, staff OAuth connection, or ChatGPT pilot is delivered.
 TASK-229/S1 verifies TASK-228/232/233, the current W3C/Chrome WebMCP surface and
 the ordinary Company Receipts browser journey. S2 adds a feature-detected six-tool
 page adapter with live actor/Company/permission fingerprints, lifecycle retirement,
@@ -3030,9 +3086,11 @@ TASK-192 later recorded deployment through 0098 and an exact-volume reset.
   `admin.modules.manage` is deprecated/non-assignable and migration 0095 retires its
   existing tenant grants and active overrides.
 - The shared API-mode entry has a separate realm backed by independent
-  `platform_principal.password_hash` credentials and one-hour non-remembered
-  `erp_platform_session`/CSRF cookies; it does not create `app_user` or `erp_session`.
-  No MFA is planned for v1, which remains an explicit high-risk limitation.
+  `platform_principal.password_hash` credentials and `erp_platform_session`/CSRF
+  cookies. The default session lasts one hour; an opted-in trusted device lasts up to
+  30 days with a seven-day idle limit. It does not create `app_user` or `erp_session`.
+  TASK-250 source/browser verification is local; production rollout is pending. No MFA
+  is planned for v1, which remains an explicit high-risk limitation.
 - Platform Superadmin may enter a default-15-minute, bounded, visible simulation of an
   active assigned user in the selected Master/Company. Authority is exactly the target
   user's entitlement, permissions, scope and workflow authority; audit attributes both
@@ -3046,8 +3104,9 @@ audit, task-graph validation, Markdown links and `git diff --check` pass. The fu
 run reached 164 passed files / 654 passed tests and one expected skip; its sole failing
 file was the stale Demo role-permission pack, which was regenerated and then passed its
 focused test. A second 15-minute full-suite run was not repeated.
-TASK-187 focused proof is 3 files / 12 tests: `platformSuperadmin.integration.test.ts`
-proves password realm, no Remember Me, no tenant session, exact target authority,
+At the TASK-187 checkpoint, focused proof was 3 files / 12 tests:
+`platformSuperadmin.integration.test.ts` proved the password realm, the then-disabled
+Remember Me option, no tenant session, exact target authority,
 company/logout lock, platform mutation block and dual audit; the remaining focused
 platform tests, typechecks, schema v96/drift and an API-mode browser login/workspace
 check also pass. TASK-188 completed the remaining full-suite, complete platform browser,

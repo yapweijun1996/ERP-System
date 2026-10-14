@@ -498,6 +498,10 @@ import {
   type UpdateCompanyPolicyInput,
   type UpdateSequenceInput,
 } from '../../src/modules/admin/controlPlane';
+import {
+  updateCompanyProfileWithin,
+  type UpdateCompanyProfileInput,
+} from '../../src/modules/admin/companyProfile';
 
 type DemoOrm = PgliteDatabase<typeof schema>;
 
@@ -1754,6 +1758,13 @@ export const erpDemoRuntime = Object.freeze({
     },
     getSystemSettingsWithin(db: DemoOrm, scope: Scope) {
       return getSystemSettingsWithin(asDomainDb(db), scope);
+    },
+    updateCompanyProfileWithin(
+      db: DemoOrm, scope: Scope, actorUserId: number, input: UpdateCompanyProfileInput,
+    ) {
+      return updateCompanyProfileWithin(
+        asDomainDb(db), scope, { userId: actorUserId, requestId: 'demo' }, input,
+      );
     },
     updateCompanyPolicyWithin(
       db: DemoOrm, scope: Scope, actorUserId: number, input: UpdateCompanyPolicyInput,

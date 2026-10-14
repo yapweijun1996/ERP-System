@@ -1,15 +1,30 @@
 # ERP-System Project Logic
 
-Home monetary KPIs — 2026-09-25: `web/public/assets/screens-ops.js` shows
-Open order value and MTD revenue only for active Sales with `sales.read`, and
-Cash position only for active Finance with `finance.read`. `/api/dashboard`
-checks current permission and effective Company module entitlement before
-reading Sales, Finance or Inventory facts; denied metrics are `null` and
-unavailable values display as `—`, never a fabricated zero. The canonical
-`src/api/dashboard.ts` read model uses Company-scoped draft and pending-approval
-orders, account `1000` debit less credit for cash, and account `4000` credit
-less debit posted in the current month of the Company's IANA time zone. The
-Demo adapter derives the same values from local canonical facts.
+Home monetary KPIs — 2026-09-25: `web/public/assets/screens-ops.js` displays
+Open order value and MTD revenue only when Sales is active and the user has
+`sales.read`; Cash position requires active Finance and `finance.read`.
+Unavailable API values display as `—`, never as a fabricated zero. The canonical
+`/api/dashboard` evaluates current permissions and effective Company module
+entitlements before reading module facts; denied modules return `null` metrics
+and no inventory alerts. The `src/api/dashboard.ts` read model uses
+Company-scoped draft and pending-approval
+sales orders for open value, account `1000` GL debit less credit for cash, and
+account `4000` GL credit less debit posted in the current month of the Company's
+IANA time zone for MTD revenue. The Demo adapter derives the same three values
+from its local canonical facts. A real zero is meaningful only when the owning
+module is available and the corresponding fact query returns zero; local source
+verification does not establish any hosted Company's actual balance.
+
+Workspace module navigation — 2026-09-25: `web/public/assets/data-core.js`
+and `web/public/assets/app.js` expose Company Receipts under its own
+`expenses_tax` module, separate from Finance and employee My Work. Payroll Run
+and Payslip are owned by the independent `payroll` module; HR Directory and
+Leave remain under `hr`. The browser hides module destinations when the
+authenticated effective module projection or route permissions deny them;
+`src/auth/moduleAccess.ts` and the API resource/module gates remain the
+authorization source; `src/auth/accessMatrix.ts` checks route alignment. The
+UI still uses shared register layouts across these modules without sharing
+business ownership.
 
 Product feedback implementation candidate — 2026-09-25: `src/data/schema/productFeedback.ts`
 defines Company-scoped `product_case`, append-only `product_case_evidence` and
@@ -561,7 +576,7 @@ reviewed receipt selection atomically, including newly matching rows. These are
 implementation requirements, not changes to the existing Pack command or domain
 contract. Existing key replay and current-visibility checks remain authoritative.
 
-## Static Demo startup identity and diagnostics — TASK-258 candidate
+## Static Demo startup identity and diagnostics — TASK-258
 
 The browser Demo transport validates canonical schema-prefix identities and
 source SQL hashes before migration, with a single transaction for ordered
@@ -573,11 +588,37 @@ identity drift fails closed without data/authority repair. The existing28 startu
 unique-arbiter validator remains separately responsible for its narrow additive
 ordinary-index contract. Additional unrelated tables/functions are preserved.
 
+Early-v73 Demo previews could retain the obsolete `uq_role_master_name` index.
+An untracked known prefix at73 or later can normalize only its exact canonical
+role-index definition when metadata-only omission yields that prefix's complete
+canonical hash (or the already-evidenced117/118 collision). Recognition precedes
+DDL; normalization, ordered upgrade and identity commit remain atomic. A recorded
+identity, changed/constraint-backed index or any additional owned-object drift
+does not receive this normalization. A same-name index on an unrelated extension
+is preserved; the late adapter no longer drops an index merely by global name.
+
+Historical CompanyProfile source `4f9234d05d9983bd416f74ab4bdee6f95b64e8bd`
+is now present in main history. Its0–117 migration bytes match current canonical
+source and historical0118 matches current0119 exactly. Generated compatibility
+binds the source SQL digest and complete base117 contract, then recognizes only
+exact historical117+Profile118 metadata with no recorded identity, or exact
+canonical119 metadata with marker118 and no identity/canonicalHR118 identity.
+The latter is the verified d29 path that treated Profile as an unrelated extension.
+Missing HR118 DDL (only when required), idempotent canonicalProfile119 DDL, marker
+and identities commit atomically after full119/HR-index validation. Profile values,
+version and FK plus tenant/staff/revoked authority remain unchanged. Other markers,
+contradictory identities and near-matching/partial/default/FK/owned-object drift
+remain fail closed. None of these source shapes identifies the owner's actual DB.
+
 Source entry points: `src/demo/migrationIdentity.ts`, `schemaLineage.ts`, the
 generated `schemaLineage.generated.ts`, and `scripts/generate-demo-schema-lineage.ts`;
 `web/public/assets/erp-system-data-adapter.js` orchestrates the classic adapter
 through `web/src/erp-demo-runtime-impl.ts`. `demo-startup-diagnostics.js` projects
-only safe source identifiers and readiness/build metadata. Failed wizard/login
+only safe source identifiers and readiness/build metadata. Unknown lineage also
+projects the numeric marker, canonical-match versions, bounded category counts
+and SHA-256 digests, identity count and a three-value obsolete-index eligibility
+enum. Actual object names, defaults, SQL/function definitions and ERP rows never
+enter the diagnostic payload. Failed wizard/login
 input and stored session/setup flags survive diagnosis; immediate/late failed
 signed-in startup is locked behind a diagnostic-only shell. No automatic reset,
 deduplication, record edit, grant activation or third-party diagnostic upload occurs.
@@ -947,6 +988,31 @@ the employee name changes.
 
 Source: `src/modules/hr/employee.ts:290-352, 454-572`.
 
+### 2.3.1 Directory and accountless employment end (TASK-253)
+
+The Staff directory keeps Search and Department, and adds combined Current /
+Former and Job title filters. Current means `employee.isActive !== false`,
+including staff on leave. Former means `isActive === false`; the record remains
+visible and historical. The Headcount KPI counts current staff, independent of
+the filtered result count. Job title is an employee fact, not an application
+permission role.
+
+`endEmployeeEmploymentWithin` serves active employees without a linked
+`app_user`. HR write authority, a reason, idempotency at the API boundary and
+an `updatedAt` optimistic token are required. The command locks the active
+Company employee, rejects linked accounts and stale or repeated requests,
+transfers any active direct reports to an eligible current employee outside
+the source reporting subtree, sets `isActive=false` and appends a reasoned
+audit event in one transaction. It never deletes the employee or decides
+Leave Applications. Account-bearing staff retain the existing account
+offboarding path, which also revokes sessions and transfers ownership.
+
+Sources: `src/modules/hr/employee.ts`, `src/api/routes/hr.ts`,
+`web/public/assets/screens-hr.js`; verification:
+`src/modules/hr/employeeEnd.test.ts`,
+`src/api/employeeUpdate.integration.test.ts`,
+`tests/e2e/staff-directory-mvp.spec.mjs`.
+
 ### 2.4 Staff onboarding and account lifecycle
 
 Staff onboarding is a draft-to-account creation path. The historical command
@@ -1038,8 +1104,20 @@ the reservation fails when `available = balance - reserved` is insufficient. The
 request then moves to `pending`, an approval instance is started from the current
 workflow configuration and a `submitted` event is appended.
 
+Submission locks the active employee and rejects a date overlap with another
+`pending` or `approved` request for that employee, including legacy requests.
+Two same-date half days may coexist only as one AM and one PM request. Draft,
+rejected, withdrawn, voided and cancelled requests do not block submission.
+Final approval repeats the check against already approved requests so a legacy
+or previously imported overlap cannot become a second approved absence. The
+employee lock serializes submissions and approvals for different request rows.
+The rejection uses `leave_dates_overlap` (409) and leaves the draft or pending
+request unchanged. This rule is shared by Demo/PGlite and API/PostgreSQL.
+
 Sources: `src/modules/hr/leaveApplication.ts:297-368, 387-473` and
 `src/modules/hr/leaveBalance.ts:59-87, 351-443`.
+Overlap verification: `src/modules/hr/leaveApplication.test.ts` and
+`tests/e2e/leave-overlap-mvp.spec.mjs`.
 
 ### 3.4 Approval decision
 
@@ -1583,6 +1661,7 @@ including current 6% exceptions and transitional rules.
 | Staff Calendar | `src/modules/hr/appointment.ts`, `calendarSync.ts`, `teamCalendar.ts`, `web/public/assets/screens-hr.js` | `src/modules/hr/appointment.test.ts`, `teamCalendar.test.ts`, `src/api/hrCalendar.integration.test.ts`, `tests/e2e/staff-calendar.spec.mjs` |
 | Expense Claim | `src/modules/expenses/claims.ts`, `controls.ts`, `postings.ts` | `src/modules/expenses/claims.test.ts`, `controls.test.ts`, `postings.test.ts` |
 | Company Receipt foundation | `src/data/schema/expenses.ts`, `src/modules/expenses/companyReceipt.ts`, `src/api/routes/companyReceipts.ts` | `src/modules/expenses/companyReceipt.test.ts`, `src/api/companyReceipts.integration.test.ts`, `src/api/postgresSecurity.integration.test.ts` |
+| Company profile | `src/data/schema/companyProfile.ts`, `src/modules/admin/companyProfile.ts`, `src/api/routes/settings.ts` | `src/modules/admin/companyProfile.test.ts`, `src/api/controlPlane.integration.test.ts`, `tests/e2e/company-profile.spec.mjs` |
 | Company Receipt Pack | `src/modules/expenses/companyReceiptPack.ts`, `companyReceiptPackGovernance.ts`, `companyReceiptPackPdf.ts`, `src/modules/documents/evidencePdf.ts` | `src/modules/expenses/companyReceiptPack.test.ts`, `src/api/companyReceipts.integration.test.ts`, `src/modules/expenses/taxEvidence.test.ts`, `tests/e2e/company-receipts.spec.mjs` |
 | Claim downstream | `src/modules/expenses/reimbursementBatches.ts`, `reimbursementPayments.ts` | matching module tests |
 | Project Progress Claim | `src/modules/project/progressClaim.ts` | project module/API tests where registered |
@@ -1644,7 +1723,8 @@ TASK-185 foundation and TASK-186 tenant-authority cutover:
    TASK-226 adds a one-time trusted initial Platform setup selection (and its static-Demo
    PGlite equivalent) before optional AI; tenant onboarding can no longer select modules.
 5. TASK-187/migration 0096 authenticates Platform Superadmin with independent password
-   credentials, one-hour non-remembered platform cookies and `platform.simulation.manage`.
+   credentials and `platform.simulation.manage`. Current login keeps the one-hour default
+   and offers an opt-in 30-day absolute / seven-day idle trusted-device cookie.
    Explicit simulation of an active assigned tenant user is default-15-minute, cannot
    outlive the platform session, runs with exactly the target authority, remains visibly
    marked/revocable and records both identities; it never provides a MAC bypass.
@@ -1823,6 +1903,23 @@ This is Demo workspace restoration, not production authentication. The setup
 browser regression covers new-Company login, reload, stale preference, denied
 cross-Company switching and revocation. Shared business commands retain authority.
 
+## Company profile MVP — 2026-09-29
+
+System Settings reads the active Company's canonical name, country, currency and
+tax regime together with optional registration number, tax number, address and
+logo from `company_profile`. The profile row is keyed by the session-derived
+`masterFn + companyFn`; no client tenant key participates in a read or write.
+`settings.read` permits viewing and `settings.manage` permits editing.
+
+The update command in `src/modules/admin/companyProfile.ts` validates bounded
+text and a maximum 256 KiB PNG/JPEG/WebP data URL by MIME, base64 and file
+signature. It changes the canonical `company.name` and profile row in one
+transaction, checks `profileVersion`, and appends an audit event without logo
+bytes. Country, currency, tax regime and Company identifier remain outside
+this editor. The production API uses the shared action dispatcher with a
+required idempotency key; Demo calls the same domain command. The UI is in
+`web/public/assets/company-profile-ui.js`, with desktop/375px browser and
+PGlite read-back evidence in `docs/evidence/TASK-252-company-profile.md`.
 ## HR organization and scoped access — local candidate 2026-09-30
 
 Company-owned BU/Position masters and nullable staff assignments grant no rights.
@@ -1853,3 +1950,12 @@ duplicate data, mismatched definitions and lost primary constraints fail closed.
 No records, role assignments, grants or migration markers are changed by this
 repair. API/PostgreSQL mode never invokes it. Retained draft top-up runs after
 compatibility and index validation. See [bounded evidence](evidence/TASK-257-retained-demo-schema.md).
+
+Company profile migration integration — 2026-10-02: remote HR migration
+`0118_classy_ronan` retains its published identity. The local Company profile
+migration is regenerated as `0119_company_profile`, with a combined snapshot and
+regenerated Demo SQL, unique-index metadata and structural lineage. Existing
+canonical HR Demo storage upgrades through the ordered migration runner; the
+historical local `0118_lucky_randall` browser lineage remains unsupported and
+fails closed without resetting records. This merge is local integration evidence,
+not a production migration or release.

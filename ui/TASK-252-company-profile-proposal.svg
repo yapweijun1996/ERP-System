@@ -1,0 +1,239 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1810" height="1240" viewBox="0 0 1810 1240" role="img" aria-labelledby="title description">
+  <title id="title">Company profile MVP proposal for Aria ERP</title>
+  <desc id="description">An illustrative after mockup showing the existing Aria ERP admin shell with a company profile form on desktop and a 375 pixel mobile layout. The form includes a logo preview, legal and tax details, registered address, a required field validation error, and save actions.</desc>
+  <defs>
+    <filter id="shadow" x="-15%" y="-15%" width="130%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#152033" flood-opacity=".09"/>
+    </filter>
+    <clipPath id="mobile-screen"><rect x="1360" y="128" width="375" height="1080" rx="22"/></clipPath>
+    <clipPath id="desktop-screen"><rect x="36" y="128" width="1280" height="900" rx="16"/></clipPath>
+    <style>
+      text { font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; fill: #20232a; }
+      .muted { fill: #6f737c; }
+      .faint { fill: #8b9099; }
+      .blue { fill: #0874df; }
+      .red { fill: #b42318; }
+      .inverse { fill: #ffffff; }
+      .label { font-size: 10px; font-weight: 650; letter-spacing: .75px; }
+      .small { font-size: 11px; }
+      .tiny { font-size: 9px; }
+      .body { font-size: 13px; }
+      .field-value { font-size: 13px; }
+      .card-title { font-size: 14px; font-weight: 650; }
+      .section-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; }
+      .line { stroke: #e8e9ed; stroke-width: 1; }
+      .field { fill: #fbfbfd; stroke: #d9dce3; stroke-width: 1; }
+      .card { fill: #ffffff; stroke: #e7e8ec; stroke-width: 1; }
+    </style>
+  </defs>
+
+  <rect width="1810" height="1240" fill="#f0f2f6"/>
+  <text x="40" y="37" class="section-label blue">TASK-252  /  COMPANY PROFILE MVP</text>
+  <text x="40" y="69" font-size="25" font-weight="700">Proposed after mockup</text>
+  <text x="40" y="94" font-size="13" class="muted">Illustrative UI proposal • Existing Aria ERP shell and settings patterns retained</text>
+  <text x="1770" y="69" text-anchor="end" class="small muted">Sample content · Validation state</text>
+
+  <text x="40" y="119" class="section-label muted">DESKTOP · 1280 PX</text>
+  <text x="1360" y="119" class="section-label muted">MOBILE · 375 PX</text>
+
+  <!-- Desktop application shell -->
+  <g clip-path="url(#desktop-screen)" filter="url(#shadow)">
+    <rect x="36" y="128" width="1280" height="900" fill="#f5f6f9"/>
+    <rect x="36" y="128" width="246" height="900" fill="#fbfcfe"/>
+    <line x1="282" y1="128" x2="282" y2="1028" class="line"/>
+
+    <!-- Desktop sidebar -->
+    <g transform="translate(56 151)">
+      <path d="M7 1 20 6v10c0 8-6 13-13 16C0 29-6 24-6 16V6Z" transform="translate(7 0) scale(.8)" fill="#fff" stroke="#1478dc" stroke-width="2.5"/>
+      <path d="M9 7 17 11v6c0 4-3 7-7 9-4-2-7-5-7-9v-6Z" fill="#0b78df"/>
+      <path d="m6 17 3-4 2 3 3-5" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <text x="94" y="165" font-size="17" font-weight="700">Aria</text>
+    <text x="94" y="182" class="small muted">Acme Mfg.</text>
+
+    <text x="57" y="224" class="section-label faint">OPERATIONS</text>
+    <path d="M59 250 66 244l7 6v8h-5v-6h-4v6h-5Z" fill="none" stroke="#737985" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="84" y="257" class="body muted">Home</text>
+    <text x="57" y="300" class="section-label faint">FINANCE &amp; BACK OFFICE</text>
+    <path d="M60 318h11v15l-5.5-3-5.5 3Z" fill="none" stroke="#737985" stroke-width="1.4" stroke-linejoin="round"/>
+    <text x="84" y="331" class="body muted">Expenses &amp; Tax</text>
+    <circle cx="64" cy="360" r="4" fill="none" stroke="#737985" stroke-width="1.3"/><path d="M56 374c1-6 4-9 8-9s7 3 8 9M64 356l-3-3m3 3 3-3" fill="none" stroke="#737985" stroke-width="1.3" stroke-linecap="round"/>
+    <text x="84" y="368" class="body muted">Human Resources</text>
+    <text x="57" y="411" class="section-label faint">PLATFORM</text>
+    <rect x="48" y="423" width="222" height="36" rx="10" fill="#fff"/>
+    <path d="M64 432 70 434v5c0 4-3 6-6 8-3-2-6-4-6-8v-5Z" fill="none" stroke="#0874df" stroke-width="1.5"/>
+    <path d="m61 439 2 2 4-5" fill="none" stroke="#0874df" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="84" y="446" class="body" font-weight="650">Admin</text>
+    <line x1="48" y1="984" x2="270" y2="984" class="line"/>
+    <circle cx="63" cy="1006" r="6" fill="none" stroke="#737985" stroke-width="1.3"/>
+    <path d="M63 996v3m0 14v3m-10-10h3m14 0h3m-17-7 2 2m10 10 2 2m0-14-2 2m-10 10-2 2" stroke="#737985" stroke-width="1.2"/>
+    <text x="84" y="1010" class="body muted">Settings</text>
+
+    <!-- Desktop top bar -->
+    <rect x="282" y="128" width="1034" height="56" fill="#ffffff"/>
+    <line x1="282" y1="184" x2="1316" y2="184" class="line"/>
+    <rect x="301" y="138" width="448" height="36" rx="10" fill="#fbfbfd" stroke="#e2e4e9"/>
+    <circle cx="319" cy="156" r="5" fill="none" stroke="#747984" stroke-width="1.4"/><line x1="323" y1="160" x2="327" y2="164" stroke="#747984" stroke-width="1.4"/>
+    <text x="337" y="160" class="body muted">Search documents, items, partners, actions...</text>
+    <rect x="700" y="145" width="37" height="21" rx="5" fill="#fff" stroke="#e3e5e9"/><text x="718.5" y="160" text-anchor="middle" class="tiny muted">⌘K</text>
+    <text x="770" y="151" class="small" font-weight="650">Acme Singapore</text><text x="770" y="168" class="tiny muted">Singapore HQ</text><path d="m875 150 4 4 4-4" fill="none" stroke="#8a8e96" stroke-width="1.2"/>
+    <text x="921" y="151" class="small" font-weight="650">FY2026 · P06</text><text x="921" y="168" class="tiny muted">June 2026 · SGD</text>
+    <rect x="1045" y="146" width="51" height="21" rx="10.5" fill="#e9f8ef" stroke="#81d5a0"/><text x="1070.5" y="160.5" text-anchor="middle" class="tiny" fill="#087c3e" font-weight="700">DEMO</text>
+    <path d="M1121 163v-6a5 5 0 0 1 10 0v6l2 3h-14Zm4 6a2 2 0 0 0 4 0" fill="none" stroke="#717681" stroke-width="1.2" stroke-linejoin="round"/>
+    <circle cx="1168" cy="156" r="7" fill="none" stroke="#717681" stroke-width="1.2"/><path d="M1161 156h14m-7-7a12 12 0 0 0 0 14m0-14a12 12 0 0 1 0 14" fill="none" stroke="#717681" stroke-width="1"/>
+    <path d="M1204 151a7 7 0 1 0 9 9 7 7 0 0 1-9-9Z" fill="none" stroke="#717681" stroke-width="1.2"/>
+    <circle cx="1260" cy="156" r="14" fill="#fff" stroke="#e0e2e7"/><circle cx="1260" cy="152" r="3.4" fill="none" stroke="#737985" stroke-width="1.2"/><path d="M1253 163c1-5 4-7 7-7s6 2 7 7" fill="none" stroke="#737985" stroke-width="1.2"/>
+
+    <!-- Desktop breadcrumb and Admin tabs -->
+    <text x="307" y="211" class="small muted">Acme Singapore</text><path d="m393 207 4 4-4 4" fill="none" stroke="#9a9ea6" stroke-width="1.2"/><text x="405" y="211" class="small muted">Admin</text><path d="m442 207 4 4-4 4" fill="none" stroke="#9a9ea6" stroke-width="1.2"/><text x="454" y="211" class="small" font-weight="600">System settings</text>
+    <g class="small muted">
+      <text x="319" y="246">♙  Users</text><text x="401" y="246">♧  Roles &amp; Permissions</text><text x="562" y="246">♢  Agent Governance</text><text x="722" y="246">☷  Product Cases</text><text x="847" y="246">▦  Master Control</text><text x="985" y="246">◴  Audit Log</text>
+    </g>
+    <rect x="1082" y="228" width="142" height="32" rx="8" fill="#e5f0fd"/>
+    <text x="1096" y="248" class="small blue" font-weight="650">☼  System Settings</text>
+    <line x1="302" y1="267" x2="1292" y2="267" class="line"/>
+
+    <!-- Desktop page header and error summary -->
+    <text x="306" y="305" font-size="26" font-weight="700">Company profile</text>
+    <text x="306" y="328" class="body muted">Legal identity and registered address shown on company documents.</text>
+    <rect x="1054" y="286" width="176" height="29" rx="14.5" fill="#fff8e8" stroke="#f0d58b"/>
+    <circle cx="1070" cy="300.5" r="4" fill="#c47a08"/><text x="1081" y="304" class="small" fill="#805207" font-weight="600">Unsaved changes</text>
+    <rect x="306" y="344" width="925" height="43" rx="10" fill="#fff4f2" stroke="#f1c7c3"/>
+    <circle cx="326" cy="365.5" r="8" fill="#bd3027"/><text x="326" y="369.5" text-anchor="middle" font-size="11" fill="#fff" font-weight="700">!</text>
+    <text x="343" y="370" class="small red" font-weight="600">Review the highlighted field: legal name is required before changes can be saved.</text>
+
+    <!-- Desktop identity card -->
+    <rect x="306" y="400" width="925" height="322" rx="16" class="card"/>
+    <text x="326" y="428" class="card-title">Company identity</text>
+    <line x1="306" y1="442" x2="1231" y2="442" class="line"/>
+    <text x="328" y="466" class="label muted">COMPANY LOGO <tspan class="faint" font-weight="400">· OPTIONAL</tspan></text>
+    <rect x="329" y="478" width="64" height="64" rx="12" fill="#eff6ff" stroke="#d7e7fb"/>
+    <path d="M346 493 360 488l14 5v10c0 10-6 17-14 21-8-4-14-11-14-21Z" fill="#0b78df"/>
+    <path d="m352 509 5-7 4 6 6-9" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="405" y="499" class="small" font-weight="650">acme-logo.webp</text>
+    <text x="405" y="516" class="tiny muted">Image preview</text>
+    <rect x="405" y="526" width="56" height="18" rx="9" fill="#eef7f1"/><text x="433" y="538.5" text-anchor="middle" class="tiny" fill="#247342">WEBP</text>
+    <rect x="329" y="555" width="143" height="32" rx="8" fill="#fff" stroke="#d9dce3"/>
+    <path d="M344 571v-7m-3 3 3-3 3 3m-3 4v3h14v-10" fill="none" stroke="#526071" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="365" y="575" class="small" font-weight="600">Replace logo</text>
+    <text x="329" y="609" class="small blue" font-weight="600">Remove logo</text>
+    <text x="329" y="635" class="tiny muted">PNG, JPEG or WebP</text>
+    <text x="329" y="652" class="tiny muted">Preview updates before save.</text>
+
+    <text x="525" y="466" class="label red">LEGAL NAME <tspan font-weight="700">*</tspan></text>
+    <rect x="525" y="474" width="681" height="42" rx="9" fill="#fffafa" stroke="#c53b32" stroke-width="1.4"/>
+    <text x="540" y="500" class="field-value faint">Enter the registered legal name</text>
+    <circle cx="527" cy="532" r="6" fill="#bd3027"/><text x="527" y="535" text-anchor="middle" font-size="8" class="inverse" font-weight="700">!</text>
+    <text x="539" y="536" class="small red">Required. Add the legal name to continue.</text>
+
+    <text x="525" y="565" class="label muted">REGISTRATION NUMBER</text>
+    <rect x="525" y="573" width="329" height="42" rx="9" class="field"/>
+    <text x="540" y="599" class="field-value">2019•••••K</text>
+    <text x="877" y="565" class="label muted">TAX NUMBER</text>
+    <rect x="877" y="573" width="329" height="42" rx="9" class="field"/>
+    <text x="892" y="599" class="field-value">M2-•••••••-X</text>
+    <text x="525" y="641" class="tiny muted">Use the identifiers issued for this company’s registered jurisdiction.</text>
+
+    <!-- Desktop address card -->
+    <rect x="306" y="738" width="925" height="188" rx="16" class="card"/>
+    <text x="326" y="766" class="card-title">Registered address</text>
+    <line x1="306" y1="780" x2="1231" y2="780" class="line"/>
+    <text x="328" y="804" class="label muted">ADDRESS LINE 1</text>
+    <rect x="328" y="812" width="426" height="38" rx="9" class="field"/><text x="342" y="836" class="field-value">18 Example Industrial Road</text>
+    <text x="778" y="804" class="label muted">ADDRESS LINE 2 <tspan class="faint" font-weight="400">· OPTIONAL</tspan></text>
+    <rect x="778" y="812" width="428" height="38" rx="9" class="field"/><text x="792" y="836" class="field-value">#04-02</text>
+    <text x="328" y="873" class="label muted">CITY</text>
+    <rect x="328" y="881" width="426" height="34" rx="9" class="field"/><text x="342" y="903" class="field-value">Singapore</text>
+    <text x="778" y="873" class="label muted">POSTAL CODE</text>
+    <rect x="778" y="881" width="428" height="34" rx="9" class="field"/><text x="792" y="903" class="field-value">123456</text>
+
+    <!-- Desktop sticky save bar -->
+    <rect x="282" y="944" width="1034" height="72" fill="#fff" stroke="#e4e6eb"/>
+    <text x="307" y="981" class="small muted">Changes apply to this company profile.</text>
+    <rect x="1016" y="962" width="91" height="38" rx="9" fill="#fff" stroke="#d9dce3"/>
+    <text x="1061.5" y="986" text-anchor="middle" class="body" font-weight="600">Cancel</text>
+    <rect x="1117" y="962" width="187" height="38" rx="9" fill="#086dd2"/>
+    <path d="m1135 981 3 3 6-7" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="1152" y="986" class="body inverse" font-weight="650">Save changes</text>
+  </g>
+  <rect x="36" y="128" width="1280" height="900" rx="16" fill="none" stroke="#dfe2e8"/>
+
+  <!-- Mobile application shell at true 375px width -->
+  <g clip-path="url(#mobile-screen)" filter="url(#shadow)">
+    <rect x="1360" y="128" width="375" height="1080" fill="#f5f6f9"/>
+    <rect x="1360" y="128" width="375" height="56" fill="#fff"/>
+    <line x1="1360" y1="184" x2="1735" y2="184" class="line"/>
+    <rect x="1374" y="138" width="140" height="36" rx="18" fill="#fbfbfd" stroke="#e2e4e9"/>
+    <circle cx="1392" cy="155" r="5" fill="none" stroke="#747984" stroke-width="1.4"/><line x1="1396" y1="159" x2="1400" y2="163" stroke="#747984" stroke-width="1.4"/>
+    <text x="1408" y="160" class="small muted">Search documents...</text>
+    <circle cx="1537" cy="156" r="21" fill="#fff" stroke="#e3e5e9"/><path d="M1533 163v-7a4 4 0 0 1 8 0v7l2 3h-12Zm3 5a2 2 0 0 0 4 0" fill="none" stroke="#717681" stroke-width="1.2"/>
+    <circle cx="1589" cy="156" r="21" fill="#fff" stroke="#e3e5e9"/><circle cx="1589" cy="156" r="7" fill="none" stroke="#717681" stroke-width="1.1"/><path d="M1582 156h14m-7-7a12 12 0 0 0 0 14m0-14a12 12 0 0 1 0 14" fill="none" stroke="#717681" stroke-width=".9"/>
+    <circle cx="1641" cy="156" r="21" fill="#fff" stroke="#e3e5e9"/><path d="M1638 150a7 7 0 1 0 9 9 7 7 0 0 1-9-9Z" fill="none" stroke="#717681" stroke-width="1.2"/>
+    <circle cx="1693" cy="156" r="21" fill="#fff" stroke="#e3e5e9"/><circle cx="1693" cy="152" r="3.3" fill="none" stroke="#737985" stroke-width="1.2"/><path d="M1686 163c1-5 4-7 7-7s6 2 7 7" fill="none" stroke="#737985" stroke-width="1.2"/>
+
+    <!-- Mobile breadcrumb and horizontally scrollable Admin tabs -->
+    <text x="1376" y="207" class="small muted">Acme Singapore</text><path d="m1462 203 4 4-4 4" fill="none" stroke="#9a9ea6" stroke-width="1.2"/><text x="1474" y="207" class="small muted">Admin</text><path d="m1511 203 4 4-4 4" fill="none" stroke="#9a9ea6" stroke-width="1.2"/><text x="1523" y="207" class="small" font-weight="600">System settings</text>
+    <g class="small muted">
+      <text x="1324" y="243">Audit Log</text><text x="1393" y="243">Master Control</text><text x="1515" y="243">Audit Log</text>
+    </g>
+    <rect x="1570" y="224" width="149" height="32" rx="8" fill="#e5f0fd"/><text x="1582" y="244" class="small blue" font-weight="650">☼  System Settings</text>
+    <line x1="1376" y1="263" x2="1719" y2="263" class="line"/>
+
+    <text x="1376" y="297" font-size="23" font-weight="700">Company profile</text>
+    <text x="1376" y="319" class="small muted">Legal identity and registered address shown</text>
+    <text x="1376" y="335" class="small muted">on company documents.</text>
+    <rect x="1376" y="347" width="343" height="48" rx="10" fill="#fff4f2" stroke="#f1c7c3"/>
+    <circle cx="1394" cy="371" r="7" fill="#bd3027"/><text x="1394" y="374.5" text-anchor="middle" font-size="10" class="inverse" font-weight="700">!</text>
+    <text x="1408" y="367" class="tiny red" font-weight="600">Legal name is required.</text><text x="1408" y="381" class="tiny red">Add it before saving changes.</text>
+
+    <!-- Mobile identity card -->
+    <rect x="1376" y="407" width="343" height="367" rx="15" class="card"/>
+    <text x="1392" y="434" class="card-title">Company identity</text>
+    <line x1="1376" y1="447" x2="1719" y2="447" class="line"/>
+    <text x="1392" y="465" class="label muted">COMPANY LOGO · OPTIONAL</text>
+    <rect x="1392" y="474" width="52" height="52" rx="10" fill="#eff6ff" stroke="#d7e7fb"/>
+    <path d="M1405 486 1418 482l13 4v8c0 8-5 14-13 18-8-4-13-10-13-18Z" fill="#0b78df"/>
+    <path d="m1410 499 4-6 4 5 5-7" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="1454" y="488" class="small" font-weight="650">acme-logo.webp</text><text x="1454" y="504" class="tiny muted">Preview · WEBP</text>
+    <text x="1454" y="522" class="tiny blue" font-weight="600">Replace</text><text x="1505" y="522" class="tiny muted">·</text><text x="1515" y="522" class="tiny blue" font-weight="600">Remove</text>
+    <text x="1392" y="540" class="tiny muted">PNG, JPEG or WebP. Preview updates before save.</text>
+
+    <text x="1392" y="561" class="label red">LEGAL NAME *</text>
+    <rect x="1392" y="568" width="311" height="38" rx="8" fill="#fffafa" stroke="#c53b32" stroke-width="1.3"/>
+    <text x="1404" y="592" class="small faint">Enter the registered legal name</text>
+    <text x="1392" y="622" class="tiny red" font-weight="600">!  Required. Add the legal name to continue.</text>
+
+    <text x="1392" y="646" class="label muted">REGISTRATION NUMBER</text>
+    <rect x="1392" y="653" width="311" height="37" rx="8" class="field"/><text x="1404" y="677" class="field-value">2019•••••K</text>
+    <text x="1392" y="712" class="label muted">TAX NUMBER</text>
+    <rect x="1392" y="719" width="311" height="37" rx="8" class="field"/><text x="1404" y="743" class="field-value">M2-•••••••-X</text>
+
+    <!-- Mobile address card -->
+    <rect x="1376" y="789" width="343" height="276" rx="15" class="card"/>
+    <text x="1392" y="816" class="card-title">Registered address</text>
+    <line x1="1376" y1="829" x2="1719" y2="829" class="line"/>
+    <text x="1392" y="848" class="label muted">ADDRESS LINE 1</text>
+    <rect x="1392" y="854" width="311" height="34" rx="8" class="field"/><text x="1404" y="876" class="small">18 Example Industrial Road</text>
+    <text x="1392" y="908" class="label muted">ADDRESS LINE 2 · OPTIONAL</text>
+    <rect x="1392" y="914" width="311" height="34" rx="8" class="field"/><text x="1404" y="936" class="small">#04-02</text>
+    <text x="1392" y="968" class="label muted">CITY</text>
+    <rect x="1392" y="974" width="145" height="34" rx="8" class="field"/><text x="1404" y="996" class="small">Singapore</text>
+    <text x="1548" y="968" class="label muted">POSTAL CODE</text>
+    <rect x="1548" y="974" width="155" height="34" rx="8" class="field"/><text x="1560" y="996" class="small">123456</text>
+
+    <!-- Mobile pinned save actions, above the existing bottom navigation -->
+    <rect x="1360" y="1020" width="375" height="62" fill="#fff" stroke="#e4e6eb"/>
+    <rect x="1376" y="1031" width="101" height="39" rx="9" fill="#fff" stroke="#d9dce3"/><text x="1426.5" y="1056" text-anchor="middle" class="small" font-weight="600">Cancel</text>
+    <rect x="1487" y="1031" width="232" height="39" rx="9" fill="#086dd2"/>
+    <path d="m1504 1050 3 3 6-7" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><text x="1521" y="1056" class="small inverse" font-weight="650">Save changes</text>
+
+    <!-- Existing mobile bottom navigation -->
+    <rect x="1360" y="1082" width="375" height="126" fill="#fff" stroke="#e7e8ec"/>
+    <path d="m1406 1110 8-7 8 7v11h-6v-7h-4v7h-6Z" fill="none" stroke="#737985" stroke-width="1.5" stroke-linejoin="round"/>
+    <text x="1414" y="1135" text-anchor="middle" class="tiny muted">Home</text>
+    <circle cx="1570" cy="1110" r="7" fill="none" stroke="#737985" stroke-width="1.5"/><line x1="1575" y1="1115" x2="1580" y2="1120" stroke="#737985" stroke-width="1.5"/>
+    <text x="1570" y="1135" text-anchor="middle" class="tiny muted">Search</text>
+    <rect x="1490" y="1185" width="115" height="4" rx="2" fill="#282b30"/>
+  </g>
+  <rect x="1360" y="128" width="375" height="1080" rx="22" fill="none" stroke="#dfe2e8"/>
+</svg>

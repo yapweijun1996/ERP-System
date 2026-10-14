@@ -11,11 +11,19 @@ import {
 } from '../../modules/admin/controlPlane';
 import { apiError, context, requireSession } from '../http';
 import { ActionDispatchError, dispatchAction } from '../actionDispatcher';
+import {
+  CompanyProfileError,
+  updateCompanyProfileWithin,
+} from '../../modules/admin/companyProfile';
 
 export function createSettingsRouter(db: DB): Router {
   const router = Router();
   const fail = (res: import('express').Response, error: unknown) => {
     if (error instanceof ControlPlaneError) { apiError(res, error.code.endsWith('not_found') ? 404 : 422, error.code, error.message); return true; }
+    if (error instanceof CompanyProfileError) {
+      const status = error.code === 'profile_version_conflict' ? 409 : error.code.endsWith('not_found') ? 404 : 422;
+      apiError(res, status, error.code, error.message); return true;
+    }
     return false;
   };
   router.get('/overview', async (req, res) => {
@@ -30,6 +38,17 @@ export function createSettingsRouter(db: DB): Router {
       const result = await dispatchAction({ db, session, resource: 'settings/policy', resourceId: 1, action: 'update', payload: req.body ?? {}, idempotencyKey: req.header('idempotency-key'), requestId: context(res).requestId }, {
         permission: PERMISSIONS.settingsManage, idempotency: 'required', audit: 'none',
         execute: (tx, scope, input) => updateCompanyPolicyWithin(tx, scope, { userId: input.actorUserId, requestId: context(res).requestId }, input.payload as unknown as Parameters<typeof updateCompanyPolicyWithin>[3]),
+      });
+      if (result.replayed) res.setHeader('Idempotency-Replayed', 'true'); res.status(result.status).json(result.body);
+    } catch (error) { if (error instanceof ActionDispatchError) apiError(res, error.status, error.code, error.message); else if (!fail(res, error)) throw error; }
+  });
+  router.post('/company-profile/:id/actions/update', async (req, res) => {
+    const session = await requireSession(db, req, res); if (!session) return;
+    if (req.params.id !== 'current') { apiError(res, 404, 'company_not_found', 'Active company not found.'); return; }
+    try {
+      const result = await dispatchAction({ db, session, resource: 'settings/company-profile', resourceId: 1, action: 'update', payload: req.body ?? {}, idempotencyKey: req.header('idempotency-key'), requestId: context(res).requestId }, {
+        permission: PERMISSIONS.settingsManage, idempotency: 'required', audit: 'none',
+        execute: (tx, scope, input) => updateCompanyProfileWithin(tx, scope, { userId: input.actorUserId, requestId: context(res).requestId }, input.payload as unknown as Parameters<typeof updateCompanyProfileWithin>[3]),
       });
       if (result.replayed) res.setHeader('Idempotency-Replayed', 'true'); res.status(result.status).json(result.body);
     } catch (error) { if (error instanceof ActionDispatchError) apiError(res, error.status, error.code, error.message); else if (!fail(res, error)) throw error; }

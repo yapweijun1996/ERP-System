@@ -4,23 +4,43 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PGlite } from '@electric-sql/pglite';
-import { demoStructuralHash, readDemoStructuralContract } from '../src/demo/schemaLineage';
+import { demoStructuralHash, demoStructuralCategoryEvidence, readDemoStructuralContract } from '../src/demo/schemaLineage';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const journal=JSON.parse(readFileSync(path.join(root,'drizzle/meta/_journal.json'),'utf8')) as { entries: { idx: number; tag: string }[] };
-const identities: { version: number; tag: string; sqlHash: string; structuralHash: string }[]=[];
+const identities: { version: number; tag: string; sqlHash: string; structuralHash: string; categories: Awaited<ReturnType<typeof demoStructuralCategoryEvidence>> }[]=[];
 let hrIndexes: {name:string;table:string;definition:string}[]=[];
+let legacyRoleIndex: {table:string;name:string;definition:string;valid:boolean;ready:boolean;immediate:boolean}|undefined;
 const client=new PGlite();
 let ownedTables: string[]=[];
 let ownedFunctions: string[]=[];
+// Exact historical source is now present in main history. Its0–117 SQL and
+// historical0118_lucky_randall are byte-identical to canonical0–117 and0119.
+// Bind both contracts so regeneration cannot silently broaden that evidence.
+const historicalProfileSource='4f9234d05d9983bd416f74ab4bdee6f95b64e8bd';
+const historical117Hash='0d83f977320a015bc572b09cab2f45612e9c1abfb81ffe7372d625ece8e73eb7';
+const historicalProfileSqlHash='75222ed3d3930d0dd0bd40d9ccbd49a53a6a070385e51a078b13c70fb510ad49';
+const profileSourceSql=readFileSync(path.join(root,'drizzle/0119_company_profile.sql'),'utf8');
+if(createHash('sha256').update(profileSourceSql).digest('hex')!==historicalProfileSqlHash)throw new Error('Historical CompanyProfile SQL no longer matches the verified source. Review compatibility before regenerating.');
+let historicalProfileHash='';
 try {
   for(const entry of journal.entries){
     const sql=readFileSync(path.join(root,'drizzle',entry.tag+'.sql'),'utf8').trim();
     await client.exec(sql);
     const contract=await readDemoStructuralContract(client);
-    identities.push({version:entry.idx,tag:entry.tag,sqlHash:createHash('sha256').update(sql).digest('hex'),structuralHash:await demoStructuralHash(contract)});
+    identities.push({version:entry.idx,tag:entry.tag,sqlHash:createHash('sha256').update(sql).digest('hex'),structuralHash:await demoStructuralHash(contract),categories:await demoStructuralCategoryEvidence(contract)});
     ownedTables=contract.tables;
     ownedFunctions=contract.functions.map(row=>row.signature);
+    if(entry.idx===72)legacyRoleIndex=contract.indexes.find(index=>index.name==='uq_role_master_name');
+    if(entry.idx===117){
+      if(await demoStructuralHash(contract)!==historical117Hash)throw new Error('Historical CompanyProfile base117 metadata no longer matches the verified source.');
+      const rollback=Symbol('source-only historical fingerprint rollback');
+      try{await client.transaction(async tx=>{
+        await tx.exec(profileSourceSql);
+        historicalProfileHash=await demoStructuralHash(await readDemoStructuralContract(tx));
+        throw rollback;
+      });}catch(error){if(error!==rollback)throw error;}
+    }
     if(entry.idx===118){
       hrIndexes=(await client.query<{name:string;table:string;definition:string}>("select indexname as name,tablename as \"table\",indexdef as definition from pg_indexes where schemaname='public' and indexname in ('uq_hr_business_unit_code','uq_hr_business_unit_tenant_id','uq_hr_position_code','uq_hr_position_tenant_id') order by indexname")).rows;
     }
@@ -28,15 +48,19 @@ try {
 } finally { await client.close(); }
 const hr=identities.find(entry=>entry.version===118&&entry.tag==='0118_classy_ronan');
 const prior=identities.find(entry=>entry.version===117);
-if(!hr||!prior||hrIndexes.length!==4) throw new Error('The bounded HR compatibility lineage is absent. Review the identity policy before regenerating.');
+const profile=identities.find(entry=>entry.version===119&&entry.tag==='0119_company_profile');
+if(!hr||!prior||!profile||!historicalProfileHash||hrIndexes.length!==4||!legacyRoleIndex||legacyRoleIndex.table!=='role') throw new Error('The bounded compatibility lineage is absent. Review the identity policy before regenerating.');
 const bundle=readFileSync(path.join(root,'web/public/db/erp-system-migrations.sql'),'utf8');
-const start=bundle.indexOf('-- 0118_classy_ronan\n');
-if(start<0)throw new Error('Generated HR compatibility SQL is absent. Run generate:demo-schema first.');
-const next=bundle.slice(start+1).search(/^-- \d{4}_/m);
-const repairSql=next<0?bundle.slice(start).trim():bundle.slice(start,start+1+next).trim();
+function compatibilitySection(tag:string){
+  const start=bundle.indexOf('-- '+tag+'\n');
+  if(start<0)throw new Error('Generated compatibility SQL is absent. Run generate:demo-schema first.');
+  const next=bundle.slice(start+1).search(/^-- \d{4}_/m);
+  return next<0?bundle.slice(start).trim():bundle.slice(start,start+1+next).trim();
+}
+const repairSql=compatibilitySection(hr.tag);
 const target=path.join(root,'src/demo/schemaLineage.generated.ts');
 const content='// GENERATED by scripts/generate-demo-schema-lineage.ts. Do not edit.\n'+
-  'export const DEMO_SCHEMA_LINEAGE = '+JSON.stringify({identities,ownedTables,ownedFunctions,assetHashes:{'erp-system-schema.sql':createHash('sha256').update(readFileSync(path.join(root,'web/public/db/erp-system-schema.sql'),'utf8')).digest('hex'),'erp-system-migrations.sql':createHash('sha256').update(bundle).digest('hex')},hrRepair:{fromVersion:117,toVersion:118,tag:hr.tag,sqlHash:hr.sqlHash,sql:repairSql,indexes:hrIndexes}},null,2)+' as const;\n';
+  'export const DEMO_SCHEMA_LINEAGE = '+JSON.stringify({identities,ownedTables,ownedFunctions,assetHashes:{'erp-system-schema.sql':createHash('sha256').update(readFileSync(path.join(root,'web/public/db/erp-system-schema.sql'),'utf8')).digest('hex'),'erp-system-migrations.sql':createHash('sha256').update(bundle).digest('hex')},legacyRoleRepair:{absentSinceVersion:73,index:legacyRoleIndex},historicalCompanyProfile:{sourceCommit:historicalProfileSource,sourceTag:'0118_lucky_randall',sourceSqlHash:historicalProfileSqlHash,marker:118,structuralHash:historicalProfileHash,targetVersion:119,sql:compatibilitySection(profile.tag)},hrRepair:{fromVersion:117,toVersion:118,tag:hr.tag,sqlHash:hr.sqlHash,sql:repairSql,indexes:hrIndexes}},null,2)+' as const;\n';
 if(process.argv.includes('--check')){
   if(readFileSync(target,'utf8')!==content)throw new Error('Generated Demo schema lineage is stale. Run generate:demo-lineage.');
   console.log('Demo structural identities match '+identities.length+' canonical migration prefixes.');

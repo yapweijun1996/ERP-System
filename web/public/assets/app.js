@@ -576,7 +576,6 @@ async function dismissAllNotifications(){
 function routeModuleId(route){
   if(route==='settings') return 'settings';
   if(route==='notifications'||route==='my-activity') return 'account';
-  if(route==='company-receipts') return 'expenses_tax';
   return ROUTE_MODULE[route];
 }
 function userHasAnyPermission(required){
@@ -593,7 +592,7 @@ function canReadModule(mod){
   const required={
     sales:['sales.read'],purchasing:['purchasing.read'],crm:['crm.read'],
     inventory:['inventory.read'],warehouse:['warehouse.read'],manufacturing:['manufacturing.read'],
-    quality:['quality.read'],finance:['finance.read'],hr:['hr.read'],project:['project.read'],
+    quality:['quality.read'],finance:['finance.read'],hr:['hr.read'],payroll:['payroll.read'],project:['project.read'],
     service:['service.read'],asset:['asset.read'],workflow:[
       'sales.approve','purchasing.approve','finance.approve','hr.approve','project.approve',
       'employee.team.read','expenses.approve.manager','expenses.approve.finance',
@@ -701,7 +700,8 @@ function notificationDestination(row){
 function moduleBlockedPanel(route){
   const mod=routeModuleId(route);
   const item=moduleControlItems().find(m=>m.id===mod);
-  const label=item?item.label:mod==='expenses_tax'?t('module.expensesTax'):(mod||route);
+  const labelKey=MODULE_DEFS[mod]?.labelKey;
+  const label=labelKey?t(labelKey):(item?.label||mod||route);
   const st=mod?moduleState(mod):{ visible:true, active:true };
   const reason=st.visible?t('access.moduleInactive'):t('access.moduleHidden');
   /* Resolve the placeholder before escaping the complete heading.  The i18n
@@ -915,8 +915,11 @@ const SUBROUTES = {
   asset:['asset-register','asset-detail','depreciation'],
   project:['project-pl','project-detail','timesheet'],
   integration:['integration','integration-logs','data-import'],
-  finance:['gl','account-ledger','journal-entry','new-journal-entry','payment-voucher','new-payment-voucher','bank-rec','pnl','ar-aging','company-receipts'], hr:['leave-approval','leave-workflow','hr-directory','employee','new-employee','hr-calendar','staff-calendar','payroll-run','payslip'],
-  mywork:['my-leave','leave-application','my-claims','expense-claim','my-receipts','company-receipts','receipt-tax-evidence','team-calendar','my-approvals'],
+  finance:['gl','account-ledger','journal-entry','new-journal-entry','payment-voucher','new-payment-voucher','bank-rec','pnl','ar-aging'],
+  expenses_tax:['company-receipts'],
+  hr:['leave-approval','leave-workflow','hr-directory','employee','new-employee','hr-calendar','staff-calendar'],
+  payroll:['payroll-run','payslip'],
+  mywork:['my-leave','leave-application','my-claims','expense-claim','my-receipts','receipt-tax-evidence','team-calendar','my-approvals'],
   workflow:['approval-inbox'], bi:['bi-dashboard','sales-analysis','stock-aging'], admin:['role-permission','master-control','user-mgmt','agent-mgmt','product-cases','audit-log','sys-settings','company-onboarding','notifications'],
 };
 DB.nav.forEach(g=>g.items.forEach(m=>{ ROUTE_MODULE[m.route]=m.id; }));
@@ -1053,7 +1056,10 @@ const MODULE_DEFS = {
     ['gl','General Ledger','book'],['account-ledger','Account Ledger','list'],
     ['journal-entry','Journal Entries','receipt'],['payment-voucher','Payment Vouchers','coins'],
     ['bank-rec','Bank Reconciliation','refresh'],['pnl','Profit & Loss','chart'],
-    ['ar-aging','AR Aging','clock'],['company-receipts','Company Receipts','receipt','route.company-receipts'],
+    ['ar-aging','AR Aging','clock'],
+  ]},
+  expenses_tax:{ labelKey:'nav.expenses_tax', home:'company-receipts', items:[
+    ['company-receipts','Company Receipts','receipt','route.company-receipts'],
   ]},
   crm:{ labelKey:'nav.crm', home:'crm-pipeline', items:[
     ['crm-pipeline','Pipeline','flow'],['crm-customer','Customer 360','user'],
@@ -1072,13 +1078,14 @@ const MODULE_DEFS = {
     {route:'leave-workflow',labelKey:'route.leave-workflow',icon:'flow'},
     ['hr-calendar','Calendar','calendar','route.hr-calendar'],
     ['staff-calendar','Staff Calendar','calendar','route.staff-calendar'],
-    ['payroll-run','Payroll','coins'],
+  ]},
+  payroll:{ labelKey:'nav.payroll', home:'payroll-run', items:[
+    ['payroll-run','Payroll Runs','coins','route.payroll-run'],
   ]},
   mywork:{ labelKey:'nav.mywork', home:'my-leave', items:[
     {route:'my-leave',labelKey:'myWork.nav.leave',icon:'calendar'},
     {route:'my-claims',labelKey:'myWork.nav.claims',icon:'receipt'},
     {route:'my-receipts',labelKey:'myWork.nav.receipts',icon:'upload'},
-    {route:'company-receipts',labelKey:'route.company-receipts',icon:'receipt'},
     {route:'receipt-tax-evidence',labelKey:'myWork.nav.taxEvidence',icon:'filepdf'},
     {route:'team-calendar',labelKey:'myWork.nav.teamCalendar',icon:'people',capability:'team'},
     {route:'my-approvals',labelKey:'myWork.nav.approvals',icon:'check',capability:'approvals'},
@@ -1114,7 +1121,7 @@ const MODULE_READ_PERMISSION = {
   home:'dashboard.read', sales:'sales.read', purchasing:'purchasing.read',
   crm:'crm.read', inventory:'inventory.read', warehouse:'warehouse.read',
   manufacturing:'manufacturing.read', quality:'quality.read', finance:'finance.read',
-  hr:'hr.read', project:'project.read', service:'service.read', asset:'asset.read',
+  hr:'hr.read', payroll:'payroll.read', project:'project.read', service:'service.read', asset:'asset.read',
   workflow:'approval.read', bi:'reporting.read', admin:'admin.read',
   integration:'integration.read', settings:'settings.read', mywork:'employee.self.read',
 };
@@ -1130,7 +1137,7 @@ const SCREEN_LAYOUT_GROUPS = Object.freeze({
     'purchase-returns','supplier-credit-notes','supplier-debit-notes','po-approvals',
     'supplier-price-lists','landed-cost','stock-movement','work-orders',
     'qc-inspection','gl','hr-directory','project-pl','timesheet','service-ticket',
-    'service-contracts','asset-register','user-mgmt','product-cases',
+    'service-contracts','asset-register','user-mgmt',
     'my-leave','my-claims','my-receipts','company-receipts','approval-inbox',
   ],
   'master-detail-register-v1':[

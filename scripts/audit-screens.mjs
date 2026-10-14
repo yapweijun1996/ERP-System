@@ -575,6 +575,25 @@ async function auditRoutes(browser, viewport) {
   const allRoutes = await page.evaluate(() => Object.keys(SCREENS).sort());
   const routeModule = await page.evaluate(() => Object.assign({}, ROUTE_MODULE));
   const screenMeta = await page.evaluate(() => JSON.parse(JSON.stringify(window.SCREEN_META || {})));
+  const duplicateLayouts = await page.evaluate(() => {
+    const routes = new Map();
+    Object.entries(SCREEN_LAYOUT_GROUPS).forEach(([layout, members]) => {
+      members.forEach((route) => routes.set(route, [...(routes.get(route) || []), layout]));
+    });
+    return [...routes].filter(([, layouts]) => layouts.length > 1)
+      .map(([route, layouts]) => `${route}: ${layouts.join(', ')}`);
+  });
+  if (duplicateLayouts.length) {
+    throw new Error(`Routes with conflicting layout declarations: ${duplicateLayouts.join(' | ')}`);
+  }
+  const modulesWithoutNavigation = await page.evaluate(() => {
+    const sidebarModules = new Set(DB.nav.flatMap((group) => group.items.map((item) => item.id)));
+    return Object.keys(MODULE_DEFS).filter((moduleId) => moduleId !== 'account'
+      && !sidebarModules.has(moduleId));
+  });
+  if (modulesWithoutNavigation.length) {
+    throw new Error(`Modules without a primary navigation entry: ${modulesWithoutNavigation.join(', ')}`);
+  }
   const missingLayoutMeta = allRoutes.filter((route) => !screenMeta[route]?.layout);
   const invalidLayoutMeta = allRoutes.filter((route) => !VALID_LAYOUTS.has(screenMeta[route]?.layout));
   const canonicalApiGaps = allRoutes.filter((route) => screenMeta[route]?.maturity === 'canonical'
@@ -2453,8 +2472,8 @@ async function auditRoutes(browser, viewport) {
           }
         }
         const employeeTabs=document.querySelectorAll('#viewRoot .sales-subnav .ssub').length;
-        if (employeeTabs!==5) {
-          issues.push(`employee capability navigation exposed ${employeeTabs} tabs instead of 5`);
+        if (employeeTabs!==4) {
+          issues.push(`employee capability navigation exposed ${employeeTabs} tabs instead of 4`);
         }
 
         setContext(false,true);
@@ -2504,8 +2523,8 @@ async function auditRoutes(browser, viewport) {
         await navigate('team-calendar');
         const managerRoot=document.querySelector('#viewRoot [data-my-work-shell="true"]');
         const managerTabs=document.querySelectorAll('#viewRoot .sales-subnav .ssub').length;
-        if (managerTabs!==7) {
-          issues.push(`manager capability navigation exposed ${managerTabs} tabs instead of 7`);
+        if (managerTabs!==6) {
+          issues.push(`manager capability navigation exposed ${managerTabs} tabs instead of 6`);
         }
         if (managerRoot?.getAttribute('data-my-work-privacy')!=='reason_and_evidence_redacted') {
           issues.push('team route privacy marker missing');

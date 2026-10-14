@@ -37,7 +37,7 @@
   var PG_DATA_DIR = 'idb://erp-system-demo';
   var PG_IDB_NAME = '/pglite/erp-system-demo';
   var BOOT_TIMEOUT_MS = 45000;
-  var DEMO_SCHEMA_VERSION = 118;
+  var DEMO_SCHEMA_VERSION = 119;
   var DEMO_PACK_VERSION = '16';
   var DEMO_IMPERSONATOR_KEY = 'aria-demo-impersonator-email';
 
@@ -370,12 +370,10 @@
       && accessColumnSignature && Number(accessColumnSignature.n) === 3
       && commercialLineSignature && Number(commercialLineSignature.n) === 6;
     if (currentVersion >= DEMO_SCHEMA_VERSION && hasCurrentSignature) {
-      /* Repair databases upgraded by an early v73 preview that retained the
-         obsolete group-wide role-name index. Company roles must be independent. */
-      await db.exec(
-        'drop index if exists "uq_role_master_name";' +
-        'create unique index if not exists "uq_role_company_name" ' +
-        'on "role" ("master_fn","company_fn","name");');
+      /* Identity preflight performs the bounded early-v73 normalization only
+         after exact role-index and complete canonical-contract recognition.
+         The separate startup-index validator validates/repairs company roles.
+         Never drop an unrelated extension index merely by its global name. */
       return false;
     }
 
@@ -2893,6 +2891,16 @@
         throw new Error('Unknown connector action.');
       });
       return {data:connectorResult,meta:{}};
+    }
+    if(key==='settings/company-profile'&&name==='update'){
+      if(!(DB.user&&Array.isArray(DB.user.permissionKeys)&&DB.user.permissionKeys.includes('settings.manage'))){
+        throw new Error('You cannot edit the Company profile.');
+      }
+      var companyProfileResult=await requireDemoDb().transaction(function(tx){
+        return state.runtime.commands.updateCompanyProfileWithin(
+          state.runtime.createOrm(tx),SCOPE,Number(state.activeUserId),payload||{});
+      });
+      return {data:companyProfileResult,meta:{}};
     }
     if(key==='settings/policy'&&name==='update'){
       var policyResult=await requireDemoDb().transaction(function(tx){

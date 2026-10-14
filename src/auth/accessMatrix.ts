@@ -112,7 +112,7 @@ export const ACCESS_MATRIX: readonly AccessMatrixEntry[] = [
   resourceProbe('asset-detail', 'asset', 'assets/assets', 'asset.read', { requiresRow: true }),
 
   resourceProbe('employee', 'hr', 'hr/employees', 'hr.read', { requiresRow: true }),
-  resourceProbe('payroll-run', 'hr', 'payroll/runs', 'payroll.read', { requiresRow: true }),
+  resourceProbe('payroll-run', 'payroll', 'payroll/runs', 'payroll.read', { requiresRow: true }),
   {
     id: 'hr-calendar-holidays', route: 'hr-calendar', module: 'hr',
     requiredAny: ['hr.read'],

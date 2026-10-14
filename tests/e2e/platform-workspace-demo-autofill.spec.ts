@@ -359,7 +359,8 @@ async function main(): Promise<void> {
       await page.locator('#platformRealmTab').click();
       assert(await page.locator('#tenantCredentials').isHidden(), `${viewport.label}: Tenant fields remain visible in Platform realm`);
       assert(await page.locator('#platformCredentials').isVisible(), `${viewport.label}: Platform fields are hidden after selection`);
-      assert(await page.locator('#tenantRememberDeviceRow').isHidden(), `${viewport.label}: Remember Me remains visible in Platform realm`);
+      assert(await page.locator('#tenantRememberDeviceRow').isHidden(), `${viewport.label}: tenant Remember Me remains visible in Platform realm`);
+      assert(await page.locator('#platformRememberDeviceRow').isVisible(), `${viewport.label}: Platform trusted-device option is hidden`);
       await page.locator('#tenantRealmTab').click();
     }
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -399,6 +400,7 @@ async function main(): Promise<void> {
     const formWidth = await page.locator('#platformAwareLoginForm').evaluate((form) => form.getBoundingClientRect().width);
     assert(recoveryWidth < formWidth, 'Tenant recovery still occupies the full primary-action width');
     assert(await page.locator('#tenantRememberDeviceRow').isVisible(), 'tenant Remember Me row is not visible in tenant realm');
+    assert(await page.locator('#platformRememberDeviceRow').isHidden(), 'Platform trusted-device option is visible in tenant realm');
     const rememberAfterPassword = await page.evaluate(() => {
       const password = document.querySelector('#realmPassword');
       const remember = document.querySelector('#tenantRememberDeviceRow');
@@ -412,13 +414,17 @@ async function main(): Promise<void> {
     assert(await page.locator('#realmPassword').getAttribute('type') === 'password', 'tenant password did not become hidden');
     await page.locator('[data-realm="platform"]').click();
     await waitFor(page, '#platformDemoLoginButton');
-    assert(await page.locator('#tenantRememberDeviceRow').isHidden(), 'Remember Me row is visible in Platform realm');
+    assert(await page.locator('#tenantRememberDeviceRow').isHidden(), 'tenant Remember Me row is visible in Platform realm');
+    assert(await page.locator('#platformRememberDeviceRow').isVisible(), 'Platform trusted-device option is hidden in Platform realm');
     await page.locator('#realmPasswordToggle').click();
     assert(await page.locator('#realmPassword').getAttribute('type') === 'text', 'Platform password did not become visible');
     await page.locator('#realmPasswordToggle').click();
     assert(await page.locator('#platformDemoLoginButton').innerText() === 'Log in as Platform Admin (Demo)', 'demo Platform login button copy is incorrect');
+    await page.locator('#platformRememberDevice').check();
     await page.locator('#platformDemoLoginButton').click();
     await waitFor(page, '.platform-shell');
+    const rememberedCookie = (await context.cookies()).find((cookie) => cookie.name === 'erp_platform_session');
+    assert(Boolean(rememberedCookie && rememberedCookie.expires * 1000 - Date.now() > 29 * 24 * 60 * 60 * 1000), 'Platform trusted-device login did not persist its cookie');
 
     // A production-like build (or a Demo build with the flag overridden off)
     // must not expose the shortcut, even when the database has a principal.
@@ -433,6 +439,13 @@ async function main(): Promise<void> {
     await waitFor(productionPage, '#platformAwareLoginForm');
     await productionPage.locator('[data-realm="platform"]').click();
     assert(await productionPage.locator('#platformDemoLoginButton').count() === 0, 'demo Platform login button rendered while autofill was disabled');
+    await productionPage.locator('#platformPrincipalKey').fill('platform-admin');
+    await productionPage.locator('#realmPassword').fill('demo-platform-1234');
+    await productionPage.locator('#platformRememberDevice').check();
+    await productionPage.locator('#platformAwareLoginForm button[type="submit"]').click();
+    await waitFor(productionPage, '.platform-shell');
+    const manualRememberedCookie = (await productionContext.cookies()).find((cookie) => cookie.name === 'erp_platform_session');
+    assert(Boolean(manualRememberedCookie && manualRememberedCookie.expires * 1000 - Date.now() > 29 * 24 * 60 * 60 * 1000), 'manual Platform trusted-device login did not persist its cookie');
     await productionContext.close();
     assert(browserErrors.length === 0, `platform demo autofill browser errors: ${browserErrors.join(' | ')}`);
 

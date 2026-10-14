@@ -5,13 +5,21 @@
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { createServer } from 'node:net';
 import { PDFDocument } from 'pdf-lib';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const ROOT=path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
 const WEB_DIR=path.join(ROOT,'web');
-const PORT=process.env.COMPANY_RECEIPTS_E2E_PORT||'4318';
+const PORT=process.env.COMPANY_RECEIPTS_E2E_PORT||await new Promise((resolve,reject)=>{
+  const server=createServer();
+  server.once('error',reject);
+  server.listen(0,'127.0.0.1',()=>{
+    const address=server.address();
+    server.close(()=>resolve(String(address.port)));
+  });
+});
 const BASE_URL=`http://127.0.0.1:${PORT}`;
 const TIMEOUT=60000;
 
@@ -19,10 +27,13 @@ function assert(condition,message){if(!condition) throw new Error(message);}
 async function waitForServer(){
   const deadline=Date.now()+15000;
   while(Date.now()<deadline){
-    try{if((await fetch(BASE_URL)).ok)return;}catch{}
+    try{
+      const response=await fetch(BASE_URL);
+      if(response.ok&&(await response.text()).includes('<title>Aria ERP</title>'))return;
+    }catch{}
     await new Promise(resolve=>setTimeout(resolve,250));
   }
-  throw new Error(`${BASE_URL} did not respond.`);
+  throw new Error(`${BASE_URL} did not serve the Aria ERP preview.`);
 }
 async function main(){
   if(!existsSync(path.join(WEB_DIR,'dist','index.html'))){
@@ -49,7 +60,12 @@ async function main(){
     await page.goto(`${BASE_URL}/?company-receipts-e2e=${Date.now()}#dashboard`,{
       waitUntil:'domcontentloaded',timeout:30000,
     });
-    await page.waitForFunction(()=>window.ErpSystemData&&window.navigate,{timeout:TIMEOUT});
+    try {
+      await page.waitForFunction(()=>window.ErpSystemData&&window.navigate,null,{timeout:TIMEOUT});
+    } catch (error) {
+      const visibleState=(await page.locator('body').innerText()).slice(0,500);
+      throw new Error(`Demo boot did not reach the workspace. Visible state: ${visibleState}. Browser errors: ${browserErrors.join(' | ')}`,{cause:error});
+    }
     await page.waitForFunction(()=>typeof DB!=='undefined'&&DB.user&&Array.isArray(DB.user.permissionKeys),
       null,{timeout:TIMEOUT});
     await page.evaluate(async()=>{
@@ -71,7 +87,7 @@ async function main(){
       await page.evaluate(async value=>{await setLang(value);await navigate('company-receipts');},language);
       const title=await page.locator('.pagehead h1').innerText();
       assert(title===expected&& !title.includes('&amp;'),
-        `module access title must render translated text for ${language} without HTML entities`);
+        `module access title for ${language}: expected ${JSON.stringify(expected)}, received ${JSON.stringify(title)}`);
     }
     const accessBody=await page.evaluate(()=>{
       const original=DB.company.name;
@@ -371,9 +387,26 @@ async function main(){
       const opened=window.__receiptPrintOpen;
       return opened?.target==='_blank'&&opened.url.startsWith('blob:')&&opened.features.includes('noopener');
     }), 'Print must open the generated PDF blob in a protected new window');
+    await page.locator('[data-receipt-preset]').selectOption('thisYear');
+    await page.locator('[data-receipt-search]').fill('Travel');
+    await page.locator('[data-company-receipt-filters] button.primary').click();
+    await page.waitForFunction(()=>window.__receiptQueries.at(-1)?.search==='Travel');
+    assert(await page.evaluate(()=>{
+      const query=window.__receiptQueries.at(-1);
+      return query.dateFrom==='2026-01-01'&&query.dateTo==='2026-12-31';
+    }), 'year preset and category keyword must reach the scoped register query');
+    await page.locator('[data-receipt-pack-preview]').click();
+    await page.locator('[data-company-receipt-pack-confirm]').click();
+    await page.waitForFunction(()=>window.__receiptPackPayloads.at(-1)?.search==='Travel');
+    assert(await page.evaluate(()=>{
+      const payload=window.__receiptPackPayloads.at(-1);
+      return payload.dateFrom==='2026-01-01'&&payload.dateTo==='2026-12-31';
+    }), 'yearly category selection must be frozen into the Receipt Pack');
+    await page.locator('#modalEl .modal-foot button').click();
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth),
       'desktop page overflowed horizontally');
 
+    await page.evaluate(()=>{ closeModal(); closeAllPops(); });
     await page.setViewportSize({width:390,height:844});
     await page.evaluate(()=>navigate('company-receipts'));
     await page.locator('[data-company-receipt-register="canonical"]').waitFor({timeout:TIMEOUT});
@@ -402,6 +435,8 @@ async function main(){
       'mobile register must render cards instead of a visible grid header');
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth),
       'mobile page overflowed horizontally');
+    await page.locator('.dt-body .dt-r').first().scrollIntoViewIfNeeded();
+    await page.screenshot({path:'docs/evidence/TASK-255-company-receipts-mobile.png',fullPage:true});
     const actualEvidence=await page.evaluate(async()=>{
       const actual=window.__actualCompanyReceiptAdapter;
       ErpSystemData.companyReceipts=actual.companyReceipts;

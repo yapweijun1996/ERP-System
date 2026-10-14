@@ -28,7 +28,7 @@ DB.fiscal = DB.fiscalYears[1];
 DB.user = { name:'Dana Reyes', email:'dana.reyes@northwind.co', initials:'DR', role:'Operations Director',
   perms:{ post:true, approve:true, salaryView:false, costView:true } };
 
-/* ---- navigation: 4 domains × 16 modules. screen = first route ---- */
+/* ---- navigation: business modules and baseline services. screen = first route ---- */
 DB.nav = [
   { group:'Operations', items:[
     { id:'home', label:'Home', icon:'home', route:'dashboard' },
@@ -43,7 +43,9 @@ DB.nav = [
   { group:'Finance & Back office', items:[
     { id:'mywork', label:'My Work', icon:'user', route:'my-leave' },
     { id:'finance', label:'Finance', icon:'book', route:'gl' },
-    { id:'hr', label:'HR / Payroll', icon:'people', route:'hr-directory' },
+    { id:'expenses_tax', label:'Expenses & Tax', icon:'receipt', route:'company-receipts' },
+    { id:'hr', label:'Human Resources', icon:'people', route:'hr-directory' },
+    { id:'payroll', label:'Payroll', icon:'coins', route:'payroll-run' },
     { id:'project', label:'Projects', icon:'project', route:'project-pl' },
     { id:'service', label:'Service', icon:'wrench', route:'service-ticket' },
     { id:'asset', label:'Fixed Assets', icon:'asset', route:'asset-register' },

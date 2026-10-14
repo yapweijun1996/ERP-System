@@ -2,7 +2,7 @@ import type { Server } from 'node:http';
 import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { DB } from '../data/db';
-import { integrationConnector } from '../data/schema';
+import { company, companyProfile, integrationConnector } from '../data/schema';
 import { seedDemo } from '../data/seed';
 import { freshDb } from '../test/helpers';
 import { createApp } from './app';
@@ -304,5 +304,42 @@ describe('canonical control-plane API', () => {
       },
       body: JSON.stringify({ enabled: true, minConfidence: 0.98 }),
     })).status).toBe(403);
+  });
+
+  it('updates only the session Company profile with version, replay and permission guards', async () => {
+    const admin = await login();
+    const viewer = await login('viewer@acme.co', 'viewer1234');
+    const path = `${baseUrl}/api/settings/company-profile/current/actions/update`;
+    const payload = {
+      name: 'Acme Singapore Legal Pte Ltd', registrationNo: '202600001A', taxNo: 'M90000001A',
+      addressLine1: '10 Example Road', addressLine2: '', city: 'Singapore', region: '',
+      postalCode: '123456', expectedVersion: 0,
+    };
+    const submit = (key: string, body: Record<string, unknown> = payload, cookie = admin) => fetch(path, {
+      method: 'POST',
+      headers: { cookie: cookie.header, 'x-csrf-token': cookie.csrf,
+        'content-type': 'application/json', 'idempotency-key': key },
+      body: JSON.stringify(body),
+    });
+    expect((await submit('profile-tenant-spoof', {
+      ...payload, masterFn: 'OTHER', companyFn: 'C-MY',
+    })).status).toBe(400);
+    expect((await submit('profile-viewer-denied', payload, viewer)).status).toBe(403);
+    const saved = await submit('profile-save-once');
+    expect(saved.status).toBe(200);
+    expect(await saved.json()).toMatchObject({ data: {
+      name: payload.name, registrationNo: payload.registrationNo, profileVersion: 1,
+    } });
+    const replay = await submit('profile-save-once');
+    expect(replay.status).toBe(200);
+    expect(replay.headers.get('idempotency-replayed')).toBe('true');
+    expect((await submit('profile-stale', payload)).status).toBe(409);
+    expect((await db.select().from(companyProfile)).map((row) => row.companyFn)).toEqual(['C-SG']);
+    expect((await db.select().from(company).where(eq(company.companyFn, 'C-MY')))[0].name)
+      .not.toBe(payload.name);
+    const overview = await fetch(`${baseUrl}/api/settings/overview`, { headers: { cookie: admin.header } });
+    expect((await overview.json())).toMatchObject({ data: { company: {
+      name: payload.name, taxNo: payload.taxNo, profileVersion: 1,
+    } } });
   });
 });

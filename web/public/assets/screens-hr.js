@@ -4561,7 +4561,7 @@ SCREENS['payroll-run'] = async function(root){
   }
 
   page=masterDetailRegisterPage(root,{
-    module:'hr',
+    module:'payroll',
     route:'payroll-run',
     title:s('payrollRunTitle'),
     description:s('payrollRunDescription'),
@@ -4686,7 +4686,7 @@ SCREENS['payslip'] = async function(root, params){
       :{tone:'warn',label:s('netPayPending'),note:run?s('scheduledFor').replace('{date}',dateValue(run.payDate)):''};
 
   root.innerHTML=`<div class="content full"><section class="master"><div class="docwrap"><div class="docpage payslip-page">
-    ${crumbs([DB.company.name,t('nav.hr'),{label:s('payslipCrumb'),route:'payroll-run'},{cur:run?run.docNo+' · #'+line.lineNo:'#'+line.id}])}
+    ${crumbs([DB.company.name,t('nav.payroll'),{label:s('payslipCrumb'),route:'payroll-run'},{cur:run?run.docNo+' · #'+line.lineNo:'#'+line.id}])}
     <div class="dochead">
       <div class="dh-row1">
         <div><h1 class="dt">${ic('receipt')}${esc(s('payslipTitle'))} <span class="dnum" data-business-text>${esc(run?run.docNo:'')}${run?' · ':''}${esc(empName)}</span></h1>

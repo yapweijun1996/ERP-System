@@ -16,6 +16,7 @@ import {
 } from '../../data/schema';
 import { appendAudit } from '../../api/audit';
 import { ensureEmployeeNumberSequenceWithin } from '../hr/employee';
+import { readCompanyProfileWithin } from './companyProfile';
 
 export interface ControlScope { masterFn: string; companyFn: string }
 export interface ControlActor { userId: number; requestId: string }
@@ -112,18 +113,7 @@ export async function getMasterControlWithin(exec: DB, scope: ControlScope) {
 }
 
 export async function getSystemSettingsWithin(exec: DB, scope: ControlScope) {
-  const [companyRow] = await exec.select({
-    companyFn: company.companyFn,
-    name: company.name,
-    country: company.country,
-    currency: company.currency,
-    taxRegime: company.taxRegime,
-    locale: company.locale,
-    fiscalYearStart: company.fiscalYearStart,
-  }).from(company).where(and(
-    eq(company.masterFn, scope.masterFn), eq(company.companyFn, scope.companyFn),
-  )).limit(1);
-  if (!companyRow) throw new ControlPlaneError('company_not_found', 'Active company not found.');
+  const companyRow = await readCompanyProfileWithin(exec, scope);
   // Existing production companies may predate the employee sequence row. The
   // default is initialized lazily from the already-governed document_sequence
   // table, so no schema migration or employee data rewrite is required.

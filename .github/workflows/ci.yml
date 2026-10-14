@@ -93,6 +93,13 @@ jobs:
           mkdir -p output
           node tests/e2e/demo-lineage-diagnostics.spec.mjs 2>&1 | tee output/demo-lineage-${{ matrix.browser }}.log
 
+      - name: Marker-less canonical retained Demo storage adoption
+        if: ${{ !cancelled() }}
+        run: |
+          set -o pipefail
+          mkdir -p output
+          node tests/e2e/demo-unmarked-v79.spec.mjs 2>&1 | tee output/demo-unmarked-v79-${{ matrix.browser }}.log
+
       - name: Upload isolated Demo browser evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -199,6 +206,7 @@ jobs:
         run: npm run demo
 
       - name: Build the GitHub Pages demo bundle
+        id: demo-build
         env:
           VITE_DATA_MODE: demo
         run: npm run build:demo
@@ -215,10 +223,12 @@ jobs:
           key: playwright-chromium-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Chromium (+ OS deps)
+        id: chromium-install
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
 
       - name: Install Playwright OS deps only (browser cache hit)
+        id: chromium-deps
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
@@ -227,10 +237,29 @@ jobs:
           ERP_HR_REGRESSION: "1"
         run: node tests/e2e/hr-organization.spec.mjs
 
-      - name: Full first-run wizard, sign-in and responsive layout (Chromium)
+      # Keep the targeted setup contract and native WebKit evidence independent
+      # of earlier browser failures. Each failure still fails this job.
+      - name: Post-setup module visibility and Company settings (Chromium)
+        if: ${{ !cancelled() && steps.demo-build.outcome == 'success' && (steps.chromium-install.outcome == 'success' || steps.chromium-deps.outcome == 'success') }}
+        env:
+          SETUP_WIZARD_E2E_MODULE_ONLY: "1"
         run: node tests/e2e/setup-wizard-layout.spec.mjs
 
+      - name: Full first-run wizard, sign-in and responsive layout (Chromium)
+        if: ${{ !cancelled() && steps.demo-build.outcome == 'success' && (steps.chromium-install.outcome == 'success' || steps.chromium-deps.outcome == 'success') }}
+        run: node tests/e2e/setup-wizard-layout.spec.mjs
+
+      - name: Upload setup wizard failure diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: setup-wizard-failure-diagnostics
+          path: output/setup-wizard-failures/
+          if-no-files-found: ignore
+
       - name: Install Playwright WebKit (+ OS deps)
+        id: webkit-install
+        if: ${{ !cancelled() && steps.demo-build.outcome == 'success' }}
         run: npx playwright install --with-deps webkit
 
       - name: i18n browser matrix (en/ms/zh/ja/vi × desktop/mobile)
