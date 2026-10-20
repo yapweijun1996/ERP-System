@@ -1876,5 +1876,6 @@
   "hr.org.unassigned": "Belum ditugaskan",
   "hr.org.reason": "Sebab",
   "access.scope.business_unit": "Unit perniagaan",
-  "access.scope.position": "Jawatan"
+  "access.scope.position": "Jawatan",
+  "route.hr-directory": "Kakitangan"
 }

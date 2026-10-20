@@ -1876,5 +1876,6 @@
   "hr.org.unassigned": "未割り当て",
   "hr.org.reason": "理由",
   "access.scope.business_unit": "事業部",
-  "access.scope.position": "職位"
+  "access.scope.position": "職位",
+  "route.hr-directory": "人々"
 }

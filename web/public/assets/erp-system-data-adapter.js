@@ -39,6 +39,7 @@
   var BOOT_TIMEOUT_MS = 45000;
   var DEMO_SCHEMA_VERSION = 118;
   var DEMO_PACK_VERSION = '16';
+  var DEMO_ORGANIZATION_VERSION = '1';
   var DEMO_IMPERSONATOR_KEY = 'aria-demo-impersonator-email';
 
   /* Same PBKDF2-HMAC-SHA256 scheme and "pbkdf2$<iterations>$<saltHex>$<hashHex>"
@@ -203,6 +204,33 @@
     var started = performance.now();
     await db.exec(sqlText);
     state.demoPack = Object.assign({}, manifest, { loadMs: Math.round(performance.now()-started) });
+    return true;
+  }
+
+  async function ensureOrganizationFixture(db, freshlySeeded){
+    // Separate from the historical showcase pack: never replay its role writes.
+    var current = await db.query("select value from system_state where key='demo_organization_pack' limit 1");
+    if(current.rows[0] && current.rows[0].value && current.rows[0].value.version === DEMO_ORGANIZATION_VERSION) return false;
+    if(!freshlySeeded){
+      var accepted = typeof window.confirm === 'function' && window.confirm(
+        'Add fictional Business Unit and Position examples to Acme Singapore? Existing staff assignments, edited records and permissions will not be changed.'
+      );
+      if(!accepted) return false;
+    }
+    var manifest = await fetchJson('erp-system-demo-organization-v1.json');
+    if(!manifest || manifest.version !== DEMO_ORGANIZATION_VERSION || manifest.masterFn !== 'M1' || manifest.companyFn !== 'C-SG'){
+      throw new Error('Demo organization manifest is invalid.');
+    }
+    var masters = await fetchSql('erp-system-demo-organization-v1.sql');
+    if(await state.runtime.sha256Hex(masters) !== manifest.sha256) throw new Error('Demo organization integrity check failed.');
+    var assignments = '';
+    if(freshlySeeded){
+      assignments = await fetchSql('erp-system-demo-organization-assignments-v1.sql');
+      if(await state.runtime.sha256Hex(assignments) !== manifest.freshAssignmentsSha256) throw new Error('Demo organization assignment integrity check failed.');
+    }
+    // The marker and fixture are one transaction. Retained databases never run assignments.
+    var marker = JSON.stringify({version:DEMO_ORGANIZATION_VERSION,freshAssignments:!!freshlySeeded});
+    await db.exec("BEGIN;\n" + masters + "\n" + assignments + "\nINSERT INTO system_state (key,value) VALUES ('demo_organization_pack','" + marker + "'::jsonb) ON CONFLICT (key) DO NOTHING;\nCOMMIT;");
     return true;
   }
 
@@ -1242,6 +1270,7 @@
       await ensureSchemaUpToDate(db);
       reportBootProgress(45,'Loading showcase data','Preparing the deterministic enterprise demo pack…','loading');
       var showcaseLoaded = await ensureShowcasePack(db, freshlySeeded);
+      await ensureOrganizationFixture(db, freshlySeeded);
       await ensureCompanyReceiptReadFixture(db);
       reportBootProgress(53,'Loading warehouse fixtures','Preparing inventory and picking examples…','loading');
       await ensureWarehousePickFixture(db);

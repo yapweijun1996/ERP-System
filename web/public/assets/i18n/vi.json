@@ -1876,5 +1876,6 @@
   "hr.org.unassigned": "Chưa phân công",
   "hr.org.reason": "Lý do",
   "access.scope.business_unit": "Đơn vị kinh doanh",
-  "access.scope.position": "Vị trí"
+  "access.scope.position": "Vị trí",
+  "route.hr-directory": "Mọi người"
 }

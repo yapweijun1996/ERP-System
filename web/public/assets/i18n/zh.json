@@ -1876,5 +1876,6 @@
   "hr.org.unassigned": "未分配",
   "hr.org.reason": "原因",
   "access.scope.business_unit": "业务单位",
-  "access.scope.position": "职位"
+  "access.scope.position": "职位",
+  "route.hr-directory": "员工"
 }

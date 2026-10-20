@@ -25,7 +25,8 @@ try{
   await page.locator('[data-org-editor] [name=name]').fill('Fictional Position');
   await page.locator('[data-org-editor] [type=submit]').click();
   await page.locator('[data-org-assign]').waitFor({timeout:60000});
-  const result=await page.evaluate(async()=>{const db=ErpSystemData.db;return{unit:(await db.query("select id from hr_business_unit where code='TEST-BU'")).rows[0].id,position:(await db.query("select id from hr_position where code='TEST-POS'")).rows[0].id,staff:(await db.query("select id from employee where company_fn='C-SG' and is_active=true order by id limit 1")).rows[0].id};});
+  const result=await page.evaluate(async()=>{const db=ErpSystemData.db;return{unit:(await db.query("select id from hr_business_unit where code='TEST-BU'")).rows[0].id,position:(await db.query("select id from hr_position where code='TEST-POS'")).rows[0].id,staffRow:(await db.query("select id,organization_version from employee where company_fn='C-SG' and is_active=true order by id limit 1")).rows[0]};});
+  result.staff=result.staffRow.id;
   await page.locator('[data-org-assign]').click();
   await page.locator('[data-org-assignment] [name=employee]').selectOption(String(result.staff));
   await page.locator('[data-org-assignment] [name=unit]').selectOption(String(result.unit));
@@ -34,7 +35,7 @@ try{
   await page.locator('[data-org-assignment] [type=submit]').click();
   await page.locator('[data-org-assign]').waitFor({timeout:60000});
   const persisted=await page.evaluate(async id=>(await ErpSystemData.db.query('select business_unit_id,position_id,organization_version from employee where id=$1',[id])).rows[0],result.staff);
-  assert.equal(Number(persisted.business_unit_id),Number(result.unit));assert.equal(Number(persisted.position_id),Number(result.position));assert.equal(Number(persisted.organization_version),1);
+  assert.equal(Number(persisted.business_unit_id),Number(result.unit));assert.equal(Number(persisted.position_id),Number(result.position));assert.equal(Number(persisted.organization_version),Number(result.staffRow.organization_version)+1);
   await page.locator('[data-org-close]').click();
   const layouts=[];
   for(const width of [1280,768,375]){

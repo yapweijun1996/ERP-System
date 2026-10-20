@@ -1851,5 +1851,6 @@ window.__ERP_I18N_EN__=Object.freeze({
   "hr.org.unassigned": "Unassigned",
   "hr.org.reason": "Reason",
   "access.scope.business_unit": "Business unit",
-  "access.scope.position": "Position"
+  "access.scope.position": "Position",
+  "route.hr-directory": "People"
 });
