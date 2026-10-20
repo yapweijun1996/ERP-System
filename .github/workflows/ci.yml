@@ -149,6 +149,11 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
+      - name: Scoped HR editor, staff and Leave browser regression
+        env:
+          ERP_HR_REGRESSION: "1"
+        run: node tests/e2e/hr-organization.spec.mjs
+
       - name: i18n browser matrix (en/ms/zh/ja/vi × desktop/mobile)
         env:
           I18N_LANGUAGES: en,ms,zh,ja,vi

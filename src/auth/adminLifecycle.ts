@@ -565,7 +565,7 @@ export async function setRoleResourceScopeWithin(
   scope: DataScope,
   requestId: string,
 ) {
-  if (!['self', 'team', 'department', 'company'].includes(scope)) {
+  if (!['self', 'team', 'department', 'business_unit', 'position', 'company'].includes(scope)) {
     throw new AuthLifecycleError(400, 'invalid_data_scope', 'Unknown data scope.');
   }
   if (!resourceKey.trim() || resourceKey.length > 120) {

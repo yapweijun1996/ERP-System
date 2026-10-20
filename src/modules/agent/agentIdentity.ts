@@ -384,7 +384,8 @@ function grantCoversRequest(
   grant: AuthorizationScopeTarget,
   requested: AuthorizationScopeTarget,
 ): boolean {
-  if (SCOPE_RANK[grant.scope] < SCOPE_RANK[requested.scope]) return false;
+  if (!(grant.scope in SCOPE_RANK) || !(requested.scope in SCOPE_RANK)) return false;
+  if (SCOPE_RANK[grant.scope as AgentGrantScope] < SCOPE_RANK[requested.scope as AgentGrantScope]) return false;
   if (grant.scope === 'company' && grant.targetType === 'none') return true;
   return grant.targetType === requested.targetType && grant.targetId === requested.targetId;
 }

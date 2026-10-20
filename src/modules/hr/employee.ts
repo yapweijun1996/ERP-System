@@ -3,6 +3,7 @@
 import { and, asc, eq, sql } from 'drizzle-orm';
 import type { DB } from '../../data/db';
 import type { Scope } from '../../data/repo';
+import { appendAudit } from '../../api/audit';
 import {
   appUser,
   company,
@@ -89,6 +90,14 @@ export interface UpdateEmployeeInput {
   expectedUpdatedAt?: string | Date | null;
   actorUserId?: number | null;
   requestId?: string;
+}
+
+export interface EndEmployeeEmploymentInput {
+  expectedUpdatedAt: string | Date;
+  reason: string;
+  handoffEmployeeId?: number | null;
+  actorUserId: number;
+  requestId: string;
 }
 
 function normalizeEmployeeNo(value: string): string {
@@ -570,6 +579,73 @@ export async function updateEmployeeWithin(
   }
 
   return { employee: updated, before };
+}
+
+/** End an accountless employee's employment without deleting HR history. */
+export async function endEmployeeEmploymentWithin(
+  exec: DB, scope: Scope, employeeId: number, input: EndEmployeeEmploymentInput,
+) {
+  const reason = typeof input.reason === 'string' ? input.reason.trim() : '';
+  if (reason.length < 3 || reason.length > 500) {
+    throw new EmployeeUpdateError('employment_reason_required', 'Enter a reason of 3 to 500 characters.', 422);
+  }
+  const [before] = await exec.select().from(employee).where(and(
+    eq(employee.id, employeeId),
+    eq(employee.masterFn, scope.masterFn),
+    eq(employee.companyFn, scope.companyFn),
+  )).limit(1).for('update');
+  if (!before) throw new EmployeeUpdateError('employee_not_found', 'Employee not found in the active company.', 404);
+  if (before.userId != null) {
+    throw new EmployeeUpdateError('employee_account_offboard_required', 'Offboard this employee account to end employment.', 409);
+  }
+  if (!before.isActive) throw new EmployeeUpdateError('employee_already_inactive', 'Employment has already ended.', 409);
+  if (!timestampMatches(before.updatedAt, input.expectedUpdatedAt)) {
+    throw new EmployeeUpdateError('employee_stale', 'This employee changed. Refresh before ending employment.', 409);
+  }
+  const reports = await exec.select({ id: employee.id }).from(employee).where(and(
+    eq(employee.masterFn, scope.masterFn),
+    eq(employee.companyFn, scope.companyFn),
+    eq(employee.managerId, employeeId),
+    eq(employee.isActive, true),
+  ));
+  let handoffEmployeeId: number | null = null;
+  if (reports.length) {
+    handoffEmployeeId = input.handoffEmployeeId ?? null;
+    if (!Number.isSafeInteger(handoffEmployeeId) || handoffEmployeeId === null || handoffEmployeeId <= 0) {
+      throw new EmployeeUpdateError('handoff_required', 'Choose an active employee to receive direct reports.', 422);
+    }
+    try {
+      await validateManagerChange(exec, scope, employeeId, handoffEmployeeId);
+    } catch (error) {
+      if (error instanceof InvalidEmployeeStateError) {
+        throw new EmployeeUpdateError('invalid_handoff', error.message, 422);
+      }
+      throw error;
+    }
+  }
+  const now = new Date(Math.max(Date.now(), before.updatedAt.getTime() + 1));
+  if (handoffEmployeeId != null) {
+    await exec.update(employee).set({ managerId: handoffEmployeeId, updatedAt: now }).where(and(
+      eq(employee.masterFn, scope.masterFn),
+      eq(employee.companyFn, scope.companyFn),
+      eq(employee.managerId, employeeId),
+      eq(employee.isActive, true),
+    ));
+  }
+  const [ended] = await exec.update(employee).set({ isActive: false, updatedAt: now }).where(and(
+    eq(employee.id, employeeId),
+    eq(employee.masterFn, scope.masterFn),
+    eq(employee.companyFn, scope.companyFn),
+  )).returning();
+  if (!ended) throw new EmployeeUpdateError('employee_not_found', 'Employee not found in the active company.', 404);
+  await syncManagerRolesWithin(exec, scope, [employeeId, handoffEmployeeId]);
+  await appendAudit(exec, {
+    ...scope, actorUserId: input.actorUserId, requestId: input.requestId,
+    entity: 'hr/employees', entityId: employeeId, action: 'end_employment',
+    before: { isActive: true, directReportCount: reports.length },
+    after: { isActive: false, directReportCount: reports.length, handoffEmployeeId, reason },
+  });
+  return { employee: ended, reportsReassigned: reports.length };
 }
 
 export function updateEmployee(

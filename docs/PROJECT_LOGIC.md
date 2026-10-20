@@ -1783,3 +1783,16 @@ this editor. The production API uses the shared action dispatcher with a
 required idempotency key; Demo calls the same domain command. The UI is in
 `web/public/assets/company-profile-ui.js`, with desktop/375px browser and
 PGlite read-back evidence in `docs/evidence/TASK-252-company-profile.md`.
+
+
+## HR organization and scoped access — local candidate 2026-09-30
+
+Company-owned BU/Position masters and nullable staff assignments grant no rights.
+Shared live HR staff projection now covers generic resources, dedicated employee
+and Leave routes, and governed permission-based approval. Explicit targets require
+active same-Company masters and an active actor assignment; stale/unassigned or
+cross-Company access fails closed. Company-only administration prevents self-moving
+to widen authority. No production grants or data changed. Additive migrations
+0119/0120 and disposable PostgreSQL RLS/backup rehearsal are documented in
+[HR organization slice](HR_ORGANIZATION_SLICE.md). TASK-256 remains in progress
+until committed source CI and reviewed migration/release evidence are complete.

@@ -228,7 +228,7 @@ export function createAdminRouter(db: DB, options: AdminRouterOptions = {}): Rou
         permissionKey: body.permissionKey,
         resourceKey: typeof body.resourceKey === 'string' ? body.resourceKey : null,
         effect: String(body.effect) as PermissionOverrideEffect,
-        scope: typeof body.scope === 'string' ? body.scope as 'self' | 'team' | 'department' | 'company' : undefined,
+        scope: typeof body.scope === 'string' ? body.scope as 'self' | 'team' | 'department' | 'business_unit' | 'position' | 'company' : undefined,
         targetType: typeof body.targetType === 'string' ? body.targetType : undefined,
         targetId: typeof body.targetId === 'string' || typeof body.targetId === 'number'
           ? body.targetId : null,
@@ -393,7 +393,7 @@ export function createAdminRouter(db: DB, options: AdminRouterOptions = {}): Rou
       const scope = raw.scope;
       const targetType = raw.targetType;
       const targetId = raw.targetId;
-      if (!['self', 'team', 'department', 'company'].includes(String(scope))
+      if (!['self', 'team', 'department', 'business_unit', 'position', 'company'].includes(String(scope))
         || typeof targetType !== 'string'
         || (targetId != null && typeof targetId !== 'string' && typeof targetId !== 'number')) {
         apiError(res, 400, 'invalid_request', 'scopeTarget is invalid.');
@@ -535,7 +535,7 @@ export function createAdminRouter(db: DB, options: AdminRouterOptions = {}): Rou
         session,
         roleId,
         body.resourceKey,
-        body.scope as 'self' | 'team' | 'department' | 'company',
+        body.scope as 'self' | 'team' | 'department' | 'business_unit' | 'position' | 'company',
         context(res).requestId,
       );
       res.json({ data: result, meta: {} });

@@ -1,3 +1,4 @@
+import { resolveOrganizationEmployeeIdsWithin } from './organizationScope';
 import { and, eq, isNotNull } from 'drizzle-orm';
 import type { DB } from '../data/db';
 import { employee } from '../data/schema';
@@ -16,6 +17,16 @@ export async function resolveScopedUserIds(
   target?: ScopeTarget,
 ): Promise<number[]> {
   if (scope === 'company') return [];
+  if (scope === 'business_unit' || scope === 'position') {
+    if (target && !['none', scope].includes(target.targetType)) return [];
+    const targetId = target?.targetType === scope ? Number(target.targetId) : null;
+    const ids = await resolveOrganizationEmployeeIdsWithin(db,
+      { masterFn: session.masterFn, companyFn: session.activeCompanyFn }, session.userId, scope, targetId);
+    const rows = await db.select({ id: employee.id, userId: employee.userId }).from(employee).where(and(
+      eq(employee.masterFn, session.masterFn), eq(employee.companyFn, session.activeCompanyFn), eq(employee.isActive, true),
+    ));
+    return rows.filter(row => ids.includes(row.id) && row.userId != null).map(row => row.userId!);
+  }
   const rows = await db.select({
     id: employee.id,
     userId: employee.userId,
