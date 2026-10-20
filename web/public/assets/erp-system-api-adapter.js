@@ -747,14 +747,14 @@
 
     var m = payload.metrics || {};
     DB.dashboardMetrics = {
-      /* not modeled server-side yet — 0 is the honest "not tracked", not a guess */
+      /* Existing non-monetary placeholders; monetary KPIs use API facts or unavailable. */
       approvals: 0, glIssues: 0, openDeliveries: 0, goodsReceipts: 0,
-      pickTasks: 0, leaveRequests: 0, cash: 0, cleared: 0,
+      pickTasks: 0, leaveRequests: 0, cash: m.cash ?? null, cleared: 0,
       /* real, from GET /api/dashboard */
       stockAlerts: m.stockAlertCount || 0,
       arOpen: m.arOpen || 0,
-      openOrderValue: m.openOrderValue || 0,
-      mtdSales: m.mtdRevenue || 0,
+      openOrderValue: m.openOrderValue ?? null,
+      mtdSales: m.mtdRevenue ?? null,
     };
 
     document.title = 'ERP System - ' + active.name;
@@ -1139,6 +1139,9 @@
     get mode(){ return state.mode; },
     get db(){ return null; },
   };
+  adapter.organizationList=function(kind){return apiRequest('/hr/organization/'+encodeURIComponent(kind));};
+  adapter.organizationSave=function(kind,input){return apiRequest('/hr/organization/'+encodeURIComponent(kind)+(input.id?'/'+input.id:''),{method:input.id?'PUT':'POST',body:Object.assign({},input,{id:undefined}),headers:{'Idempotency-Key':crypto.randomUUID()}});};
+  adapter.organizationAssign=function(employeeId,input){return apiRequest('/hr/employees/'+employeeId+'/organization',{method:'PUT',body:input,headers:{'Idempotency-Key':crypto.randomUUID()}});};
   window.ErpSystemData = adapter;
   window.ErpSystemDemo = adapter;
   window.ErpSystemDataReady = ready;

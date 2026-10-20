@@ -48,6 +48,8 @@ const SCOPE_RANK: Record<DataScope, number> = {
   self: 0,
   team: 1,
   department: 2,
+  business_unit: 2,
+  position: 2,
   company: 3,
 };
 
@@ -65,15 +67,17 @@ export interface ScopeGrant {
   targetId: string | null;
 }
 
-export async function effectiveCapabilities(
+export async function effectiveCapabilities(db: DB, session: SessionData, now = new Date()): Promise<EffectiveCapability> {
+  return withTenantTransaction(db, { masterFn: session.masterFn, companyFn: session.activeCompanyFn },
+    tx => effectiveCapabilitiesWithin(tx, session, now));
+}
+
+export async function effectiveCapabilitiesWithin(
   db: DB,
   session: SessionData,
   now = new Date(),
 ): Promise<EffectiveCapability> {
-  return withTenantTransaction(db, {
-    masterFn: session.masterFn,
-    companyFn: session.activeCompanyFn,
-  }, async (exec) => {
+  const exec = db;
     const [authorizationVersion, isCompanyOwner] = await Promise.all([
       getAuthorizationVersionWithin(exec, {
         masterFn: session.masterFn,
@@ -209,7 +213,6 @@ export async function effectiveCapabilities(
       scopes,
       scopeGrants,
     };
-  });
 }
 
 interface ScopeGrantRow {

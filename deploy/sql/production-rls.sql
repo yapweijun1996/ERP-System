@@ -45,7 +45,7 @@ DECLARE
     'bank_receipt', 'payment_voucher', 'payment_voucher_line',
     'activity', 'opportunity', 'contact',
     'asset', 'depreciation_run', 'depreciation_run_line',
-    'employee', 'employee_activation_secret', 'employee_account_handoff',
+    'employee', 'hr_business_unit', 'hr_position', 'employee_activation_secret', 'employee_account_handoff',
     'staff_appointment', 'staff_appointment_reminder', 'staff_appointment_outbound_event',
     'employee_hierarchy_scope', 'working_calendar', 'working_calendar_version',
     'calendar_holiday', 'leave_type', 'leave_policy_version', 'leave_balance_entry',

@@ -319,7 +319,7 @@ SCREENS['role-permission'] = async function(root){
       <div class="pg-r pg-head"><div class="pg-c modcell">${esc(t('access.resource'))}</div>${editable.map(r=>`<div class="pg-c c">${esc(tenantRoleDisplayName(r))}</div>`).join('')}</div>
       ${ADMIN_SCOPE_RESOURCES.map(resource=>`<div class="pg-r"><div class="pg-c modcell sub mono">${esc(resource)}</div>${editable.map(role=>{
         const value=map.get(`${role.roleId}:${resource}`)||'';
-        return `<div class="pg-c c"><select class="role-scope" data-role="${role.roleId}" data-resource="${esc(resource)}"><option value="" ${value?'':'selected'}>${esc(t('access.denied'))}</option>${['self','team','department','company'].map(scope=>`<option value="${scope}" ${value===scope?'selected':''}>${esc(t('access.scope.'+scope))}</option>`).join('')}</select></div>`;
+        return `<div class="pg-c c"><select class="role-scope" data-role="${role.roleId}" data-resource="${esc(resource)}"><option value="" ${value?'':'selected'}>${esc(t('access.denied'))}</option>${['self','team','department','business_unit','position','company'].map(scope=>`<option value="${scope}" ${value===scope?'selected':''}>${esc(t('access.scope.'+scope))}</option>`).join('')}</select></div>`;
       }).join('')}</div>`).join('')}</div></div>`;
   }
   async function render(){

@@ -79,6 +79,9 @@ async function runModuleVisibilityAfterSetup(browser) {
     const state = await page.evaluate(() => ({
       companyFn: DB.erpSystem.scope.companyFn,
       companyName: DB.company.name,
+      country: DB.company.country,
+      currency: DB.company.currency,
+      taxRegime: DB.company.taxRegime,
       enabledModules: DB.erpSystem.modules
         .filter((module) => module.enabled === true)
         .map((module) => module.moduleKey || module.module_key)
@@ -86,6 +89,7 @@ async function runModuleVisibilityAfterSetup(browser) {
     }));
     if (state.companyFn === 'C-SG'
       || state.companyName !== 'Acme Singapore'
+      || state.country !== 'SG' || state.currency !== 'SGD' || state.taxRegime !== 'GST'
       || JSON.stringify(state.enabledModules) !== JSON.stringify(['expenses_tax', 'hr'])) {
       throw new Error(`setup did not activate the new Company's selected modules: ${JSON.stringify(state)}`);
     }
@@ -98,9 +102,26 @@ async function runModuleVisibilityAfterSetup(browser) {
     if (leaked.length) {
       throw new Error(`disabled module commands leaked after setup: ${JSON.stringify({ state, leaked })}`);
     }
-    if (!commands.some((command) => command.trim() === 'HR / Payroll')
+    if (!commands.some((command) => command.trim() === 'Human Resources')
       || !commands.some((command) => command.trim() === 'Leave Approval')) {
       throw new Error(`enabled HR commands disappeared after setup: ${JSON.stringify({ state, commands })}`);
+    }
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => document.querySelector('#palette')?.getAttribute('aria-hidden') === 'true', null, { timeout: TIMEOUT });
+    await page.evaluate(() => navigate('sys-settings'));
+    const companyFacts = page.locator('[data-canonical-system-settings] .docmeta');
+    await companyFacts.waitFor({ state: 'visible', timeout: TIMEOUT });
+    const displayedFacts = await companyFacts.innerText();
+    if (!['Acme Singapore', 'SG', 'SGD', 'GST'].every(fact => displayedFacts.includes(fact))) {
+      throw new Error(`System Settings did not read back the new Company facts: ${displayedFacts}`);
+    }
+    await page.locator('#cpDateFormat').selectOption('DD/MM/YYYY');
+    await page.locator('[data-policy-save]').click();
+    await page.getByText('Company policy saved.', { exact: true }).waitFor({ state: 'visible', timeout: TIMEOUT });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.locator('[data-canonical-system-settings]').waitFor({ state: 'visible', timeout: TIMEOUT });
+    if (await page.locator('#cpDateFormat').inputValue() !== 'DD/MM/YYYY') {
+      throw new Error('New Company policy did not persist after reload');
     }
     if (runtimeErrors.length) throw new Error(`module visibility emitted runtime errors: ${runtimeErrors.join(' | ')}`);
     console.log('PASS setup module visibility E2E: selected modules control the post-setup command palette');
@@ -160,7 +181,7 @@ async function startPreview() {
 async function main() {
   const preview = await startPreview();
   const browser = await chromium.launch({ headless: true });
-  const viewports = [
+  const viewports = process.env.SETUP_WIZARD_E2E_MODULE_ONLY === '1' ? [] : [
     { label: 'desktop', width: 1280, height: 900 },
     { label: 'split-pane', width: 753, height: 837 },
     { label: 'reported-pane', width: 603, height: 837 },

@@ -235,6 +235,59 @@ async function main(): Promise<void> {
     assert(!disabledCompanyReceipts.allowed && !disabledCompanyReceipts.shown,
       'Company Receipts remains reachable or visible when expenses_tax is disabled.');
 
+    const moduleNavigation = await page.evaluate(async () => {
+      DB.user = {
+        name: 'Module Boundary Reviewer',
+        email: 'module-review@example.com',
+        permissionKeys: [
+          'hr.read', 'payroll.read', 'expenses.company_receipts.read_own',
+        ],
+        is_superadmin: false,
+      };
+      DB.erpSystem = {
+        ...(DB.erpSystem || {}),
+        selfServiceOnly: false,
+        modules: [
+          { moduleKey: 'hr', enabled: true },
+          { moduleKey: 'payroll', enabled: false },
+          { moduleKey: 'expenses_tax', enabled: true },
+          { moduleKey: 'finance', enabled: false },
+        ],
+      };
+      await loadModuleControl();
+      renderSidebar();
+      const withoutPayroll = {
+        payrollAllowed: routeAllowed('payroll-run'),
+        payslipAllowed: routeAllowed('payslip'),
+        hrNavHasPayroll: moduleNav('hr', 'hr-directory').includes('payroll-run'),
+        sidebar: [...document.querySelectorAll('#sidebar .nav[data-mod]')].map((item) => item.dataset.mod),
+      };
+      DB.erpSystem.modules.find((module) => module.moduleKey === 'payroll').enabled = true;
+      await loadModuleControl();
+      renderSidebar();
+      return {
+        withoutPayroll,
+        payrollAllowed: routeAllowed('payroll-run'),
+        payrollSidebar: Boolean(document.querySelector('#sidebar .nav[data-mod="payroll"]')),
+        companyReceiptsModule: routeModuleId('company-receipts'),
+        companyReceiptsAllowed: routeAllowed('company-receipts'),
+        companyReceiptsSidebar: Boolean(document.querySelector('#sidebar .nav[data-mod="expenses_tax"]')),
+        companyReceiptsInFinance: moduleNav('finance', 'gl').includes('company-receipts'),
+        companyReceiptsInMyWork: moduleNav('mywork', 'my-leave').includes('company-receipts'),
+      };
+    });
+    assert(!moduleNavigation.withoutPayroll.payrollAllowed
+      && !moduleNavigation.withoutPayroll.payslipAllowed
+      && !moduleNavigation.withoutPayroll.hrNavHasPayroll
+      && !moduleNavigation.withoutPayroll.sidebar.includes('payroll'),
+    'Payroll route or navigation remains available while the Payroll module is disabled.');
+    assert(moduleNavigation.payrollAllowed && moduleNavigation.payrollSidebar,
+      'Payroll route or navigation is missing when its module is enabled.');
+    assert(moduleNavigation.companyReceiptsModule === 'expenses_tax'
+      && moduleNavigation.companyReceiptsAllowed && moduleNavigation.companyReceiptsSidebar
+      && !moduleNavigation.companyReceiptsInFinance && !moduleNavigation.companyReceiptsInMyWork,
+    'Company Receipts is not reachable through its enabled Expenses & Tax module without Finance.');
+
     // Ensure the route set itself is represented by the matrix. Preview-only
     // routes are still checked for fail-closed behavior above; the matrix is
     // intentionally focused on canonical production routes and action gates.

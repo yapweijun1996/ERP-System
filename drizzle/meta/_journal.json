@@ -834,6 +834,20 @@
       "when": 1790690742577,
       "tag": "0118_lucky_randall",
       "breakpoints": true
+    },
+    {
+      "idx": 119,
+      "version": "7",
+      "when": 1790782997220,
+      "tag": "0119_tiny_human_torch",
+      "breakpoints": true
+    },
+    {
+      "idx": 120,
+      "version": "7",
+      "when": 1790783957242,
+      "tag": "0120_same_deathbird",
+      "breakpoints": true
     }
   ]
 }

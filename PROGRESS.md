@@ -1,5 +1,14 @@
 # ERP Project Progress
 
+**Focused Demo QA addendum — 2026-09-29:** Company setup and policy persistence,
+employee directory/direct login, leave validation/approval, My Receipts capture,
+and Company Receipts access/confirmation/PDF flows passed in local browser tests.
+The module-disabled heading now uses the localized module label. Normal Demo
+uploads still quarantine when no scanner is configured; production API and
+release behavior were not verified in this run. See the
+[TASK-251 evidence](docs/ai-native/evidence/TASK-251-2026-09-29-focused-demo-e2e.md).
+This local QA addendum does not change capability counts or production exits.
+
 Reviewed: **2026-09-15, Asia/Singapore**. Snapshot of the current root worktree,
 not an automated live monitor. Current application release revision: `5dcc15b`
 (the follow-on evidence/progress commit is `9b03913`, documentation-only).

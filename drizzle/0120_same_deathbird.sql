@@ -1,0 +1,8 @@
+ALTER TABLE "role_resource_scope" DROP CONSTRAINT "ck_role_resource_scope_value";--> statement-breakpoint
+ALTER TABLE "user_company_role_scope" DROP CONSTRAINT "ck_user_company_role_scope_value";--> statement-breakpoint
+ALTER TABLE "user_permission_override" DROP CONSTRAINT "ck_user_permission_override_scope";--> statement-breakpoint
+ALTER TABLE "user_permission_override" DROP CONSTRAINT "ck_user_permission_override_target_type";--> statement-breakpoint
+ALTER TABLE "role_resource_scope" ADD CONSTRAINT "ck_role_resource_scope_value" CHECK ("role_resource_scope"."scope" in ('self', 'team', 'department', 'business_unit', 'position', 'company'));--> statement-breakpoint
+ALTER TABLE "user_company_role_scope" ADD CONSTRAINT "ck_user_company_role_scope_value" CHECK ("user_company_role_scope"."scope" in ('self', 'team', 'department', 'business_unit', 'position', 'company'));--> statement-breakpoint
+ALTER TABLE "user_permission_override" ADD CONSTRAINT "ck_user_permission_override_scope" CHECK ("user_permission_override"."scope" in ('self', 'team', 'department', 'business_unit', 'position', 'company'));--> statement-breakpoint
+ALTER TABLE "user_permission_override" ADD CONSTRAINT "ck_user_permission_override_target_type" CHECK ("user_permission_override"."target_type" in ('none', 'company', 'branch', 'department', 'team', 'employee', 'region', 'business_unit', 'position', 'legal_entity', 'cost_center'));
