@@ -229,6 +229,28 @@ export function isSystemManagedTenantRole(sourceTemplateKey: string | null | und
     || sourceTemplateKey === PLATFORM_TENANT_ADMIN_ROLE_TEMPLATE_KEY;
 }
 
+export interface AuthorizationRoleAssignment {
+  userId: number;
+  assignedByUserId: number | null;
+  assignmentSource: string;
+  isSuperadmin: boolean;
+  sourceTemplateKey: string | null;
+}
+
+/** Manual self-assignments never authorize, and protected owner/admin roles are
+ * effective only when they came from setup, provisioning or a legacy backfill. */
+export function roleAssignmentCanAuthorize(assignment: AuthorizationRoleAssignment): boolean {
+  if (assignment.assignmentSource === 'manual'
+    && assignment.assignedByUserId === assignment.userId) return false;
+  if (!assignment.isSuperadmin && !isSystemManagedTenantRole(assignment.sourceTemplateKey)) {
+    return true;
+  }
+  return assignment.assignmentSource === 'system'
+    || assignment.assignmentSource === 'legacy_backfill'
+    || (assignment.assignmentSource === 'onboarding'
+      && assignment.assignedByUserId === assignment.userId);
+}
+
 export function fineGrainedActionPermission(
   resource: string,
   action: string,

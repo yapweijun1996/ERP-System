@@ -110,6 +110,17 @@ describe('atomic staff onboarding', () => {
     expect(activated.roleIds).toEqual([employeeRole.id]);
   });
 
+  it('rejects system-managed owner roles in staff onboarding', async () => {
+    const { db, session } = await fixture();
+    const [ownerRole] = await db.select({ id: role.roleId }).from(role).where(and(
+      eq(role.companyFn, 'C-SG'), eq(role.name, 'Company Owner'),
+    ));
+    await expect(createStaffOnboardingDraft(db, session, {
+      employee: { ...employeeInput, employeeNo: 'EMP-OWNER', fullName: 'Owner Attempt' },
+      username: 'owner.attempt', email: 'owner.attempt@example.test', roleIds: [ownerRole.id],
+    }, 'owner-role-draft')).rejects.toMatchObject({ code: 'protected_role_assignment' });
+  });
+
   it('links an existing organization identity across companies without resetting its password', async () => {
     const { db, session, roleId } = await fixture('C-MY');
     const [identity] = await db.select().from(appUser).where(eq(appUser.username, 'viewer'));

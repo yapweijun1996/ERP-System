@@ -16,7 +16,8 @@ import {
   userCompanyRoleScope,
   userPermissionOverride,
 } from '../data/schema';
-import type { DataScope } from './accessCatalog';
+import { roleAssignmentCanAuthorize, type DataScope } from './accessCatalog';
+import { provisionedCompanyOwnerUserIdsWithin } from './delegationAuthority';
 import { permissionCandidates, permissionDefinition } from './permissionRegistry';
 import { activeRoleAssignmentCondition } from './roleAssignmentState';
 import type { SessionData } from './session';
@@ -104,6 +105,11 @@ interface AssignmentPermissionRow {
   roleName: string;
   permissionKey: string;
   scopeBackfilledAt: Date | null;
+  userId: number;
+  assignedByUserId: number | null;
+  assignmentSource: string;
+  isSuperadmin: boolean;
+  sourceTemplateKey: string | null;
 }
 
 interface ScopeGrantRow {
@@ -312,7 +318,16 @@ async function evaluateAuthorization(
     now,
   }));
   const denies = matchingOverrides.filter((row) => row.effect === 'deny');
-  const allows = matchingOverrides.filter((row) => row.effect === 'allow');
+  // Historical allows remain effective only when their author still has the
+  // non-delegable, provisioning-owned Company Owner authority.
+  const candidateAllows = matchingOverrides.filter((row) =>
+    row.effect === 'allow' && row.assignedByUserId !== request.principal.userId);
+  const ownerUserIds = candidateAllows.length
+    ? await provisionedCompanyOwnerUserIdsWithin(
+      db, request.principal.masterFn, request.principal.companyFn, now,
+    )
+    : new Set<number>();
+  const allows = candidateAllows.filter((row) => ownerUserIds.has(row.assignedByUserId));
   const candidateKeys = candidates;
   const overrideDetails = (row: typeof userPermissionOverride.$inferSelect) => ({
     permissionKey,
@@ -343,12 +358,17 @@ async function evaluateAuthorization(
     };
   }
 
-  const assignments = await db.select({
+  const assignmentRows = await db.select({
     assignmentId: userCompanyRole.assignmentId,
     roleId: role.roleId,
     roleName: role.name,
     permissionKey: rolePermission.permissionKey,
     scopeBackfilledAt: userCompanyRole.scopeBackfilledAt,
+    userId: userCompanyRole.userId,
+    assignedByUserId: userCompanyRole.assignedByUserId,
+    assignmentSource: userCompanyRole.assignmentSource,
+    isSuperadmin: role.isSuperadmin,
+    sourceTemplateKey: role.sourceTemplateKey,
   }).from(userCompanyRole)
     .innerJoin(role, and(
       eq(role.roleId, userCompanyRole.roleId),
@@ -367,6 +387,7 @@ async function evaluateAuthorization(
       activeRoleAssignmentCondition(now),
     ))
     .orderBy(asc(userCompanyRole.assignmentId));
+  const assignments = assignmentRows.filter(roleAssignmentCanAuthorize);
 
   let hasAssignmentScope = false;
   for (const assignment of assignments) {

@@ -1,5 +1,31 @@
 # ERP-System Project Logic
 
+Tenant privilege delegation — 2026-11-23: tenant IAM writes now enforce a shared
+delegation ceiling before an allow override, invitation, staff-onboarding role,
+manual role assignment, role-template clone, custom-role permission or broader
+role scope is persisted. The actor must currently hold every delegated permission
+at an equal or broader stable scope; recipient-relative scopes require Company
+authority because they resolve against the recipient rather than the actor.
+`admin.users.manage` and `admin.roles.write` are non-delegable without a
+provisioned Company Owner assignment, and every allow override requires that same
+owner authority. Allow overrides cannot target their author. Company Owner,
+Master Admin, Platform Tenant Admin and legacy Superadmin assignments remain
+setup/provisioning-owned and cannot be invited, manually assigned, removed or
+revoked through tenant role administration. The authorization evaluator and
+capability projection ignore historical allows without trusted Company Owner
+provenance, self-authored manual assignments and protected-role assignments
+without trusted provisioning provenance, so pre-existing unsafe rows do not
+preserve the original escalation path. Explicit deny creation, owner-authorized
+deny revocation, permission removal, narrower scope changes and ordinary role
+grants within the actor's permission/scope ceiling remain supported. The source
+boundaries are
+`src/auth/delegationAuthority.ts`, `src/auth/delegationPolicy.ts`,
+`src/auth/permissionOverrides.ts`, `src/auth/adminLifecycle.ts`,
+`src/auth/roleAssignments.ts`, `src/auth/lifecycle.ts`,
+`src/auth/authorization.ts`, `src/auth/permissions.ts` and
+`src/modules/hr/staffOnboarding.ts`; static regression assertions are in
+`src/auth/delegationPolicy.test.ts` and the adjacent role/onboarding tests.
+
 Home monetary KPIs — 2026-09-25: `web/public/assets/screens-ops.js` displays
 Open order value and MTD revenue only when Sales is active and the user has
 `sales.read`; Cash position requires active Finance and `finance.read`.

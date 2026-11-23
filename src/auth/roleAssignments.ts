@@ -15,7 +15,10 @@ import {
 } from '../data/schema';
 import { AuthLifecycleError } from './authErrors';
 import { bumpAuthorizationVersionWithin } from './authorizationVersion';
-import type { DataScope } from './accessCatalog';
+import {
+  isSystemManagedTenantRole, roleAssignmentCanAuthorize, type DataScope,
+} from './accessCatalog';
+import { assertCanDelegateRoleWithin } from './delegationPolicy';
 import type { SessionData } from './session';
 
 export interface RoleAssignmentScopeInput {
@@ -161,6 +164,13 @@ export async function createRoleAssignmentWithin(
       eq(appUser.identityKind, 'human'),
     )).limit(1);
   if (!target) throw new AuthLifecycleError(404, 'user_not_found', 'User not found in this company.');
+  if (input.userId === session.userId) {
+    throw new AuthLifecycleError(
+      403,
+      'self_role_grant_forbidden',
+      'You cannot create or update a role assignment for your own account.',
+    );
+  }
 
   const [availableRole] = await exec.select({ roleId: role.roleId }).from(role).where(and(
     eq(role.roleId, input.roleId),
@@ -181,6 +191,9 @@ export async function createRoleAssignmentWithin(
         targetId: '',
       }));
   await validateScopeTargets(exec, session, scopes);
+  await assertCanDelegateRoleWithin(
+    exec, session, input.roleId, scopes, input.userId, now,
+  );
 
   if (input.assignmentId != null && (!Number.isSafeInteger(input.assignmentId) || input.assignmentId <= 0)) {
     throw new AuthLifecycleError(400, 'invalid_id', 'assignmentId must be a positive integer.');
@@ -309,6 +322,35 @@ export async function revokeRoleAssignmentWithin(
   if (cleanReason.length < 3 || cleanReason.length > 500) {
     throw new AuthLifecycleError(400, 'invalid_reason', 'A revocation reason is required.');
   }
+  const [current] = await exec.select({
+    assignmentId: userCompanyRole.assignmentId,
+    userId: userCompanyRole.userId,
+    assignedByUserId: userCompanyRole.assignedByUserId,
+    assignmentSource: userCompanyRole.assignmentSource,
+    managedBySystem: userCompanyRole.managedBySystem,
+    isSuperadmin: role.isSuperadmin,
+    sourceTemplateKey: role.sourceTemplateKey,
+  }).from(userCompanyRole)
+    .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
+    .where(and(
+      eq(userCompanyRole.assignmentId, assignmentId),
+      eq(userCompanyRole.companyFn, session.activeCompanyFn),
+      eq(role.masterFn, session.masterFn),
+      isNull(userCompanyRole.revokedAt),
+    ))
+    .limit(1);
+  if (!current) {
+    throw new AuthLifecycleError(404, 'assignment_not_found', 'Role assignment not found or already revoked.');
+  }
+  const protectedRole = current.isSuperadmin
+    || isSystemManagedTenantRole(current.sourceTemplateKey);
+  if (current.managedBySystem || (protectedRole && roleAssignmentCanAuthorize(current))) {
+    throw new AuthLifecycleError(
+      403,
+      'protected_role_assignment',
+      'System-managed role assignments cannot be revoked manually.',
+    );
+  }
   const [assignment] = await exec.update(userCompanyRole).set({
     revokedAt: now,
     revokedByUserId: session.userId,
@@ -323,7 +365,7 @@ export async function revokeRoleAssignmentWithin(
     userId: userCompanyRole.userId,
     roleId: userCompanyRole.roleId,
   });
-  if (!assignment) throw new AuthLifecycleError(404, 'assignment_not_found', 'Role assignment not found or already revoked.');
+  if (!assignment) throw new AuthLifecycleError(409, 'assignment_conflict', 'The role assignment changed before it could be revoked.');
   await bumpAuthorizationVersionWithin(exec, {
     masterFn: session.masterFn,
     companyFn: session.activeCompanyFn,

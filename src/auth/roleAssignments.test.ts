@@ -47,6 +47,7 @@ describe('assignment-scoped authorization', () => {
     const db = await freshDb();
     await seedDemo(db);
     const [viewer] = await db.select().from(appUser).where(eq(appUser.username, 'viewer'));
+    const [admin] = await db.select().from(appUser).where(eq(appUser.username, 'admin'));
     const [targetRole] = await db.insert(role).values({ masterFn: 'M1', name: 'Targeted Viewer' })
       .returning({ roleId: role.roleId });
     await db.insert(userCompany).values({
@@ -57,7 +58,7 @@ describe('assignment-scoped authorization', () => {
     await db.insert(rolePermission).values({
       masterFn: 'M1', roleId: targetRole.roleId, permissionKey: 'inventory.read', allowed: true,
     });
-    const created = await createRoleAssignment(db, session(viewer.userId, viewer.username), {
+    const created = await createRoleAssignment(db, session(admin.userId, admin.username), {
       userId: viewer.userId,
       roleId: targetRole.roleId,
       scopes: [
@@ -72,7 +73,7 @@ describe('assignment-scoped authorization', () => {
     ));
     expect(assignments).toHaveLength(1);
     expect(created.scopes).toHaveLength(2);
-    const second = await createRoleAssignment(db, session(viewer.userId, viewer.username), {
+    const second = await createRoleAssignment(db, session(admin.userId, admin.username), {
       userId: viewer.userId,
       roleId: targetRole.roleId,
       scopes: [
