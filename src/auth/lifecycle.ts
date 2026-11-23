@@ -16,6 +16,7 @@ import { withTenantTransaction } from '../data/tenantTransaction';
 import { appendAudit } from '../api/audit';
 import { AuthLifecycleError } from './authErrors';
 import { bumpAuthorizationVersionWithin } from './authorizationVersion';
+import { assertCanDelegateRoleWithin } from './delegationPolicy';
 import { hashPassword } from './password';
 import { usernameFromEmail } from './identifiers';
 import type { SessionData } from './session';
@@ -92,6 +93,9 @@ export async function createInvitation(
     if (!targetRole) {
       throw new AuthLifecycleError(400, 'invalid_role', 'The selected role is unavailable.');
     }
+    await assertCanDelegateRoleWithin(
+      tx, session, targetRole.roleId, undefined, null, now,
+    );
 
     const [existingUser] = await tx.select({ userId: appUser.userId })
       .from(appUser)

@@ -26,12 +26,18 @@ import { appendAudit } from '../api/audit';
 import { AuthLifecycleError } from './authErrors';
 import {
   COMPANY_OWNER_ROLE_TEMPLATE_KEY, ROLE_TEMPLATES, isCompanyOwnerRole, isMasterAdminRole,
-  isSystemManagedTenantRole, roleTemplate, type DataScope,
+  isSystemManagedTenantRole, roleAssignmentCanAuthorize, roleTemplate, type DataScope,
 } from './accessCatalog';
 import { isAssignableTenantPermission } from './permissionRegistry';
 import type { SessionData } from './session';
 import { activeRoleAssignmentCondition } from './roleAssignmentState';
 import { bumpAuthorizationVersionWithin } from './authorizationVersion';
+import {
+  assertCanDelegatePermissionSetWithin,
+  assertCanDelegateRoleWithin,
+  assertCanGrantPermissionToRoleWithin,
+  assertCanSetRoleScopeWithin,
+} from './delegationPolicy';
 
 export async function setUserActiveWithin(
   exec: DB,
@@ -59,8 +65,11 @@ export async function setUserActiveWithin(
     // A tenant must never end up with zero working Company Owners. The legacy
     // is_superadmin flag is included only while the expand/backfill migration
     // is being rolled out; it no longer bypasses role_permission.
-    const [targetOwnerGrant] = await exec.select({
+    const targetOwnerGrants = await exec.select({
       roleId: role.roleId,
+      userId: userCompanyRole.userId,
+      assignedByUserId: userCompanyRole.assignedByUserId,
+      assignmentSource: userCompanyRole.assignmentSource,
       isSuperadmin: role.isSuperadmin,
       sourceTemplateKey: role.sourceTemplateKey,
     })
@@ -75,10 +84,16 @@ export async function setUserActiveWithin(
           eq(role.sourceTemplateKey, COMPANY_OWNER_ROLE_TEMPLATE_KEY),
         ),
         activeRoleAssignmentCondition(now),
-      ))
-      .limit(1);
+      ));
+    const targetOwnerGrant = targetOwnerGrants.find(roleAssignmentCanAuthorize);
     if (targetOwnerGrant) {
-      const [otherActiveOwner] = await exec.select({ userId: appUser.userId })
+      const otherActiveOwnerGrants = await exec.select({
+        userId: userCompanyRole.userId,
+        assignedByUserId: userCompanyRole.assignedByUserId,
+        assignmentSource: userCompanyRole.assignmentSource,
+        isSuperadmin: role.isSuperadmin,
+        sourceTemplateKey: role.sourceTemplateKey,
+      })
         .from(appUser)
         .innerJoin(userCompanyRole, eq(userCompanyRole.userId, appUser.userId))
         .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
@@ -93,8 +108,8 @@ export async function setUserActiveWithin(
           ),
           activeRoleAssignmentCondition(now),
           ne(appUser.userId, userId),
-        ))
-        .limit(1);
+        ));
+      const otherActiveOwner = otherActiveOwnerGrants.find(roleAssignmentCanAuthorize);
       if (!otherActiveOwner) {
         throw new AuthLifecycleError(
           400,
@@ -211,6 +226,9 @@ export async function setUserRolesWithin(
     isSuperadmin: role.isSuperadmin,
     sourceTemplateKey: role.sourceTemplateKey,
     managedBySystem: userCompanyRole.managedBySystem,
+    userId: userCompanyRole.userId,
+    assignedByUserId: userCompanyRole.assignedByUserId,
+    assignmentSource: userCompanyRole.assignmentSource,
   }).from(userCompanyRole)
     .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
     .where(and(
@@ -232,12 +250,20 @@ export async function setUserRolesWithin(
       { roleIds: 'Update the employee reporting line before removing this role.' },
     );
   }
-  const hasOwnerGrant = (grant: { isSuperadmin: boolean; sourceTemplateKey: string | null }) =>
+  const hasOwnerRole = (grant: { isSuperadmin: boolean; sourceTemplateKey: string | null }) =>
     grant.isSuperadmin || isCompanyOwnerRole(grant.sourceTemplateKey);
-  const removesOwner = before.some(hasOwnerGrant)
-    && !selectedRoles.some(hasOwnerGrant);
+  const trustedOwnerRoleIds = before
+    .filter((grant) => hasOwnerRole(grant) && roleAssignmentCanAuthorize(grant))
+    .map((grant) => grant.roleId);
+  const removesOwner = trustedOwnerRoleIds.some((roleId) => !roleIds.includes(roleId));
   if (removesOwner) {
-    const [otherActiveOwner] = await exec.select({ userId: appUser.userId })
+    const otherActiveOwnerGrants = await exec.select({
+      userId: userCompanyRole.userId,
+      assignedByUserId: userCompanyRole.assignedByUserId,
+      assignmentSource: userCompanyRole.assignmentSource,
+      isSuperadmin: role.isSuperadmin,
+      sourceTemplateKey: role.sourceTemplateKey,
+    })
       .from(appUser)
       .innerJoin(userCompanyRole, eq(userCompanyRole.userId, appUser.userId))
       .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
@@ -252,8 +278,8 @@ export async function setUserRolesWithin(
         ),
         activeRoleAssignmentCondition(now),
         ne(appUser.userId, userId),
-      ))
-      .limit(1);
+      ));
+    const otherActiveOwner = otherActiveOwnerGrants.find(roleAssignmentCanAuthorize);
     if (!otherActiveOwner) {
       throw new AuthLifecycleError(
         400,
@@ -263,12 +289,41 @@ export async function setUserRolesWithin(
     }
   }
 
-  await exec.delete(userCompanyRole).where(and(
-    eq(userCompanyRole.userId, userId),
-    eq(userCompanyRole.companyFn, session.activeCompanyFn),
-    eq(userCompanyRole.managedBySystem, false),
-  ));
-  const manualRoleIds = roleIds.filter((roleId) => !managedRoleIds.includes(roleId));
+  const protectedRoleIds = before
+    .filter((grant) => (grant.isSuperadmin || isSystemManagedTenantRole(grant.sourceTemplateKey))
+      && roleAssignmentCanAuthorize(grant))
+    .map((grant) => grant.roleId);
+  const omittedProtectedRole = protectedRoleIds.find((roleId) => !roleIds.includes(roleId));
+  if (omittedProtectedRole != null) {
+    throw new AuthLifecycleError(
+      403,
+      'protected_role_assignment',
+      'System-managed owner and administrator assignments cannot be changed manually.',
+    );
+  }
+  if (userId === session.userId) {
+    throw new AuthLifecycleError(
+      403,
+      'self_role_grant_forbidden',
+      'You cannot change role assignments for your own account.',
+    );
+  }
+  const preservedRoleIds = new Set([...managedRoleIds, ...protectedRoleIds]);
+  for (const roleId of roleIds.filter((roleId) => !preservedRoleIds.has(roleId))) {
+    await assertCanDelegateRoleWithin(exec, session, roleId, undefined, userId, now);
+  }
+  const mutableBeforeRoleIds = before
+    .filter((grant) => !preservedRoleIds.has(grant.roleId))
+    .map((grant) => grant.roleId);
+  if (mutableBeforeRoleIds.length) {
+    await exec.delete(userCompanyRole).where(and(
+      eq(userCompanyRole.userId, userId),
+      eq(userCompanyRole.companyFn, session.activeCompanyFn),
+      eq(userCompanyRole.managedBySystem, false),
+      inArray(userCompanyRole.roleId, mutableBeforeRoleIds),
+    ));
+  }
+  const manualRoleIds = roleIds.filter((roleId) => !preservedRoleIds.has(roleId));
   if (manualRoleIds.length) {
     await exec.insert(userCompanyRole).values(manualRoleIds.map((roleId) => ({
       userId,
@@ -417,6 +472,11 @@ export async function setRolePermissionWithin(
       eq(rolePermission.permissionKey, permissionKey),
     ))
     .limit(1);
+  if (allowed && existing?.allowed !== true) {
+    await assertCanGrantPermissionToRoleWithin(
+      exec, session, roleId, permissionKey, now,
+    );
+  }
   if (existing) {
     await exec.update(rolePermission).set({
       allowed,
@@ -495,6 +555,17 @@ export async function cloneRoleTemplateWithin(
       `Role template '${template.key}' contains an unregistered permission '${invalidPermission}'.`,
     );
   }
+  await assertCanDelegatePermissionSetWithin(
+    exec,
+    session,
+    template.permissions,
+    Object.entries(template.scopes).map(([resourceKey, scope]) => ({
+      resourceKey,
+      scope,
+      targetType: 'none',
+      targetId: null,
+    })),
+  );
   const name = nameInput?.trim() || template.name;
   const [existing] = await exec.select({ roleId: role.roleId }).from(role).where(and(
     eq(role.masterFn, session.masterFn),
@@ -564,6 +635,7 @@ export async function setRoleResourceScopeWithin(
   resourceKey: string,
   scope: DataScope,
   requestId: string,
+  now = new Date(),
 ) {
   if (!['self', 'team', 'department', 'business_unit', 'position', 'company'].includes(scope)) {
     throw new AuthLifecycleError(400, 'invalid_data_scope', 'Unknown data scope.');
@@ -593,20 +665,48 @@ export async function setRoleResourceScopeWithin(
         : 'Legacy Superadmin scope cannot be edited.',
     );
   }
+  const normalizedResourceKey = resourceKey.trim();
+  const [existingScope] = await exec.select({ scope: roleResourceScope.scope })
+    .from(roleResourceScope)
+    .where(and(
+      eq(roleResourceScope.masterFn, session.masterFn),
+      eq(roleResourceScope.companyFn, session.activeCompanyFn),
+      eq(roleResourceScope.roleId, roleId),
+      eq(roleResourceScope.resourceKey, normalizedResourceKey),
+    ))
+    .limit(1);
+  const scopeRank: Record<DataScope, number> = {
+    self: 0,
+    team: 1,
+    department: 2,
+    business_unit: 2,
+    position: 2,
+    company: 3,
+  };
+  const isNarrowing = existingScope
+    && scopeRank[scope] < scopeRank[existingScope.scope as DataScope];
+  if (existingScope?.scope !== scope && !isNarrowing) {
+    await assertCanSetRoleScopeWithin(exec, session, roleId, {
+      resourceKey: normalizedResourceKey,
+      scope,
+      targetType: 'none',
+      targetId: null,
+    }, now);
+  }
   await exec.insert(roleResourceScope).values({
     masterFn: session.masterFn,
     companyFn: session.activeCompanyFn,
     roleId,
-    resourceKey: resourceKey.trim(),
+    resourceKey: normalizedResourceKey,
     scope,
   }).onConflictDoUpdate({
     target: [roleResourceScope.roleId, roleResourceScope.resourceKey],
-    set: { scope, updatedAt: new Date() },
+    set: { scope, updatedAt: now },
   });
   await bumpAuthorizationVersionWithin(exec, {
     masterFn: session.masterFn,
     companyFn: session.activeCompanyFn,
-  });
+  }, now);
   await appendAudit(exec, {
     masterFn: session.masterFn,
     companyFn: session.activeCompanyFn,
@@ -615,9 +715,9 @@ export async function setRoleResourceScopeWithin(
     entity: 'role_resource_scope',
     entityId: roleId,
     action: 'set_scope',
-    after: { resourceKey: resourceKey.trim(), scope },
+    after: { resourceKey: normalizedResourceKey, scope },
   });
-  return { roleId, resourceKey: resourceKey.trim(), scope };
+  return { roleId, resourceKey: normalizedResourceKey, scope };
 }
 
 export function setRoleResourceScope(
@@ -687,6 +787,9 @@ export async function createInvitationRecordWithin(
   if (!targetRole) {
     throw new AuthLifecycleError(400, 'invalid_role', 'The selected role is unavailable.');
   }
+  await assertCanDelegateRoleWithin(
+    exec, session, targetRole.roleId, undefined, null, now,
+  );
 
   const [existingUser] = await exec.select({ userId: appUser.userId })
     .from(appUser)

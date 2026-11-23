@@ -11,6 +11,8 @@ import {
 import { appendAudit } from '../api/audit';
 import { AuthLifecycleError } from './authErrors';
 import { bumpAuthorizationVersionWithin } from './authorizationVersion';
+import { assertProvisionedCompanyOwnerAuthorityWithin } from './delegationAuthority';
+import { assertCanDelegatePermissionWithin } from './delegationPolicy';
 import { isAssignableTenantPermission, permissionCandidates } from './permissionRegistry';
 import type { DataScope } from './accessCatalog';
 import type { SessionData } from './session';
@@ -169,6 +171,22 @@ export async function createPermissionOverrideWithin(
     )).limit(1);
   if (!target) throw new AuthLifecycleError(404, 'user_not_found', 'User not found in this company.');
   await validateTarget(exec, session, normalized);
+  if (normalized.effect === 'allow') {
+    if (input.userId === session.userId) {
+      throw new AuthLifecycleError(
+        403,
+        'self_permission_grant_forbidden',
+        'You cannot create an allow override for your own account.',
+      );
+    }
+    await assertProvisionedCompanyOwnerAuthorityWithin(exec, session, now);
+    await assertCanDelegatePermissionWithin(exec, session, normalized.permissionKey, {
+      resourceKey: normalized.resourceKey ?? '',
+      scope: normalized.scope,
+      targetType: normalized.targetType,
+      targetId: normalized.targetId,
+    }, input.userId, now);
+  }
   const [created] = await exec.insert(userPermissionOverride).values({
     masterFn: session.masterFn,
     companyFn: session.activeCompanyFn,
@@ -237,6 +255,21 @@ export async function revokePermissionOverrideWithin(
     throw new AuthLifecycleError(400, 'invalid_id', 'overrideId must be a positive integer.');
   }
   const cleanReason = normalizeReason(reason);
+  const [current] = await exec.select({ effect: userPermissionOverride.effect })
+    .from(userPermissionOverride)
+    .where(and(
+      eq(userPermissionOverride.id, overrideId),
+      eq(userPermissionOverride.masterFn, session.masterFn),
+      eq(userPermissionOverride.companyFn, session.activeCompanyFn),
+      isNull(userPermissionOverride.revokedAt),
+    ))
+    .limit(1);
+  if (!current) {
+    throw new AuthLifecycleError(404, 'override_not_found', 'Permission override not found or already revoked.');
+  }
+  if (current.effect === 'deny') {
+    await assertProvisionedCompanyOwnerAuthorityWithin(exec, session, now);
+  }
   const [revoked] = await exec.update(userPermissionOverride).set({
     revokedAt: now,
     revokedByUserId: session.userId,
@@ -253,7 +286,7 @@ export async function revokePermissionOverrideWithin(
     permissionKey: userPermissionOverride.permissionKey,
     effect: userPermissionOverride.effect,
   });
-  if (!revoked) throw new AuthLifecycleError(404, 'override_not_found', 'Permission override not found or already revoked.');
+  if (!revoked) throw new AuthLifecycleError(409, 'override_conflict', 'The permission override changed before it could be revoked.');
   await bumpAuthorizationVersionWithin(exec, {
     masterFn: session.masterFn,
     companyFn: session.activeCompanyFn,

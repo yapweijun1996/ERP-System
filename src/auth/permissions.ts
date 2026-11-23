@@ -7,8 +7,10 @@ import {
 import type { SessionData } from './session';
 import {
   COMPANY_OWNER_ROLE_TEMPLATE_KEY,
+  roleAssignmentCanAuthorize,
   type DataScope,
 } from './accessCatalog';
+import { provisionedCompanyOwnerUserIdsWithin } from './delegationAuthority';
 import { PERMISSIONS } from './permissionKeys';
 import { permissionCandidates } from './permissionRegistry';
 import { activeRoleAssignmentCondition } from './roleAssignmentState';
@@ -97,13 +99,28 @@ export async function effectiveCapabilitiesWithin(
     // truth. A scoped deny is conservatively removed from the snapshot as a
     // whole so the UI cannot advertise access that the central decision service
     // will reject. Record-level evaluation remains in authorize().
-    const deniedKeys = new Set(overrides
+    const ownerUserIds = overrides.some((row) => row.effect === 'allow')
+      ? await provisionedCompanyOwnerUserIdsWithin(
+        exec, session.masterFn, session.activeCompanyFn, now,
+      )
+      : new Set<number>();
+    const effectiveOverrides = overrides.filter((row) => row.effect !== 'allow'
+      || (row.assignedByUserId !== session.userId
+        && ownerUserIds.has(row.assignedByUserId)));
+    const deniedKeys = new Set(effectiveOverrides
       .filter((row) => row.effect === 'deny')
       .flatMap((row) => permissionCandidates(row.permissionKey)));
-    const allowedKeys = new Set(overrides
+    const allowedKeys = new Set(effectiveOverrides
       .filter((row) => row.effect === 'allow')
       .flatMap((row) => permissionCandidates(row.permissionKey)));
-    const permissions = await exec.select({ permissionKey: rolePermission.permissionKey })
+    const permissionRows = await exec.select({
+      permissionKey: rolePermission.permissionKey,
+      userId: userCompanyRole.userId,
+      assignedByUserId: userCompanyRole.assignedByUserId,
+      assignmentSource: userCompanyRole.assignmentSource,
+      isSuperadmin: role.isSuperadmin,
+      sourceTemplateKey: role.sourceTemplateKey,
+    })
       .from(userCompanyRole)
       .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
       .innerJoin(rolePermission, eq(rolePermission.roleId, role.roleId))
@@ -115,12 +132,19 @@ export async function effectiveCapabilitiesWithin(
         eq(rolePermission.allowed, true),
         activeRoleAssignmentCondition(now),
       ));
-    const assignmentScopeRows = await exec.select({
+    const permissions = permissionRows.filter(roleAssignmentCanAuthorize);
+    const rawAssignmentScopeRows = await exec.select({
       resourceKey: userCompanyRoleScope.resourceKey,
       scope: userCompanyRoleScope.scope,
       targetType: userCompanyRoleScope.targetType,
       targetId: userCompanyRoleScope.targetId,
+      userId: userCompanyRole.userId,
+      assignedByUserId: userCompanyRole.assignedByUserId,
+      assignmentSource: userCompanyRole.assignmentSource,
+      isSuperadmin: role.isSuperadmin,
+      sourceTemplateKey: role.sourceTemplateKey,
     }).from(userCompanyRole)
+      .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
       .innerJoin(userCompanyRoleScope, eq(
         userCompanyRoleScope.assignmentId,
         userCompanyRole.assignmentId,
@@ -128,16 +152,25 @@ export async function effectiveCapabilitiesWithin(
       .where(and(
         eq(userCompanyRole.userId, session.userId),
         eq(userCompanyRole.companyFn, session.activeCompanyFn),
+        eq(role.masterFn, session.masterFn),
+        or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
         eq(userCompanyRoleScope.masterFn, session.masterFn),
         eq(userCompanyRoleScope.companyFn, session.activeCompanyFn),
         activeRoleAssignmentCondition(now),
       ));
-    const legacyScopeRows = await exec.select({
+    const assignmentScopeRows = rawAssignmentScopeRows.filter(roleAssignmentCanAuthorize);
+    const rawLegacyScopeRows = await exec.select({
       resourceKey: roleResourceScope.resourceKey,
       scope: roleResourceScope.scope,
       targetType: roleResourceScope.resourceKey,
       targetId: roleResourceScope.resourceKey,
+      userId: userCompanyRole.userId,
+      assignedByUserId: userCompanyRole.assignedByUserId,
+      assignmentSource: userCompanyRole.assignmentSource,
+      isSuperadmin: role.isSuperadmin,
+      sourceTemplateKey: role.sourceTemplateKey,
     }).from(userCompanyRole)
+      .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
       .innerJoin(roleResourceScope, and(
         eq(roleResourceScope.roleId, userCompanyRole.roleId),
         eq(roleResourceScope.masterFn, session.masterFn),
@@ -146,9 +179,12 @@ export async function effectiveCapabilitiesWithin(
       .where(and(
         eq(userCompanyRole.userId, session.userId),
         eq(userCompanyRole.companyFn, session.activeCompanyFn),
+        eq(role.masterFn, session.masterFn),
+        or(eq(role.companyFn, session.activeCompanyFn), isNull(role.companyFn)),
         isNull(userCompanyRole.scopeBackfilledAt),
         activeRoleAssignmentCondition(now),
       ));
+    const legacyScopeRows = rawLegacyScopeRows.filter(roleAssignmentCanAuthorize);
     const scopeRows: ScopeGrantRow[] = [
       ...assignmentScopeRows.map((row) => ({
         resourceKey: row.resourceKey,
@@ -187,7 +223,7 @@ export async function effectiveCapabilitiesWithin(
       }
       scopeGrants[row.resourceKey] = grants;
     }
-    for (const row of overrides.filter((override) => override.effect === 'allow')) {
+    for (const row of effectiveOverrides.filter((override) => override.effect === 'allow')) {
       const resourceKey = row.resourceKey || '*';
       const value = row.scope as DataScope;
       const current = scopes[resourceKey];
@@ -256,10 +292,14 @@ export async function isCompanyOwnerSession(
   session: SessionData,
   now = new Date(),
 ): Promise<boolean> {
-  const [assignment] = await db.select({
+  const assignments = await db.select({
     roleMasterFn: role.masterFn,
     companyMasterFn: company.masterFn,
     sourceTemplateKey: role.sourceTemplateKey,
+    userId: userCompanyRole.userId,
+    assignedByUserId: userCompanyRole.assignedByUserId,
+    assignmentSource: userCompanyRole.assignmentSource,
+    isSuperadmin: role.isSuperadmin,
   }).from(userCompanyRole)
     .innerJoin(role, eq(role.roleId, userCompanyRole.roleId))
     .innerJoin(company, eq(company.companyFn, userCompanyRole.companyFn))
@@ -271,8 +311,8 @@ export async function isCompanyOwnerSession(
       eq(company.masterFn, session.masterFn),
       eq(role.sourceTemplateKey, COMPANY_OWNER_ROLE_TEMPLATE_KEY),
       activeRoleAssignmentCondition(now),
-    ))
-    .limit(1);
+    ));
+  const assignment = assignments.find(roleAssignmentCanAuthorize);
   if (!assignment) return false;
   if (
     assignment.roleMasterFn !== session.masterFn

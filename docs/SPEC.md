@@ -628,7 +628,11 @@ the durable Master Admin identity. Master Admin permissions are exactly dashboar
 company switch, user invite/read/manage, role read/write, audit read and settings
 read/manage. They do not include business modules, workflow/approval, payment, payroll,
 MAC, support, simulation or any `platform.*` permission. Company Owner retains the
-explicit tenant model and cannot mutate MAC. Platform mutations require independent
+explicit tenant model and cannot mutate MAC. Tenant privilege administration cannot
+turn either identity into a business-authority bypass: self allow overrides and self role
+grants are rejected; protected owner/admin roles remain provisioning-owned; allow
+overrides require the provisioned Company Owner; and every delegated permission and scope
+must remain within the actor's current authority. Platform mutations require independent
 session, Platform CSRF, request ID, `Idempotency-Key`, duplicate conflict detection and
 append-only audit; response replays never store plaintext passwords. Tenant password-reset request/confirm APIs and the five-language recovery page
 have local isolated-mail evidence. Confirmation rechecks live human login

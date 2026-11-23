@@ -9,6 +9,8 @@ import { appendAudit } from '../../api/audit';
 import type { EncryptedToken } from '../../auth/tokenCrypto';
 import type { SessionData } from '../../auth/session';
 import { isValidUsername, normalizeUsername } from '../../auth/identifiers';
+import { AuthLifecycleError } from '../../auth/authErrors';
+import { assertCanDelegateRoleWithin } from '../../auth/delegationPolicy';
 import { createEmployeeWithin, type CreateEmployeeInput } from './employee';
 import { ensureEmployeeRoleWithin } from './employeeAccount';
 
@@ -73,6 +75,16 @@ async function assertCompanyRoles(exec: DB, session: SessionData, roleIds: numbe
   ));
   if (rows.length !== roleIds.length) {
     throw new StaffOnboardingError(400, 'invalid_company_role', 'One or more roles do not belong to this company.');
+  }
+  try {
+    for (const roleId of roleIds) {
+      await assertCanDelegateRoleWithin(exec, session, roleId, undefined, null);
+    }
+  } catch (error) {
+    if (error instanceof AuthLifecycleError) {
+      throw new StaffOnboardingError(error.status, error.code, error.message, error.fieldErrors);
+    }
+    throw error;
   }
 }
 
